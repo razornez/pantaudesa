@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, MapPin, Users, Tag, Calendar,
@@ -9,6 +10,7 @@ import { mockDesa } from "@/lib/mock-data";
 import { formatRupiah, formatRupiahFull, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { SECTION, BUDGET_ITEMS, PENDAPATAN, DOKUMEN, PENGADUAN } from "@/lib/copy";
 import { getAbsorptionVerdict } from "@/lib/verdicts";
+import { ASSETS } from "@/lib/assets";
 import BudgetBarChart from "@/components/desa/BudgetBarChart";
 import APBDesBreakdown from "@/components/desa/APBDesBreakdown";
 import SkorTransparansiCard from "@/components/desa/SkorTransparansiCard";
@@ -194,58 +196,95 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* Dokumen Publik */}
       {desa.dokumen && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h2 className="text-base font-semibold text-slate-800 mb-1">{SECTION.dokumen}</h2>
-          <p className="text-xs text-slate-500 mb-4">{SECTION.dokumenSub}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {desa.dokumen.map((dok, i) => (
-              <div
-                key={i}
-                className={`flex items-center gap-3 p-3 rounded-xl border ${
-                  dok.tersedia
-                    ? "border-emerald-100 bg-emerald-50"
-                    : "border-slate-100 bg-slate-50 opacity-70"
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${dok.tersedia ? "bg-emerald-100" : "bg-slate-200"}`}>
-                  <FileText size={14} className={dok.tersedia ? "text-emerald-600" : "text-slate-400"} />
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          {/* Header dengan ilustrasi */}
+          <div className="flex flex-col sm:flex-row items-center gap-0">
+            {/* Ilustrasi dokumen */}
+            <div className="relative w-full sm:w-56 h-44 flex-shrink-0 bg-indigo-50">
+              <Image
+                src={ASSETS.illustrationDocs}
+                alt="Ilustrasi dokumen publik desa"
+                fill
+                className="object-contain object-center p-3"
+                sizes="(max-width: 640px) 100vw, 224px"
+              />
+            </div>
+
+            {/* Teks header */}
+            <div className="flex-1 p-5">
+              <h2 className="text-base font-semibold text-slate-800 mb-1">{SECTION.dokumen}</h2>
+              <p className="text-xs text-slate-500">{SECTION.dokumenSub}</p>
+            </div>
+          </div>
+
+          {/* Daftar dokumen */}
+          <div className="px-5 pb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {desa.dokumen.map((dok, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 p-3 rounded-xl border ${
+                    dok.tersedia
+                      ? "border-emerald-100 bg-emerald-50"
+                      : "border-slate-100 bg-slate-50 opacity-70"
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${dok.tersedia ? "bg-emerald-100" : "bg-slate-200"}`}>
+                    <FileText size={14} className={dok.tersedia ? "text-emerald-600" : "text-slate-400"} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{dok.nama}</p>
+                    <p className="text-xs text-slate-400">{dok.jenis} · {dok.tahun}</p>
+                  </div>
+                  {dok.tersedia ? (
+                    <button className="flex-shrink-0 text-emerald-600 hover:text-emerald-700" title={DOKUMEN.tersedia}>
+                      <ExternalLink size={13} />
+                    </button>
+                  ) : (
+                    <span className="flex-shrink-0 text-xs text-rose-500 font-medium text-right leading-tight max-w-[70px]">
+                      {DOKUMEN.belum}
+                    </span>
+                  )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-slate-700 truncate">{dok.nama}</p>
-                  <p className="text-xs text-slate-400">{dok.jenis} · {dok.tahun}</p>
-                </div>
-                {dok.tersedia ? (
-                  <button className="flex-shrink-0 text-emerald-600 hover:text-emerald-700" title={DOKUMEN.tersedia}>
-                    <ExternalLink size={13} />
-                  </button>
-                ) : (
-                  <span className="flex-shrink-0 text-xs text-rose-500 font-medium text-right leading-tight max-w-[70px]">
-                    {DOKUMEN.belum}
-                  </span>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* Pengaduan */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-        <h2 className="text-sm font-semibold text-amber-800 mb-1">{PENGADUAN.title}</h2>
-        <p className="text-xs text-amber-700 mb-4">{PENGADUAN.subtitle}</p>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="https://www.lapor.go.id"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
-          >
-            <ExternalLink size={11} />
-            {PENGADUAN.lapor}
-          </a>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-amber-200 text-amber-700 px-3 py-1.5 rounded-lg">
-            {PENGADUAN.inspektorat(desa.kabupaten)}
-          </span>
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+        <div className="flex items-end gap-0">
+          {/* Konten teks + tombol */}
+          <div className="flex-1 p-5">
+            <h2 className="text-sm font-semibold text-amber-800 mb-1">{PENGADUAN.title}</h2>
+            <p className="text-xs text-amber-700 mb-4">{PENGADUAN.subtitle}</p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="https://www.lapor.go.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                <ExternalLink size={11} />
+                {PENGADUAN.lapor}
+              </a>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-amber-200 text-amber-700 px-3 py-1.5 rounded-lg">
+                {PENGADUAN.inspektorat(desa.kabupaten)}
+              </span>
+            </div>
+          </div>
+
+          {/* Pak Waspada — disembunyikan di layar kecil */}
+          <div className="hidden sm:block flex-shrink-0 w-32 relative">
+            <Image
+              src={ASSETS.mascotStanding}
+              alt="Pak Waspada siap mengawasi"
+              width={128}
+              height={170}
+              className="object-contain object-bottom"
+            />
+          </div>
         </div>
       </div>
 

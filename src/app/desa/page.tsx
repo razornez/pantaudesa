@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
 import DesaCard from "@/components/desa/DesaCard";
 import DesaTable from "@/components/desa/DesaTable";
 import { mockDesa, provinsiList } from "@/lib/mock-data";
 import { StatusSerapan, SortField, SortOrder } from "@/lib/types";
+import { ASSETS } from "@/lib/assets";
 
 type ViewMode = "grid" | "table";
 
@@ -107,8 +109,21 @@ export default function DesaListPage() {
       />
 
       {paginated.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
-          <p className="text-slate-400 text-sm">Tidak ada desa yang sesuai dengan filter yang dipilih.</p>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-12 px-6 flex flex-col items-center gap-4 text-center">
+          <Image
+            src={ASSETS.mascotEmpty}
+            alt="Pak Waspada tidak menemukan hasil pencarian"
+            width={150}
+            height={170}
+            className="object-contain"
+          />
+          <div>
+            <p className="font-semibold text-slate-700 text-sm mb-1">Tidak ada desa yang cocok</p>
+            <p className="text-slate-400 text-xs max-w-xs">
+              Pak Waspada sudah mencari ke mana-mana tapi tidak ketemu.
+              Coba ubah filter atau kata kunci pencarianmu.
+            </p>
+          </div>
         </div>
       ) : view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

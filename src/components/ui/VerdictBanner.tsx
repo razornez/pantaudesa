@@ -5,6 +5,7 @@ import { getVerdictColors } from "@/lib/utils";
 interface Props {
   verdict: Verdict;
   className?: string;
+  isDark?: boolean;
 }
 
 const ICONS = {
@@ -14,12 +15,15 @@ const ICONS = {
   neutral:  Info,
 };
 
-/**
- * Menampilkan pesan verdict dengan warna dan ikon sesuai tone-nya.
- * Reusable di mana saja — detail desa, card, dll.
- */
-export default function VerdictBanner({ verdict, className = "" }: Props) {
-  const colors = getVerdictColors(verdict.tone);
+const DARK_COLORS = {
+  positive: { text: "text-emerald-300", bg: "bg-emerald-900/30", border: "border-emerald-700/40", icon: "text-emerald-400" },
+  warning:  { text: "text-amber-300",   bg: "bg-amber-900/30",   border: "border-amber-700/40",   icon: "text-amber-400" },
+  danger:   { text: "text-rose-300",    bg: "bg-rose-900/30",    border: "border-rose-700/40",    icon: "text-rose-400" },
+  neutral:  { text: "text-slate-300",   bg: "bg-slate-800/50",   border: "border-slate-600/40",   icon: "text-slate-400" },
+};
+
+export default function VerdictBanner({ verdict, className = "", isDark = false }: Props) {
+  const colors = isDark ? DARK_COLORS[verdict.tone] : getVerdictColors(verdict.tone);
   const Icon   = ICONS[verdict.tone];
 
   return (
