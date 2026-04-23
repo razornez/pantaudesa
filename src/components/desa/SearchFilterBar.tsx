@@ -2,6 +2,7 @@
 
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { StatusSerapan } from "@/lib/types";
+import { FILTER, STATUS_FILTER_LABELS } from "@/lib/copy";
 
 interface Props {
   search: string;
@@ -14,11 +15,13 @@ interface Props {
   totalResults: number;
 }
 
-const statusOptions: { value: StatusSerapan; label: string; color: string }[] = [
-  { value: "semua", label: "Semua Status", color: "bg-slate-100 text-slate-700 border-slate-200" },
-  { value: "baik", label: "Baik ≥85%", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "sedang", label: "Sedang 60-84%", color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "rendah", label: "Rendah <60%", color: "bg-rose-100 text-rose-700 border-rose-200" },
+type StatusOption = { value: StatusSerapan; color: string };
+
+const STATUS_OPTIONS: StatusOption[] = [
+  { value: "semua",  color: "bg-slate-100 text-slate-700 border-slate-200" },
+  { value: "baik",   color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "sedang", color: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "rendah", color: "bg-rose-100 text-rose-700 border-rose-200" },
 ];
 
 export default function SearchFilterBar({
@@ -35,7 +38,7 @@ export default function SearchFilterBar({
             type="text"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder="Cari nama desa, kecamatan, atau kabupaten..."
+            placeholder={FILTER.searchPlaceholder}
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder-slate-400"
           />
           {search && (
@@ -51,19 +54,17 @@ export default function SearchFilterBar({
             onChange={(e) => onProvinsi(e.target.value)}
             className="pl-8 pr-8 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition appearance-none cursor-pointer"
           >
-            <option value="">Semua Provinsi</option>
-            {provinsiList.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+            <option value="">{FILTER.allProvinsi}</option>
+            {provinsiList.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
         <span className="text-xs text-slate-500 font-medium flex items-center gap-1 mr-1">
-          <SlidersHorizontal size={12} /> Filter:
+          <SlidersHorizontal size={12} /> {FILTER.filterLabel}
         </span>
-        {statusOptions.map((opt) => (
+        {STATUS_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onStatus(opt.value)}
@@ -73,7 +74,7 @@ export default function SearchFilterBar({
                 : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
             }`}
           >
-            {opt.label}
+            {STATUS_FILTER_LABELS[opt.value]}
           </button>
         ))}
         {hasFilter && (
@@ -81,14 +82,12 @@ export default function SearchFilterBar({
             onClick={() => { onSearch(""); onProvinsi(""); onStatus("semua"); }}
             className="ml-auto text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1 transition-colors"
           >
-            <X size={12} /> Reset
+            <X size={12} /> {FILTER.reset}
           </button>
         )}
       </div>
 
-      <p className="text-xs text-slate-400">
-        Menampilkan <span className="font-semibold text-slate-600">{totalResults}</span> desa
-      </p>
+      <p className="text-xs text-slate-400">{FILTER.totalResults(totalResults)}</p>
     </div>
   );
 }

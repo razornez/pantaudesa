@@ -1,9 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MapPin, Users, Tag, Calendar, TrendingUp, Wallet, CheckCircle2, Clock } from "lucide-react";
+import {
+  ArrowLeft, MapPin, Users, Tag, Calendar,
+  TrendingUp, Wallet, CheckCircle2, Clock,
+  FileText, ExternalLink,
+} from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import { formatRupiah, formatRupiahFull, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { SECTION, BUDGET_ITEMS, PENDAPATAN, DOKUMEN, PENGADUAN } from "@/lib/copy";
+import { getAbsorptionVerdict } from "@/lib/verdicts";
 import BudgetBarChart from "@/components/desa/BudgetBarChart";
+import APBDesBreakdown from "@/components/desa/APBDesBreakdown";
+import SkorTransparansiCard from "@/components/desa/SkorTransparansiCard";
+import OutputFisikCards from "@/components/desa/OutputFisikCards";
+import PerangkatDesaSection from "@/components/desa/PerangkatDesaSection";
+import RiwayatChart from "@/components/desa/RiwayatChart";
+import DownloadButton from "@/components/desa/DownloadButton";
+import VerdictBanner from "@/components/ui/VerdictBanner";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -14,39 +27,43 @@ export async function generateStaticParams() {
 }
 
 export default async function DesaDetailPage({ params }: Props) {
-  const { id } = await params;
-  const desa = mockDesa.find((d) => d.id === id);
+  const { id }  = await params;
+  const desa    = mockDesa.find((d) => d.id === id);
 
   if (!desa) return notFound();
 
-  const selisih = desa.totalAnggaran - desa.terealisasi;
+  const selisih           = desa.totalAnggaran - desa.terealisasi;
+  const absorptionVerdict = getAbsorptionVerdict(desa.persentaseSerapan, selisih);
 
   const infoItems = [
-    { icon: MapPin, label: "Kecamatan", value: desa.kecamatan },
-    { icon: MapPin, label: "Kabupaten/Kota", value: desa.kabupaten },
-    { icon: MapPin, label: "Provinsi", value: desa.provinsi },
-    { icon: Users, label: "Jumlah Penduduk", value: `${desa.penduduk.toLocaleString("id-ID")} jiwa` },
-    { icon: Tag, label: "Kategori Fokus", value: desa.kategori },
-    { icon: Calendar, label: "Tahun Anggaran", value: desa.tahun.toString() },
+    { icon: MapPin,   label: "Kecamatan",      value: desa.kecamatan },
+    { icon: MapPin,   label: "Kabupaten/Kota",  value: desa.kabupaten },
+    { icon: MapPin,   label: "Provinsi",         value: desa.provinsi },
+    { icon: Users,    label: "Jumlah Penduduk", value: `${desa.penduduk.toLocaleString("id-ID")} jiwa` },
+    { icon: Tag,      label: "Fokus Program",   value: desa.kategori },
+    { icon: Calendar, label: "Tahun Anggaran",  value: desa.tahun.toString() },
   ];
 
   const budgetItems = [
-    { icon: Wallet, label: "Total Anggaran", value: formatRupiahFull(desa.totalAnggaran), color: "text-indigo-600", bg: "bg-indigo-50" },
-    { icon: CheckCircle2, label: "Terealisasi", value: formatRupiahFull(desa.terealisasi), color: "text-emerald-600", bg: "bg-emerald-50" },
-    { icon: Clock, label: "Belum Terserap", value: formatRupiahFull(selisih), color: "text-rose-600", bg: "bg-rose-50" },
-    { icon: TrendingUp, label: "Persentase Serapan", value: `${desa.persentaseSerapan}%`, color: "text-amber-600", bg: "bg-amber-50" },
+    { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFull(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50" },
+    { icon: CheckCircle2, label: BUDGET_ITEMS.terealisasi.label,   value: formatRupiahFull(desa.terealisasi),   color: "text-emerald-600", bg: "bg-emerald-50" },
+    { icon: Clock,        label: BUDGET_ITEMS.belumTerserap.label, value: formatRupiahFull(selisih),             color: "text-rose-600",    bg: "bg-rose-50" },
+    { icon: TrendingUp,   label: BUDGET_ITEMS.persentase.label,    value: `${desa.persentaseSerapan}%`,          color: "text-amber-600",   bg: "bg-amber-50" },
   ];
+
+  const pendapatan = desa.pendapatan;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Back */}
-      <Link
-        href="/desa"
-        className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
-      >
-        <ArrowLeft size={15} />
-        Kembali ke Daftar Desa
-      </Link>
+
+      {/* Back + Download */}
+      <div className="flex items-center justify-between">
+        <Link href="/desa" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+          <ArrowLeft size={15} />
+          Kembali ke Daftar Desa
+        </Link>
+        <DownloadButton desa={desa} />
+      </div>
 
       {/* Header */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-6">
@@ -59,15 +76,15 @@ export default async function DesaDetailPage({ params }: Props) {
             </div>
           </div>
           <span className={`self-start text-sm font-semibold px-3 py-1 rounded-full border ${getStatusColor(desa.status)}`}>
-            Serapan {getStatusLabel(desa.status)}
+            {getStatusLabel(desa.status)}
           </span>
         </div>
 
         {/* Progress bar */}
         <div className="mt-5">
           <div className="flex justify-between text-xs text-slate-500 mb-2">
-            <span>Penyerapan Anggaran {desa.tahun}</span>
-            <span className="font-semibold text-slate-700">{desa.persentaseSerapan}%</span>
+            <span>Anggaran yang sudah dipakai tahun {desa.tahun}</span>
+            <span className="font-bold text-slate-700 text-sm">{desa.persentaseSerapan}%</span>
           </div>
           <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -79,6 +96,11 @@ export default async function DesaDetailPage({ params }: Props) {
             <span>Rp 0</span>
             <span>{formatRupiah(desa.totalAnggaran)}</span>
           </div>
+        </div>
+
+        {/* Verdict manusiawi langsung di bawah progress bar */}
+        <div className="mt-3">
+          <VerdictBanner verdict={absorptionVerdict} />
         </div>
       </div>
 
@@ -98,10 +120,41 @@ export default async function DesaDetailPage({ params }: Props) {
         })}
       </div>
 
-      {/* Chart + Info */}
+      {/* Sumber Pendapatan */}
+      {pendapatan && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-base font-semibold text-slate-800 mb-1">{SECTION.pendapatan}</h2>
+          <p className="text-xs text-slate-500 mb-4">{SECTION.pendapatanSub}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(
+              [
+                { key: "danaDesa",        amount: pendapatan.danaDesa,        color: "bg-indigo-500" },
+                { key: "add",             amount: pendapatan.add,             color: "bg-sky-500" },
+                { key: "pades",           amount: pendapatan.pades,           color: "bg-emerald-500" },
+                { key: "bantuanKeuangan", amount: pendapatan.bantuanKeuangan, color: "bg-violet-500" },
+              ] as const
+            ).map((s) => {
+              const info = PENDAPATAN[s.key];
+              return (
+                <div key={s.key} className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <div className={`w-2 h-2 rounded-full ${s.color} mb-2`} />
+                  <p className="text-xs text-slate-500 mb-1 leading-tight">{info.label}</p>
+                  <p className="text-xs text-slate-400 mb-2 italic">{info.hint}</p>
+                  <p className="text-sm font-bold text-slate-800">{formatRupiah(s.amount)}</p>
+                  <p className="text-xs text-slate-400">
+                    {Math.round((s.amount / desa.totalAnggaran) * 100)}% dari total
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Skor Transparansi + Info Desa */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3">
-          <BudgetBarChart desa={desa} />
+          {desa.skorTransparansi && <SkorTransparansiCard skor={desa.skorTransparansi} />}
         </div>
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <h2 className="text-base font-semibold text-slate-800 mb-4">Informasi Desa</h2>
@@ -124,9 +177,81 @@ export default async function DesaDetailPage({ params }: Props) {
         </div>
       </div>
 
+      {/* Output Fisik */}
+      {desa.outputFisik && <OutputFisikCards items={desa.outputFisik} />}
+
+      {/* Chart + APBDes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <BudgetBarChart desa={desa} />
+        {desa.apbdes && <APBDesBreakdown items={desa.apbdes} />}
+      </div>
+
+      {/* Riwayat */}
+      {desa.riwayat && <RiwayatChart riwayat={desa.riwayat} />}
+
+      {/* Perangkat Desa */}
+      {desa.perangkat && <PerangkatDesaSection perangkat={desa.perangkat} />}
+
+      {/* Dokumen Publik */}
+      {desa.dokumen && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-base font-semibold text-slate-800 mb-1">{SECTION.dokumen}</h2>
+          <p className="text-xs text-slate-500 mb-4">{SECTION.dokumenSub}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {desa.dokumen.map((dok, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-3 rounded-xl border ${
+                  dok.tersedia
+                    ? "border-emerald-100 bg-emerald-50"
+                    : "border-slate-100 bg-slate-50 opacity-70"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${dok.tersedia ? "bg-emerald-100" : "bg-slate-200"}`}>
+                  <FileText size={14} className={dok.tersedia ? "text-emerald-600" : "text-slate-400"} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-slate-700 truncate">{dok.nama}</p>
+                  <p className="text-xs text-slate-400">{dok.jenis} · {dok.tahun}</p>
+                </div>
+                {dok.tersedia ? (
+                  <button className="flex-shrink-0 text-emerald-600 hover:text-emerald-700" title={DOKUMEN.tersedia}>
+                    <ExternalLink size={13} />
+                  </button>
+                ) : (
+                  <span className="flex-shrink-0 text-xs text-rose-500 font-medium text-right leading-tight max-w-[70px]">
+                    {DOKUMEN.belum}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pengaduan */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+        <h2 className="text-sm font-semibold text-amber-800 mb-1">{PENGADUAN.title}</h2>
+        <p className="text-xs text-amber-700 mb-4">{PENGADUAN.subtitle}</p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="https://www.lapor.go.id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+          >
+            <ExternalLink size={11} />
+            {PENGADUAN.lapor}
+          </a>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-amber-200 text-amber-700 px-3 py-1.5 rounded-lg">
+            {PENGADUAN.inspektorat(desa.kabupaten)}
+          </span>
+        </div>
+      </div>
+
       {/* Note */}
-      <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-xs text-indigo-700">
-        <strong>Catatan:</strong> Data yang ditampilkan bersifat ilustrasi. Integrasi dengan API resmi (SIPD, OMSPAN, OpenData DJPK) akan tersedia pada versi berikutnya.
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-500">
+        <strong>Catatan:</strong> Data yang ditampilkan bersifat ilustrasi. Integrasi dengan data resmi SIPD, OMSPAN, dan OpenData DJPK Kemenkeu sedang disiapkan.
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowUpDown } from "lucide-react";
 import { Desa, SortField, SortOrder } from "@/lib/types";
-import { formatRupiah, getStatusColor, getSerapanColor } from "@/lib/utils";
+import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { TABLE_HEADERS } from "@/lib/copy";
 
 interface Props {
   desa: Desa[];
@@ -10,7 +11,7 @@ interface Props {
   onSort: (field: SortField) => void;
 }
 
-function SortHeader({ label, field, active, order, onSort }: {
+function SortHeader({ label, field, active, onSort }: {
   label: string; field: SortField; active: boolean; order: SortOrder; onSort: (f: SortField) => void;
 }) {
   return (
@@ -29,15 +30,15 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr className="text-xs font-medium text-slate-500">
               <th className="text-left px-4 py-3">
-                <SortHeader label="Nama Desa" field="nama" active={sortField === "nama"} order={sortOrder} onSort={onSort} />
+                <SortHeader label={TABLE_HEADERS.nama} field="nama" active={sortField === "nama"} order={sortOrder} onSort={onSort} />
               </th>
-              <th className="text-left px-4 py-3 hidden md:table-cell">Wilayah</th>
+              <th className="text-left px-4 py-3 hidden md:table-cell">{TABLE_HEADERS.wilayah}</th>
               <th className="text-right px-4 py-3 hidden lg:table-cell">
-                <SortHeader label="Anggaran" field="totalAnggaran" active={sortField === "totalAnggaran"} order={sortOrder} onSort={onSort} />
+                <SortHeader label={TABLE_HEADERS.anggaran} field="totalAnggaran" active={sortField === "totalAnggaran"} order={sortOrder} onSort={onSort} />
               </th>
-              <th className="text-right px-4 py-3 hidden lg:table-cell">Realisasi</th>
+              <th className="text-right px-4 py-3 hidden lg:table-cell">{TABLE_HEADERS.realisasi}</th>
               <th className="text-right px-4 py-3">
-                <SortHeader label="Serapan" field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
+                <SortHeader label={TABLE_HEADERS.serapan} field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
               </th>
               <th className="px-4 py-3" />
             </tr>
@@ -60,16 +61,19 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${getStatusColor(d.status)}`}>
-                      {d.persentaseSerapan}%
+                      {getStatusLabel(d.status)}
                     </span>
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${getSerapanColor(d.persentaseSerapan)}`} style={{ width: `${d.persentaseSerapan}%` }} />
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${getSerapanColor(d.persentaseSerapan)}`} style={{ width: `${d.persentaseSerapan}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-500">{d.persentaseSerapan}%</span>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Link href={`/desa/${d.id}`} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">
-                    Detail
+                    Lihat Detail
                   </Link>
                 </td>
               </tr>
