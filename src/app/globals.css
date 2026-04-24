@@ -8,3 +8,56 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* ── Hero ticker marquee ──────────────────────────────────────────────── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.333%); }
+}
+
+.animate-ticker {
+  animation: ticker 28s linear infinite;
+  will-change: transform;
+}
+
+/* ── Brush highlight sweep ────────────────────────────────────────────── */
+@keyframes brush-sweep {
+  from { transform: scaleX(0); opacity: 0.6; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+.brush-highlight::before {
+  content: '';
+  position: absolute;
+  inset: 2px -4px 0px -4px;
+  background: #fbbf24;
+  border-radius: 3px;
+  transform-origin: left;
+  animation: brush-sweep 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.8s both;
+  z-index: -1;
+  opacity: 0.75;
+}
+
+/* ── Fade-up stagger ──────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* ── Receipt perforated edge ──────────────────────────────────────────── */
+.receipt-perf {
+  background-image: radial-gradient(circle, #e2e8f0 4px, transparent 4px);
+  background-size: 12px 8px;
+  background-position: 0 0;
+  height: 8px;
+}
