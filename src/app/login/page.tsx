@@ -334,9 +334,9 @@ export default function LoginPage() {
         <div className="mt-10 pt-6 border-t border-slate-100">
           <p className="text-xs text-slate-400 text-center">
             Belum punya akun?{" "}
-            <a href="mailto:admin@pantaudesa.id" className="text-indigo-600 font-semibold hover:underline">
-              Daftar sebagai warga
-            </a>
+            <Link href="/daftar" className="text-indigo-600 font-semibold hover:underline">
+              Daftar gratis
+            </Link>
           </p>
         </div>
       </div>

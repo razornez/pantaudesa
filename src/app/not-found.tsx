@@ -1,23 +1,53 @@
 import Link from "next/link";
-import { Home } from "lucide-react";
+import { Home, Search, ArrowRight } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mb-5">
-        <span className="text-2xl font-bold text-indigo-600">404</span>
+    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center">
+
+      {/* Illustration */}
+      <div className="relative mb-8">
+        <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center mx-auto">
+          <span className="text-6xl select-none">🗺️</span>
+        </div>
+        <div className="absolute -top-2 -right-2 w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center border-2 border-white shadow-sm">
+          <span className="text-lg font-black text-rose-500">?</span>
+        </div>
       </div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-2">Halaman Tidak Ditemukan</h1>
-      <p className="text-slate-500 text-sm mb-6 max-w-sm">
-        Halaman yang Anda cari tidak tersedia atau sudah dipindahkan.
+
+      {/* Copy */}
+      <div className="max-w-sm space-y-2 mb-8">
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">404 — Tidak Ditemukan</p>
+        <h1 className="text-3xl font-black text-slate-900 leading-tight">
+          Desa ini tidak ada di peta.
+        </h1>
+        <p className="text-slate-500 text-sm leading-relaxed">
+          Mungkin alamatnya salah atau halaman sudah dipindahkan. Tapi masih banyak desa lain yang bisa kamu pantau.
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition-colors text-sm shadow-md shadow-indigo-200"
+        >
+          <Home size={15} /> Beranda
+        </Link>
+        <Link
+          href="/desa"
+          className="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-indigo-600 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+        >
+          <Search size={15} /> Cari Desa
+        </Link>
+      </div>
+
+      <p className="mt-8 text-xs text-slate-400">
+        Butuh bantuan?{" "}
+        <Link href="/panduan" className="text-indigo-600 font-semibold hover:underline inline-flex items-center gap-0.5">
+          Baca panduan <ArrowRight size={11} />
+        </Link>
       </p>
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors text-sm"
-      >
-        <Home size={16} />
-        Kembali ke Beranda
-      </Link>
     </div>
   );
 }

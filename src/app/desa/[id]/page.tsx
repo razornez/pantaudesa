@@ -18,10 +18,33 @@ import TransparansiCard from "@/components/desa/TransparansiCard";
 import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import { getVoicesForDesa } from "@/lib/citizen-voice";
 
+import type { Metadata } from "next";
+
 interface Props { params: Promise<{ id: string }> }
 
 export async function generateStaticParams() {
   return mockDesa.map((d) => ({ id: d.id }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const desa   = mockDesa.find((d) => d.id === id);
+  if (!desa) return { title: "Desa Tidak Ditemukan" };
+
+  const title       = `${desa.nama} — Anggaran ${desa.tahun}`;
+  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url:  `https://pantaudesa.id/desa/${desa.id}`,
+      type: "article",
+    },
+    twitter: { title, description },
+  };
 }
 
 export default async function DesaDetailPage({ params }: Props) {

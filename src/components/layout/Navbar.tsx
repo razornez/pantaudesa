@@ -11,9 +11,11 @@ import { getUnreadCount } from "@/lib/user-profile";
 import { getAvatarBg, getInitial } from "@/lib/citizen-voice";
 
 const navLinks = [
-  { href: "/",      label: "Beranda"     },
-  { href: "/desa",  label: "Data Desa"   },
-  { href: "/suara", label: "Suara Warga" },
+  { href: "/",           label: "Beranda"     },
+  { href: "/desa",       label: "Data Desa"   },
+  { href: "/suara",      label: "Suara Warga" },
+  { href: "/bandingkan", label: "Bandingkan"  },
+  { href: "/panduan",    label: "Panduan"     },
 ];
 
 // ─── Avatar mini ──────────────────────────────────────────────────────────────

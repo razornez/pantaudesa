@@ -8,8 +8,35 @@ import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PantauDesa — Transparansi Anggaran Dana Desa",
-  description: "Platform publik untuk memantau penyerapan anggaran dan realisasi dana desa di seluruh Indonesia.",
+  title: {
+    default: "PantauDesa — Transparansi Anggaran Dana Desa",
+    template: "%s — PantauDesa",
+  },
+  description:
+    "Platform publik untuk memantau penyerapan anggaran dan realisasi dana desa di seluruh Indonesia. Pantau, bandingkan, dan bersuara untuk desamu.",
+  keywords: [
+    "dana desa", "APBDes", "transparansi desa", "anggaran desa",
+    "pantau desa", "realisasi dana desa", "SIPD", "suara warga",
+  ],
+  authors:  [{ name: "PantauDesa" }],
+  creator:  "PantauDesa",
+  metadataBase: new URL("https://pantaudesa.id"),
+  openGraph: {
+    type:        "website",
+    locale:      "id_ID",
+    url:         "https://pantaudesa.id",
+    siteName:    "PantauDesa",
+    title:       "PantauDesa — Transparansi Anggaran Dana Desa",
+    description: "Pantau penggunaan dana desa, bandingkan kinerja antar desa, dan bersuara langsung sebagai warga.",
+    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "PantauDesa" }],
+  },
+  twitter: {
+    card:        "summary_large_image",
+    title:       "PantauDesa — Transparansi Anggaran Dana Desa",
+    description: "Pantau penggunaan dana desa, bandingkan kinerja antar desa, dan bersuara langsung sebagai warga.",
+    images:      ["/og-default.png"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
