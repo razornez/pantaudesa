@@ -1,7 +1,9 @@
+import Image from "next/image";
 import { CheckCircle2, ClipboardList, HelpCircle, ChevronRight } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
 import { getExpectations, ExpectedStatus } from "@/lib/expectations";
+import { ASSETS } from "@/lib/assets";
 
 interface Props {
   desa: Desa;
@@ -121,19 +123,37 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
     <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
       {/* Header banner */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-5 sm:px-6 py-5">
-        <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mb-1">
-          Hak Wargamu
-        </p>
-        <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
-          Dengan{" "}
-          <span className="text-amber-300">{formatRupiah(desa.totalAnggaran)}</span>
-          {", "}desa ini seharusnya<br className="hidden sm:block" />
-          bisa memberikan ini ke warganya:
-        </h2>
-        <p className="text-slate-400 text-xs mt-2">
-          Berdasarkan regulasi Dana Desa & alokasi APBDes {desa.tahun}
-        </p>
+      <div className="relative bg-gradient-to-r from-slate-800 to-slate-700 overflow-hidden">
+        {/* Texture overlay */}
+        <div className="absolute inset-0 opacity-[0.06]">
+          <Image src={ASSETS.textureDark} alt="" fill className="object-cover" />
+        </div>
+        <div className="relative flex items-center gap-0">
+          {/* Ilustrasi kiri */}
+          <div className="hidden sm:block relative w-44 h-36 flex-shrink-0">
+            <Image
+              src={ASSETS.illustrationHakWarga}
+              alt="Warga dengan checklist hak desa"
+              fill
+              className="object-cover object-center"
+              sizes="176px"
+            />
+          </div>
+          {/* Teks */}
+          <div className="px-5 sm:pl-4 sm:pr-6 py-5 flex-1">
+            <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">
+              Hak Wargamu
+            </p>
+            <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
+              Dengan{" "}
+              <span className="text-amber-300">{formatRupiah(desa.totalAnggaran)}</span>
+              {", "}desa ini seharusnya bisa memberikan ini:
+            </h2>
+            <p className="text-slate-400 text-xs mt-2">
+              Berdasarkan regulasi Dana Desa &amp; alokasi APBDes {desa.tahun}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Body */}

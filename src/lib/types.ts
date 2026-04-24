@@ -1,3 +1,95 @@
+// ─── Profil Desa (data non-anggaran) ─────────────────────────────────────────
+
+export interface AsetDesa {
+  nama:      string;
+  jenis:     "tanah" | "bangunan" | "kendaraan" | "peralatan" | "infrastruktur" | "lainnya";
+  nilai:     number;      // estimasi nilai (Rp)
+  tahunBeli: number;
+  kondisi:   "baik" | "sedang" | "rusak";
+  lokasi:    string;      // nama lokasi/desa/dusun
+}
+
+export interface FasilitasDesa {
+  nama:    string;
+  jenis:   "pendidikan" | "kesehatan" | "olahraga" | "ibadah" | "umum" | "ekonomi";
+  jumlah:  number;
+  kondisi: "baik" | "sedang" | "rusak";
+  ket?:    string;
+}
+
+export interface BumdesInfo {
+  nama:         string;
+  bidangUsaha:  string;
+  tahunBerdiri: number;
+  modal:        number;     // modal awal (Rp)
+  omsetPerTahun?: number;
+  status:       "aktif" | "tidak_aktif" | "dalam_pembentukan";
+  deskripsi:    string;
+}
+
+export type LembagaJenis =
+  | "pemerintahan"   // BPD, LPMD
+  | "keamanan"       // Linmas, Babinsa
+  | "pemberdayaan"   // PKK, Karang Taruna, Posyandu
+  | "keagamaan"      // MUI, FKUB
+  | "ekonomi"        // Koperasi, Kelompok Tani
+  | "kesehatan"      // Posyandu, Polindes
+  | "pendidikan";    // PAUD, Komite Sekolah
+
+export interface LembagaDesa {
+  nama:         string;
+  jenis:        LembagaJenis;
+  ketua:        string;
+  anggota:      number;
+  tahunBerdiri: number;
+  aktif:        boolean;
+  deskripsi:    string;
+  program?:     string;    // program unggulan / kegiatan rutin
+}
+
+export interface HistoryBelanja {
+  tahun:      number;
+  semester:   1 | 2;
+  kode:       string;
+  uraian:     string;
+  anggaran:   number;
+  realisasi:  number;
+  penyedia?:  string;   // nama vendor/kontraktor
+}
+
+// Level badge 1–5 (1 = terburuk, 5 = terbaik)
+export type BadgeLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface DesaBadge {
+  level:     BadgeLevel;
+  label:     string;
+  deskripsi: string;
+  warna:     string;   // Tailwind color class
+  icon:      string;   // emoji
+}
+
+export interface ProfilDesa {
+  website?:        string;
+  email?:          string;
+  telepon?:        string;
+  luasWilayah:     number;   // km²
+  luasSawah?:      number;   // ha
+  luasHutan?:      number;   // ha
+  jumlahDusun:     number;
+  jumlahRt:        number;
+  jumlahRw:        number;
+  jumlahKk:        number;
+  mataPencaharian: string;
+  potensiUnggulan: string;
+  terakhirDiperbarui: Date;
+  aset:            AsetDesa[];
+  fasilitas:       FasilitasDesa[];
+  lembaga:         LembagaDesa[];
+  bumdes?:         BumdesInfo;
+  historyBelanja:  HistoryBelanja[];
+  badge:           DesaBadge;
+}
+
 export interface APBDesItem {
   kode: string;
   bidang: string;
@@ -70,6 +162,7 @@ export interface Desa {
   dokumen?: DokumenPublik[];
   skorTransparansi?: SkorTransparansi;
   pendapatan?: PendapatanDesa;
+  profil?: ProfilDesa;
 }
 
 export interface TrendData {

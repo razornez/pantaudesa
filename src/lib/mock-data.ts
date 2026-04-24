@@ -3,6 +3,7 @@ import {
   APBDesItem, OutputFisik, PerangkatDesa,
   RiwayatTahunan, DokumenPublik, SkorTransparansi, PendapatanDesa,
 } from "./types";
+import { mkProfilDesa, DESA_UPDATE_DAYS, DESA_WEBSITES } from "./profil-desa";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -242,15 +243,25 @@ const desaBase = [
 
 export const mockDesa: Desa[] = desaBase.map((d, i) => {
   const [ketepatan, kelengkapan, responsif] = allSkor[i];
+  const skor = mkSkor(d.persentaseSerapan, ketepatan, kelengkapan, responsif);
   return {
     ...d,
-    apbdes: mkApbdes(d.totalAnggaran, d.persentaseSerapan, d.kategori),
-    outputFisik: mkOutputFisik(d.kategori, d.persentaseSerapan),
-    perangkat: allPerangkat[i],
-    riwayat: mkRiwayat(d.totalAnggaran, d.persentaseSerapan, allTrend[i]),
-    dokumen: mkDokumen(d.tahun, d.persentaseSerapan),
-    skorTransparansi: mkSkor(d.persentaseSerapan, ketepatan, kelengkapan, responsif),
-    pendapatan: mkPendapatan(d.totalAnggaran),
+    apbdes:          mkApbdes(d.totalAnggaran, d.persentaseSerapan, d.kategori),
+    outputFisik:     mkOutputFisik(d.kategori, d.persentaseSerapan),
+    perangkat:       allPerangkat[i],
+    riwayat:         mkRiwayat(d.totalAnggaran, d.persentaseSerapan, allTrend[i]),
+    dokumen:         mkDokumen(d.tahun, d.persentaseSerapan),
+    skorTransparansi: skor,
+    pendapatan:      mkPendapatan(d.totalAnggaran),
+    profil:          mkProfilDesa({
+      kategori:      d.kategori,
+      penduduk:      d.penduduk,
+      totalAnggaran: d.totalAnggaran,
+      serapan:       d.persentaseSerapan,
+      skorTotal:     skor.total,
+      updateDaysAgo: DESA_UPDATE_DAYS[i],
+      website:       DESA_WEBSITES[i],
+    }),
   };
 });
 

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ExternalLink, Phone, ChevronRight, AlertTriangle, Lightbulb } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { getResponsibilities, ProblemCategory } from "@/lib/responsibility";
+import { ASSETS } from "@/lib/assets";
 
 interface Props {
   desa: Desa;
@@ -100,17 +102,36 @@ export default function TanggungJawabSection({ desa }: Props) {
     <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-5 sm:px-6 py-5">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle size={16} className="text-amber-400" />
-          <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Panduan Warga</p>
+      <div className="relative bg-gradient-to-r from-slate-900 to-slate-800 overflow-hidden">
+        {/* Texture overlay */}
+        <div className="absolute inset-0 opacity-[0.06]">
+          <Image src={ASSETS.textureDark} alt="" fill className="object-cover" />
         </div>
-        <h2 className="text-lg sm:text-xl font-black text-white">
-          Siapa yang Bertanggung Jawab?
-        </h2>
-        <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
-          Pilih masalahmu di bawah — kami tunjukkan ke mana harus melapor, langkah demi langkah.
-        </p>
+        <div className="relative flex items-center gap-0">
+          {/* Teks kiri */}
+          <div className="px-5 sm:px-6 py-5 flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-amber-400" />
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Panduan Warga</p>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-white">
+              Siapa yang Bertanggung Jawab?
+            </h2>
+            <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
+              Pilih masalahmu di bawah — kami tunjukkan ke mana harus melapor, langkah demi langkah.
+            </p>
+          </div>
+          {/* Ilustrasi kanan */}
+          <div className="hidden sm:block relative w-48 h-32 flex-shrink-0">
+            <Image
+              src={ASSETS.illustrationEskalasi}
+              alt="Warga melapor masalah ke pemerintah"
+              fill
+              className="object-contain object-bottom"
+              sizes="192px"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Tab selector */}

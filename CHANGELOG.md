@@ -14,8 +14,201 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fitur "Bandingkan Desa" — perbandingan side-by-side 2–3 desa
 - QR code per desa untuk transparansi offline-to-online
 - Halaman `/cerita-data` — narasi investigatif berbasis data
-- Form pengaduan warga terintegrasi per halaman desa
 - Integrasi data resmi: OMSPAN, SIPD, OpenData DJPK Kemenkeu
+- Dark theme untuk halaman detail desa
+- Backend + storage upload foto suara warga (S3 / Supabase)
+- Notifikasi push saat respons resmi desa masuk
+
+---
+
+## [0.7.0] — 2026-04-24
+
+### `feat(suara): VoiceCard lengkap — foto bukti, vote benar/bohong, thread komentar, respons resmi desa`
+
+Commit: `2fbf5f3` (VoiceCard, VoiceStats, SuaraWargaSection update, /suara page update)
+
+Ekspansi besar fitur Suara Warga: dari feed komentar sederhana menjadi ruang partisipasi
+warga yang nyata — dengan bukti foto, verifikasi komunitas via vote, percakapan dua arah,
+dan saluran respons resmi dari perangkat desa.
+
+#### Ditambahkan
+
+**`src/components/desa/VoiceCard.tsx`** *(baru)*
+- Komponen kartu suara warga yang dapat digunakan ulang (dipakai di `/desa/[id]/suara` dan `/suara`)
+- **Grid foto bukti**: tampilkan maks 4 foto, sisanya ditampilkan sebagai "+N"; klik foto membuka lightbox fullscreen
+- **Badge status penanganan** di setiap kartu:
+  - `Belum` — rose, ikon `AlertCircle`
+  - `Proses` — amber, ikon `Clock`
+  - `Selesai` — emerald, ikon `CheckCircle2`
+- **Vote Benar / Bohong**: tombol one-shot per sesi dengan optimistic counter — setelah memilih satu, keduanya disabled
+- **Thread komentar collapsible**: toggle show/hide dengan hitungan komentar di tombol
+- **Form reply langsung**: input nama (opsional, default anonim) + textarea + tombol Kirim / Batal — muncul di dalam thread tanpa navigasi
+- **Respons resmi desa disorot khusus**:
+  - Background emerald, border emerald, badge "Resmi Desa" dengan ikon perisai (`Shield`)
+  - Jika thread belum dibuka, preview snippet respons resmi muncul sebagai CTA collapsible hijau di bawah teks suara
+- Tombol "berguna" disabled setelah diklik (state `helpedIds` dikirim dari parent agar konsisten lintas render)
+
+**`src/components/suara/VoiceStats.tsx`** *(baru)*
+- 4 stat card berwarna: Total Suara (indigo), Belum Ditangani (rose), Sedang Diproses (amber), Sudah Selesai (emerald + rata-rata hari penyelesaian)
+- **Bar chart** suara per kategori menggunakan Recharts: kolom total berwarna per kategori + overlay kolom resolved (hijau muda)
+- **Pie chart donut** distribusi status penanganan (merah/kuning/hijau) dengan Legend dan tooltip
+- **Ranking desa paling aktif bersuara**: medali 🥇🥈🥉 untuk 3 besar, progress bar resolusi, jumlah total + breakdown belum/selesai per desa
+
+**`src/components/desa/SuaraWargaSection.tsx`** *(diperbarui)*
+- Form kini mendukung **upload foto bukti**:
+  - Tombol lampir foto (tersembunyi di `<input type="file">`, trigger via `ref.click()`)
+  - Maks 3 foto per kiriman
+  - Thumbnail preview 80×64px dengan tombol ×  hapus per foto (hover reveal)
+  - URL dibuat via `URL.createObjectURL` (client-only, tanpa server untuk MVP)
+- Feed diperbarui menggunakan `VoiceCard` baru
+- `CitizenVoice` yang dikirim via form kini menyertakan `photos[]`, `votes`, `status: "open"`, `replies: []`
+
+**`src/app/suara/page.tsx`** *(diperbarui)*
+- Tombol **"Lihat statistik"** di hero banner toggle `VoiceStats` panel — stats tersembunyi secara default
+- Feed diperbarui menggunakan `VoiceCard` dengan desa badge (📍 nama desa → link ke profil desa) di atas tiap kartu
+- `helpedIds` state di-share ke semua kartu agar tombol berguna konsisten
+
+**`src/lib/citizen-voice.ts`** *(diperluas)*
+- Tipe baru: `VoiceStatus` (`"open" | "in_progress" | "resolved"`)
+- Tipe baru: `VoiceReply` — field `isOfficialDesa: boolean` menandai respons dari perangkat desa
+- `CitizenVoice` diperluas: `photos: string[]`, `votes: { benar: number; bohong: number }`, `status`, `resolvedAt?`, `replies: VoiceReply[]`
+- `STATUS_CONFIG` — record konfigurasi UI per status (label panjang, label pendek, bg/text/border Tailwind)
+- 16 mock voices lintas 5 desa (Sukamaju, Harapan Jaya, Maju Bersama, Baru Makmur, Pura Harapan) dengan thread percakapan realistis, respons resmi kades, vote counts, dan foto bukti
+- Getter baru:
+  - `getVoiceStats()` → total, resolved, inProgress, open, desaCount, avgResolutionDays
+  - `getDesaRanking()` → array desa diurutkan by total suara, dengan breakdown open/resolved
+  - `getCategoryStats()` → array per kategori dengan total dan resolved count
+
+---
+
+## [0.6.0] — 2026-04-24
+
+### `feat(nav+detail): navigasi Suara Warga + integrasi seksi ke halaman detail desa`
+
+Commit: `2fbf5f3`
+
+#### Ditambahkan
+
+**`src/app/desa/[id]/suara/page.tsx`** *(baru)*
+- Halaman khusus suara warga per desa, dipisah dari halaman detail agar tidak menumpuk
+- `generateStaticParams()` untuk semua desa → SSG (20 halaman di-pre-render)
+- Mini header desa: nama, lokasi (kecamatan + kabupaten), status badge
+- Full `SuaraWargaSection` dengan desaId + desaNama
+- Back link ke `/desa/[id]`
+
+**`src/app/suara/page.tsx`** *(baru)*
+- Halaman global agregasi suara seluruh desa — rute `/suara` di menu navbar
+- Hero section dengan stats: total suara + jumlah desa + jumlah suara selesai
+- CTA "Ceritakan" → membuka desa selector dengan search field → redirect ke `/desa/[id]/suara`
+- Filter bar: dropdown desa + 6 category pill toggle
+- Feed `GlobalVoiceCard` = VoiceCard baru dibungkus desa badge per kartu
+
+#### Diubah
+
+**`src/components/layout/Navbar.tsx`**
+- Tambah menu item ketiga: **Suara Warga** → `/suara` (desktop + mobile)
+- Logo ganti dari `BarChart3` Lucide icon → `<Image src={ASSETS.logo} />` (32×32, object-cover, shadow-sm)
+
+**`src/app/desa/[id]/page.tsx`**
+- Import + render `SeharusnyaAdaSection` di bawah header desa
+- Import + render `TanggungJawabSection` setelah seksi Dokumen
+- Suara Warga diubah dari full section menjadi **preview card** yang menautkan ke `/desa/[id]/suara`:
+  - Banner gradient indigo–violet dengan jumlah suara aktif
+  - 2 preview voice teratas (`getVoicesForDesa(id).slice(0, 2)`)
+  - Footer CTA "Lihat semua suara & tambahkan ceritamu"
+- Hapus import `SuaraWargaSection` (dipindah ke halaman terpisah)
+
+---
+
+## [0.5.0] — 2026-04-24
+
+### `feat(civic): seksi hak warga "Seharusnya Ada" + panel eskalasi "Tanggung Jawab"`
+
+Commit: `2fbf5f3`
+
+Dua seksi baru yang mengubah halaman detail desa dari laporan pasif menjadi alat
+advokasi aktif: warga bisa tahu apa yang seharusnya ada di desanya, dan tahu ke mana
+harus melapor kalau sesuatu tidak beres.
+
+#### Ditambahkan
+
+**`src/lib/expectations.ts`** *(baru)*
+- Fungsi murni `getExpectations(desa: Desa): DesaExpectation`
+- Kalkulasi otomatis dari data desa nyata:
+  - Jumlah KK yang seharusnya dapat BLT = 20% Dana Desa ÷ Rp 3.600.000
+  - Jumlah posyandu seharusnya ada = total penduduk ÷ 500
+  - APBDes breakdown 5 bidang berdasarkan bobot kategori desa (Infrastruktur, Kesehatan, dll.)
+- Item diberi tag: `wajib` (harus ada), `direncanakan` (ada di APBDes), `tanyakan` (perlu dikonfirmasi)
+
+**`src/components/desa/SeharusnyaAdaSection.tsx`** *(baru)*
+- Banner gelap dengan nominal dana desa: *"Dengan Rp X, desa ini seharusnya bisa…"*
+- Checklist 3 grup per status:
+  - **Wajib** (emerald ✓) — hak yang harus ada berdasarkan regulasi
+  - **Direncanakan** (indigo) — sesuai APBDes yang ada
+  - **Tanyakan** (amber ?) — patut dikonfirmasi ke perangkat desa
+- Verdict bar di bawah: persentase serapan + kalimat kontekstual berdasarkan tone
+
+**`src/lib/responsibility.ts`** *(baru)*
+- Fungsi murni `getResponsibilities(desa: Desa): ProblemCategory[]`
+- 6 kategori masalah: `infrastruktur`, `bansos`, `anggaran`, `korupsi`, `perizinan`, `pelayanan`
+- Tiap kategori memiliki 3 level eskalasi, diisi dengan nama nyata dari data desa:
+  - Level 1: Kepala Desa + nomor kontak
+  - Level 2: Camat / BPD + kecamatan
+  - Level 3: Inspektorat / ORI / KPK + kabupaten
+- Tiap level: deskripsi tindakan, link `tel:`, URL eksternal (LAPOR.go.id, inspektorat, ORI, dll.)
+
+**`src/components/desa/TanggungJawabSection.tsx`** *(baru — client component)*
+- Banner gelap dengan judul seksi
+- 6 tab kategori dengan emoji icon — aktif per klik
+- Timeline eskalasi bernomor dengan garis vertikal: lingkaran 1=hijau, 2=kuning, 3=merah
+- Tiap step: nama kontak, deskripsi tindakan, tombol tel:, link eksternal
+- Tips warga per kategori
+- CTA bar universal LAPOR.go.id di bagian bawah
+
+**`src/components/desa/SuaraWargaSection.tsx`** *(baru — client component)*
+- 6 category pill selector (bukan dropdown) dengan animasi scale + ring saat aktif
+- Textarea dengan counter karakter yang berubah warna: slate → amber (70%) → rose (90%)
+- Custom toggle switch anonim — UI native tanpa library
+- Validasi submit: min 10 karakter + kategori wajib dipilih
+- Success state dengan ikon `Sparkles` dan pesan terima kasih
+- Feed voice card dengan thumbs-up optimistik + toggle "lihat X cerita lainnya"
+
+---
+
+## [0.4.0] — 2026-04-24
+
+### `feat(hero): revamp hero section — hero.webp, film grain, brush highlight, receipt card, live ticker, ⌘K`
+
+Commit: `c7ede61`
+
+Hero section didesain ulang dari nol: dari gradient flat yang "biasa saja" menjadi
+visual yang hidup, punya karakter kuat, dan langsung menyampaikan nilai platform.
+
+#### Ditambahkan
+
+**`src/components/home/HeroSection.tsx`** *(baru — client component)*
+- **Background layered**:
+  - `hero.webp` sebagai base fill layer (object-cover)
+  - Gradient directional `linear-gradient(105deg, rgba(55,48,163,1.00) 0% → rgba(124,58,237,0.05) 100%)` di atas gambar — indigo penuh di kiri, transparan di kanan sehingga gambar terlihat
+  - SVG film-grain noise via data URI (`opacity: 0.038`) untuk tekstur halus
+- **Brush-highlight sweep** pada kata *"desamu"*: pseudo-element `::before` dengan background amber sweeping dari `scaleX(0)` ke `scaleX(1)` pada delay 0.8s
+- **Struk receipt miring** (`rotate-6`): daftar 5 bidang APBDes + progress bar per bidang, animasi pengisian dimulai 900ms setelah load
+- **Live ticker marquee**: 3 set item (total desa, transparansi baik, warga aktif) berputar 28s infinite loop dengan CSS `translateX`
+- **Keyboard shortcut ⌘K / Ctrl+K** → `router.push("/desa")` via `useEffect` + `keydown` listener
+- **Stagger fade-up**: tiap elemen hero masuk bertahap dengan delay 0ms, 100ms, 200ms, 400ms
+- Props: `totalDesa: number`, `tahun: number`
+
+**`src/app/globals.css`**
+- `@keyframes ticker` — `translateX(0 → -33.333%)` untuk marquee 3-set
+- `.animate-ticker` — `animation: ticker 28s linear infinite`
+- `.brush-highlight::before` — amber sweep dengan `transform-origin: left`, delay 0.8s
+- `.receipt-perf` — `radial-gradient(circle, #e2e8f0 4px, transparent 4px)` dot background
+- Fade-up animation: `@keyframes fadeUp` + `.animate-fade-up` + `.animation-delay-{100,200,400}`
+
+#### Diubah
+
+**`src/app/page.tsx`**
+- Ganti inline hero JSX dengan `<HeroSection totalDesa={...} tahun={...} />`
 
 ---
 

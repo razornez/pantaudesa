@@ -1,34 +1,37 @@
 /**
  * assets.ts — registry terpusat untuk semua aset gambar PantauDesa.
- *
- * Untuk mengganti gambar, cukup ubah path di sini — tidak perlu menyentuh komponen.
- * Semua path relatif terhadap folder /public.
+ * Untuk mengganti gambar, cukup ubah path di sini.
  */
 
 export const ASSETS = {
-  /** Logo bulat indigo — dipakai di Navbar */
-  logo: "/images/logo.webp",
+  // ── Brand ────────────────────────────────────────────────────────────────
+  logo:                    "/images/logo.webp",
 
-  /** Pattern background hero — ikon-ikon kecil desa di atas biru gelap */
-  bgPattern: "/images/bg-pattern.webp",
+  // ── Mascot ───────────────────────────────────────────────────────────────
+  mascotStanding:          "/images/mascot-standing.webp",
+  mascotEmpty:             "/images/mascot-empty.webp",
 
-  /** Pak Waspada dengan peta Indonesia + kaca pembesar — hero homepage */
-  hero: "/images/hero.webp",
+  // ── Hero & Texture ───────────────────────────────────────────────────────
+  /** Pak Waspada + peta Indonesia — hero homepage */
+  hero:                    "/images/hero.webp",
+  /** Pattern desa (rumah, padi, gunung) — overlay pada dark header */
+  textureDark:             "/images/texture-dark.webp",
+  /** Pattern desa biru muda outline — overlay ringan pada light card */
+  textureLight:            "/images/texture-light.webp",
 
-  /** Pak Waspada berdiri, memegang tablet grafik */
-  mascotStanding: "/images/mascot-standing.webp",
-
-  /** Pak Waspada bingung + clipboard — empty state ketika tidak ada hasil */
-  mascotEmpty: "/images/mascot-empty.webp",
-
-  /** Tiga warga Indonesia melihat dashboard — CTA section */
-  illustrationCitizen: "/images/illustration-citizen.webp",
-
+  // ── Illustrations ────────────────────────────────────────────────────────
+  /** Tiga warga lihat dashboard — CTA section homepage */
+  illustrationCitizen:     "/images/illustration-citizen.webp",
   /** Desa bermasalah: jalan berlubang, posyandu mangkrak — alert section */
-  illustrationAlert: "/images/illustration-alert.webp",
-
-  /** Folder terbuka + dokumen APBDes/LPPD/RKP — seksi dokumen publik */
-  illustrationDocs: "/images/illustration-docs.webp",
+  illustrationAlert:       "/images/illustration-alert.webp",
+  /** Folder terbuka + dokumen — tab dokumen */
+  illustrationDocs:        "/images/illustration-docs.webp",
+  /** Pemuda + clipboard checklist — SeharusnyaAda header */
+  illustrationHakWarga:    "/images/illustration-hak-warga.webp",
+  /** Warga + megafon + tangga eskalasi — TanggungJawab header */
+  illustrationEskalasi:    "/images/illustration-eskalasi.webp",
+  /** Desa maju 90%: posyandu, balai desa, lapangan — leaderboard */
+  illustrationDesaBaik:    "/images/illustration-desa-baik.webp",
 } as const;
 
 export type AssetKey = keyof typeof ASSETS;
