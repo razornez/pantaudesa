@@ -8,8 +8,9 @@ import { Menu, X } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 
 const navLinks = [
-  { href: "/",     label: "Beranda" },
-  { href: "/desa", label: "Data Desa" },
+  { href: "/",       label: "Beranda"      },
+  { href: "/desa",   label: "Data Desa"    },
+  { href: "/suara",  label: "Suara Warga"  },
 ];
 
 export default function Navbar() {

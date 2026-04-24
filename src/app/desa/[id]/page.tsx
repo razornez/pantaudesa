@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft, MapPin, Users, Tag, Calendar,
   TrendingUp, Wallet, CheckCircle2, Clock,
-  FileText, ExternalLink,
+  FileText, ExternalLink, Megaphone, ArrowRight,
 } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import { formatRupiah, formatRupiahFull, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { SECTION, BUDGET_ITEMS, PENDAPATAN, DOKUMEN, PENGADUAN } from "@/lib/copy";
 import { getAbsorptionVerdict } from "@/lib/verdicts";
 import { ASSETS } from "@/lib/assets";
+import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import BudgetBarChart from "@/components/desa/BudgetBarChart";
 import APBDesBreakdown from "@/components/desa/APBDesBreakdown";
 import SkorTransparansiCard from "@/components/desa/SkorTransparansiCard";
@@ -18,7 +19,9 @@ import OutputFisikCards from "@/components/desa/OutputFisikCards";
 import PerangkatDesaSection from "@/components/desa/PerangkatDesaSection";
 import RiwayatChart from "@/components/desa/RiwayatChart";
 import DownloadButton from "@/components/desa/DownloadButton";
+import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import VerdictBanner from "@/components/ui/VerdictBanner";
+import { getVoicesForDesa } from "@/lib/citizen-voice";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -36,6 +39,7 @@ export default async function DesaDetailPage({ params }: Props) {
 
   const selisih           = desa.totalAnggaran - desa.terealisasi;
   const absorptionVerdict = getAbsorptionVerdict(desa.persentaseSerapan, selisih);
+  const voicePreview      = getVoicesForDesa(desa.id).slice(0, 2);
 
   const infoItems = [
     { icon: MapPin,   label: "Kecamatan",      value: desa.kecamatan },
@@ -105,6 +109,9 @@ export default async function DesaDetailPage({ params }: Props) {
           <VerdictBanner verdict={absorptionVerdict} />
         </div>
       </div>
+
+      {/* Seharusnya Ada Apa — hak warga berdasarkan anggaran */}
+      <SeharusnyaAdaSection desa={desa} />
 
       {/* Budget Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -200,12 +207,12 @@ export default async function DesaDetailPage({ params }: Props) {
           {/* Header dengan ilustrasi */}
           <div className="flex flex-col sm:flex-row items-center gap-0">
             {/* Ilustrasi dokumen */}
-            <div className="relative w-full sm:w-56 h-44 flex-shrink-0 bg-indigo-50">
+            <div className="relative w-full sm:w-56 h-44 flex-shrink-0">
               <Image
                 src={ASSETS.illustrationDocs}
                 alt="Ilustrasi dokumen publik desa"
                 fill
-                className="object-contain object-center p-3"
+                className="object-cover object-center"
                 sizes="(max-width: 640px) 100vw, 224px"
               />
             </div>
@@ -218,7 +225,7 @@ export default async function DesaDetailPage({ params }: Props) {
           </div>
 
           {/* Daftar dokumen */}
-          <div className="px-5 pb-5">
+          <div className="px-5 p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {desa.dokumen.map((dok, i) => (
                 <div
@@ -252,10 +259,60 @@ export default async function DesaDetailPage({ params }: Props) {
         </div>
       )}
 
-      {/* Pengaduan */}
+      {/* Siapa yang Bertanggung Jawab */}
+      <TanggungJawabSection desa={desa} />
+
+      {/* Suara Warga — preview card → link ke halaman terpisah */}
+      <Link
+        href={`/desa/${desa.id}/suara`}
+        className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all"
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <Megaphone size={17} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Suara Warga</p>
+              <p className="text-xs text-indigo-200">
+                {voicePreview.length > 0
+                  ? `${getVoicesForDesa(desa.id).length} warga sudah bersuara — lihat & tambahkan ceritamu`
+                  : "Belum ada suara — jadilah yang pertama bercerita"}
+              </p>
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" />
+        </div>
+
+        {/* Preview voices */}
+        {voicePreview.length > 0 && (
+          <div className="bg-white divide-y divide-slate-50">
+            {voicePreview.map((v) => (
+              <div key={v.id} className="px-5 py-3 flex items-start gap-3">
+                <span className="text-base flex-shrink-0 mt-0.5">
+                  {/* emoji from category */}
+                  {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{v.author}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer CTA */}
+        <div className="bg-indigo-50 px-5 py-2.5 flex items-center justify-between">
+          <span className="text-xs text-indigo-600 font-semibold">Lihat semua suara & tambahkan ceritamu</span>
+          <ArrowRight size={13} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
+        </div>
+      </Link>
+
+      {/* Pak Waspada + tombol lapor ringkas */}
       <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
-        <div className="flex items-end gap-0">
-          {/* Konten teks + tombol */}
+        <div className="flex items-end">
           <div className="flex-1 p-5">
             <h2 className="text-sm font-semibold text-amber-800 mb-1">{PENGADUAN.title}</h2>
             <p className="text-xs text-amber-700 mb-4">{PENGADUAN.subtitle}</p>
@@ -274,9 +331,7 @@ export default async function DesaDetailPage({ params }: Props) {
               </span>
             </div>
           </div>
-
-          {/* Pak Waspada — disembunyikan di layar kecil */}
-          <div className="hidden sm:block flex-shrink-0 w-32 relative">
+          <div className="hidden sm:block flex-shrink-0 w-32">
             <Image
               src={ASSETS.mascotStanding}
               alt="Pak Waspada siap mengawasi"
