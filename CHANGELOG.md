@@ -10,6 +10,83 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 > Fitur-fitur yang sedang dalam rencana atau pengerjaan.
 
 - Peta choropleth interaktif Indonesia (drill-down provinsi → kabupaten → desa)
+- Follow desa / warga lain + feed aktivitas
+- Search profil warga
+- Sistem laporan konten (flag suara palsu)
+
+---
+
+## [1.0.0] — 2026-04-24
+
+### `feat(profil-warga): profil user, trust badge 5 level, history suara & notifikasi`
+
+Commit: `409cc57`
+
+#### Ditambahkan
+
+**`/profil/[username]`** — Profil Publik Warga
+- Cover gradient otomatis sesuai tier badge (slate → sky → amber → indigo → violet)
+- Avatar dengan ring-4 putih + fallback inisial berwarna
+- Nama, @username, bio, tanggal bergabung
+- **4 stat pill**: Suara, Terbukti Benar, Berguna, Diselesaikan
+- **Trust Progress Bar**:
+  - 5 emoji icon tier (Pengamat 👁️ → Warga Aktif 🙋 → Suara Terpercaya ⭐ → Pahlawan Desa 🦸 → Pejuang Desa 🏆)
+  - Bar progress warna per tier + skor saat ini + milestone berikutnya
+- **Riwayat suara** sebagai mini card: kategori badge, status badge, desa, waktu, stat votes/helpful/replies
+- Tombol "Edit Profil" hanya muncul untuk pemilik profil
+
+**`/profil/saya`** — Halaman Edit Privat
+- Tab **Profil / Suara / Notifikasi** dengan badge counter
+- Tab Profil:
+  - Avatar editor dengan overlay kamera + file input hidden
+  - Input nama (editable), username (read-only dengan label jelas)
+  - Bio 160 karakter
+  - Trust Card: badge tier + deskripsi + progress bar + poin berikutnya
+  - Simpan dengan loading state → update session di AuthContext
+- Tab Suara: riwayat lengkap dengan status + stat inline + link ke halaman desa
+- Tab Notifikasi: list notif (reply/vote/helpful/resolved), dot belum-dibaca, mark one/all read, empty state dengan BellOff icon
+
+**`src/lib/user-profile.ts`** *(baru)*
+- `UserBadge` type + `USER_BADGES` record (5 tier dengan label, emoji, warna, minScore)
+- `computeTrustStats(username)` — hitung skor dari suara, votes, helpful, replies, resolved
+- `getVoicesByAuthor(name)` — filter CitizenVoice by author name
+- `UserNotification` type: id, type, voiceId, voiceText, fromName, isOfficial, message, createdAt, isRead
+- `NOTIF_CONFIG` — icon & warna per tipe notifikasi
+- `MOCK_NOTIFICATIONS` — notif realistis untuk Pak Muryanto & Ibu Sumarni
+- `getNotifications(name)`, `getUnreadCount(name)`
+
+**`src/components/user/UserAvatar.tsx`** *(baru)*
+- Reusable dengan 4 size (sm/md/lg/xl)
+- Fallback inisial + warna deterministik dari nama
+- Support `avatarUrl` untuk gambar custom
+
+**`src/components/user/BadgePill.tsx`** *(baru)*
+- Variant `compact` (inline pill kecil) dan full (dengan deskripsi)
+
+#### Diubah
+
+**`src/lib/auth-mock.ts`**
+- Role baru: `"warga"` (selain `"desa"` dan `"admin"`)
+- `AuthUser` diperluas: `username` (unik, tidak bisa diubah), `bio?`, `joinedAt: Date`
+- `MOCK_ACCOUNTS` — semua akun digabung, tambah 2 mock warga
+- `getAccountByEmail()` sekarang mencari di `MOCK_ACCOUNTS` tunggal
+
+**`src/lib/auth-context.tsx`**
+- Tambah `revive()` untuk restore `Date` fields setelah `JSON.parse` dari sessionStorage
+
+**`src/app/login/page.tsx`**
+- **Tab switcher** Warga ↔ Desa/Admin di atas form
+- Validasi role mismatch (warga email tidak bisa masuk lewat tab Desa)
+- Demo email warga: pak.muryanto@gmail.com, ibu.sumarni@gmail.com
+
+**`src/components/layout/Navbar.tsx`**
+- Warga: avatar + nama depan, bell dengan badge unread count, link `/profil/saya`
+- Desa/Admin: dashboard shortcut + logout (tidak berubah)
+- Guest: tombol "Masuk" sederhana
+
+---
+
+## [0.9.0] — 2026-04-24
 - Halaman `/panduan` — glossary dan FAQ keresahan warga
 - Fitur "Bandingkan Desa" — perbandingan side-by-side 2–3 desa
 - QR code per desa untuk transparansi offline-to-online
