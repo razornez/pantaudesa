@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { AuthUser, getAccountByEmail } from "./auth-mock";
+import { AuthUser } from "./auth-mock";
 
 interface AuthCtx {
   user:    AuthUser | null;
@@ -14,7 +14,14 @@ const Ctx = createContext<AuthCtx>({
   user: null, login: () => {}, logout: () => {}, loading: true,
 });
 
-const STORAGE_KEY = "pantaudesa_user";
+const KEY = "pantaudesa_user";
+
+function revive(raw: string): AuthUser {
+  const parsed = JSON.parse(raw);
+  // Restore Date fields that JSON.parse turns into strings
+  if (parsed.joinedAt) parsed.joinedAt = new Date(parsed.joinedAt);
+  return parsed as AuthUser;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<AuthUser | null>(null);
@@ -22,20 +29,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
+      const raw = sessionStorage.getItem(KEY);
+      if (raw) setUser(revive(raw));
     } catch {}
     setLoading(false);
   }, []);
 
   const login = (u: AuthUser) => {
     setUser(u);
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    sessionStorage.setItem(KEY, JSON.stringify(u));
   };
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(KEY);
   };
 
   return <Ctx.Provider value={{ user, login, logout, loading }}>{children}</Ctx.Provider>;

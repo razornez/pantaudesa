@@ -3,32 +3,56 @@
  * Ganti dengan API calls nyata saat backend tersedia.
  */
 
-export type UserRole = "desa" | "admin";
+export type UserRole = "desa" | "admin" | "warga";
 
 export interface AuthUser {
-  id:       string;
-  nama:     string;
-  email:    string;
-  role:     UserRole;
-  desaId?:  string;  // hanya untuk role "desa"
-  desaNama?:string;
-  avatar?:  string;
+  id:        string;
+  nama:      string;
+  username:  string;  // @handle, unik, tidak bisa diubah
+  email:     string;
+  role:      UserRole;
+  avatarUrl?: string;
+  bio?:       string;
+  joinedAt:   Date;
+  // Hanya untuk role "desa"
+  desaId?:   string;
+  desaNama?: string;
 }
 
 // ─── Mock accounts ────────────────────────────────────────────────────────────
 
-export const MOCK_DESA_ACCOUNTS: Record<string, { password: string; user: AuthUser }> = {
+export const MOCK_ACCOUNTS: Record<string, AuthUser> = {
+  // Desa accounts
   "desa.sukamaju@gmail.com": {
-    password: "123456",
-    user: { id: "u1", nama: "H. Asep Supriatna, S.H.", email: "desa.sukamaju@gmail.com", role: "desa", desaId: "1", desaNama: "Desa Sukamaju" },
+    id: "u1", nama: "H. Asep Supriatna, S.H.", username: "kades_sukamaju",
+    email: "desa.sukamaju@gmail.com", role: "desa",
+    desaId: "1", desaNama: "Desa Sukamaju",
+    joinedAt: new Date("2024-01-15"),
   },
   "desa.harapanjaya@gmail.com": {
-    password: "123456",
-    user: { id: "u2", nama: "Dadang Sutisna, A.Md.", email: "desa.harapanjaya@gmail.com", role: "desa", desaId: "2", desaNama: "Desa Harapan Jaya" },
+    id: "u2", nama: "Dadang Sutisna, A.Md.", username: "kades_harapanjaya",
+    email: "desa.harapanjaya@gmail.com", role: "desa",
+    desaId: "2", desaNama: "Desa Harapan Jaya",
+    joinedAt: new Date("2024-02-01"),
   },
+  // Admin
   "admin@pantaudesa.id": {
-    password: "admin123",
-    user: { id: "a1", nama: "Admin PantauDesa", email: "admin@pantaudesa.id", role: "admin" },
+    id: "a1", nama: "Admin PantauDesa", username: "admin_pantaudesa",
+    email: "admin@pantaudesa.id", role: "admin",
+    joinedAt: new Date("2023-12-01"),
+  },
+  // Warga accounts (demo)
+  "pak.muryanto@gmail.com": {
+    id: "w1", nama: "Pak Muryanto", username: "muryanto87",
+    email: "pak.muryanto@gmail.com", role: "warga",
+    bio: "Warga Desa Maju Bersama. Peduli transparansi anggaran desa.",
+    joinedAt: new Date("2024-03-10"),
+  },
+  "ibu.sumarni@gmail.com": {
+    id: "w2", nama: "Ibu Sumarni", username: "sumarni_warga",
+    email: "ibu.sumarni@gmail.com", role: "warga",
+    bio: "Ibu rumah tangga yang ingin tahu anggaran desanya dipakai untuk apa.",
+    joinedAt: new Date("2024-04-05"),
   },
 };
 
@@ -38,8 +62,8 @@ const OTP_STORE: Record<string, { code: string; expiresAt: number }> = {};
 
 export function generateOTP(email: string): string {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  OTP_STORE[email] = { code, expiresAt: Date.now() + 5 * 60_000 }; // 5 menit
-  console.info(`[MOCK OTP] ${email} → ${code}`); // di produksi ini dikirim via email/WA
+  OTP_STORE[email] = { code, expiresAt: Date.now() + 5 * 60_000 };
+  console.info(`[MOCK OTP] ${email} → ${code}`);
   return code;
 }
 
@@ -53,10 +77,10 @@ export function verifyOTP(email: string, code: string): boolean {
 }
 
 export function getAccountByEmail(email: string): AuthUser | null {
-  return MOCK_DESA_ACCOUNTS[email]?.user ?? null;
+  return MOCK_ACCOUNTS[email] ?? null;
 }
 
-// ─── Document status types ────────────────────────────────────────────────────
+// ─── Document status ──────────────────────────────────────────────────────────
 
 export type DocStatus = "menunggu_review" | "disetujui" | "ditolak";
 
@@ -64,10 +88,10 @@ export interface UploadedDoc {
   id:          string;
   desaId:      string;
   desaNama:    string;
-  jenis:       string;   // "APBDes", "LPPD", "RKP", "Profil", dll.
+  jenis:       string;
   nama:        string;
   tahun:       number;
-  fileUrl:     string;   // blob URL (mock) atau path
+  fileUrl:     string;
   fileSize:    string;
   uploadedAt:  Date;
   uploadedBy:  string;
@@ -75,8 +99,6 @@ export interface UploadedDoc {
   reviewNote?: string;
   reviewedAt?: Date;
 }
-
-// ─── Mock uploaded documents ──────────────────────────────────────────────────
 
 export const MOCK_UPLOADS: UploadedDoc[] = [
   {
