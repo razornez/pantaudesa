@@ -16,6 +16,55 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.0] — 2026-04-24
+
+### `feat(ux): registrasi warga, panduan FAQ, bandingkan desa, SEO global & 404`
+
+Commit: `c0ed0eb`
+
+#### Ditambahkan
+
+**`/daftar`** — Registrasi Warga 4 Langkah
+- Step 1 "info": nama (auto-generate username slug dari nama), username (a-z0-9_, 3–20 karakter, read-only setelah isi), email, bio opsional
+- Step 2 "otp": verifikasi kode OTP 6 digit
+- Step 3 "avatar": upload foto profil opsional dengan preview (Camera overlay button)
+- Step 4 "done": sukses + redirect ke /profil/saya
+- `ProgressDots` component — 4 titik animasi step indicator
+
+**`/panduan`** — Panduan & FAQ (Server Component, SEO-ready)
+- 5 seksi accordion `<details>/<summary>`: Memulai, Anggaran Desa, Suara Warga, Hak & Kewajiban, Akun & Profil
+- Quick-nav pills per seksi (jump link ke anchor `#id`)
+- CTA bottom: Daftar Sekarang + Cari Desamu
+- `Metadata` export untuk SEO (title, description)
+
+**`/bandingkan`** — Perbandingan Desa Side-by-Side (Client Component)
+- `DesaPicker` — search dropdown dengan filter, exclude pilihan lawan
+- `CompRow` — row perbandingan dengan winner highlight (emerald bold)
+- Dual progress bar serapan anggaran
+- Tabel: total anggaran, terealisasi, %, penduduk, anggaran/jiwa, fokus, provinsi, skor transparansi
+- Tren 3 tahun terakhir (per desa)
+- Ketersediaan dokumen (APBDes, Realisasi, RKP, LKPD)
+- CTA link ke profil masing-masing desa
+
+**`/not-found`** — 404 Redesign
+- Ikon peta 🗺️ dalam kotak gradient dengan badge "?" overlay
+- Copy citizen-friendly: "Desa ini tidak ada di peta kami"
+- Dua tombol aksi (Beranda + Cari Desa) + link bantuan ke /panduan
+
+#### Diubah
+
+**`src/app/layout.tsx`**
+- Full SEO metadata: OpenGraph (website, id_ID, siteName), Twitter card (`summary_large_image`), keywords array, robots `{index: true, follow: true}`
+- Title template `"%s — PantauDesa"`
+
+**`src/app/login/page.tsx`**
+- Link /daftar menggantikan mailto:; validasi pesan mismatch role lebih jelas
+
+**`src/components/layout/Navbar.tsx`**
+- navLinks diperluas ke 5: tambah "Bandingkan" (/bandingkan) dan "Panduan" (/panduan)
+
+---
+
 ## [1.0.0] — 2026-04-24
 
 ### `feat(profil-warga): profil user, trust badge 5 level, history suara & notifikasi`
