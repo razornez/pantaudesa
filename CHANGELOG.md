@@ -14,10 +14,121 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fitur "Bandingkan Desa" — perbandingan side-by-side 2–3 desa
 - QR code per desa untuk transparansi offline-to-online
 - Halaman `/cerita-data` — narasi investigatif berbasis data
+- Backend nyata: Supabase Auth, PostgreSQL, S3 storage
 - Integrasi data resmi: OMSPAN, SIPD, OpenData DJPK Kemenkeu
-- Dark theme untuk halaman detail desa
-- Backend + storage upload foto suara warga (S3 / Supabase)
-- Notifikasi push saat respons resmi desa masuk
+- Notifikasi push/email saat status dokumen berubah
+- OTP via WhatsApp (Twilio/Fonnte) menggantikan simulasi
+
+---
+
+## [0.9.0] — 2026-04-24
+
+### `feat(auth): portal login desa + dashboard desa + admin review panel`
+
+Commit: `88908dd`
+
+Implementasi sistem autentikasi dan manajemen konten desa — semuanya UI mockup siap-backend.
+Login menggunakan **Email + OTP 6 digit** (no password) agar tidak ada credential yang bisa lupa atau lemah.
+
+#### Ditambahkan
+
+**`/login`** — Halaman Login Portal Desa
+- Split layout: ilustrasi kiri (indigo gradient + feature list + mascot), form kanan
+- **Flow 3 langkah**: email → OTP → success redirect
+- OTP Input: 6 kotak terpisah, auto-focus, paste support (tempel langsung dari clipboard)
+- Demo banner tampilkan kode OTP simulasi (mock email)
+- Countdown resend 60 detik
+- Redirect otomatis: role `desa` → `/desa-admin`, role `admin` → `/admin`
+
+**`/desa-admin`** — Dashboard Utama Desa
+- Topbar: logo, nama desa, bell (badge jika ada pending), avatar, logout
+- Welcome card gradient dengan jumlah dokumen menunggu review
+- 4 quick action cards: Upload Dokumen, Profil Desa, Dokumenku, Lihat Profil Publik
+- Stats grid: Disetujui / Menunggu Review / Ditolak
+- Panel info desa ringkas (penduduk, serapan %, wilayah)
+- Recent docs list dengan status badge
+- Alert card merah untuk dokumen yang ditolak + CTA upload ulang
+
+**`/desa-admin/dokumen`** — Upload & Riwayat Dokumen
+- Form kiri: jenis dokumen (dropdown), tahun, file upload
+- Drop zone drag-and-drop dengan animasi scale saat drag aktif
+- Validasi: hanya PDF/Excel, maks 10 MB
+- Simulasi progress bar upload 0–100%
+- Riwayat unggahan kanan: status badge + catatan admin jika ditolak
+- Success toast animated setelah upload sukses
+
+**`/desa-admin/profil`** — Pengaturan Profil Desa
+- Section **Identitas** — read-only (kecamatan, kabupaten, provinsi, penduduk, anggaran)
+- Section **Kontak & Web** — website URL, email, nomor telepon/WA
+- Section **Potensi** — potensi unggulan, mata pencaharian
+- Section **Sumber Data API** — URL integrasi SIPD/OMSPAN/custom (dengan penjelasan cara kerja)
+- Section **Keamanan** — ganti PIN 6 digit + konfirmasi + toggle show/hide
+- Auto-save indicator di topbar setelah simpan
+
+**`/admin`** — Panel Review Admin PantauDesa
+- Dark topbar dengan pending counter badge
+- 4 stat cards: total/pending/disetujui/ditolak
+- Filter bar per status
+- ReviewCard expandable: preview placeholder + textarea catatan admin +
+  tombol **Setujui & Publish** (emerald) / **Tolak & Kembalikan** (rose)
+- Pending docs diexpand default + sorted pending-first
+- Perubahan status tersimpan di state lokal (optimistic)
+
+**`src/lib/auth-mock.ts`** *(baru)*
+- Mock accounts: 2 desa + 1 admin (email siap demo)
+- `generateOTP(email)` + `verifyOTP(email, code)` dengan TTL 5 menit
+- `UploadedDoc` type dengan status `menunggu_review | disetujui | ditolak`
+- 4 mock uploaded documents dengan berbagai status
+
+**`src/lib/auth-context.tsx`** *(baru)*
+- `AuthProvider` + `useAuth()` hook
+- Persist session ke `sessionStorage` (hilang saat tab ditutup)
+- `login(user)` + `logout()` actions
+
+#### Diubah
+
+**`src/components/layout/Navbar.tsx`**
+- Tombol **"Masuk Portal Desa"** untuk guest (kanan desktop)
+- **Dashboard shortcut** + **logout** untuk user yang sudah login
+- Navbar tersembunyi di `/login`, `/desa-admin*`, `/admin*` (halaman punya header sendiri)
+
+**`src/app/layout.tsx`**
+- Wrap seluruh app dengan `<AuthProvider>`
+
+---
+
+## [0.8.0] — 2026-04-24
+
+### `feat(visual): reduce illustration overload + cleanup unused image assets`
+
+Commit: `88908dd`
+
+#### Diubah
+
+**`src/components/desa/TransparansiCard.tsx`**
+- Hapus 2 banner landscape gambar (tab Transparansi & Perangkat) — diganti header ikon berwarna
+- Tab icons: `BarChart3` (transparansi), `Users2` (perangkat), `FileText` (dokumen)
+- Thumbnail `illustrationDocs` dipertahankan di tab Dokumen (ukuran kompak 48×48px)
+
+**`src/components/desa/KelengkapanDesa.tsx`**
+- Hapus texture overlay + ilustrasi desa di header
+- Diganti: `bg-slate-800` solid + emoji icon `🏛️` — lebih bersih, tidak ramai
+
+**`src/components/desa/DesaHeroCard.tsx`**
+- Hapus thumbnail kondisional desa baik/buruk (96×56px) di strip potensi
+- Diganti: strip `bg-slate-50/50` murni teks — lebih clean
+
+#### Dihapus dari `public/`
+
+- `images/bg-pattern.webp` — tidak dipakai di manapun
+- Root-level file ASET 1–6 + "gambaran desa baik" (semua sudah di-copy ke `/images/`)
+
+#### Diperbarui
+
+**`src/lib/assets.ts`**
+- Hapus entry `bgPattern` dan `textureSoft`
+- Tambah entri baru: `textureLight`, `textureDark`, `illustrationHakWarga`,
+  `illustrationEskalasi`, `illustrationTransparansi`, `illustrationPerangkat`, `illustrationDesaBaik`
 
 ---
 
