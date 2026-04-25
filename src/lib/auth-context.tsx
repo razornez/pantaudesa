@@ -11,16 +11,18 @@ import { useSession, signOut } from "next-auth/react";
 export type UserRole = "WARGA" | "DESA" | "ADMIN";
 
 export interface AuthUser {
-  id:        string;
-  nama:      string;
-  username:  string;
-  email:     string;
-  role:      UserRole;
-  avatarUrl?: string;
-  bio?:       string;
-  joinedAt?:  Date;
-  desaId?:   string;
-  desaNama?: string;
+  id:           string;
+  nama:         string;
+  username:     string;
+  email:        string;
+  role:         UserRole;
+  avatarUrl?:   string;
+  bio?:         string;
+  joinedAt?:    Date;
+  desaId?:      string;
+  desaNama?:    string;
+  /** true when user logged in but hasn't completed /daftar yet */
+  isIncomplete: boolean;
 }
 
 interface AuthCtx {
@@ -36,12 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user: AuthUser | null = session?.user
     ? {
-        id:        session.user.id,
-        nama:      session.user.name ?? session.user.username ?? "",
-        username:  session.user.username ?? "",
-        email:     session.user.email ?? "",
-        role:      (session.user.role as UserRole) ?? "WARGA",
-        avatarUrl: session.user.image ?? undefined,
+        id:           session.user.id,
+        nama:         session.user.name ?? session.user.username ?? "",
+        username:     session.user.username ?? "",
+        email:        session.user.email ?? "",
+        role:         (session.user.role as UserRole) ?? "WARGA",
+        avatarUrl:    session.user.image ?? undefined,
+        isIncomplete: !session.user.username,
       }
     : null;
 
