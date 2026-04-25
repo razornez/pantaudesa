@@ -16,9 +16,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     session({ session, user }) {
-      session.user.id       = user.id;
-      session.user.username = (user as { username?: string }).username ?? "";
-      session.user.role     = (user as { role?: string }).role ?? "WARGA";
+      const u = user as {
+        id: string;
+        name?: string | null;
+        image?: string | null;
+        username?: string | null;
+        nama?: string | null;
+        avatarUrl?: string | null;
+        role?: string | null;
+      };
+      session.user.id       = u.id;
+      // Prefer custom `nama` over NextAuth `name`; fall back gracefully
+      session.user.name     = u.nama ?? u.name ?? "";
+      session.user.image    = u.avatarUrl ?? u.image ?? null;
+      session.user.username = u.username ?? "";
+      session.user.role     = u.role ?? "WARGA";
       return session;
     },
   },

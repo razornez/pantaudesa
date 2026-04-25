@@ -13,15 +13,20 @@ datasource db {
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String?  @unique   // filled on /daftar after first login
-  nama      String?            // filled on /daftar after first login
-  bio       String?
-  avatarUrl String?
-  role      Role     @default(WARGA)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  // NextAuth required fields — must match exact names PrismaAdapter expects
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // PantauDesa custom fields
+  username      String?   @unique
+  nama          String?
+  bio           String?
+  avatarUrl     String?
+  role          Role      @default(WARGA)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // NextAuth relations
   accounts Account[]
