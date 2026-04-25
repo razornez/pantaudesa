@@ -9,10 +9,141 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 > Fitur-fitur yang sedang dalam rencana atau pengerjaan.
 
+- Suara warga: simpan ke database (sekarang masih data dummy di kode)
+- Data desa: fetch dari database (sekarang masih data dummy)
+- Upload avatar ke cloud storage (Supabase Storage / Cloudinary)
 - Peta choropleth interaktif Indonesia (drill-down provinsi → kabupaten → desa)
 - Follow desa / warga lain + feed aktivitas
 - Search profil warga
 - Sistem laporan konten (flag suara palsu)
+
+---
+
+## [2.0.0] — 2026-04-25
+
+### Backend — Database, Autentikasi, dan API
+
+Ini adalah versi terbesar sejak pertama kali project dibuat. Sebelum versi ini, PantauDesa hanya berjalan dengan data palsu (dummy) di dalam kode — tidak ada database, tidak ada akun nyata, tidak ada email yang dikirim. Di versi ini, fondasi backend yang sesungguhnya dibangun.
+
+---
+
+#### 🗄️ Database — Supabase + Prisma
+
+**Apa yang berubah:**  
+Data user sekarang disimpan di database sungguhan, bukan di memori kode.
+
+**Teknologi yang dipakai:**
+- **Supabase** — layanan database PostgreSQL berbasis cloud. PostgreSQL adalah jenis database yang sangat populer dan andal, dipakai oleh perusahaan besar. Supabase menyediakan database ini secara gratis untuk skala kecil-menengah, lengkap dengan dashboard visual untuk melihat data.
+- **Prisma** — alat bantu yang menghubungkan kode Next.js ke database. Prisma memastikan struktur data selalu sesuai antara kode dan database, dan mencegah banyak bug umum.
+
+**Tabel yang dibuat di database:**
+
+| Tabel | Isi |
+|-------|-----|
+| `users` | Data pengguna: nama, username, email, bio, foto profil, role (WARGA/DESA/ADMIN) |
+| `accounts` | Menghubungkan akun user dengan provider login (email magic link) |
+| `sessions` | Sesi login aktif — siapa yang sedang login dan kapan sesinya berakhir |
+| `verification_tokens` | Token sementara untuk verifikasi magic link |
+
+**File baru:**
+- `prisma/schema.prisma` — "blueprint" struktur database, tempat mendefinisikan tabel dan relasinya
+- `src/lib/db.ts` — koneksi ke database yang dioptimalkan agar tidak membuka terlalu banyak koneksi sekaligus (penting untuk serverless seperti Vercel)
+
+---
+
+#### 🔐 Autentikasi — NextAuth v5 + Magic Link
+
+**Apa yang berubah:**  
+Sebelumnya login hanya simulasi — kode OTP muncul langsung di layar dan tidak ada email yang benar-benar dikirim. Sekarang login menggunakan sistem nyata.
+
+**Cara kerjanya (Magic Link):**
+1. User masukkan email di halaman `/login`
+2. Sistem kirim email berisi tombol "Masuk ke PantauDesa" via **Resend**
+3. User klik tombol di email → langsung masuk, tidak perlu password
+4. Sesi login disimpan di database
+
+**Kenapa Magic Link, bukan password?**  
+Password bisa lupa, bisa bocor. Magic link lebih aman dan lebih mudah — user hanya butuh akses ke emailnya. Pola ini dipakai oleh Notion, Linear, dan banyak aplikasi modern.
+
+**Teknologi yang dipakai:**
+- **NextAuth v5 (Auth.js)** — library autentikasi standar industri untuk Next.js. Menangani semua hal kompleks: pembuatan sesi, keamanan token, redirect setelah login, dll.
+- **Resend** — layanan pengiriman email khusus developer. Email dikirim dari domain `razornez.net` yang sudah terverifikasi. Gratis hingga 3.000 email/bulan.
+
+**File baru:**
+- `src/lib/auth.ts` — konfigurasi NextAuth: provider email Resend, adapter database Prisma, callback untuk menyimpan role user ke sesi
+- `src/app/api/auth/[...nextauth]/route.ts` — endpoint API yang menangani semua request login (kirim email, verifikasi token, buat sesi)
+
+---
+
+#### 👤 API Pengguna
+
+**Apa yang berubah:**  
+Ada endpoint API nyata untuk membaca dan mengubah data pengguna, bukan lagi manipulasi state di browser.
+
+**Endpoint yang dibuat:**
+
+| Method | URL | Fungsi |
+|--------|-----|--------|
+| `GET` | `/api/users/me` | Ambil data profil pengguna yang sedang login |
+| `PATCH` | `/api/users/me` | Update nama, bio, atau foto profil |
+| `POST` | `/api/users/register` | Simpan username dan nama saat pertama kali daftar |
+
+**Keamanan:** Semua endpoint dicek sesinya — jika tidak login, langsung ditolak dengan respons `401 Unauthorized`.
+
+---
+
+#### 🔄 Halaman yang Diperbarui
+
+**`/login`**
+- Sebelum: form palsu, kode OTP muncul di layar, tidak ada email terkirim
+- Sesudah: kirim magic link nyata ke email user, tampilkan halaman konfirmasi "Cek emailmu!"
+
+**`/login/verify`** *(halaman baru)*
+- Ditampilkan setelah magic link terkirim
+- Instruksi cek spam, tombol kembali jika email salah
+
+**`/daftar`**
+- Sebelum: 4 langkah dengan OTP palsu, data disimpan di browser saja
+- Sesudah: 2 langkah — (1) isi nama/username/bio → disimpan ke database, (2) upload foto profil opsional
+- Catatan: untuk daftar, user harus login dulu via magic link, lalu melengkapi profil
+
+**`/profil/saya`** *(edit profil)*
+- Sebelum: perubahan nama/bio hanya tersimpan di browser, hilang saat refresh
+- Sesudah: perubahan dikirim ke `PATCH /api/users/me` dan tersimpan permanen di database
+
+---
+
+#### ⚙️ Konfigurasi Teknis
+
+**Environment Variables** (disimpan di Vercel, tidak di-commit ke GitHub):
+- `DATABASE_URL` — alamat koneksi ke Supabase (Transaction Pooler, cocok untuk serverless)
+- `DIRECT_URL` — alamat koneksi langsung, dipakai saat menjalankan migrasi database
+- `AUTH_SECRET` — kunci enkripsi sesi (string acak 32 karakter, dibuat otomatis)
+- `NEXTAUTH_URL` — URL production aplikasi di Vercel
+- `RESEND_API_KEY` — kunci API Resend untuk mengirim email
+- `RESEND_FROM` — alamat pengirim email
+
+**Catatan keamanan:** Semua nilai di atas bersifat rahasia dan tidak pernah masuk ke kode atau GitHub. File `.env.local` dan `.env` sudah ada di `.gitignore`.
+
+---
+
+#### 🔁 Migrasi Role Pengguna
+
+Role pengguna diubah dari huruf kecil ke huruf kapital agar sesuai standar Prisma/database:
+
+| Sebelum | Sesudah | Arti |
+|---------|---------|------|
+| `"warga"` | `"WARGA"` | Warga biasa |
+| `"desa"` | `"DESA"` | Perangkat/admin desa |
+| `"admin"` | `"ADMIN"` | Admin PantauDesa |
+
+Semua halaman yang mengecek role (admin panel, dashboard desa, profil) sudah diperbarui.
+
+---
+
+#### ⚠️ Apa yang Belum Berubah
+
+Data desa, suara warga, dan notifikasi masih menggunakan data dummy di kode (`src/lib/mock-data.ts`, `src/lib/citizen-voice.ts`). Ini disengaja — backend untuk data desa akan dikerjakan di fase berikutnya setelah fondasi user selesai.
 
 ---
 
