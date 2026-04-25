@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Send, Megaphone, Sparkles, ChevronDown, ImagePlus, X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Megaphone, Sparkles, ChevronDown, ImagePlus, X, RotateCw } from "lucide-react";
 import {
   VOICE_CATEGORIES, VoiceCategory, CitizenVoice,
   getVoicesForDesa,
 } from "@/lib/citizen-voice";
+import { fetchVoices, submitVoice, submitVote, submitHelpful } from "@/lib/voices-api";
 import VoiceCard from "./VoiceCard";
 
 interface Props {
@@ -13,8 +14,9 @@ interface Props {
   desaNama: string;
 }
 
-const MAX_CHARS   = 400;
-const MAX_PHOTOS  = 3;
+const MAX_CHARS  = 400;
+const MAX_PHOTOS = 3;
+const PREVIEW_COUNT = 3;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,10 +24,6 @@ function charCountColor(n: number): string {
   if (n > MAX_CHARS * 0.9) return "text-rose-500";
   if (n > MAX_CHARS * 0.7) return "text-amber-500";
   return "text-slate-400";
-}
-
-function generateId() {
-  return `new-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 // ─── Category pill ────────────────────────────────────────────────────────────
@@ -64,7 +62,7 @@ function PhotoPreview({ urls, onRemove }: { urls: string[]; onRemove: (i: number
           <button
             type="button"
             onClick={() => onRemove(i)}
-            className="absolute top-0.5 right-0.5 w-4.5 h-4.5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-0.5 right-0.5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ width: 18, height: 18 }}
           >
             <X size={10} className="text-white" />
@@ -78,27 +76,47 @@ function PhotoPreview({ urls, onRemove }: { urls: string[]; onRemove: (i: number
 // ─── Komponen utama ───────────────────────────────────────────────────────────
 
 export default function SuaraWargaSection({ desaId, desaNama }: Props) {
-  const [voices,     setVoices]     = useState<CitizenVoice[]>(() => getVoicesForDesa(desaId));
-  const [category,   setCategory]   = useState<VoiceCategory | null>(null);
-  const [text,       setText]       = useState("");
-  const [name,       setName]       = useState("");
-  const [isAnon,     setIsAnon]     = useState(false);
-  const [submitted,  setSubmitted]  = useState(false);
-  const [showAll,    setShowAll]    = useState(false);
-  const [helpedIds,  setHelpedIds]  = useState<Set<string>>(new Set());
-  const [photoUrls,  setPhotoUrls]  = useState<string[]>([]);
+  const [voices,    setVoices]    = useState<CitizenVoice[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [submitErr, setSubmitErr] = useState("");
+
+  const [category,  setCategory]  = useState<VoiceCategory | null>(null);
+  const [text,      setText]      = useState("");
+  const [name,      setName]      = useState("");
+  const [isAnon,    setIsAnon]    = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [showAll,   setShowAll]   = useState(false);
+  const [helpedIds, setHelpedIds] = useState<Set<string>>(new Set());
+  const [votedIds,  setVotedIds]  = useState<Map<string, "BENAR" | "BOHONG">>(new Map());
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const PREVIEW_COUNT = 3;
+  // ── Load voices from API, fall back to mock on error ──────────────────────
+  const loadVoices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchVoices(desaId);
+      // If DB is empty for this desa, show mock data so UI isn't blank
+      setVoices(data.length > 0 ? data : getVoicesForDesa(desaId));
+    } catch {
+      setVoices(getVoicesForDesa(desaId));
+    } finally {
+      setLoading(false);
+    }
+  }, [desaId]);
+
+  useEffect(() => { loadVoices(); }, [loadVoices]);
+
   const displayed = showAll ? voices : voices.slice(0, PREVIEW_COUNT);
 
+  // ── Photo handling ─────────────────────────────────────────────────────────
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     const remaining = MAX_PHOTOS - photoUrls.length;
     files.slice(0, remaining).forEach(file => {
-      const url = URL.createObjectURL(file);
-      setPhotoUrls(prev => [...prev, url]);
+      setPhotoUrls(prev => [...prev, URL.createObjectURL(file)]);
     });
     e.target.value = "";
   };
@@ -110,42 +128,77 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ── Submit new voice ───────────────────────────────────────────────────────
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!text.trim() || !category) return;
-
-    const newVoice: CitizenVoice = {
-      id:        generateId(),
-      desaId,
-      category,
-      text:      text.trim(),
-      author:    isAnon || !name.trim() ? "Anonim" : name.trim(),
-      isAnon:    isAnon || !name.trim(),
-      createdAt: new Date(),
-      helpful:   0,
-      photos:    photoUrls,
-      votes:     { benar: 0, bohong: 0 },
-      status:    "open",
-      replies:   [],
-    };
-
-    setVoices(prev => [newVoice, ...prev]);
-    setSubmitted(true);
-    setText(""); setName(""); setCategory(null); setIsAnon(false); setPhotoUrls([]);
+    setSubmitErr("");
+    setSaving(true);
+    try {
+      const newVoice = await submitVoice({
+        desaId,
+        category,
+        text: text.trim(),
+        isAnon: isAnon || !name.trim(),
+      });
+      setVoices(prev => [newVoice, ...prev]);
+      setSubmitted(true);
+      setText(""); setName(""); setCategory(null); setIsAnon(false); setPhotoUrls([]);
+    } catch (err) {
+      setSubmitErr(err instanceof Error ? err.message : "Gagal mengirim cerita. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleHelpful = (id: string) => {
+  // ── Helpful ────────────────────────────────────────────────────────────────
+  const handleHelpful = async (id: string) => {
     if (helpedIds.has(id)) return;
-    setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful: v.helpful + 1 } : v));
     setHelpedIds(prev => new Set(prev).add(id));
+    setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful: v.helpful + 1 } : v));
+    try {
+      const { helpful } = await submitHelpful(id);
+      setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful } : v));
+    } catch {
+      // Optimistic update stays; not critical
+    }
   };
 
-  const canSubmit = text.trim().length >= 10 && !!category && text.length <= MAX_CHARS;
+  // ── Vote ───────────────────────────────────────────────────────────────────
+  const handleVote = async (id: string, type: "BENAR" | "BOHONG") => {
+    if (votedIds.get(id) === type) return;
+    const prev = votedIds.get(id);
+    setVotedIds(m => new Map(m).set(id, type));
+    // Optimistic update
+    setVoices(vs => vs.map(v => {
+      if (v.id !== id) return v;
+      const votes = { ...v.votes };
+      if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]--;
+      votes[type === "BENAR" ? "benar" : "bohong"]++;
+      return { ...v, votes };
+    }));
+    try {
+      const updated = await submitVote(id, type);
+      setVoices(vs => vs.map(v => v.id === id ? { ...v, votes: updated } : v));
+    } catch {
+      // Revert optimistic update on error
+      setVotedIds(m => { const n = new Map(m); prev ? n.set(id, prev) : n.delete(id); return n; });
+      setVoices(vs => vs.map(v => {
+        if (v.id !== id) return v;
+        const votes = { ...v.votes };
+        votes[type === "BENAR" ? "benar" : "bohong"]--;
+        if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]++;
+        return { ...v, votes };
+      }));
+    }
+  };
+
+  const canSubmit = text.trim().length >= 10 && !!category && text.length <= MAX_CHARS && !saving;
 
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 sm:px-6 py-5">
         <div className="flex items-center gap-2 mb-2">
           <Megaphone size={16} className="text-indigo-200" />
@@ -161,9 +214,8 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
         </p>
       </div>
 
-      {/* ── Form ───────────────────────────────────────────────────────── */}
+      {/* ── Form ───────────────────────────────────────────────────────────── */}
       <div className="bg-indigo-50/50 px-5 sm:px-6 py-5 border-b border-slate-200">
-
         {submitted ? (
           <div className="flex flex-col items-center py-6 text-center gap-3">
             <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -184,6 +236,12 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {submitErr && (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-xs text-rose-700">
+                ⚠️ {submitErr}
+              </div>
+            )}
 
             {/* Category selector */}
             <div>
@@ -282,8 +340,8 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
               disabled={!canSubmit}
               className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-indigo-700 active:bg-indigo-800 transition-all shadow-md shadow-indigo-900/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              <Send size={14} />
-              Bagikan Ceritamu
+              {saving ? <RotateCw size={14} className="animate-spin" /> : <Send size={14} />}
+              {saving ? "Menyimpan..." : "Bagikan Ceritamu"}
             </button>
             {!canSubmit && text.length > 0 && text.length < 10 && (
               <p className="text-xs text-slate-400">Tulis minimal 10 karakter ya.</p>
@@ -295,23 +353,37 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
         )}
       </div>
 
-      {/* ── Feed ───────────────────────────────────────────────────────── */}
+      {/* ── Feed ───────────────────────────────────────────────────────────── */}
       <div className="bg-white px-5 sm:px-6 py-5">
 
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-bold text-slate-800">
-            {voices.length > 0 ? `${voices.length} Suara Warga` : "Belum ada cerita"}
-          </p>
-          {voices.length === 0 && (
+          {loading ? (
+            <div className="flex items-center gap-2 text-slate-400">
+              <RotateCw size={14} className="animate-spin" />
+              <span className="text-sm">Memuat cerita warga...</span>
+            </div>
+          ) : (
+            <p className="text-sm font-bold text-slate-800">
+              {voices.length > 0 ? `${voices.length} Suara Warga` : "Belum ada cerita"}
+            </p>
+          )}
+          {!loading && voices.length === 0 && (
             <p className="text-xs text-slate-400">Jadilah yang pertama bersuara untuk desa ini.</p>
           )}
         </div>
 
-        {voices.length > 0 && (
+        {!loading && voices.length > 0 && (
           <>
             <div className="space-y-3">
               {displayed.map(v => (
-                <VoiceCard key={v.id} voice={v} onHelpful={handleHelpful} helpedIds={helpedIds} />
+                <VoiceCard
+                  key={v.id}
+                  voice={v}
+                  onHelpful={handleHelpful}
+                  helpedIds={helpedIds}
+                  onVote={handleVote}
+                  votedType={votedIds.get(v.id)}
+                />
               ))}
             </div>
 

@@ -1,27 +1,26 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Megaphone, Search, Filter, ArrowRight, X, BarChart2 } from "lucide-react";
+import { Megaphone, Search, Filter, ArrowRight, X, BarChart2, RotateCw } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import {
   getAllVoices, getVoiceStats,
   VOICE_CATEGORIES, VoiceCategory,
   CitizenVoice,
 } from "@/lib/citizen-voice";
+import { fetchVoices, submitVote, submitHelpful } from "@/lib/voices-api";
 import VoiceCard from "@/components/desa/VoiceCard";
 import VoiceStats from "@/components/suara/VoiceStats";
 
-// ─── Desa lookup ──────────────────────────────────────────────────────────────
-
 const desaMap = Object.fromEntries(mockDesa.map(d => [d.id, d]));
 
-// ─── Kartu suara global (with desa badge wrapper) ─────────────────────────────
-
-function GlobalVoiceCard({ voice, helpedIds, onHelpful }: {
-  voice: CitizenVoice;
+function GlobalVoiceCard({ voice, helpedIds, onHelpful, onVote, votedIds }: {
+  voice:     CitizenVoice;
   helpedIds: Set<string>;
   onHelpful: (id: string) => void;
+  onVote:    (id: string, type: "BENAR" | "BOHONG") => void;
+  votedIds:  Map<string, "BENAR" | "BOHONG">;
 }) {
   const desa = desaMap[voice.desaId];
   return (
@@ -35,44 +34,88 @@ function GlobalVoiceCard({ voice, helpedIds, onHelpful }: {
           <ArrowRight size={10} />
         </Link>
       )}
-      <VoiceCard voice={voice} onHelpful={onHelpful} helpedIds={helpedIds} />
+      <VoiceCard
+        voice={voice}
+        onHelpful={onHelpful}
+        helpedIds={helpedIds}
+        onVote={onVote}
+        votedType={votedIds.get(voice.id)}
+      />
     </div>
   );
 }
 
-// ─── Halaman utama ────────────────────────────────────────────────────────────
-
 export default function SuaraWargaPage() {
-  const allVoices = useMemo(() => getAllVoices(), []);
-  const stats     = useMemo(() => getVoiceStats(), []);
+  const [voices,   setVoices]   = useState<CitizenVoice[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [helpedIds, setHelpedIds] = useState<Set<string>>(new Set());
+  const [votedIds,  setVotedIds]  = useState<Map<string, "BENAR" | "BOHONG">>(new Map());
 
   const [searchDesa,  setSearchDesa]  = useState("");
   const [filterDesa,  setFilterDesa]  = useState("");
   const [filterCat,   setFilterCat]   = useState<VoiceCategory | "">("");
   const [showStats,   setShowStats]   = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [helpedIds,   setHelpedIds]   = useState<Set<string>>(new Set());
+
+  // Fetch from API, fall back to mock if empty/error
+  useEffect(() => {
+    fetchVoices()
+      .then(data => setVoices(data.length > 0 ? data : getAllVoices()))
+      .catch(() => setVoices(getAllVoices()))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const stats = useMemo(() => getVoiceStats(), []);
 
   const desaOptions = useMemo(
-    () => [...new Set(allVoices.map(v => v.desaId))]
+    () => [...new Set(voices.map(v => v.desaId))]
             .map(id => desaMap[id])
             .filter(Boolean)
             .sort((a, b) => a.nama.localeCompare(b.nama)),
-    [allVoices]
+    [voices]
   );
 
   const filtered = useMemo(() => {
-    let result = allVoices;
+    let result = voices;
     if (filterDesa) result = result.filter(v => v.desaId === filterDesa);
     if (filterCat)  result = result.filter(v => v.category === filterCat);
     return result;
-  }, [allVoices, filterDesa, filterCat]);
+  }, [voices, filterDesa, filterCat]);
 
-  const hasFilter = filterDesa || filterCat;
-
-  const handleHelpful = (id: string) => {
+  const handleHelpful = async (id: string) => {
     if (helpedIds.has(id)) return;
     setHelpedIds(prev => new Set(prev).add(id));
+    setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful: v.helpful + 1 } : v));
+    try {
+      const { helpful } = await submitHelpful(id);
+      setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful } : v));
+    } catch { /* optimistic stays */ }
+  };
+
+  const handleVote = async (id: string, type: "BENAR" | "BOHONG") => {
+    if (votedIds.get(id) === type) return;
+    const prev = votedIds.get(id);
+    setVotedIds(m => new Map(m).set(id, type));
+    setVoices(vs => vs.map(v => {
+      if (v.id !== id) return v;
+      const votes = { ...v.votes };
+      if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]--;
+      votes[type === "BENAR" ? "benar" : "bohong"]++;
+      return { ...v, votes };
+    }));
+    try {
+      const updated = await submitVote(id, type);
+      setVoices(vs => vs.map(v => v.id === id ? { ...v, votes: updated } : v));
+    } catch {
+      setVotedIds(m => { const n = new Map(m); prev ? n.set(id, prev) : n.delete(id); return n; });
+      setVoices(vs => vs.map(v => {
+        if (v.id !== id) return v;
+        const votes = { ...v.votes };
+        votes[type === "BENAR" ? "benar" : "bohong"]--;
+        if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]++;
+        return { ...v, votes };
+      }));
+    }
   };
 
   return (
@@ -92,7 +135,7 @@ export default function SuaraWargaPage() {
           </p>
           <div className="flex flex-wrap gap-4 text-sm items-center">
             <div>
-              <span className="font-black text-2xl">{stats.total}</span>
+              <span className="font-black text-2xl">{loading ? "—" : voices.length}</span>
               <span className="text-indigo-200 ml-1.5">suara</span>
             </div>
             <div className="w-px bg-white/20 h-5" />
@@ -105,8 +148,6 @@ export default function SuaraWargaPage() {
               <span className="font-black text-2xl">{stats.resolved}</span>
               <span className="text-indigo-200 ml-1.5">sudah selesai</span>
             </div>
-
-            {/* Toggle stats */}
             <button
               onClick={() => setShowStats(v => !v)}
               className="ml-auto inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
@@ -146,7 +187,6 @@ export default function SuaraWargaPage() {
               <X size={16} />
             </button>
           </div>
-
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -157,7 +197,6 @@ export default function SuaraWargaPage() {
               className="w-full pl-8 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
             />
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto">
             {mockDesa
               .filter(d =>
@@ -186,7 +225,7 @@ export default function SuaraWargaPage() {
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-semibold text-slate-600">Tampilkan:</span>
-          {hasFilter && (
+          {(filterDesa || filterCat) && (
             <button
               onClick={() => { setFilterDesa(""); setFilterCat(""); }}
               className="ml-auto text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1 transition-colors"
@@ -195,7 +234,6 @@ export default function SuaraWargaPage() {
             </button>
           )}
         </div>
-
         <div className="flex flex-wrap gap-2">
           <select
             value={filterDesa}
@@ -207,7 +245,6 @@ export default function SuaraWargaPage() {
               <option key={d.id} value={d.id}>{d.nama}</option>
             ))}
           </select>
-
           {(Object.entries(VOICE_CATEGORIES) as [VoiceCategory, typeof VOICE_CATEGORIES[VoiceCategory]][]).map(
             ([cat, { label, emoji, color }]) => (
               <button
@@ -222,21 +259,32 @@ export default function SuaraWargaPage() {
             )
           )}
         </div>
-
         <p className="text-xs text-slate-400">
-          Menampilkan <span className="font-semibold text-slate-600">{filtered.length}</span> dari {allVoices.length} suara
+          Menampilkan <span className="font-semibold text-slate-600">{filtered.length}</span> dari {voices.length} suara
         </p>
       </div>
 
       {/* ── Feed ──────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
+          <RotateCw size={18} className="animate-spin" />
+          <span className="text-sm">Memuat suara warga...</span>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
           <p className="text-slate-400 text-sm">Belum ada suara yang sesuai filter.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filtered.map(v => (
-            <GlobalVoiceCard key={v.id} voice={v} helpedIds={helpedIds} onHelpful={handleHelpful} />
+            <GlobalVoiceCard
+              key={v.id}
+              voice={v}
+              helpedIds={helpedIds}
+              onHelpful={handleHelpful}
+              onVote={handleVote}
+              votedIds={votedIds}
+            />
           ))}
         </div>
       )}

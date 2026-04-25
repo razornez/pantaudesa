@@ -118,18 +118,15 @@ function PhotoGrid({ photos }: { photos: string[] }) {
 // ─── Main VoiceCard ───────────────────────────────────────────────────────────
 
 interface Props {
-  voice:       CitizenVoice;
-  onHelpful:   (id: string) => void;
-  helpedIds:   Set<string>;
+  voice:      CitizenVoice;
+  onHelpful:  (id: string) => void;
+  helpedIds:  Set<string>;
+  onVote?:    (id: string, type: "BENAR" | "BOHONG") => void;
+  votedType?: "BENAR" | "BOHONG";
 }
 
-export default function VoiceCard({ voice, onHelpful, helpedIds }: Props) {
+export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedType }: Props) {
   const cfg = VOICE_CATEGORIES[voice.category];
-
-  const [votedBenar,  setVotedBenar]  = useState(false);
-  const [votedBohong, setVotedBohong] = useState(false);
-  const [benarCount,  setBenarCount]  = useState(voice.votes.benar);
-  const [bohongCount, setBohongCount] = useState(voice.votes.bohong);
 
   const [showReplies,   setShowReplies]   = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -137,20 +134,10 @@ export default function VoiceCard({ voice, onHelpful, helpedIds }: Props) {
   const [replyName,     setReplyName]     = useState("");
   const [localReplies,  setLocalReplies]  = useState<VoiceReply[]>(voice.replies);
 
-  const hasReplies    = localReplies.length > 0;
   const officialReply = localReplies.find(r => r.isOfficialDesa);
 
-  const handleBenar = () => {
-    if (votedBenar || votedBohong) return;
-    setVotedBenar(true);
-    setBenarCount(n => n + 1);
-  };
-
-  const handleBohong = () => {
-    if (votedBenar || votedBohong) return;
-    setVotedBohong(true);
-    setBohongCount(n => n + 1);
-  };
+  const handleBenar  = () => onVote?.(voice.id, "BENAR");
+  const handleBohong = () => onVote?.(voice.id, "BOHONG");
 
   const handleReplySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,27 +220,27 @@ export default function VoiceCard({ voice, onHelpful, helpedIds }: Props) {
             {/* Vote benar */}
             <button
               onClick={handleBenar}
-              disabled={votedBenar || votedBohong}
+              disabled={!!votedType}
               className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
-                votedBenar
+                votedType === "BENAR"
                   ? "bg-emerald-50 border-emerald-300 text-emerald-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
               }`}
             >
-              ✅ Benar <span className="font-semibold">{benarCount}</span>
+              ✅ Benar <span className="font-semibold">{voice.votes.benar}</span>
             </button>
 
             {/* Vote bohong */}
             <button
               onClick={handleBohong}
-              disabled={votedBenar || votedBohong}
+              disabled={!!votedType}
               className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
-                votedBohong
+                votedType === "BOHONG"
                   ? "bg-rose-50 border-rose-300 text-rose-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed"
               }`}
             >
-              ❌ Bohong <span className="font-semibold">{bohongCount}</span>
+              ❌ Bohong <span className="font-semibold">{voice.votes.bohong}</span>
             </button>
 
             {/* Replies toggle */}

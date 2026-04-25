@@ -26,7 +26,101 @@ model User {
   accounts Account[]
   sessions Session[]
 
+  // Citizen voice relations
+  voices     Voice[]
+  replies    VoiceReply[]
+  votes      VoiceVote[]
+  helpfuls   VoiceHelpful[]
+
   @@map("users")
+}
+
+// ─── Citizen Voice ────────────────────────────────────────────────────────────
+
+model Voice {
+  id         String        @id @default(cuid())
+  desaId     String
+  category   VoiceCategory
+  text       String        @db.Text
+  isAnon     Boolean       @default(false)
+  status     VoiceStatus   @default(OPEN)
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  authorId   String?
+  author     User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  replies    VoiceReply[]
+  votes      VoiceVote[]
+  helpfuls   VoiceHelpful[]
+
+  @@index([desaId])
+  @@index([createdAt])
+  @@map("voices")
+}
+
+model VoiceReply {
+  id              String   @id @default(cuid())
+  voiceId         String
+  text            String   @db.Text
+  isAnon          Boolean  @default(false)
+  isOfficialDesa  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  authorId  String?
+  author    User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  voice     Voice   @relation(fields: [voiceId], references: [id], onDelete: Cascade)
+
+  @@index([voiceId])
+  @@map("voice_replies")
+}
+
+model VoiceVote {
+  id        String    @id @default(cuid())
+  voiceId   String
+  userId    String
+  type      VoteType
+  createdAt DateTime  @default(now())
+
+  voice  Voice @relation(fields: [voiceId], references: [id], onDelete: Cascade)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([voiceId, userId])
+  @@map("voice_votes")
+}
+
+model VoiceHelpful {
+  id        String   @id @default(cuid())
+  voiceId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  voice  Voice @relation(fields: [voiceId], references: [id], onDelete: Cascade)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([voiceId, userId])
+  @@map("voice_helpfuls")
+}
+
+enum VoiceCategory {
+  infrastruktur
+  bansos
+  fasilitas
+  anggaran
+  lingkungan
+  lainnya
+}
+
+enum VoiceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum VoteType {
+  BENAR
+  BOHONG
 }
 
 enum Role {
