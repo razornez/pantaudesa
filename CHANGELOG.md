@@ -1,6 +1,6 @@
 # Changelog
 
-Semua perubahan penting pada proyek PantauDesa didokumentasikan di sini.  
+Semua perubahan penting pada proyek PantauDesa didokumentasikan di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
