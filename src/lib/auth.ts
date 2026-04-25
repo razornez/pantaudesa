@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Resend from "next-auth/providers/resend";
 import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
+import { sendErrorAlert } from "@/lib/alert";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -34,8 +35,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   logger: {
     error(error) {
-      console.error("[auth] ERROR:", error.name, error.message, (error as Error).stack ?? "");
+      const msg = error.message ?? String(error);
+      console.error("[auth] ERROR:", error.name, msg, (error as Error).stack ?? "");
       Sentry.captureException(error, { tags: { source: "next-auth" } });
+      sendErrorAlert({
+        subject:  `Auth Error: ${error.name}`,
+        title:    error.name,
+        body:     msg,
+        metadata: { stack: (error as Error).stack?.split("\n")[1]?.trim() },
+      });
     },
     warn(code) {
       console.warn("[auth] WARN:", code);
