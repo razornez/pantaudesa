@@ -10,7 +10,7 @@ interface Props {
   reset?:     number; // increment to reset
 }
 
-export default function PinInput({ length = 4, onComplete, disabled, error, reset }: Props) {
+export default function PinInput({ length = 6, onComplete, disabled, error, reset }: Props) {
   const [digits, setDigits] = useState<string[]>(Array(length).fill(""));
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 

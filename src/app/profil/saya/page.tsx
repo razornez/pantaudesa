@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Camera, BellOff, ChevronRight, RotateCw,
+  Eye, EyeOff, Lock,
 } from "lucide-react";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth-context";
@@ -187,6 +188,106 @@ function TrustCard({ score, tier }: { score: number; tier: BadgeTier }) {
   );
 }
 
+// ─── Change PIN card ──────────────────────────────────────────────────────────
+
+function ChangePinCard({ onSuccess, onError }: { onSuccess: () => void; onError: (msg: string) => void }) {
+  const [open,       setOpen]       = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [showPins,   setShowPins]   = useState(false);
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin,     setNewPin]     = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [fieldErr,   setFieldErr]   = useState<Record<string, string>>({});
+
+  const reset = () => { setCurrentPin(""); setNewPin(""); setConfirmPin(""); setFieldErr({}); };
+
+  const handleSubmit = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setFieldErr({});
+    setSaving(true);
+    try {
+      const res  = await fetch("/api/users/pin", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ currentPin, newPin, confirmPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.field) setFieldErr({ [data.field]: data.error });
+        else onError(data.error ?? "Gagal mengganti PIN.");
+        return;
+      }
+      onSuccess();
+      reset();
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pinInput = (label: string, value: string, onChange: (v: string) => void, field: string) => (
+    <div>
+      <label className="text-xs font-semibold text-slate-600 block mb-1">{label}</label>
+      <div className="relative">
+        <Lock size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type={showPins ? "text" : "password"}
+          value={value}
+          onChange={e => { onChange(e.target.value.replace(/\D/g, "").slice(0, 6)); setFieldErr({}); }}
+          inputMode="numeric" maxLength={6} placeholder="••••••"
+          className={`w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.4em] ${
+            fieldErr[field] ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"
+          }`}
+        />
+        <button type="button" onClick={() => setShowPins(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+          {showPins ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
+      </div>
+      {fieldErr[field] && <p className="text-xs text-rose-600 mt-1">⚠ {fieldErr[field]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => { setOpen(v => !v); reset(); }}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
+            <Lock size={14} className="text-indigo-600" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-slate-800">Ganti PIN</p>
+            <p className="text-xs text-slate-400">Ubah PIN 6 digit untuk keamanan akun</p>
+          </div>
+        </div>
+        <ChevronRight size={15} className={`text-slate-400 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+
+      {open && (
+        <form onSubmit={handleSubmit} className="px-5 pb-5 pt-1 space-y-3 border-t border-slate-100">
+          {pinInput("PIN Saat Ini", currentPin, setCurrentPin, "currentPin")}
+          {pinInput("PIN Baru", newPin, setNewPin, "newPin")}
+          {pinInput("Konfirmasi PIN Baru", confirmPin, setConfirmPin, "confirmPin")}
+          <p className="text-[10px] text-slate-400">PIN 6 digit angka. Jangan gunakan urutan mudah ditebak (123456, tanggal lahir).</p>
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={saving || !currentPin || !newPin || !confirmPin}
+              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-40 cursor-pointer">
+              {saving ? <><RotateCw size={13} className="animate-spin" /> Menyimpan...</> : "Simpan PIN Baru"}
+            </button>
+            <button type="button" onClick={() => { setOpen(false); reset(); }}
+              className="px-4 py-2.5 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+              Batal
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function SayaProfilePage() {
@@ -361,6 +462,9 @@ export default function SayaProfilePage() {
               {saving ? <><RotateCw size={14} className="animate-spin" /> Menyimpan...</> : "Simpan Perubahan"}
             </button>
           </form>
+
+          {/* Ganti PIN */}
+          <ChangePinCard onSuccess={() => toast("PIN berhasil diperbarui ✓", "success")} onError={msg => toast(msg, "error")} />
 
           {/* Trust card */}
           {user.role === "WARGA" && (

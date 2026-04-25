@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 
+const LEN = 6;
+
 interface Props {
   onComplete: (value: string) => void;
   disabled?:  boolean;
@@ -10,13 +12,13 @@ interface Props {
 }
 
 export default function OtpInput({ onComplete, disabled, error, reset }: Props) {
-  const [digits, setDigits] = useState(["", "", "", ""]);
+  const [digits, setDigits] = useState(Array(LEN).fill(""));
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   const prevReset = useRef(reset);
   if (reset !== prevReset.current) {
     prevReset.current = reset;
-    setDigits(["", "", "", ""]);
+    setDigits(Array(LEN).fill(""));
     refs.current[0]?.focus();
   }
 
@@ -24,8 +26,8 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
     const v = val.replace(/\D/g, "").slice(-1);
     const next = [...digits]; next[i] = v;
     setDigits(next);
-    if (v && i < 3) refs.current[i + 1]?.focus();
-    if (next.join("").length === 4) onComplete(next.join(""));
+    if (v && i < LEN - 1) refs.current[i + 1]?.focus();
+    if (next.join("").length === LEN) onComplete(next.join(""));
   };
 
   const handleKey = (i: number, e: React.KeyboardEvent) => {
@@ -33,13 +35,13 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
-    if (text.length === 4) { setDigits(text.split("")); onComplete(text); }
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, LEN);
+    if (text.length === LEN) { setDigits(text.split("")); onComplete(text); }
     e.preventDefault();
   };
 
   return (
-    <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+    <div className="flex gap-2 justify-center" onPaste={handlePaste}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -51,7 +53,7 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
           disabled={disabled}
           onChange={e => handleChange(i, e.target.value)}
           onKeyDown={e => handleKey(i, e)}
-          className={`w-14 h-14 text-center text-2xl font-black rounded-2xl border-2 transition-all outline-none focus:scale-105 disabled:opacity-40 ${
+          className={`w-11 h-12 text-center text-xl font-black rounded-xl border-2 transition-all outline-none focus:scale-105 disabled:opacity-40 cursor-text ${
             error
               ? "border-rose-400 bg-rose-50 text-rose-700"
               : d

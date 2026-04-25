@@ -9,6 +9,14 @@ body {
   box-sizing: border-box;
 }
 
+/* All interactive elements get pointer cursor globally */
+button:not([disabled]),
+a[href],
+[role="button"],
+summary {
+  cursor: pointer;
+}
+
 
 /* ── Hero ticker marquee ──────────────────────────────────────────────── */
 @keyframes ticker {

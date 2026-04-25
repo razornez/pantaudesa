@@ -98,7 +98,7 @@ function DaftarInner() {
     if (!form.nama.trim())     errs.nama       = "Nama tidak boleh kosong.";
     if (!/^[a-z0-9_]{3,20}$/.test(form.username)) errs.username = "3–20 karakter: huruf kecil, angka, underscore.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Format email tidak valid.";
-    if (!/^\d{4}$/.test(form.pin))             errs.pin        = "PIN harus 4 digit angka.";
+    if (!/^\d{6}$/.test(form.pin))             errs.pin        = "PIN harus 6 digit angka.";
     if (form.pin !== form.confirmPin)          errs.confirmPin = "PIN tidak cocok.";
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
@@ -300,7 +300,7 @@ function DaftarInner() {
                 <label className="text-xs font-semibold text-slate-600 block mb-1">PIN 4 Digit *</label>
                 <div className="relative">
                   <input type={showPin ? "text" : "password"} value={form.pin}
-                    onChange={e => set("pin", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    onChange={e => set("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
                     inputMode="numeric" maxLength={4} placeholder="••••"
                     className={`w-full px-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.5em] ${errors.pin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
                   <button type="button" onClick={() => setShowPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -318,7 +318,7 @@ function DaftarInner() {
                 <label className="text-xs font-semibold text-slate-600 block mb-1">Konfirmasi PIN *</label>
                 <div className="relative">
                   <input type={showConfirm ? "text" : "password"} value={form.confirmPin}
-                    onChange={e => set("confirmPin", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    onChange={e => set("confirmPin", e.target.value.replace(/\D/g, "").slice(0, 6))}
                     inputMode="numeric" maxLength={4} placeholder="••••"
                     className={`w-full px-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.5em] ${errors.confirmPin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
                   <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -343,16 +343,16 @@ function DaftarInner() {
 
         {/* ── Step 2: OTP ──────────────────────────────────────────────── */}
         {step === "otp" && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="text-center">
               <div className="w-16 h-16 rounded-3xl bg-indigo-100 flex items-center justify-center mx-auto mb-4">
                 <Mail size={28} className="text-indigo-500" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900">Masukkan Kode OTP</h2>
+              <h2 className="text-2xl font-black text-slate-900">Cek emailmu</h2>
               <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                Kode 4 digit dikirim ke{" "}
+                Kode 6 digit dikirim ke{" "}
                 <span className="font-semibold text-slate-700">{form.email}</span>.
-                <br />Berlaku 10 menit.
+                <br />Berlaku 10 menit — masukkan segera.
               </p>
             </div>
 
@@ -370,17 +370,45 @@ function DaftarInner() {
               </div>
             )}
 
-            <div className="text-center space-y-2">
+            {/* Countdown + resend */}
+            <div className="text-center space-y-2.5">
               {resendIn > 0 ? (
-                <p className="text-xs text-slate-400">Kirim ulang dalam <span className="font-bold text-slate-600">{resendIn}s</span></p>
+                <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                  <RotateCw size={12} className="text-slate-400" />
+                  <span className="text-xs text-slate-500">
+                    Kirim ulang tersedia dalam{" "}
+                    <span className="font-black text-indigo-600 tabular-nums">{resendIn}s</span>
+                  </span>
+                </div>
               ) : (
-                <button onClick={handleResend} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                  Tidak menerima kode? Kirim ulang
+                <button
+                  onClick={handleResend}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer transition-colors underline underline-offset-2"
+                >
+                  Tidak menerima kode? Kirim ulang sekarang
                 </button>
               )}
-              <br />
-              <button onClick={() => { setStep("form"); setApiErr(""); }} className="text-xs text-slate-400 hover:text-slate-600">
-                ← Ubah data pendaftaran
+
+              {/* Panduan jika tidak menerima */}
+              <details className="text-left">
+                <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 text-center select-none">
+                  Masih belum menerima? Lihat tips ▾
+                </summary>
+                <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 space-y-1">
+                  <p className="font-bold">Yang bisa kamu lakukan:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Cek folder <strong>Spam</strong> atau <strong>Promotions</strong></li>
+                    <li>Tunggu hingga tombol "Kirim Ulang" muncul, lalu klik</li>
+                    <li>Pastikan emailmu benar — kalau salah, kembali dan ubah</li>
+                  </ul>
+                </div>
+              </details>
+
+              <button
+                onClick={() => { setStep("form"); setApiErr(""); }}
+                className="block text-xs text-slate-400 hover:text-slate-600 cursor-pointer transition-colors mx-auto"
+              >
+                ← Email salah? Ubah data pendaftaran
               </button>
             </div>
           </div>

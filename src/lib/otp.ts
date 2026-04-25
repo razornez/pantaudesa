@@ -5,7 +5,7 @@ const OTP_EXPIRY_MINUTES = 10;
 const OTP_RESEND_SECONDS = 60;
 
 export function generateCode(): string {
-  return String(Math.floor(1000 + Math.random() * 9000)); // 4 digits
+  return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
 }
 
 export async function createOtp(email: string, purpose: "REGISTER" | "RESET_PIN" | "UNFREEZE"): Promise<{

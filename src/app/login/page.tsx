@@ -181,7 +181,7 @@ function LoginInner() {
           </Link>
           <div className="flex-1 flex flex-col justify-center max-w-sm">
             <h1 className="text-3xl font-black text-white leading-tight mb-4">Suaramu penting<br />untuk desamu.</h1>
-            <p className="text-indigo-200 text-sm leading-relaxed">Masuk dengan email dan PIN 4 digit — cepat, aman, tanpa password yang rumit.</p>
+            <p className="text-indigo-200 text-sm leading-relaxed">Masuk dengan email dan PIN 6 digit — cepat, aman, tanpa password yang rumit.</p>
           </div>
           <div className="flex justify-end opacity-70">
             <Image src={ASSETS.mascotStanding} alt="Pak Waspada" width={100} height={140} className="object-contain" />

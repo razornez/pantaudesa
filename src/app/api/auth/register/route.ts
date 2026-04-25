@@ -19,8 +19,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ field: "username", error: "Username hanya huruf kecil, angka, underscore (3–20 karakter)." }, { status: 400 });
     if (!email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       return NextResponse.json({ field: "email", error: "Format email tidak valid." }, { status: 400 });
-    if (!pin || !/^\d{4}$/.test(pin))
-      return NextResponse.json({ field: "pin", error: "PIN harus 4 digit angka." }, { status: 400 });
+    if (!pin || !/^\d{6}$/.test(pin))
+      return NextResponse.json({ field: "pin", error: "PIN harus 6 digit angka." }, { status: 400 });
     if (pin !== confirmPin)
       return NextResponse.json({ field: "confirmPin", error: "Konfirmasi PIN tidak cocok." }, { status: 400 });
 

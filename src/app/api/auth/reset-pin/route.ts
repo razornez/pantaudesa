@@ -34,8 +34,8 @@ export async function POST(req: Request) {
     }
 
     // ── Verify OTP + set new PIN ───────────────────────────────────────────
-    if (!pin || !/^\d{4}$/.test(pin)) {
-      return NextResponse.json({ field: "pin", error: "PIN harus 4 digit angka." }, { status: 400 });
+    if (!pin || !/^\d{6}$/.test(pin)) {
+      return NextResponse.json({ field: "pin", error: "PIN harus 6 digit angka." }, { status: 400 });
     }
     if (pin !== confirmPin) {
       return NextResponse.json({ field: "confirmPin", error: "Konfirmasi PIN tidak cocok." }, { status: 400 });
