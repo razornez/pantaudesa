@@ -67,7 +67,7 @@ export default function DesaAdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "desa")) router.push("/login");
+    if (!loading && (!user || user.role !== "DESA")) router.push("/login");
   }, [user, loading, router]);
 
   if (loading || !user) return null;

@@ -4,38 +4,31 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
-  ArrowLeft, ArrowRight, Check, User, Mail,
-  AtSign, FileText, RotateCw, Sparkles, Camera,
+  ArrowRight, Check, User,
+  AtSign, FileText, RotateCw, Camera,
 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
-import { MOCK_ACCOUNTS, generateOTP, verifyOTP } from "@/lib/auth-mock";
-import { useAuth } from "@/lib/auth-context";
-import type { AuthUser } from "@/lib/auth-mock";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Step = "info" | "otp" | "avatar" | "done";
+type Step = "info" | "avatar" | "done";
 
 interface FormData {
-  nama:     string;
-  username: string;
-  email:    string;
-  bio:      string;
+  nama:      string;
+  username:  string;
+  bio:       string;
   avatarUrl?: string;
 }
 
+interface FieldErrors {
+  nama?:     string;
+  username?: string;
+  bio?:      string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isEmailTaken(email: string) {
-  return Object.keys(MOCK_ACCOUNTS).includes(email.toLowerCase().trim());
-}
-
-function isUsernameTaken(username: string) {
-  return Object.values(MOCK_ACCOUNTS).some(
-    a => a.username.toLowerCase() === username.toLowerCase().trim()
-  );
-}
 
 function slugify(str: string) {
   return str.toLowerCase()
@@ -47,63 +40,21 @@ function slugify(str: string) {
 // ─── Progress dots ────────────────────────────────────────────────────────────
 
 function ProgressDots({ step }: { step: Step }) {
-  const steps: Step[] = ["info", "otp", "avatar", "done"];
+  const steps: Step[] = ["info", "avatar", "done"];
   const idx           = steps.indexOf(step);
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
       {steps.slice(0, -1).map((s, i) => (
         <div key={s} className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-            i < idx  ? "bg-indigo-600 text-white" :
-            i === idx? "bg-indigo-100 text-indigo-600 ring-2 ring-indigo-400 ring-offset-1" :
-                       "bg-slate-100 text-slate-400"
+            i < idx   ? "bg-indigo-600 text-white" :
+            i === idx ? "bg-indigo-100 text-indigo-600 ring-2 ring-indigo-400 ring-offset-1" :
+                        "bg-slate-100 text-slate-400"
           }`}>
             {i < idx ? <Check size={13} /> : i + 1}
           </div>
-          {i < 2 && <div className={`w-8 h-0.5 rounded-full ${i < idx ? "bg-indigo-400" : "bg-slate-200"}`} />}
+          {i < 1 && <div className={`w-8 h-0.5 rounded-full ${i < idx ? "bg-indigo-400" : "bg-slate-200"}`} />}
         </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── OTP Input ────────────────────────────────────────────────────────────────
-
-function OTPInput({ onComplete, disabled }: { onComplete: (v: string) => void; disabled?: boolean }) {
-  const [digits, setDigits] = useState(["","","","","",""]);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const refs = Array.from({ length: 6 }, () => useRef<HTMLInputElement>(null));
-
-  const handleChange = (i: number, val: string) => {
-    const v = val.replace(/\D/g, "").slice(-1);
-    const next = [...digits]; next[i] = v;
-    setDigits(next);
-    if (v && i < 5) refs[i + 1].current?.focus();
-    if (next.join("").length === 6) onComplete(next.join(""));
-  };
-  const handleKey = (i: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !digits[i] && i > 0) refs[i - 1].current?.focus();
-  };
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (text.length === 6) { setDigits(text.split("")); onComplete(text); }
-    e.preventDefault();
-  };
-
-  return (
-    <div className="flex gap-2.5 justify-center" onPaste={handlePaste}>
-      {digits.map((d, i) => (
-        <input
-          key={i} ref={refs[i]} type="text" inputMode="numeric"
-          maxLength={1} value={d} disabled={disabled}
-          onChange={e => handleChange(i, e.target.value)}
-          onKeyDown={e => handleKey(i, e)}
-          className={`w-11 text-center text-xl font-black rounded-2xl border-2 transition-all outline-none focus:scale-105 disabled:opacity-40 ${
-            d ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-              : "border-slate-200 bg-white focus:border-indigo-400 focus:bg-indigo-50/50"
-          }`}
-          style={{ height: 52 }}
-        />
       ))}
     </div>
   );
@@ -112,30 +63,27 @@ function OTPInput({ onComplete, disabled }: { onComplete: (v: string) => void; d
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function DaftarPage() {
-  const router      = useRouter();
-  const { login }   = useAuth();
-  const fileRef     = useRef<HTMLInputElement>(null);
+  const router              = useRouter();
+  const { data: session }   = useSession();
+  const fileRef             = useRef<HTMLInputElement>(null);
 
   const [step,    setStep]    = useState<Step>("info");
   const [loading, setLoading] = useState(false);
-  const [otp,     setOtp]     = useState("");
-  const [otpCode, setOtpCode] = useState(""); // mock — hapus di produksi
-  const [otpErr,  setOtpErr]  = useState("");
-  const [errors,  setErrors]  = useState<Partial<FormData>>({});
+  const [errors,  setErrors]  = useState<FieldErrors>({});
+  const [apiErr,  setApiErr]  = useState("");
 
   const [form, setForm] = useState<FormData>({
-    nama:     "",
+    nama:     session?.user?.name ?? "",
     username: "",
-    email:    "",
     bio:      "",
   });
 
   const set = (k: keyof FormData, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: undefined }));
+    setApiErr("");
   };
 
-  // Auto-generate username dari nama
   const handleNamaChange = (v: string) => {
     set("nama", v);
     if (!form.username || form.username === slugify(form.nama)) {
@@ -143,40 +91,34 @@ export default function DaftarPage() {
     }
   };
 
-  // ── Step 1: validasi + kirim OTP ──────────────────────────────────────
-  const handleInfoSubmit = async (e: React.FormEvent) => {
+  // ── Step 1: validasi info → POST /api/users/register ──────────────────
+  const handleInfoSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    const errs: Partial<FormData> = {};
-    if (!form.nama.trim())      errs.nama     = "Nama tidak boleh kosong.";
-    if (!form.username.trim())  errs.username = "Username tidak boleh kosong.";
+    const errs: FieldErrors = {};
+    if (!form.nama.trim())     errs.nama     = "Nama tidak boleh kosong.";
+    if (!form.username.trim()) errs.username = "Username tidak boleh kosong.";
     if (!/^[a-z0-9_]{3,20}$/.test(form.username))
       errs.username = "Hanya huruf kecil, angka, underscore. 3–20 karakter.";
-    if (!form.email.trim())     errs.email    = "Email tidak boleh kosong.";
-    if (isEmailTaken(form.email))
-      errs.email = "Email sudah terdaftar. Silakan masuk.";
-    if (isUsernameTaken(form.username))
-      errs.username = "Username sudah dipakai.";
     if (Object.keys(errs).length) return setErrors(errs);
 
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const code = generateOTP(form.email.toLowerCase().trim());
-    setOtpCode(code);
+    const res = await fetch("/api/users/register", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ username: form.username.trim(), nama: form.nama.trim(), bio: form.bio.trim() || null }),
+    });
     setLoading(false);
-    setStep("otp");
-  };
 
-  // ── Step 2: verifikasi OTP ─────────────────────────────────────────────
-  const handleOTPComplete = async (code: string) => {
-    setOtpErr(""); setLoading(true);
-    await new Promise(r => setTimeout(r, 500));
-    const valid = verifyOTP(form.email.toLowerCase().trim(), code);
-    if (!valid) { setLoading(false); return setOtpErr("Kode salah atau kedaluwarsa."); }
-    setLoading(false);
+    if (!res.ok) {
+      const data = await res.json();
+      if (data.error?.includes("username")) setErrors({ username: data.error });
+      else setApiErr(data.error ?? "Terjadi kesalahan. Coba lagi.");
+      return;
+    }
     setStep("avatar");
   };
 
-  // ── Step 3: avatar (opsional) → selesai ────────────────────────────────
+  // ── Step 2: upload avatar (opsional) → selesai ────────────────────────
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) set("avatarUrl", URL.createObjectURL(f));
@@ -184,23 +126,15 @@ export default function DaftarPage() {
 
   const handleFinish = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-
-    const newUser: AuthUser = {
-      id:        `w-${Date.now()}`,
-      nama:      form.nama.trim(),
-      username:  form.username.trim(),
-      email:     form.email.toLowerCase().trim(),
-      role:      "warga",
-      bio:       form.bio.trim() || undefined,
-      avatarUrl: form.avatarUrl,
-      joinedAt:  new Date(),
-    };
-
-    // In production: POST /api/users, here we just log in directly
-    login(newUser);
+    if (form.avatarUrl) {
+      await fetch("/api/users/me", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ avatarUrl: form.avatarUrl }),
+      });
+    }
     setStep("done");
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1000));
     router.push("/profil/saya");
   };
 
@@ -266,11 +200,19 @@ export default function DaftarPage() {
 
         {/* ── Step 1: Info ────────────────────────────────────────────────── */}
         {step === "info" && (
-          <div className="space-y-5 animate-fade-up">
+          <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Buat Akun Warga</h2>
-              <p className="text-sm text-slate-500 mt-1">Gratis, tanpa perlu kartu kredit. Hanya butuh email.</p>
+              <h2 className="text-2xl font-black text-slate-900">Lengkapi Profilmu</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Masuk sebagai <span className="font-semibold text-slate-700">{session?.user?.email}</span>
+              </p>
             </div>
+
+            {apiErr && (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-xs text-rose-700">
+                ⚠️ {apiErr}
+              </div>
+            )}
 
             <form onSubmit={handleInfoSubmit} className="space-y-4">
               {/* Nama */}
@@ -307,21 +249,6 @@ export default function DaftarPage() {
                 }
               </div>
 
-              {/* Email */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email *</label>
-                <div className="relative">
-                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email" value={form.email}
-                    onChange={e => set("email", e.target.value)}
-                    placeholder="email@kamu.com"
-                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition ${errors.email ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`}
-                  />
-                </div>
-                {errors.email && <p className="text-xs text-rose-600 mt-1">⚠️ {errors.email}</p>}
-              </div>
-
               {/* Bio (opsional) */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 block mb-1.5">Bio <span className="font-normal">(opsional)</span></label>
@@ -345,53 +272,18 @@ export default function DaftarPage() {
                 {loading ? <RotateCw size={16} className="animate-spin" /> : <><span>Lanjut</span><ArrowRight size={15} /></>}
               </button>
             </form>
-
-            <p className="text-center text-xs text-slate-400">
-              Dengan mendaftar, kamu menyetujui{" "}
-              <Link href="/panduan" className="text-indigo-600 hover:underline">ketentuan layanan</Link> kami.
-            </p>
           </div>
         )}
 
-        {/* ── Step 2: OTP ─────────────────────────────────────────────────── */}
-        {step === "otp" && (
-          <div className="space-y-5 animate-fade-up">
-            <button onClick={() => setStep("info")} className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
-              <ArrowLeft size={13} /> Kembali
-            </button>
-            <div>
-              <h2 className="text-2xl font-black text-slate-900">Verifikasi Email</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                Kode dikirim ke <span className="font-semibold text-slate-700">{form.email}</span>
-              </p>
-            </div>
-
-            {otpCode && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <Sparkles size={16} className="text-indigo-500 flex-shrink-0" />
-                <div>
-                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Kode Demo</p>
-                  <p className="text-2xl font-black text-indigo-700 tracking-[0.3em]">{otpCode}</p>
-                </div>
-              </div>
-            )}
-
-            <OTPInput onComplete={handleOTPComplete} disabled={loading} />
-            {otpErr && <p className="text-xs text-rose-600 text-center">⚠️ {otpErr}</p>}
-            {loading && <div className="flex justify-center"><RotateCw size={18} className="text-indigo-500 animate-spin" /></div>}
-          </div>
-        )}
-
-        {/* ── Step 3: Avatar ──────────────────────────────────────────────── */}
+        {/* ── Step 2: Avatar ──────────────────────────────────────────────── */}
         {step === "avatar" && (
-          <div className="space-y-6 animate-fade-up">
+          <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-black text-slate-900">Tambah Foto Profil</h2>
               <p className="text-sm text-slate-500 mt-1">Opsional — kamu bisa melewatinya sekarang.</p>
             </div>
 
             <div className="flex flex-col items-center gap-5">
-              {/* Avatar preview */}
               <div className="relative">
                 {form.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -435,9 +327,9 @@ export default function DaftarPage() {
           </div>
         )}
 
-        {/* ── Step 4: Done ────────────────────────────────────────────────── */}
+        {/* ── Step 3: Done ────────────────────────────────────────────────── */}
         {step === "done" && (
-          <div className="flex flex-col items-center text-center gap-5 animate-fade-up">
+          <div className="flex flex-col items-center text-center gap-5">
             <div className="w-20 h-20 rounded-3xl bg-emerald-100 flex items-center justify-center">
               <span className="text-4xl">🎉</span>
             </div>

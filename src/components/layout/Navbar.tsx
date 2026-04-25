@@ -47,7 +47,7 @@ export default function Navbar() {
 
   const handleLogout = () => { logout(); router.push("/"); };
 
-  const unread = user?.role === "warga" ? getUnreadCount(user.nama) : 0;
+  const unread = user?.role === "WARGA" ? getUnreadCount(user.nama) : 0;
 
   // Right-side content per role
   const renderRight = () => {
@@ -59,7 +59,7 @@ export default function Navbar() {
       );
     }
 
-    if (user.role === "warga") {
+    if (user.role === "WARGA") {
       return (
         <div className="flex items-center gap-1.5">
           {/* Notif bell */}
@@ -89,11 +89,11 @@ export default function Navbar() {
     return (
       <div className="flex items-center gap-2">
         <Link
-          href={user.role === "admin" ? "/admin" : "/desa-admin"}
+          href={user.role === "ADMIN" ? "/admin" : "/desa-admin"}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors"
         >
           <LayoutDashboard size={13} />
-          {user.role === "admin" ? "Admin" : "Dashboard"}
+          {user.role === "ADMIN" ? "Admin" : "Dashboard"}
         </Link>
         <button onClick={handleLogout} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors">
           <LogOut size={14} />
@@ -163,7 +163,7 @@ export default function Navbar() {
                 Masuk
               </Link>
             )}
-            {user?.role === "warga" && (
+            {user?.role === "WARGA" && (
               <>
                 <Link href="/profil/saya" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-700">
                   <NavAvatar nama={user.nama} avatarUrl={user.avatarUrl} /> Profil Saya
@@ -174,9 +174,9 @@ export default function Navbar() {
                 </button>
               </>
             )}
-            {(user?.role === "desa" || user?.role === "admin") && (
+            {(user?.role === "DESA" || user?.role === "ADMIN") && (
               <>
-                <Link href={user.role === "admin" ? "/admin" : "/desa-admin"} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-indigo-600">
+                <Link href={user.role === "ADMIN" ? "/admin" : "/desa-admin"} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-indigo-600">
                   <LayoutDashboard size={14} /> Dashboard
                 </Link>
                 <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 w-full">

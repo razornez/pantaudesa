@@ -129,7 +129,7 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<DocStatus | "semua">("semua");
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "admin")) router.push("/login");
+    if (!loading && (!user || user.role !== "ADMIN")) router.push("/login");
   }, [user, loading, router]);
 
   if (loading || !user) return null;

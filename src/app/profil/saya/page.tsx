@@ -146,7 +146,7 @@ function TrustCard({ score, tier }: { score: number; tier: BadgeTier }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function SayaProfilePage() {
-  const { user, login, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   const [tab,       setTab]       = useState<Tab>("profil");
@@ -173,12 +173,14 @@ export default function SayaProfilePage() {
   const trustStats = computeTrustStats(user.nama);
   const unread     = notifs.filter(n => !n.isRead).length;
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    // Update session (mock — backend would persist this)
-    login({ ...user, nama: nama.trim() || user.nama, bio: bio.trim(), avatarUrl });
+    await fetch("/api/users/me", {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ nama: nama.trim() || user.nama, bio: bio.trim(), avatarUrl }),
+    });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -311,7 +313,7 @@ export default function SayaProfilePage() {
           </form>
 
           {/* Trust card */}
-          {user.role === "warga" && (
+          {user.role === "WARGA" && (
             <TrustCard score={trustStats.trustScore} tier={trustStats.badge.tier as BadgeTier} />
           )}
         </div>

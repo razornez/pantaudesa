@@ -70,7 +70,7 @@ export default function ProfilAdminPage() {
   const [passErr, setPassErr] = useState("");
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "desa")) router.push("/login");
+    if (!loading && (!user || user.role !== "DESA")) router.push("/login");
   }, [user, loading, router]);
 
   if (loading || !user || !desa) return null;

@@ -1,51 +1,57 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { AuthUser } from "./auth-mock";
+/**
+ * Thin wrapper around NextAuth useSession so the rest of the app
+ * keeps using useAuth() without knowing about NextAuth internals.
+ */
+
+import { createContext, useContext, ReactNode } from "react";
+import { useSession, signOut } from "next-auth/react";
+
+export type UserRole = "WARGA" | "DESA" | "ADMIN";
+
+export interface AuthUser {
+  id:        string;
+  nama:      string;
+  username:  string;
+  email:     string;
+  role:      UserRole;
+  avatarUrl?: string;
+  bio?:       string;
+  joinedAt?:  Date;
+  desaId?:   string;
+  desaNama?: string;
+}
 
 interface AuthCtx {
   user:    AuthUser | null;
-  login:   (user: AuthUser) => void;
   logout:  () => void;
   loading: boolean;
 }
 
-const Ctx = createContext<AuthCtx>({
-  user: null, login: () => {}, logout: () => {}, loading: true,
-});
-
-const KEY = "pantaudesa_user";
-
-function revive(raw: string): AuthUser {
-  const parsed = JSON.parse(raw);
-  // Restore Date fields that JSON.parse turns into strings
-  if (parsed.joinedAt) parsed.joinedAt = new Date(parsed.joinedAt);
-  return parsed as AuthUser;
-}
+const Ctx = createContext<AuthCtx>({ user: null, logout: () => {}, loading: true });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,    setUser]    = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(KEY);
-      if (raw) setUser(revive(raw));
-    } catch {}
-    setLoading(false);
-  }, []);
+  const user: AuthUser | null = session?.user
+    ? {
+        id:        session.user.id,
+        nama:      session.user.name ?? session.user.username ?? "",
+        username:  session.user.username ?? "",
+        email:     session.user.email ?? "",
+        role:      (session.user.role as UserRole) ?? "WARGA",
+        avatarUrl: session.user.image ?? undefined,
+      }
+    : null;
 
-  const login = (u: AuthUser) => {
-    setUser(u);
-    sessionStorage.setItem(KEY, JSON.stringify(u));
-  };
+  const logout = () => signOut({ callbackUrl: "/" });
 
-  const logout = () => {
-    setUser(null);
-    sessionStorage.removeItem(KEY);
-  };
-
-  return <Ctx.Provider value={{ user, login, logout, loading }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, logout, loading: status === "loading" }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export const useAuth = () => useContext(Ctx);

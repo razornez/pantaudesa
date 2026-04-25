@@ -190,7 +190,7 @@ export default function DokumenPage() {
   const [successId, setSuccessId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "desa")) router.push("/login");
+    if (!loading && (!user || user.role !== "DESA")) router.push("/login");
   }, [user, loading, router]);
 
   useEffect(() => {

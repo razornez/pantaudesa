@@ -3,7 +3,7 @@
  * Ganti dengan API calls nyata saat backend tersedia.
  */
 
-export type UserRole = "desa" | "admin" | "warga";
+export type UserRole = "DESA" | "ADMIN" | "WARGA";
 
 export interface AuthUser {
   id:        string;
@@ -25,32 +25,32 @@ export const MOCK_ACCOUNTS: Record<string, AuthUser> = {
   // Desa accounts
   "desa.sukamaju@gmail.com": {
     id: "u1", nama: "H. Asep Supriatna, S.H.", username: "kades_sukamaju",
-    email: "desa.sukamaju@gmail.com", role: "desa",
+    email: "desa.sukamaju@gmail.com", role: "DESA",
     desaId: "1", desaNama: "Desa Sukamaju",
     joinedAt: new Date("2024-01-15"),
   },
   "desa.harapanjaya@gmail.com": {
     id: "u2", nama: "Dadang Sutisna, A.Md.", username: "kades_harapanjaya",
-    email: "desa.harapanjaya@gmail.com", role: "desa",
+    email: "desa.harapanjaya@gmail.com", role: "DESA",
     desaId: "2", desaNama: "Desa Harapan Jaya",
     joinedAt: new Date("2024-02-01"),
   },
   // Admin
   "admin@pantaudesa.id": {
     id: "a1", nama: "Admin PantauDesa", username: "admin_pantaudesa",
-    email: "admin@pantaudesa.id", role: "admin",
+    email: "admin@pantaudesa.id", role: "ADMIN",
     joinedAt: new Date("2023-12-01"),
   },
   // Warga accounts (demo)
   "pak.muryanto@gmail.com": {
     id: "w1", nama: "Pak Muryanto", username: "muryanto87",
-    email: "pak.muryanto@gmail.com", role: "warga",
+    email: "pak.muryanto@gmail.com", role: "WARGA",
     bio: "Warga Desa Maju Bersama. Peduli transparansi anggaran desa.",
     joinedAt: new Date("2024-03-10"),
   },
   "ibu.sumarni@gmail.com": {
     id: "w2", nama: "Ibu Sumarni", username: "sumarni_warga",
-    email: "ibu.sumarni@gmail.com", role: "warga",
+    email: "ibu.sumarni@gmail.com", role: "WARGA",
     bio: "Ibu rumah tangga yang ingin tahu anggaran desanya dipakai untuk apa.",
     joinedAt: new Date("2024-04-05"),
   },

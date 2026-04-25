@@ -215,7 +215,7 @@ export default function PublicProfilePage() {
             <span className="flex items-center gap-1">
               <Calendar size={11} /> Bergabung {joinDate}
             </span>
-            {profileUser.role === "warga" && (
+            {profileUser.role === "WARGA" && (
               <span className="flex items-center gap-1">
                 <MessageSquare size={11} /> {voices.length} suara
               </span>
@@ -225,7 +225,7 @@ export default function PublicProfilePage() {
       </div>
 
       {/* ── Trust stats ───────────────────────────────────────────────────── */}
-      {stats && profileUser.role === "warga" && (
+      {stats && profileUser.role === "WARGA" && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           {/* Stat pills */}
           <div className="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
@@ -251,7 +251,7 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {voices.length === 0 && profileUser.role === "warga" && (
+      {voices.length === 0 && profileUser.role === "WARGA" && (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center">
           <p className="text-3xl mb-3">🤫</p>
           <p className="text-sm font-semibold text-slate-600">Belum ada suara yang dibagikan.</p>
