@@ -1,55 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as Sentry from "@sentry/nextjs";
-import Image from "next/image";
 import Link from "next/link";
-import {
-  Mail, ArrowRight, RotateCw, ShieldCheck, Sparkles,
-  AlertTriangle, RefreshCw, Users, Building2,
-} from "lucide-react";
+import Image from "next/image";
+import { Mail, ArrowRight, RotateCw, AlertTriangle, ShieldAlert, Users, Building2 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
+import PinInput from "@/components/ui/PinInput";
+import { useCountdown } from "@/lib/use-countdown";
 
-type Step  = "email" | "sent";
-type Mode  = "warga" | "desa";
+type Step = "email" | "pin";
+type Mode = "warga" | "desa";
 
-// ─── Error parser ─────────────────────────────────────────────────────────────
-
-function parseSignInError(error: unknown): { message: string; action: string } {
-  const s = String(error ?? "").toLowerCase();
-  if (s.includes("configuration") || s.includes("server"))
-    return { message: "Server sedang bermasalah.", action: "Coba lagi dalam beberapa menit. Jika masih gagal, hubungi tim kami." };
-  if (s.includes("email") || s.includes("send") || s.includes("resend"))
-    return { message: "Email gagal terkirim.", action: "Pastikan alamat email benar dan coba lagi. Periksa juga folder spam." };
-  if (s.includes("rate") || s.includes("limit") || s.includes("too many"))
-    return { message: "Terlalu banyak percobaan.", action: "Tunggu beberapa menit sebelum mencoba lagi." };
-  if (s.includes("network") || s.includes("fetch") || s.includes("connect"))
-    return { message: "Koneksi internet bermasalah.", action: "Periksa koneksi internet kamu dan coba lagi." };
-  return { message: "Terjadi kesalahan.", action: "Coba lagi, atau hubungi kami jika masalah terus berlanjut." };
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Mode selector ─────────────────────────────────────────────────────────────
 
 function ModeSelector({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   return (
     <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
       {([
-        { id: "warga", label: "Saya Warga",         icon: Users     },
-        { id: "desa",  label: "Portal Desa / Admin", icon: Building2 },
+        { id: "warga", label: "Saya Warga",          icon: Users     },
+        { id: "desa",  label: "Portal Desa / Admin",  icon: Building2 },
       ] as { id: Mode; label: string; icon: React.ElementType }[]).map(m => {
         const Icon = m.icon;
         return (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onChange(m.id)}
+          <button key={m.id} type="button" onClick={() => onChange(m.id)}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              mode === m.id
-                ? "bg-white text-slate-800 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
+              mode === m.id ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}>
             <Icon size={13} /> {m.label}
           </button>
         );
@@ -58,81 +37,137 @@ function ModeSelector({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => v
   );
 }
 
-function ErrorBox({ message, action, onRetry }: { message: string; action: string; onRetry: () => void }) {
-  return (
-    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
-      <div className="flex items-start gap-2.5">
-        <AlertTriangle size={16} className="text-rose-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-rose-800">{message}</p>
-          <p className="text-xs text-rose-600 mt-0.5 leading-relaxed">{action}</p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:text-rose-900 bg-rose-100 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition-colors"
-      >
-        <RefreshCw size={11} /> Coba lagi
-      </button>
-    </div>
-  );
-}
+// ─── Main inner ────────────────────────────────────────────────────────────────
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+function LoginInner() {
+  const router     = useRouter();
+  const params     = useSearchParams();
 
-export default function LoginPage() {
-  const [step,    setStep]    = useState<Step>("email");
   const [mode,    setMode]    = useState<Mode>("warga");
-  const [email,   setEmail]   = useState("");
-  const [error,   setError]   = useState<{ message: string; action: string } | null>(null);
+  const [step,    setStep]    = useState<Step>("email");
+  const [email,   setEmail]   = useState(params.get("email") ?? "");
   const [loading, setLoading] = useState(false);
+  const [err,     setErr]     = useState("");
+  const [frozen,  setFrozen]  = useState(false);
+  const [frozenUntil, setFrozenUntil] = useState<Date | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [pinReset, setPinReset] = useState(0);
+  const [resendAt, setResendAt] = useState<Date | null>(null);
 
-  const handleModeChange = (m: Mode) => {
-    setMode(m);
-    setError(null);
-    setEmail("");
-  };
+  const frozenSecs = useCountdown(frozenUntil);
+  const resendSecs = useCountdown(resendAt);
 
-  const reset = () => { setError(null); setStep("email"); };
+  // If frozen timer expired, allow retry
+  useEffect(() => {
+    if (frozen && frozenSecs === 0) setFrozen(false);
+  }, [frozen, frozenSecs]);
 
-  const handleSubmit = async (e: React.SyntheticEvent) => {
+  const handleModeChange = (m: Mode) => { setMode(m); setErr(""); };
+
+  // ── Step 1: check email ─────────────────────────────────────────────────
+  const handleEmailSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setError(null);
+    setErr("");
     const trimmed = email.toLowerCase().trim();
-    if (!trimmed) {
-      setError({ message: "Email tidak boleh kosong.", action: "Masukkan alamat email kamu." });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError({ message: "Format email tidak valid.", action: "Contoh: nama@gmail.com" });
-      return;
-    }
+    if (!trimmed) { setErr("Email tidak boleh kosong."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setErr("Format email tidak valid."); return; }
 
     setLoading(true);
     try {
-      const res = await signIn("resend", { email: trimmed, redirect: false, callbackUrl: "/" });
-      if (res?.error) {
-        Sentry.captureMessage(`signIn error: ${res.error}`, { level: "warning", extra: { email: trimmed } });
-        setError(parseSignInError(res.error));
+      const res  = await fetch("/api/auth/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+
+      if (!data.exists) {
+        // Redirect to register with email pre-filled
+        router.push(`/daftar?email=${encodeURIComponent(trimmed)}`);
         return;
       }
-      setStep("sent");
-    } catch (err) {
-      Sentry.captureException(err);
-      setError(parseSignInError(err));
+      if (data.unverified) {
+        setErr("Email belum diverifikasi. Cek inbox kamu dan klik link verifikasi, atau daftar ulang.");
+        return;
+      }
+      setStep("pin");
+    } catch (ex) {
+      Sentry.captureException(ex);
+      setErr("Koneksi bermasalah. Coba lagi.");
     } finally {
       setLoading(false);
     }
   };
 
-  const placeholder = mode === "warga" ? "email@kamu.com" : "email@desa.id";
-  const label       = mode === "warga" ? "Email kamu" : "Email resmi desa / admin";
+  // ── Step 2: verify PIN ──────────────────────────────────────────────────
+  const handlePinComplete = async (pin: string) => {
+    if (frozen) return;
+    setErr("");
+    setLoading(true);
+    try {
+      const res  = await fetch("/api/auth/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email: email.toLowerCase().trim(), pin }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPinReset(n => n + 1);
+        if (data.frozen) {
+          setFrozen(true);
+          setFrozenUntil(new Date(data.frozenUntil));
+          setErr(data.error);
+        } else {
+          setAttemptsLeft(data.attemptsLeft ?? null);
+          setErr(data.error ?? "PIN salah.");
+        }
+        return;
+      }
+
+      // PIN verified server-side — create NextAuth JWT session via "pin" provider
+      const signInRes = await signIn("pin", {
+        email:    email.toLowerCase().trim(),
+        redirect: false,
+      });
+
+      if (signInRes?.error) {
+        Sentry.captureMessage(`signIn after pin error: ${signInRes.error}`, "warning");
+        setErr("Login berhasil tapi sesi gagal dibuat. Coba lagi.");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (ex) {
+      Sentry.captureException(ex);
+      setErr("Koneksi bermasalah. Coba lagi.");
+      setPinReset(n => n + 1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Send PIN to email ───────────────────────────────────────────────────
+  const handleSendPinEmail = async () => {
+    if (resendSecs > 0) return;
+    setErr("");
+    const res  = await fetch("/api/auth/login", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ email: email.toLowerCase().trim(), resendOtp: true }),
+    });
+    const data = await res.json();
+    setResendAt(new Date(data.canResendAt));
+    setErr("Kode sementara dikirim ke emailmu. Masukkan kode tersebut sebagai PIN.");
+  };
+
+  const frozenMins = frozenSecs > 0 ? Math.ceil(frozenSecs / 60) : 0;
 
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Sisi kiri — branding ──────────────────────────────────────────── */}
+      {/* Sisi kiri */}
       <div className="hidden lg:flex flex-col flex-1 relative bg-gradient-to-br from-indigo-700 via-indigo-600 to-violet-700 overflow-hidden p-10">
         <div className="absolute inset-0 opacity-10">
           <Image src={ASSETS.textureLight} alt="" fill className="object-cover" />
@@ -145,15 +180,8 @@ export default function LoginPage() {
             <span className="font-bold text-lg text-white">Pantau<span className="text-indigo-200">Desa</span></span>
           </Link>
           <div className="flex-1 flex flex-col justify-center max-w-sm">
-            <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1.5 text-xs font-semibold text-white mb-6 w-fit">
-              <ShieldCheck size={13} /> Masuk dengan aman — tanpa password
-            </div>
-            <h1 className="text-3xl font-black text-white leading-tight mb-4">
-              Suaramu penting<br />untuk desamu.
-            </h1>
-            <p className="text-indigo-200 text-sm leading-relaxed">
-              Masukkan email kamu dan kami kirimkan link masuk — klik link-nya, langsung masuk tanpa password.
-            </p>
+            <h1 className="text-3xl font-black text-white leading-tight mb-4">Suaramu penting<br />untuk desamu.</h1>
+            <p className="text-indigo-200 text-sm leading-relaxed">Masuk dengan email dan PIN 4 digit — cepat, aman, tanpa password yang rumit.</p>
           </div>
           <div className="flex justify-end opacity-70">
             <Image src={ASSETS.mascotStanding} alt="Pak Waspada" width={100} height={140} className="object-contain" />
@@ -161,7 +189,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Sisi kanan — form ─────────────────────────────────────────────── */}
+      {/* Sisi kanan */}
       <div className="flex-1 lg:max-w-md flex flex-col justify-center px-6 sm:px-10 py-12 bg-white">
 
         <div className="lg:hidden mb-8">
@@ -173,88 +201,116 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* ── Step: email ───────────────────────────────────────────────── */}
+        {/* ── Step 1: Email ─────────────────────────────────────────────── */}
         {step === "email" && (
           <div className="space-y-5">
             <div>
               <h2 className="text-2xl font-black text-slate-900">Masuk</h2>
-              <p className="text-sm text-slate-500 mt-1">Tidak perlu password — kami kirimkan link masuk ke emailmu.</p>
+              <p className="text-sm text-slate-500 mt-1">Masukkan email kamu untuk melanjutkan.</p>
             </div>
 
             <ModeSelector mode={mode} onChange={handleModeChange} />
 
-            {error && <ErrorBox message={error.message} action={error.action} onRetry={reset} />}
+            {err && (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+                <AlertTriangle size={15} className="text-rose-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-rose-700">{err}</p>
+              </div>
+            )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5">{label}</label>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                  {mode === "warga" ? "Email kamu" : "Email resmi desa / admin"}
+                </label>
                 <div className="relative">
                   <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => { setEmail(e.target.value); setError(null); }}
-                    placeholder={placeholder}
-                    className={`w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition ${
-                      error ? "border-rose-300 bg-rose-50" : "border-slate-200"
-                    }`}
-                  />
+                  <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }}
+                    placeholder={mode === "warga" ? "email@kamu.com" : "email@desa.id"}
+                    className={`w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition ${err ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50"
-              >
-                {loading
-                  ? <><RotateCw size={16} className="animate-spin" /> Mengirim...</>
-                  : <><span>Kirim Link Masuk</span><ArrowRight size={15} /></>
-                }
+              <button type="submit" disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50">
+                {loading ? <><RotateCw size={16} className="animate-spin" /> Memeriksa...</> : <><span>Lanjut</span><ArrowRight size={15} /></>}
               </button>
             </form>
 
             <p className="text-center text-xs text-slate-400">
-              Link berlaku 10 menit · Tidak ada password yang perlu diingat
+              Belum punya akun?{" "}
+              <Link href="/daftar" className="text-indigo-600 font-semibold hover:underline">Daftar gratis</Link>
             </p>
           </div>
         )}
 
-        {/* ── Step: sent ────────────────────────────────────────────────── */}
-        {step === "sent" && (
-          <div className="space-y-5 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-indigo-100 flex items-center justify-center mx-auto">
-              <Sparkles size={32} className="text-indigo-500" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-slate-900">Cek emailmu!</h2>
-              <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                Kami mengirimkan link masuk ke{" "}
-                <span className="font-semibold text-slate-700">{email}</span>.
-                <br />Klik link di email untuk langsung masuk.
+        {/* ── Step 2: PIN ───────────────────────────────────────────────── */}
+        {step === "pin" && (
+          <div className="space-y-6">
+            <button onClick={() => { setStep("email"); setErr(""); setFrozen(false); }} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
+              ← Ganti email
+            </button>
+
+            <div className="text-center">
+              <h2 className="text-2xl font-black text-slate-900">Masukkan PIN</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Masuk sebagai <span className="font-semibold text-slate-700">{email}</span>
               </p>
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-700 text-left space-y-1.5">
-              <p className="font-bold">Tidak menerima email?</p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>Periksa folder <strong>Spam</strong> atau <strong>Promotions</strong></li>
-                <li>Tunggu 1–2 menit, email kadang terlambat</li>
-                <li>Pastikan alamat email yang dimasukkan benar</li>
-              </ul>
-              <button onClick={reset} className="mt-1 underline font-semibold hover:text-amber-900 transition-colors">
-                Kirim ulang ke email lain
-              </button>
+
+            {frozen ? (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 text-center space-y-2">
+                <ShieldAlert size={28} className="text-rose-500 mx-auto" />
+                <p className="text-sm font-bold text-rose-800">Akun dibekukan sementara</p>
+                <p className="text-xs text-rose-600 leading-relaxed">{err}</p>
+                {frozenSecs > 0 && (
+                  <p className="text-sm font-black text-rose-700">
+                    {frozenMins > 1 ? `${frozenMins} menit` : `${frozenSecs} detik`} lagi
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <PinInput onComplete={handlePinComplete} disabled={loading} error={!!err} reset={pinReset} />
+
+                {err && (
+                  <div className="text-center">
+                    <p className="text-sm text-rose-600">⚠ {err}</p>
+                    {attemptsLeft !== null && attemptsLeft <= 2 && (
+                      <p className="text-xs text-rose-400 mt-1">Sisa {attemptsLeft} percobaan sebelum akun dibekukan.</p>
+                    )}
+                  </div>
+                )}
+
+                {loading && <div className="flex justify-center"><RotateCw size={18} className="text-indigo-500 animate-spin" /></div>}
+              </>
+            )}
+
+            {/* Lupa PIN / kirim PIN via email */}
+            <div className="text-center space-y-2 pt-2 border-t border-slate-100">
+              <Link href={`/lupa-pin?email=${encodeURIComponent(email)}`} className="block text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                Lupa PIN?
+              </Link>
+              {!frozen && (
+                resendSecs > 0 ? (
+                  <p className="text-xs text-slate-400">Kirim PIN via email lagi dalam {resendSecs}s</p>
+                ) : (
+                  <button onClick={handleSendPinEmail} className="text-xs text-slate-500 hover:text-slate-700">
+                    Kirim kode sementara ke email
+                  </button>
+                )
+              )}
             </div>
           </div>
         )}
-
-        <div className="mt-10 pt-6 border-t border-slate-100">
-          <p className="text-xs text-slate-400 text-center">
-            Belum punya akun?{" "}
-            <Link href="/daftar" className="text-indigo-600 font-semibold hover:underline">Daftar gratis</Link>
-          </p>
-        </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" /></div>}>
+      <LoginInner />
+    </Suspense>
   );
 }

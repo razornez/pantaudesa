@@ -20,13 +20,17 @@ model User {
   emailVerified DateTime?
   image         String?
   // PantauDesa custom fields
-  username      String?   @unique
-  nama          String?
-  bio           String?
-  avatarUrl     String?
-  role          Role      @default(WARGA)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  username       String?   @unique
+  nama           String?
+  bio            String?
+  avatarUrl      String?
+  role           Role      @default(WARGA)
+  // PIN auth
+  pinHash        String?
+  pinAttempts    Int       @default(0)
+  pinLockedUntil DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // NextAuth relations
   accounts Account[]
@@ -39,6 +43,27 @@ model User {
   helpfuls   VoiceHelpful[]
 
   @@map("users")
+}
+
+// ─── OTP ──────────────────────────────────────────────────────────────────────
+
+model OtpCode {
+  id        String     @id @default(cuid())
+  email     String
+  codeHash  String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([email, purpose])
+  @@map("otp_codes")
+}
+
+enum OtpPurpose {
+  REGISTER
+  RESET_PIN
+  UNFREEZE
 }
 
 // ─── Citizen Voice ────────────────────────────────────────────────────────────

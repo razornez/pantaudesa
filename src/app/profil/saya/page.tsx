@@ -4,10 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Camera, Check, Bell, BellOff,
-  MessageSquare, ThumbsUp, CheckCircle2, Clock,
-  ChevronRight, RotateCw, MapPin,
+  ArrowLeft, Camera, BellOff, ChevronRight, RotateCw,
 } from "lucide-react";
+import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth-context";
 import {
   computeTrustStats, getVoicesByAuthor, getNotifications,
@@ -89,29 +88,74 @@ function VoiceRow({ voice }: { voice: ReturnType<typeof getVoicesByAuthor>[numbe
 
 // ─── Avatar editor ────────────────────────────────────────────────────────────
 
-function AvatarEditor({ nama, current, onChange }: {
-  nama: string; current?: string; onChange: (url: string) => void;
+function AvatarEditor({ nama, current, onUploaded, onError }: {
+  nama:       string;
+  current?:   string;
+  onUploaded: (url: string) => void;
+  onError:    (msg: string) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef               = useRef<HTMLInputElement>(null);
+  const [preview, setPreview]  = useState<string | undefined>(current);
+  const [loading, setLoading]  = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    onChange(url);
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+    setLoading(true);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res  = await fetch("/api/users/avatar", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setPreview(current); // revert preview
+        onError(data.error ?? "Gagal mengupload foto.");
+        return;
+      }
+      onUploaded(data.avatarUrl);
+    } catch {
+      setPreview(current);
+      onError("Koneksi bermasalah. Coba lagi.");
+    } finally {
+      setLoading(false);
+      URL.revokeObjectURL(objectUrl);
+      e.target.value = "";
+    }
   };
+
+  const displayUrl = preview ?? current;
 
   return (
     <div className="relative w-fit">
-      <UserAvatar nama={nama} avatarUrl={current} size="xl" />
+      {displayUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={displayUrl}
+          alt={nama}
+          className="w-16 h-16 rounded-full object-cover ring-2 ring-slate-200"
+        />
+      ) : (
+        <UserAvatar nama={nama} size="xl" />
+      )}
+      {loading && (
+        <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+          <RotateCw size={14} className="text-white animate-spin" />
+        </div>
+      )}
       <button
         type="button"
+        disabled={loading}
         onClick={() => inputRef.current?.click()}
-        className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-sm hover:bg-indigo-700 transition-colors"
+        className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
       >
         <Camera size={12} className="text-white" />
       </button>
-      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
     </div>
   );
 }
@@ -148,13 +192,13 @@ function TrustCard({ score, tier }: { score: number; tier: BadgeTier }) {
 export default function SayaProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { toasts, toast, removeToast } = useToast();
 
   const [tab,       setTab]       = useState<Tab>("profil");
   const [nama,      setNama]      = useState("");
   const [bio,       setBio]       = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [saving,    setSaving]    = useState(false);
-  const [saved,     setSaved]     = useState(false);
   const [notifs,    setNotifs]    = useState<UserNotification[]>([]);
 
   useEffect(() => {
@@ -176,14 +220,19 @@ export default function SayaProfilePage() {
   const handleSave = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
-    await fetch("/api/users/me", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ nama: nama.trim() || user.nama, bio: bio.trim(), avatarUrl }),
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      const res = await fetch("/api/users/me", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ nama: nama.trim() || user.nama, bio: bio.trim() }),
+      });
+      if (!res.ok) throw new Error("Gagal menyimpan");
+      toast("Profil berhasil disimpan ✓", "success");
+    } catch {
+      toast("Gagal menyimpan. Coba lagi.", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const markRead = (id: string) => {
@@ -200,17 +249,13 @@ export default function SayaProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <Link href={`/profil/${user.username}`} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
           <ArrowLeft size={15} /> Lihat profil publik
         </Link>
-        {saved && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-            <Check size={13} /> Tersimpan
-          </div>
-        )}
       </div>
 
       {/* ── Tab bar ───────────────────────────────────────────────────────── */}
@@ -260,7 +305,12 @@ export default function SayaProfilePage() {
 
             {/* Avatar */}
             <div className="flex items-center gap-4">
-              <AvatarEditor nama={user.nama} current={avatarUrl} onChange={setAvatarUrl} />
+              <AvatarEditor
+                nama={user.nama}
+                current={avatarUrl}
+                onUploaded={url => setAvatarUrl(url)}
+                onError={msg => toast(msg, "error")}
+              />
               <div>
                 <p className="text-sm font-semibold text-slate-700">Foto Profil</p>
                 <p className="text-xs text-slate-400">Klik ikon kamera untuk ganti</p>
