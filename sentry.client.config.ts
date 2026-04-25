@@ -1,13 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: "https://f46f5209f67744e7e4c0e8f2d07361fc@o4509432444747776.ingest.de.sentry.io/4509432449400912",
+  sendDefaultPii: true,
   environment: process.env.NODE_ENV,
-  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0,
-  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
-  // Don't show Sentry dialog to users
-  beforeSend(event) {
-    if (event.request?.cookies) event.request.cookies = {};
-    return event;
-  },
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 0,
 });

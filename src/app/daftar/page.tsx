@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import * as Sentry from "@sentry/nextjs";
 import {
-  ArrowRight, Check, User,
-  AtSign, FileText, RotateCw, Camera,
+  ArrowRight, Check, User, AtSign, FileText,
+  RotateCw, Camera, AlertTriangle, RefreshCw, LogIn,
 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 
@@ -25,7 +26,6 @@ interface FormData {
 interface FieldErrors {
   nama?:     string;
   username?: string;
-  bio?:      string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -37,6 +37,28 @@ function slugify(str: string) {
     .slice(0, 20);
 }
 
+function parseApiError(status: number, message: string): { message: string; action: string } {
+  if (status === 401)
+    return {
+      message: "Sesi login tidak ditemukan.",
+      action:  "Kamu perlu login terlebih dahulu. Klik link masuk yang dikirim ke emailmu, lalu buka halaman ini lagi.",
+    };
+  if (status === 409 || message.toLowerCase().includes("username"))
+    return {
+      message: "Username sudah dipakai orang lain.",
+      action:  "Coba username yang berbeda, misalnya tambahkan angka di belakangnya.",
+    };
+  if (status === 400)
+    return {
+      message: "Data yang dimasukkan tidak valid.",
+      action:  message,
+    };
+  return {
+    message: "Server sedang bermasalah.",
+    action:  "Coba lagi dalam beberapa menit. Jika masih gagal, hubungi tim kami.",
+  };
+}
+
 // ─── Progress dots ────────────────────────────────────────────────────────────
 
 function ProgressDots({ step }: { step: Step }) {
@@ -44,8 +66,8 @@ function ProgressDots({ step }: { step: Step }) {
   const idx           = steps.indexOf(step);
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
-      {steps.slice(0, -1).map((s, i) => (
-        <div key={s} className="flex items-center gap-2">
+      {steps.slice(0, -1).map((_, i) => (
+        <div key={i} className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
             i < idx   ? "bg-indigo-600 text-white" :
             i === idx ? "bg-indigo-100 text-indigo-600 ring-2 ring-indigo-400 ring-offset-1" :
@@ -60,28 +82,111 @@ function ProgressDots({ step }: { step: Step }) {
   );
 }
 
+// ─── Error box ────────────────────────────────────────────────────────────────
+
+function ErrorBox({ message, action }: { message: string; action: string }) {
+  return (
+    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+      <div className="flex items-start gap-2.5">
+        <AlertTriangle size={16} className="text-rose-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-rose-800">{message}</p>
+          <p className="text-xs text-rose-600 mt-0.5 leading-relaxed">{action}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Loading screen ───────────────────────────────────────────────────────────
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="text-center space-y-3">
+        <RotateCw size={24} className="animate-spin text-indigo-400 mx-auto" />
+        <p className="text-sm text-slate-400">Memverifikasi sesi...</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Not logged in screen ─────────────────────────────────────────────────────
+
+function NeedLoginScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 bg-white">
+      <div className="max-w-sm w-full text-center space-y-5">
+        <div className="w-16 h-16 rounded-3xl bg-amber-100 flex items-center justify-center mx-auto">
+          <LogIn size={28} className="text-amber-600" />
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Login dulu yuk</h2>
+          <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+            Untuk melengkapi profil, kamu perlu masuk dulu menggunakan email.
+            Kami akan kirimkan link masuk — tidak perlu password.
+          </p>
+        </div>
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors shadow-md shadow-indigo-200"
+        >
+          <LogIn size={14} /> Masuk dengan Email
+        </Link>
+        <p className="text-xs text-slate-400">
+          Sudah pernah daftar?{" "}
+          <Link href="/login" className="text-indigo-600 font-semibold hover:underline">
+            Masuk di sini
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function DaftarPage() {
-  const router              = useRouter();
-  const { data: session }   = useSession();
-  const fileRef             = useRef<HTMLInputElement>(null);
+  const router                      = useRouter();
+  const { data: session, status }   = useSession();
+  const fileRef                     = useRef<HTMLInputElement>(null);
 
   const [step,    setStep]    = useState<Step>("info");
   const [loading, setLoading] = useState(false);
   const [errors,  setErrors]  = useState<FieldErrors>({});
-  const [apiErr,  setApiErr]  = useState("");
+  const [apiErr,  setApiErr]  = useState<{ message: string; action: string } | null>(null);
 
   const [form, setForm] = useState<FormData>({
-    nama:     session?.user?.name ?? "",
+    nama:     "",
     username: "",
     bio:      "",
   });
 
+  // Pre-fill nama dari session jika tersedia
+  useEffect(() => {
+    if (session?.user?.name && !form.nama) {
+      const nama = session.user.name;
+      setForm(f => ({ ...f, nama, username: f.username || slugify(nama) }));
+    }
+  }, [session]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Jika session sudah ada dan profile sudah lengkap, langsung ke profil
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.username) {
+      router.replace("/profil/saya");
+    }
+  }, [status, session, router]);
+
+  // Tampilkan loading saat session sedang dicek
+  if (status === "loading") return <LoadingScreen />;
+
+  // Tampilkan layar login jika belum login
+  if (status === "unauthenticated") return <NeedLoginScreen />;
+
   const set = (k: keyof FormData, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: undefined }));
-    setApiErr("");
+    setApiErr(null);
   };
 
   const handleNamaChange = (v: string) => {
@@ -91,7 +196,7 @@ export default function DaftarPage() {
     }
   };
 
-  // ── Step 1: validasi info → POST /api/users/register ──────────────────
+  // ── Step 1: simpan info ke DB ──────────────────────────────────────────
   const handleInfoSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     const errs: FieldErrors = {};
@@ -102,20 +207,43 @@ export default function DaftarPage() {
     if (Object.keys(errs).length) return setErrors(errs);
 
     setLoading(true);
-    const res = await fetch("/api/users/register", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ username: form.username.trim(), nama: form.nama.trim(), bio: form.bio.trim() || null }),
-    });
-    setLoading(false);
+    setApiErr(null);
+    try {
+      const res = await fetch("/api/users/register", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          username: form.username.trim(),
+          nama:     form.nama.trim(),
+          bio:      form.bio.trim() || null,
+        }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      if (data.error?.includes("username")) setErrors({ username: data.error });
-      else setApiErr(data.error ?? "Terjadi kesalahan. Coba lagi.");
-      return;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const parsed = parseApiError(res.status, data.error ?? "");
+        if (res.status === 409 || (data.error ?? "").includes("username")) {
+          setErrors({ username: "Username sudah dipakai. Coba yang lain." });
+        } else {
+          setApiErr(parsed);
+        }
+        Sentry.captureMessage("register failed", {
+          level: "warning",
+          extra: { status: res.status, error: data.error },
+        });
+        return;
+      }
+
+      setStep("avatar");
+    } catch (err) {
+      Sentry.captureException(err);
+      setApiErr({
+        message: "Koneksi bermasalah.",
+        action:  "Periksa koneksi internet kamu dan coba lagi.",
+      });
+    } finally {
+      setLoading(false);
     }
-    setStep("avatar");
   };
 
   // ── Step 2: upload avatar (opsional) → selesai ────────────────────────
@@ -126,12 +254,19 @@ export default function DaftarPage() {
 
   const handleFinish = async () => {
     setLoading(true);
-    if (form.avatarUrl) {
-      await fetch("/api/users/me", {
-        method:  "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ avatarUrl: form.avatarUrl }),
-      });
+    try {
+      if (form.avatarUrl) {
+        await fetch("/api/users/me", {
+          method:  "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ avatarUrl: form.avatarUrl }),
+        });
+      }
+    } catch (err) {
+      // Avatar upload failing is non-critical — continue anyway
+      Sentry.captureException(err);
+    } finally {
+      setLoading(false);
     }
     setStep("done");
     await new Promise(r => setTimeout(r, 1000));
@@ -204,35 +339,44 @@ export default function DaftarPage() {
             <div>
               <h2 className="text-2xl font-black text-slate-900">Lengkapi Profilmu</h2>
               <p className="text-sm text-slate-500 mt-1">
-                Masuk sebagai <span className="font-semibold text-slate-700">{session?.user?.email}</span>
+                Masuk sebagai{" "}
+                <span className="font-semibold text-slate-700">{session?.user?.email}</span>
               </p>
             </div>
 
             {apiErr && (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-xs text-rose-700">
-                ⚠️ {apiErr}
-              </div>
+              <ErrorBox message={apiErr.message} action={apiErr.action} />
             )}
 
             <form onSubmit={handleInfoSubmit} className="space-y-4">
               {/* Nama */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Nama Lengkap *</label>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                  Nama Lengkap <span className="text-rose-400">*</span>
+                </label>
                 <div className="relative">
                   <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text" value={form.nama}
                     onChange={e => handleNamaChange(e.target.value)}
                     placeholder="Nama aslimu"
-                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition ${errors.nama ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`}
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition ${
+                      errors.nama ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"
+                    }`}
                   />
                 </div>
-                {errors.nama && <p className="text-xs text-rose-600 mt-1">⚠️ {errors.nama}</p>}
+                {errors.nama && (
+                  <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle size={10} /> {errors.nama}
+                  </p>
+                )}
               </div>
 
               {/* Username */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Username *</label>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                  Username <span className="text-rose-400">*</span>
+                </label>
                 <div className="relative">
                   <AtSign size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -240,18 +384,27 @@ export default function DaftarPage() {
                     onChange={e => set("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                     placeholder="username_kamu"
                     maxLength={20}
-                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition font-mono ${errors.username ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`}
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition font-mono ${
+                      errors.username ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"
+                    }`}
                   />
                 </div>
-                {errors.username
-                  ? <p className="text-xs text-rose-600 mt-1">⚠️ {errors.username}</p>
-                  : <p className="text-[10px] text-slate-400 mt-1">Huruf kecil, angka, underscore · Tidak bisa diubah nanti</p>
-                }
+                {errors.username ? (
+                  <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle size={10} /> {errors.username}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Huruf kecil, angka, underscore · <strong>Tidak bisa diubah setelah disimpan</strong>
+                  </p>
+                )}
               </div>
 
-              {/* Bio (opsional) */}
+              {/* Bio */}
               <div>
-                <label className="text-xs font-semibold text-slate-500 block mb-1.5">Bio <span className="font-normal">(opsional)</span></label>
+                <label className="text-xs font-semibold text-slate-500 block mb-1.5">
+                  Bio <span className="font-normal text-slate-400">(opsional)</span>
+                </label>
                 <div className="relative">
                   <FileText size={14} className="absolute left-3.5 top-3 text-slate-400" />
                   <textarea
@@ -269,7 +422,10 @@ export default function DaftarPage() {
                 type="submit" disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50"
               >
-                {loading ? <RotateCw size={16} className="animate-spin" /> : <><span>Lanjut</span><ArrowRight size={15} /></>}
+                {loading
+                  ? <><RotateCw size={16} className="animate-spin" /> Menyimpan...</>
+                  : <><span>Lanjut</span><ArrowRight size={15} /></>
+                }
               </button>
             </form>
           </div>
@@ -315,7 +471,10 @@ export default function DaftarPage() {
                 onClick={handleFinish} disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50"
               >
-                {loading ? <RotateCw size={16} className="animate-spin" /> : "Selesai & Masuk"}
+                {loading
+                  ? <><RotateCw size={16} className="animate-spin" /> Menyimpan...</>
+                  : "Selesai & Masuk ke Profil"
+                }
               </button>
               <button
                 type="button" onClick={handleFinish} disabled={loading}
@@ -334,7 +493,9 @@ export default function DaftarPage() {
               <span className="text-4xl">🎉</span>
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Selamat datang, {form.nama.split(" ")[0]}!</h2>
+              <h2 className="text-2xl font-black text-slate-900">
+                Selamat datang, {form.nama.split(" ")[0]}!
+              </h2>
               <p className="text-sm text-slate-500 mt-1">Akunmu sudah aktif. Mengalihkan ke profil...</p>
             </div>
             <div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
