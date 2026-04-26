@@ -18,9 +18,9 @@ Status saat ini:
 
 ## Current overall progress
 
-Estimated overall project progress: **18%**
+Estimated overall project progress: **23%**
 
-Estimated MVP progress: **29%**
+Estimated MVP progress: **36%**
 
 Catatan:
 - Angka ini adalah baseline awal versi Iwan berdasarkan docs, README, issue backlog, informasi repo yang sudah terbaca, dan update dari Asep.
@@ -44,17 +44,17 @@ Status score:
 
 | Epic | Related issues | Weight | Status | Progress | Notes |
 |---|---:|---:|---|---:|---|
-| Company/project operating system | #11 | 10% | partial | 60% | Docs sudah dibuat, label/status/PR template belum sepenuhnya diterapkan |
+| Company/project operating system | #11 | 10% | partial | 70% | Docs, implementation update log, dan role trace commit sudah mulai diterapkan |
 | Product/business/design foundation | #1 | 15% | partial | 70% | README, product strategy, business model, design brief, roadmap sudah ada; env/build/data demo belum selesai |
 | MVP citizen dashboard polish | #2 | 20% | todo | 15% | UI sudah ada sebagian di app, tapi checklist polish belum ditandai selesai |
 | Trust layer and data disclaimer | #3 | 12% | todo | 10% | Sudah ada di docs, belum jelas implementasi UI |
 | Data model/admin/import | #4 | 15% | todo | 5% | Prisma dependency ada, tapi data/admin workflow belum tervalidasi dari source |
 | Civic action and participation | #5 | 10% | todo | 5% | Belum masuk implementasi utama |
 | Monetization and sales offer | #6 | 8% | partial | 55% | Sales kit dan launch plan sudah ada; landing page/pitch/prospect belum selesai |
-| Auth meaning | #7 | 5% | ready-for-review | 20% | Copy strategy siap, butuh review Asep dan implementasi Ujang |
-| Badge reputation | #8 | 3% | ready-for-review | 20% | Strategy siap, butuh architecture/MVP decision |
-| Civic narrative highlight | #9 | 1% | partial | 40% | `PondasiTransparansiSection` homepage sudah selesai menurut catatan Asep; masih perlu pencatatan issue, CTA/page edukasi, dan verifikasi Iwan/Asep |
-| Responsibility guide | #10 | 1% | ready-for-review | 20% | Copy siap, UI/page belum implement |
+| Auth meaning | #7 | 5% | partial | 60% | Auth copy MVP sudah diimplementasikan, butuh review Asep/Iwan |
+| Badge reputation | #8 | 3% | partial | 60% | Badge page dan profile explanation sudah ada, masih static MVP |
+| Civic narrative highlight | #9 | 1% | partial | 60% | Homepage CTA dan page edukasi sudah dibuat, butuh review copy |
+| Responsibility guide | #10 | 1% | partial | 60% | Detail desa card dan page panduan kewenangan sudah dibuat |
 
 ## MVP definition
 
@@ -102,17 +102,17 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Progress reporting sudah mulai dibuat tetapi belum otomatis dari issue status.
 - Product docs sudah kuat, tetapi implementasi UI masih perlu diverifikasi oleh Asep/Ujang.
 - Issue #9 sekarang partial: homepage civic narrative sudah mulai terlihat melalui `PondasiTransparansiSection`, namun page edukasi, CTA, dan status issue masih perlu dirapikan.
+- Sprint 01 issues #7, #8, #9, #10, dan #11 sudah punya implementation update lokal di `docs/project-management/05-sprint-01-implementation-updates.md`.
 
 ## Not started / needs execution
 
 - `.env.example`.
 - Build/lint/test report.
 - Data demo disclaimer in UI.
-- Auth page rewrite.
-- Badge UI/popover/profile explanation.
-- Page `/tentang/kenapa-desa-dipantau` jika belum dibuat.
-- Detail desa card: tanyakan ke pihak yang tepat.
-- Page `/panduan/kewenangan`.
+- Auth page final review oleh Asep/Iwan.
+- Badge architecture review sebelum scoring engine/data model.
+- Homepage highlight final review oleh Iwan.
+- Responsibility guide legal/content review oleh Asep/Iwan.
 - Admin/import/data model final.
 - Civic action form/watchlist/contribution flow.
 - Landing page service offer.

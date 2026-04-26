@@ -78,3 +78,23 @@ Status: partial
 
 ### Need review from Asep/Iwan
 - Pastikan badge tidak mendorong spam kontribusi dan tetap menekankan kualitas.
+
+## Backlog #11 — Workflow Status/Progress
+
+## Implementation Update — Ujang
+
+Status: partial
+
+### Done
+- Implementation update lokal dibuat untuk #7, #9, #10, #8, dan #11.
+- Setiap commit Sprint 01 menggunakan role trace: Initiated-by, Reviewed-by, Executed-by, Status, dan Backlog.
+- Project dashboard diperbarui untuk mencerminkan status partial Sprint 01.
+- Worklog mengikuti urutan Sprint 01: #7, #9, #10, #8, #11.
+
+### Remaining
+- Asep perlu memberi CTO Review eksplisit di GitHub Issues atau dokumen review.
+- Iwan/Asep perlu memverifikasi status `partial` menjadi `done` atau `verified`.
+- Jika GitHub Issues tersedia, update ini perlu disalin ke issue comment terkait.
+
+### Need review from Asep/Iwan
+- Pastikan format progress lokal ini cukup sebagai source of truth sementara sampai issue tracker dipakai.
