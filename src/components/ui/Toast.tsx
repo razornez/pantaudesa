@@ -6,29 +6,28 @@ import { CheckCircle2, XCircle, AlertTriangle, X } from "lucide-react";
 export type ToastType = "success" | "error" | "warning";
 
 interface ToastProps {
-  message:  string;
-  type?:    ToastType;
+  message:   string;
+  type?:     ToastType;
   duration?: number;
-  onClose:  () => void;
+  onClose:   () => void;
 }
 
 const ICONS = {
-  success: <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />,
-  error:   <XCircle     size={16} className="text-rose-500 flex-shrink-0"    />,
-  warning: <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />,
+  success: <CheckCircle2 size={15} className="flex-shrink-0" />,
+  error:   <XCircle      size={15} className="flex-shrink-0" />,
+  warning: <AlertTriangle size={15} className="flex-shrink-0" />,
 };
 
-const STYLES = {
-  success: "bg-white border-emerald-200 text-emerald-800",
-  error:   "bg-white border-rose-200 text-rose-800",
-  warning: "bg-white border-amber-200 text-amber-800",
+const BG: Record<ToastType, string> = {
+  success: "bg-slate-900",
+  error:   "bg-rose-600",
+  warning: "bg-amber-500",
 };
 
-export function Toast({ message, type = "success", duration = 3000, onClose }: ToastProps) {
+export function Toast({ message, type = "success", duration = 3500, onClose }: ToastProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Trigger enter animation
     const show = requestAnimationFrame(() => setVisible(true));
     const hide = setTimeout(() => {
       setVisible(false);
@@ -37,20 +36,30 @@ export function Toast({ message, type = "success", duration = 3000, onClose }: T
     return () => { cancelAnimationFrame(show); clearTimeout(hide); };
   }, [duration, onClose]);
 
+  const dismiss = () => { setVisible(false); setTimeout(onClose, 300); };
+
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-lg shadow-slate-200/60 text-sm font-medium transition-all duration-300 ${STYLES[type]} ${
-      visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-    }`}>
+    <div
+      role="alert"
+      onClick={dismiss}
+      className={`flex items-center gap-2.5 pl-4 pr-3 py-3 rounded-2xl shadow-2xl shadow-black/20 text-white text-sm font-semibold cursor-pointer select-none transition-all duration-300 ${BG[type]} ${
+        visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-3 scale-95"
+      }`}
+    >
       {ICONS[type]}
-      <span className="flex-1">{message}</span>
-      <button onClick={() => { setVisible(false); setTimeout(onClose, 300); }} className="ml-1 p-0.5 rounded-lg hover:bg-slate-100 transition-colors">
-        <X size={13} className="text-slate-400" />
+      <span className="flex-1 leading-snug">{message}</span>
+      <button
+        onClick={e => { e.stopPropagation(); dismiss(); }}
+        className="ml-1 p-1 rounded-xl hover:bg-white/20 transition-colors flex-shrink-0"
+        aria-label="Tutup"
+      >
+        <X size={13} />
       </button>
     </div>
   );
 }
 
-// ─── Toast container — fixed bottom-right ─────────────────────────────────────
+// ─── Toast container — fixed bottom-center ────────────────────────────────────
 
 interface ToastItem { id: string; message: string; type: ToastType }
 
@@ -59,9 +68,9 @@ interface ToastContainerProps { toasts: ToastItem[]; onRemove: (id: string) => v
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-8 inset-x-0 z-50 flex flex-col items-center gap-2 pointer-events-none px-4">
       {toasts.map(t => (
-        <div key={t.id} className="pointer-events-auto">
+        <div key={t.id} className="pointer-events-auto w-full max-w-xs">
           <Toast message={t.message} type={t.type} onClose={() => onRemove(t.id)} />
         </div>
       ))}

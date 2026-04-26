@@ -121,7 +121,7 @@ function AvatarEditor({ nama, current, onUploaded, onError }: {
       onUploaded(data.avatarUrl);
     } catch {
       setPreview(current);
-      onError("Koneksi bermasalah. Coba lagi.");
+      onError("Gagal mengupload foto. Pastikan koneksi stabil lalu coba lagi.");
     } finally {
       setLoading(false);
       URL.revokeObjectURL(objectUrl);
@@ -156,7 +156,7 @@ function AvatarEditor({ nama, current, onUploaded, onError }: {
       >
         <Camera size={12} className="text-white" />
       </button>
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" onChange={handleFile} className="hidden" />
     </div>
   );
 }
@@ -301,16 +301,28 @@ export default function SayaProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [saving,    setSaving]    = useState(false);
   const [notifs,    setNotifs]    = useState<UserNotification[]>([]);
+  const dataFetched = useRef(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
-    if (user) {
-      setNama(user.nama);
-      setBio(user.bio ?? "");
-      setAvatarUrl(user.avatarUrl);
-      setNotifs(getNotifications(user.nama));
-    }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user || dataFetched.current) return;
+    dataFetched.current = true;
+    setNotifs(getNotifications(user.nama));
+    fetch("/api/users/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        setNama(data?.nama ?? user.nama);
+        setBio(data?.bio ?? "");
+        setAvatarUrl(data?.avatarUrl ?? user.avatarUrl);
+      })
+      .catch(() => {
+        setNama(user.nama);
+        setAvatarUrl(user.avatarUrl);
+      });
+  }, [user]);
 
   if (loading || !user) return null;
 
@@ -320,12 +332,16 @@ export default function SayaProfilePage() {
 
   const handleSave = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (!nama.trim()) {
+      toast("Nama tidak boleh kosong.", "error");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/users/me", {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ nama: nama.trim() || user.nama, bio: bio.trim() }),
+        body:    JSON.stringify({ nama: nama.trim(), bio: bio.trim() }),
       });
       if (!res.ok) throw new Error("Gagal menyimpan");
       toast("Profil berhasil disimpan ✓", "success");

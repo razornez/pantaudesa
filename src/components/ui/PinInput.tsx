@@ -47,7 +47,7 @@ export default function PinInput({ length = 6, onComplete, disabled, error, rese
   };
 
   return (
-    <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+    <div className="grid gap-2 w-full" style={{ gridTemplateColumns: `repeat(${length}, 1fr)` }} onPaste={handlePaste}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -59,7 +59,7 @@ export default function PinInput({ length = 6, onComplete, disabled, error, rese
           disabled={disabled}
           onChange={e => handleChange(i, e.target.value)}
           onKeyDown={e => handleKey(i, e)}
-          className={`w-14 h-14 text-center text-2xl font-black rounded-2xl border-2 transition-all outline-none focus:scale-105 disabled:opacity-40 ${
+          className={`w-full h-10 text-center text-lg font-black rounded-xl border-2 transition-all outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-40 ${
             error
               ? "border-rose-400 bg-rose-50 text-rose-700"
               : d

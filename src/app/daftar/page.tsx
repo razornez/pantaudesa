@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import {
   ArrowRight, Check, User, AtSign, Mail,
-  Eye, EyeOff, RotateCw, AlertTriangle,
+  Eye, EyeOff, RotateCw, AlertTriangle, CheckCircle2, XCircle,
 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 import OtpInput from "@/components/ui/OtpInput";
@@ -70,6 +70,8 @@ function DaftarInner() {
 
   const [showPin,    setShowPin]    = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [form, setForm] = useState<FormData>({
     nama: "", username: "", email: params.get("email") ?? "", pin: "", confirmPin: "",
@@ -86,9 +88,29 @@ function DaftarInner() {
     setApiErr("");
   };
 
+  const checkUsername = (value: string) => {
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (!/^[a-z0-9_]{3,20}$/.test(value)) { setUsernameStatus("idle"); return; }
+    setUsernameStatus("checking");
+    usernameTimer.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/users/username-check?username=${encodeURIComponent(value)}`);
+        const data = await res.json();
+        setUsernameStatus(data.available ? "available" : "taken");
+        if (!data.available) setErrors(e => ({ ...e, username: "Username sudah dipakai, coba yang lain." }));
+      } catch {
+        setUsernameStatus("idle");
+      }
+    }, 500);
+  };
+
   const handleNamaChange = (v: string) => {
     set("nama", v);
-    if (!form.username || form.username === slugify(form.nama)) set("username", slugify(v));
+    if (!form.username || form.username === slugify(form.nama)) {
+      const slug = slugify(v);
+      set("username", slug);
+      checkUsername(slug);
+    }
   };
 
   // ── Submit form → validate → send OTP ──────────────────────────────────
@@ -100,6 +122,7 @@ function DaftarInner() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Format email tidak valid.";
     if (!/^\d{6}$/.test(form.pin))             errs.pin        = "PIN harus 6 digit angka.";
     if (form.pin !== form.confirmPin)          errs.confirmPin = "PIN tidak cocok.";
+    if (usernameStatus === "taken") errs.username = "Username sudah dipakai, coba yang lain.";
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
@@ -195,21 +218,51 @@ function DaftarInner() {
             </div>
             <span className="font-bold text-lg text-white">Pantau<span className="text-indigo-200">Desa</span></span>
           </Link>
-          <div className="flex-1 flex flex-col justify-center max-w-sm">
-            <div className="text-4xl mb-5">🏘️</div>
-            <h1 className="text-3xl font-black text-white leading-tight mb-4">Suaramu bisa<br />mengubah desamu.</h1>
-            <p className="text-indigo-200 text-sm leading-relaxed mb-6">Daftar sekali, langsung bisa pantau anggaran desa, bersuara, dan bangun reputasi sebagai warga yang dipercaya.</p>
-            {[
-              { e: "📢", t: "Laporkan masalah di desamu" },
-              { e: "✅", t: "Verifikasi laporan warga lain" },
-              { e: "🏆", t: "Bangun reputasi suara terpercaya" },
-              { e: "🔔", t: "Notifikasi respons desa" },
-            ].map(f => (
-              <div key={f.t} className="flex items-center gap-3 mb-2.5">
-                <span className="text-lg">{f.e}</span>
-                <span className="text-sm text-indigo-100">{f.t}</span>
+          <div className="flex-1 flex flex-col justify-center max-w-sm space-y-5">
+            <div>
+              <div className="text-4xl mb-4">🏘️</div>
+              <h1 className="text-3xl font-black text-white leading-tight mb-3">Suaramu bisa<br />mengubah desamu.</h1>
+              <p className="text-indigo-200 text-sm leading-relaxed">
+                Dana desa bisa miliaran rupiah per tahun. Ketika warga diam, anggaran itu bisa disalahgunakan.
+                Ketika warga bersuara, desa berkembang — itulah kemakmuran dari akar rumput.
+              </p>
+            </div>
+
+            {/* Apa yang bisa kamu lakukan */}
+            <div className="space-y-2">
+              {[
+                { e: "📢", t: "Laporkan masalah di desamu" },
+                { e: "✅", t: "Verifikasi laporan warga lain" },
+                { e: "🏆", t: "Bangun reputasi suara terpercaya" },
+                { e: "🔔", t: "Notifikasi respons perangkat desa" },
+              ].map(f => (
+                <div key={f.t} className="flex items-center gap-3">
+                  <span className="text-lg">{f.e}</span>
+                  <span className="text-sm text-indigo-100">{f.t}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Kewenangan Desa */}
+            <div className="bg-white/10 rounded-2xl p-4">
+              <p className="text-xs font-bold text-indigo-200 uppercase tracking-wide mb-3">Apa saja yang jadi tanggung jawab desa?</p>
+              <div className="space-y-2 text-xs">
+                {[
+                  { level: "Desa", color: "bg-emerald-400", items: "Jalan desa, drainase, posyandu, BUMDes, APBDes" },
+                  { level: "Camat", color: "bg-sky-400", items: "Koordinasi antar desa, rekomendasi perizinan" },
+                  { level: "Bupati/Wali Kota", color: "bg-amber-400", items: "Jalan kabupaten, puskesmas, APBD II" },
+                  { level: "Gubernur", color: "bg-rose-400", items: "Jalan provinsi, APBD I, pemprov" },
+                ].map(r => (
+                  <div key={r.level} className="flex items-start gap-2">
+                    <span className={`inline-block w-2 h-2 rounded-full mt-1 flex-shrink-0 ${r.color}`} />
+                    <span className="text-indigo-100 leading-relaxed">
+                      <span className="font-bold text-white">{r.level}</span> — {r.items}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+              <p className="text-[10px] text-indigo-300 mt-2.5">Pantau hal-hal yang memang menjadi tanggung jawab desamu.</p>
+            </div>
           </div>
           <p className="text-indigo-300 text-xs">
             Sudah punya akun?{" "}
@@ -237,8 +290,8 @@ function DaftarInner() {
         {step === "form" && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Buat Akun</h2>
-              <p className="text-sm text-slate-500 mt-1">Gratis · Tidak perlu kartu kredit</p>
+              <h2 className="text-2xl font-black text-slate-900">Daftar Sekarang</h2>
+              <p className="text-sm text-slate-500 mt-1">Partisipasi publik · Gratis selamanya · Terbuka untuk semua</p>
             </div>
 
             {apiErr && (
@@ -274,12 +327,27 @@ function DaftarInner() {
                 <div className="relative">
                   <AtSign size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input type="text" value={form.username}
-                    onChange={e => set("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    onChange={e => {
+                      const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                      set("username", v);
+                      checkUsername(v);
+                    }}
                     placeholder="username_kamu" maxLength={20}
-                    className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition font-mono ${errors.username ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
+                    className={`w-full pl-10 pr-8 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition font-mono ${
+                      errors.username || usernameStatus === "taken" ? "border-rose-300 bg-rose-50" :
+                      usernameStatus === "available" ? "border-emerald-400 bg-emerald-50/30" :
+                      "border-slate-200 focus:border-indigo-400"
+                    }`} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {usernameStatus === "checking" && <RotateCw size={13} className="text-slate-400 animate-spin" />}
+                    {usernameStatus === "available" && <CheckCircle2 size={13} className="text-emerald-500" />}
+                    {usernameStatus === "taken"     && <XCircle size={13} className="text-rose-500" />}
+                  </span>
                 </div>
                 {errors.username
                   ? <p className="text-xs text-rose-600 mt-1">⚠ {errors.username}</p>
+                  : usernameStatus === "available"
+                  ? <p className="text-xs text-emerald-600 mt-1">✓ Username tersedia</p>
                   : <p className="text-[10px] text-slate-400 mt-1">Tidak bisa diubah setelah daftar</p>
                 }
               </div>
@@ -297,12 +365,12 @@ function DaftarInner() {
 
               {/* PIN */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1">PIN 4 Digit *</label>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">PIN 6 Digit *</label>
                 <div className="relative">
                   <input type={showPin ? "text" : "password"} value={form.pin}
                     onChange={e => set("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    inputMode="numeric" maxLength={4} placeholder="••••"
-                    className={`w-full px-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.5em] ${errors.pin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
+                    inputMode="numeric" maxLength={6} placeholder="••••••"
+                    className={`w-full pl-4 pr-10 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.35em] ${errors.pin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
                   <button type="button" onClick={() => setShowPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                     {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -319,8 +387,8 @@ function DaftarInner() {
                 <div className="relative">
                   <input type={showConfirm ? "text" : "password"} value={form.confirmPin}
                     onChange={e => set("confirmPin", e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    inputMode="numeric" maxLength={4} placeholder="••••"
-                    className={`w-full px-4 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.5em] ${errors.confirmPin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
+                    inputMode="numeric" maxLength={6} placeholder="••••••"
+                    className={`w-full pl-4 pr-10 py-2.5 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition tracking-[0.35em] ${errors.confirmPin ? "border-rose-300 bg-rose-50" : "border-slate-200 focus:border-indigo-400"}`} />
                   <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                     {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>

@@ -179,13 +179,33 @@ function LoginInner() {
             </div>
             <span className="font-bold text-lg text-white">Pantau<span className="text-indigo-200">Desa</span></span>
           </Link>
-          <div className="flex-1 flex flex-col justify-center max-w-sm">
-            <h1 className="text-3xl font-black text-white leading-tight mb-4">Suaramu penting<br />untuk desamu.</h1>
-            <p className="text-indigo-200 text-sm leading-relaxed">Masuk dengan email dan PIN 6 digit — cepat, aman, tanpa password yang rumit.</p>
+          <div className="flex-1 flex flex-col justify-center max-w-sm space-y-5">
+            <div>
+              <div className="text-3xl mb-3">🏘️</div>
+              <h1 className="text-3xl font-black text-white leading-tight mb-3">Transparansi desa<br />adalah hak kamu.</h1>
+              <p className="text-indigo-200 text-sm leading-relaxed">
+                Dana desa berjumlah miliaran rupiah setiap tahun. Kamu berhak tahu bagaimana uang itu digunakan — dan PantauDesa hadir agar suaramu terdengar.
+              </p>
+            </div>
+            <div className="bg-white/10 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold text-indigo-200 uppercase tracking-wide mb-2">Yang bisa kamu pantau</p>
+              {[
+                { e: "💰", t: "Anggaran & realisasi APBDes" },
+                { e: "🏗️", t: "Proyek infrastruktur desa" },
+                { e: "📋", t: "Program sosial dan bantuan" },
+                { e: "📢", t: "Laporan & respons perangkat desa" },
+              ].map(f => (
+                <div key={f.t} className="flex items-center gap-2.5">
+                  <span className="text-base">{f.e}</span>
+                  <span className="text-xs text-indigo-100">{f.t}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex justify-end opacity-70">
-            <Image src={ASSETS.mascotStanding} alt="Pak Waspada" width={100} height={140} className="object-contain" />
-          </div>
+          <p className="text-indigo-300 text-xs">
+            Belum punya akun?{" "}
+            <Link href="/daftar" className="text-white font-semibold hover:underline">Daftar sekarang</Link>
+          </p>
         </div>
       </div>
 
@@ -205,8 +225,8 @@ function LoginInner() {
         {step === "email" && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Masuk</h2>
-              <p className="text-sm text-slate-500 mt-1">Masukkan email kamu untuk melanjutkan.</p>
+              <h2 className="text-2xl font-black text-slate-900">Selamat Datang Kembali</h2>
+              <p className="text-sm text-slate-500 mt-1">Suaramu masih dibutuhkan untuk desamu.</p>
             </div>
 
             <ModeSelector mode={mode} onChange={handleModeChange} />

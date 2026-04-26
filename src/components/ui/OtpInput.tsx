@@ -41,7 +41,7 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
   };
 
   return (
-    <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+    <div className="grid grid-cols-6 gap-2 w-full" onPaste={handlePaste}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -53,7 +53,7 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
           disabled={disabled}
           onChange={e => handleChange(i, e.target.value)}
           onKeyDown={e => handleKey(i, e)}
-          className={`w-11 h-12 text-center text-xl font-black rounded-xl border-2 transition-all outline-none focus:scale-105 disabled:opacity-40 cursor-text ${
+          className={`w-full h-10 text-center text-lg font-black rounded-xl border-2 transition-all outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-40 cursor-text ${
             error
               ? "border-rose-400 bg-rose-50 text-rose-700"
               : d
