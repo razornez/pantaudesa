@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, ArrowRight, RotateCw, AlertTriangle, ShieldAlert, Users, Building2 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
+import { AUTH_COPY } from "@/lib/copy";
 import PinInput from "@/components/ui/PinInput";
 import { useCountdown } from "@/lib/use-countdown";
 
@@ -185,18 +186,18 @@ function LoginInner() {
           <div className="flex-1 flex flex-col justify-center max-w-sm space-y-5">
             <div>
               <div className="text-3xl mb-3">🏘️</div>
-              <h1 className="text-3xl font-black text-white leading-tight mb-3">Transparansi desa<br />adalah hak kamu.</h1>
+              <h1 className="text-3xl font-black text-white leading-tight mb-3">{AUTH_COPY.login.sideTitle}</h1>
               <p className="text-indigo-200 text-sm leading-relaxed">
-                Dana desa berjumlah miliaran rupiah setiap tahun. Kamu berhak tahu bagaimana uang itu digunakan — dan PantauDesa hadir agar suaramu terdengar.
+                {AUTH_COPY.login.sideBody}
               </p>
             </div>
             <div className="bg-white/10 rounded-2xl p-4 space-y-2">
-              <p className="text-xs font-bold text-indigo-200 uppercase tracking-wide mb-2">Yang bisa kamu pantau</p>
+              <p className="text-xs font-bold text-indigo-200 uppercase tracking-wide mb-2">Akun membantumu</p>
               {[
-                { e: "💰", t: "Anggaran & realisasi APBDes" },
-                { e: "🏗️", t: "Proyek infrastruktur desa" },
-                { e: "📋", t: "Program sosial dan bantuan" },
-                { e: "📢", t: "Laporan & respons perangkat desa" },
+                { e: "📌", t: "Menyimpan desa pantauan" },
+                { e: "🔔", t: "Mengikuti perubahan data" },
+                { e: "📋", t: "Mengelola kontribusi warga" },
+                { e: "🏅", t: "Membangun reputasi kontribusi" },
               ].map(f => (
                 <div key={f.t} className="flex items-center gap-2.5">
                   <span className="text-base">{f.e}</span>
@@ -206,8 +207,8 @@ function LoginInner() {
             </div>
           </div>
           <p className="text-indigo-300 text-xs">
-            Belum punya akun?{" "}
-            <Link href="/daftar" className="text-white font-semibold hover:underline">Daftar sekarang</Link>
+            {AUTH_COPY.login.registerPrompt}{" "}
+            <Link href="/daftar" className="text-white font-semibold hover:underline">{AUTH_COPY.login.registerCta}</Link>
           </p>
         </div>
       </div>
@@ -228,11 +229,19 @@ function LoginInner() {
         {step === "email" && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Selamat Datang Kembali</h2>
-              <p className="text-sm text-slate-500 mt-1">Suaramu masih dibutuhkan untuk desamu.</p>
+              <h2 className="text-2xl font-black text-slate-900">{AUTH_COPY.login.title}</h2>
+              <p className="text-sm text-slate-500 mt-1 leading-relaxed">{AUTH_COPY.login.subtitle}</p>
             </div>
 
             <ModeSelector mode={mode} onChange={handleModeChange} />
+
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3">
+              <p className="text-sm font-bold text-slate-900">{AUTH_COPY.whyAccountTitle}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{AUTH_COPY.whyAccountBody}</p>
+              <Link href="/desa" className="mt-2 inline-flex text-xs font-bold text-indigo-700 hover:text-indigo-900">
+                {AUTH_COPY.seePublicData}
+              </Link>
+            </div>
 
             {visibleErr && (
               <div className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
@@ -255,13 +264,13 @@ function LoginInner() {
               </div>
               <button type="submit" disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50">
-                {loading ? <><RotateCw size={16} className="animate-spin" /> Memeriksa...</> : <><span>Lanjut</span><ArrowRight size={15} /></>}
+                {loading ? <><RotateCw size={16} className="animate-spin" /> Memeriksa...</> : <><span>{AUTH_COPY.login.primaryCta}</span><ArrowRight size={15} /></>}
               </button>
             </form>
 
             <p className="text-center text-xs text-slate-400">
-              Belum punya akun?{" "}
-              <Link href="/daftar" className="text-indigo-600 font-semibold hover:underline">Daftar gratis</Link>
+              {AUTH_COPY.login.registerPrompt}{" "}
+              <Link href="/daftar" className="text-indigo-600 font-semibold hover:underline">{AUTH_COPY.login.registerCta}</Link>
             </p>
           </div>
         )}

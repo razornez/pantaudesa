@@ -183,6 +183,43 @@ export const HERO = {
   ctaAll:    "Lihat Semua Desa",
 } as const;
 
+export const AUTH_COPY = {
+  whyAccountTitle: "Kenapa perlu akun?",
+  whyAccountBody:
+    "Data publik tetap bisa dilihat tanpa akun. Namun akun membantu kamu ikut berperan lebih jauh: menyimpan desa yang kamu pedulikan, mengikuti perubahan data, memberi kontribusi, dan membangun reputasi sebagai warga aktif. Dengan akun, partisipasi tidak lagi anonim dan acak.",
+  publicAccess: "Kamu tetap bisa melihat data publik tanpa akun.",
+  seePublicData: "Lihat dulu tanpa daftar",
+  login: {
+    title: "Masuk kembali ke ruang pantau desamu.",
+    subtitle:
+      "Lanjutkan memantau desa yang kamu simpan, lihat kontribusimu, dan ikuti perkembangan transparansi yang kamu pedulikan.",
+    sideTitle: "Transparansi desa adalah kerja bersama warga.",
+    sideBody:
+      "Masuk untuk melanjutkan pantauan, mengikuti perkembangan desa, dan menjaga kontribusimu tetap tertata.",
+    primaryCta: "Masuk ke PantauDesa",
+    registerPrompt: "Baru pertama kali ikut memantau?",
+    registerCta: "Buat akun warga peduli",
+  },
+  register: {
+    title: "Ikut menjaga desa dari tempat paling dekat: sebagai warga yang peduli.",
+    subtitle:
+      "Dengan akun PantauDesa, kamu bisa menyimpan desa yang kamu pedulikan, mengikuti perubahan data, memberi kontribusi, dan membangun reputasi sebagai warga aktif.",
+    sideTitle: "Buat akun untuk ikut memantau, memahami, dan menjaga transparansi desa.",
+    sideBody:
+      "Akun membuat partisipasi warga lebih bertanggung jawab: kontribusi punya identitas, reputasi bisa dibangun, dan perkembangan desa lebih mudah diikuti.",
+    primaryCta: "Mulai Ikut Memantau",
+    loginPrompt: "Sudah punya akun?",
+    loginCta: "Masuk ke PantauDesa",
+    benefits: [
+      "Simpan desa yang ingin kamu pantau.",
+      "Ikuti perubahan data dan status anggaran.",
+      "Beri kontribusi informasi atau koreksi dengan lebih bertanggung jawab.",
+      "Kumpulkan badge kontribusi sebagai tanda partisipasi.",
+      "Bangun profil warga peduli yang bisa dipercaya komunitas.",
+    ],
+  },
+} as const;
+
 export const PHILOSOPHY = {
   homeTitle: "Kenapa desa harus dipantau?",
   homeIntro:

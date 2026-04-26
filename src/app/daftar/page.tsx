@@ -11,6 +11,7 @@ import {
   Eye, EyeOff, RotateCw, AlertTriangle, CheckCircle2, XCircle,
 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
+import { AUTH_COPY } from "@/lib/copy";
 import OtpInput from "@/components/ui/OtpInput";
 import { useCountdown } from "@/lib/use-countdown";
 
@@ -222,20 +223,19 @@ function DaftarInner() {
           <div className="flex-1 flex flex-col justify-center max-w-sm space-y-5">
             <div>
               <div className="text-4xl mb-4">🏘️</div>
-              <h1 className="text-3xl font-black text-white leading-tight mb-3">Suaramu bisa<br />mengubah desamu.</h1>
+              <h1 className="text-3xl font-black text-white leading-tight mb-3">{AUTH_COPY.register.sideTitle}</h1>
               <p className="text-indigo-200 text-sm leading-relaxed">
-                Dana desa bisa miliaran rupiah per tahun. Ketika warga diam, anggaran itu bisa disalahgunakan.
-                Ketika warga bersuara, desa berkembang — itulah kemakmuran dari akar rumput.
+                {AUTH_COPY.register.sideBody}
               </p>
             </div>
 
             {/* Apa yang bisa kamu lakukan */}
             <div className="space-y-2">
               {[
-                { e: "📢", t: "Laporkan masalah di desamu" },
-                { e: "✅", t: "Verifikasi laporan warga lain" },
-                { e: "🏆", t: "Bangun reputasi suara terpercaya" },
-                { e: "🔔", t: "Notifikasi respons perangkat desa" },
+                { e: "📌", t: AUTH_COPY.register.benefits[0] },
+                { e: "🔔", t: AUTH_COPY.register.benefits[1] },
+                { e: "📢", t: AUTH_COPY.register.benefits[2] },
+                { e: "🏅", t: AUTH_COPY.register.benefits[3] },
               ].map(f => (
                 <div key={f.t} className="flex items-center gap-3">
                   <span className="text-lg">{f.e}</span>
@@ -266,8 +266,8 @@ function DaftarInner() {
             </div>
           </div>
           <p className="text-indigo-300 text-xs">
-            Sudah punya akun?{" "}
-            <Link href="/login" className="text-white font-semibold hover:underline">Masuk di sini</Link>
+            {AUTH_COPY.register.loginPrompt}{" "}
+            <Link href="/login" className="text-white font-semibold hover:underline">{AUTH_COPY.register.loginCta}</Link>
           </p>
         </div>
       </div>
@@ -291,8 +291,16 @@ function DaftarInner() {
         {step === "form" && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Daftar Sekarang</h2>
-              <p className="text-sm text-slate-500 mt-1">Partisipasi publik · Gratis selamanya · Terbuka untuk semua</p>
+              <h2 className="text-2xl font-black text-slate-900">{AUTH_COPY.register.title}</h2>
+              <p className="text-sm text-slate-500 mt-1 leading-relaxed">{AUTH_COPY.register.subtitle}</p>
+            </div>
+
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3">
+              <p className="text-sm font-bold text-slate-900">{AUTH_COPY.whyAccountTitle}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{AUTH_COPY.whyAccountBody}</p>
+              <Link href="/desa" className="mt-2 inline-flex text-xs font-bold text-indigo-700 hover:text-indigo-900">
+                {AUTH_COPY.seePublicData}
+              </Link>
             </div>
 
             {apiErr && (
@@ -399,13 +407,13 @@ function DaftarInner() {
 
               <button type="submit" disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50 mt-1">
-                {loading ? <><RotateCw size={15} className="animate-spin" /> Memproses...</> : <><span>Daftar & Kirim Kode Verifikasi</span><ArrowRight size={15} /></>}
+                {loading ? <><RotateCw size={15} className="animate-spin" /> Memproses...</> : <><span>{AUTH_COPY.register.primaryCta}</span><ArrowRight size={15} /></>}
               </button>
             </form>
 
             <p className="text-center text-xs text-slate-400">
-              Sudah punya akun?{" "}
-              <Link href="/login" className="text-indigo-600 font-semibold hover:underline">Masuk</Link>
+              {AUTH_COPY.register.loginPrompt}{" "}
+              <Link href="/login" className="text-indigo-600 font-semibold hover:underline">{AUTH_COPY.register.loginCta}</Link>
             </p>
           </div>
         )}
