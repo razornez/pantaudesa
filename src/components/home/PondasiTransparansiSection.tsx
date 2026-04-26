@@ -42,10 +42,10 @@ export default function PondasiTransparansiSection() {
         </div>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/panduan"
+            href="/tentang/kenapa-desa-dipantau"
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
           >
-            Pelajari Cara Mengawasi
+            Pelajari Cara Memantau
             <ArrowRight size={14} />
           </Link>
           <Link

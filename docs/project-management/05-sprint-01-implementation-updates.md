@@ -21,3 +21,22 @@ Status: partial
 
 ### Need review from Asep/Iwan
 - Pastikan copy tidak terasa seperti paywall dan data publik tetap jelas terbuka tanpa akun.
+
+## Backlog #9 — Homepage Highlight
+
+## Implementation Update — Ujang
+
+Status: partial
+
+### Done
+- Homepage highlight `Kenapa desa harus dipantau?` diarahkan ke halaman edukasi khusus.
+- Halaman `/tentang/kenapa-desa-dipantau` dibuat dengan narasi hangat, adil, dan tidak menuduh.
+- CTA halaman edukasi mengarah ke pencarian desa dan panduan kewenangan.
+- Copy halaman disimpan di `src/lib/copy.ts`.
+
+### Remaining
+- Asep perlu review apakah section homepage cukup static MVP.
+- Iwan perlu review final copy sebelum status `done`.
+
+### Need review from Asep/Iwan
+- Pastikan narasi "memantau bukan menuduh" sudah cukup kuat untuk pengunjung baru.

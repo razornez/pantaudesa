@@ -235,6 +235,32 @@ export const PHILOSOPHY = {
     "Pantau yang menjadi urusan desa, lalu eskalasikan dengan benar saat masalahnya memang berada di tingkat kecamatan, kabupaten, atau provinsi.",
 } as const;
 
+export const WHY_MONITORING_PAGE = {
+  eyebrow: "Kenapa desa dipantau?",
+  title: "Memantau desa bukan berarti menuduh. Memantau desa berarti ikut menjaga akar kemakmuran bersama.",
+  intro:
+    "Desa adalah tempat banyak kebutuhan warga bermula: jalan lingkungan, posyandu, irigasi, bantuan sosial, pelayanan administrasi, sampai program pemberdayaan. Karena itu, transparansi desa bukan ancaman. Transparansi adalah cara membangun kepercayaan.",
+  sections: [
+    {
+      title: "Desa adalah titik paling dekat dengan warga",
+      body:
+        "Ketika anggaran desa jelas, warga lebih mudah memahami program yang berjalan dan pihak desa lebih mudah menjelaskan prioritasnya.",
+    },
+    {
+      title: "Pengawasan membuat pembangunan lebih tepat sasaran",
+      body:
+        "Warga yang paham data bisa bertanya dengan lebih tenang, membawa bukti, dan membantu menemukan bagian yang perlu diperbaiki.",
+    },
+    {
+      title: "Adil untuk warga dan pihak desa",
+      body:
+        "PantauDesa tidak mengajak warga menyimpulkan pelanggaran tanpa dasar. PantauDesa membantu membedakan mana yang sudah baik, mana yang perlu ditanyakan, dan mana yang perlu diverifikasi.",
+    },
+  ],
+  closing:
+    "Jika desa terbuka, bekerja baik, dan warganya aktif bertanya dengan cara yang benar, pengawasan ke tingkat kecamatan, kabupaten, provinsi, sampai pusat akan lebih mudah dibangun.",
+} as const;
+
 export const AUTHORITY_HIGHLIGHTS = [
   {
     level: "Desa",
