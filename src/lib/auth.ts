@@ -5,6 +5,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
 import { sendErrorAlert } from "@/lib/alert";
+import { verifyLoginTicket } from "@/lib/login-ticket";
+import { verifyPin } from "@/lib/pin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -20,11 +22,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       id:   "pin",
       name: "PIN",
-      credentials: { email: { type: "email" } },
+      credentials: {
+        email: { type: "email" },
+        pin: { type: "password" },
+        loginToken: { type: "text" },
+      },
       async authorize(credentials) {
         if (!credentials?.email) return null;
+        const email = String(credentials.email).toLowerCase();
         const user = await db.user.findUnique({
-          where:  { email: String(credentials.email).toLowerCase() },
+          where:  { email },
           select: {
             id: true, email: true, nama: true, name: true,
             username: true, avatarUrl: true, image: true,
@@ -32,6 +39,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
         if (!user || !user.emailVerified) return null;
+
+        const loginToken = typeof credentials.loginToken === "string" ? credentials.loginToken : "";
+        const pin = typeof credentials.pin === "string" ? credentials.pin : "";
+
+        if (loginToken) {
+          if (!verifyLoginTicket(loginToken, user.id, user.email)) return null;
+        } else if (pin) {
+          const pinResult = await verifyPin(user.id, pin);
+          if (!pinResult.ok) return null;
+        } else {
+          return null;
+        }
+
         return {
           id:       user.id,
           email:    user.email,

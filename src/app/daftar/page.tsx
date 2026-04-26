@@ -173,6 +173,7 @@ function DaftarInner() {
       // 2. Auto-login — user sudah terbukti identitasnya lewat OTP
       const result = await signIn("pin", {
         email:    form.email.toLowerCase().trim(),
+        pin:      form.pin,
         redirect: false,
       });
 
@@ -466,7 +467,7 @@ function DaftarInner() {
                   <p className="font-bold">Yang bisa kamu lakukan:</p>
                   <ul className="list-disc list-inside space-y-0.5">
                     <li>Cek folder <strong>Spam</strong> atau <strong>Promotions</strong></li>
-                    <li>Tunggu hingga tombol "Kirim Ulang" muncul, lalu klik</li>
+                    <li>Tunggu hingga tombol &quot;Kirim Ulang&quot; muncul, lalu klik</li>
                     <li>Pastikan emailmu benar — kalau salah, kembali dan ubah</li>
                   </ul>
                 </div>

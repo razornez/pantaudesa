@@ -11,7 +11,7 @@ import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth-context";
 import {
   computeTrustStats, getVoicesByAuthor, getNotifications,
-  getUnreadCount, NOTIF_CONFIG, USER_BADGES,
+  NOTIF_CONFIG, USER_BADGES,
   type UserNotification, type BadgeTier,
 } from "@/lib/user-profile";
 import { VOICE_CATEGORIES, STATUS_CONFIG, relativeTime } from "@/lib/citizen-voice";
@@ -48,7 +48,7 @@ function NotifItem({ notif, onRead }: { notif: UserNotification; onRead: (id: st
           </p>
           {!notif.isRead && <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 mt-1" />}
         </div>
-        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">"{notif.voiceText}"</p>
+        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">&quot;{notif.voiceText}&quot;</p>
         <p className="text-[10px] text-slate-400 mt-0.5">{relativeTime(notif.createdAt)}</p>
       </div>
     </button>
@@ -96,16 +96,23 @@ function AvatarEditor({ nama, current, onUploaded, onError }: {
   onError:    (msg: string) => void;
 }) {
   const inputRef               = useRef<HTMLInputElement>(null);
+  const objectUrlRef           = useRef<string | null>(null);
   const [preview, setPreview]  = useState<string | undefined>(current);
   const [loading, setLoading]  = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Show local preview immediately
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
+    objectUrlRef.current = URL.createObjectURL(file);
+    setPreview(objectUrlRef.current);
     setLoading(true);
 
     try {
@@ -118,13 +125,17 @@ function AvatarEditor({ nama, current, onUploaded, onError }: {
         onError(data.error ?? "Gagal mengupload foto.");
         return;
       }
+      setPreview(data.avatarUrl);
       onUploaded(data.avatarUrl);
     } catch {
       setPreview(current);
       onError("Gagal mengupload foto. Pastikan koneksi stabil lalu coba lagi.");
     } finally {
       setLoading(false);
-      URL.revokeObjectURL(objectUrl);
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
       e.target.value = "";
     }
   };
@@ -345,6 +356,7 @@ export default function SayaProfilePage() {
       });
       if (!res.ok) throw new Error("Gagal menyimpan");
       toast("Profil berhasil disimpan ✓", "success");
+      router.refresh();
     } catch {
       toast("Gagal menyimpan. Coba lagi.", "error");
     } finally {

@@ -1,7 +1,10 @@
 import * as Sentry from "@sentry/nextjs";
+import { validateEnv } from "@/lib/env";
+
+validateEnv();
 
 Sentry.init({
-  dsn: "https://f46f5209f67744e7e4c0e8f2d07361fc@o4509432444747776.ingest.de.sentry.io/4509432449400912",
+  dsn: process.env.SENTRY_DSN,
   sendDefaultPii: true,
   environment: process.env.NODE_ENV,
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,

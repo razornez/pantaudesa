@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as Sentry from "@sentry/nextjs";
@@ -48,7 +48,6 @@ function LoginInner() {
   const [email,   setEmail]   = useState(params.get("email") ?? "");
   const [loading, setLoading] = useState(false);
   const [err,     setErr]     = useState("");
-  const [frozen,  setFrozen]  = useState(false);
   const [frozenUntil, setFrozenUntil] = useState<Date | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [pinReset, setPinReset] = useState(0);
@@ -56,11 +55,8 @@ function LoginInner() {
 
   const frozenSecs = useCountdown(frozenUntil);
   const resendSecs = useCountdown(resendAt);
-
-  // If frozen timer expired, allow retry
-  useEffect(() => {
-    if (frozen && frozenSecs === 0) setFrozen(false);
-  }, [frozen, frozenSecs]);
+  const isFrozen = frozenUntil !== null && frozenSecs > 0;
+  const visibleErr = !isFrozen && frozenUntil !== null && frozenSecs === 0 ? "" : err;
 
   const handleModeChange = (m: Mode) => { setMode(m); setErr(""); };
 
@@ -101,7 +97,7 @@ function LoginInner() {
 
   // ── Step 2: verify PIN ──────────────────────────────────────────────────
   const handlePinComplete = async (pin: string) => {
-    if (frozen) return;
+    if (isFrozen) return;
     setErr("");
     setLoading(true);
     try {
@@ -115,7 +111,6 @@ function LoginInner() {
       if (!res.ok) {
         setPinReset(n => n + 1);
         if (data.frozen) {
-          setFrozen(true);
           setFrozenUntil(new Date(data.frozenUntil));
           setErr(data.error);
         } else {
@@ -126,14 +121,22 @@ function LoginInner() {
       }
 
       // PIN verified server-side — create NextAuth JWT session via "pin" provider
+      if (!data.loginToken) {
+        Sentry.captureMessage("PIN login succeeded without loginToken", "error");
+        setErr("PIN berhasil diverifikasi, tetapi sesi belum bisa dibuat. Coba lagi.");
+        setPinReset(n => n + 1);
+        return;
+      }
+
       const signInRes = await signIn("pin", {
-        email:    email.toLowerCase().trim(),
+        email: email.toLowerCase().trim(),
+        loginToken: data.loginToken,
         redirect: false,
       });
 
       if (signInRes?.error) {
         Sentry.captureMessage(`signIn after pin error: ${signInRes.error}`, "warning");
-        setErr("Login berhasil tapi sesi gagal dibuat. Coba lagi.");
+        setErr("PIN benar, tetapi sesi login gagal dibuat. Coba lagi.");
         return;
       }
 
@@ -231,10 +234,10 @@ function LoginInner() {
 
             <ModeSelector mode={mode} onChange={handleModeChange} />
 
-            {err && (
+            {visibleErr && (
               <div className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
                 <AlertTriangle size={15} className="text-rose-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-rose-700">{err}</p>
+                <p className="text-sm text-rose-700">{visibleErr}</p>
               </div>
             )}
 
@@ -245,9 +248,9 @@ function LoginInner() {
                 </label>
                 <div className="relative">
                   <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }}
+                  <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErr(""); setFrozenUntil(null); }}
                     placeholder={mode === "warga" ? "email@kamu.com" : "email@desa.id"}
-                    className={`w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition ${err ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
+                    className={`w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition ${visibleErr ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
                 </div>
               </div>
               <button type="submit" disabled={loading}
@@ -266,7 +269,7 @@ function LoginInner() {
         {/* ── Step 2: PIN ───────────────────────────────────────────────── */}
         {step === "pin" && (
           <div className="space-y-6">
-            <button onClick={() => { setStep("email"); setErr(""); setFrozen(false); }} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
+            <button onClick={() => { setStep("email"); setErr(""); setFrozenUntil(null); }} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
               ← Ganti email
             </button>
 
@@ -277,7 +280,7 @@ function LoginInner() {
               </p>
             </div>
 
-            {frozen ? (
+            {isFrozen ? (
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 text-center space-y-2">
                 <ShieldAlert size={28} className="text-rose-500 mx-auto" />
                 <p className="text-sm font-bold text-rose-800">Akun dibekukan sementara</p>
@@ -290,9 +293,9 @@ function LoginInner() {
               </div>
             ) : (
               <>
-                <PinInput onComplete={handlePinComplete} disabled={loading} error={!!err} reset={pinReset} />
+                <PinInput onComplete={handlePinComplete} disabled={loading} error={!!visibleErr} reset={pinReset} />
 
-                {err && (
+                {visibleErr && (
                   <div className="text-center">
                     <p className="text-sm text-rose-600">⚠ {err}</p>
                     {attemptsLeft !== null && attemptsLeft <= 2 && (
@@ -310,7 +313,7 @@ function LoginInner() {
               <Link href={`/lupa-pin?email=${encodeURIComponent(email)}`} className="block text-xs font-semibold text-indigo-600 hover:text-indigo-800">
                 Lupa PIN?
               </Link>
-              {!frozen && (
+              {!isFrozen && (
                 resendSecs > 0 ? (
                   <p className="text-xs text-slate-400">Kirim PIN via email lagi dalam {resendSecs}s</p>
                 ) : (

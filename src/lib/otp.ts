@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
+import { randomInt } from "crypto";
 import { db } from "@/lib/db";
 
 const OTP_EXPIRY_MINUTES = 10;
 const OTP_RESEND_SECONDS = 60;
 
 export function generateCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+  return String(randomInt(100000, 1000000)); // 6 digits
 }
 
 export async function createOtp(email: string, purpose: "REGISTER" | "RESET_PIN" | "UNFREEZE"): Promise<{

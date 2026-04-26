@@ -30,15 +30,31 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { nama, bio, avatarUrl } = body;
+    const { nama, bio } = body;
+
+    const data: { nama?: string; bio?: string } = {};
+
+    if (nama !== undefined) {
+      if (typeof nama !== "string" || nama.trim().length === 0 || nama.trim().length > 100) {
+        return NextResponse.json({ error: "Nama tidak valid (maks 100 karakter)." }, { status: 400 });
+      }
+      data.nama = nama.trim();
+    }
+
+    if (bio !== undefined) {
+      if (typeof bio !== "string" || bio.length > 500) {
+        return NextResponse.json({ error: "Bio maksimal 500 karakter." }, { status: 400 });
+      }
+      data.bio = bio;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "Tidak ada data profil yang valid untuk disimpan." }, { status: 400 });
+    }
 
     const user = await db.user.update({
       where: { id: session.user.id },
-      data: {
-        ...(nama      !== undefined && { nama }),
-        ...(bio       !== undefined && { bio }),
-        ...(avatarUrl !== undefined && { avatarUrl }),
-      },
+      data,
       select: { id: true, email: true, username: true, nama: true, bio: true, avatarUrl: true, role: true },
     });
 

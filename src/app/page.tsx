@@ -7,6 +7,7 @@ import TrendChart from "@/components/home/TrendChart";
 import SerapanDonut from "@/components/home/SerapanDonut";
 import DesaLeaderboard from "@/components/home/DesaLeaderboard";
 import AlertDiniSection from "@/components/home/AlertDiniSection";
+import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
 import { mockSummaryStats, mockTrendData, mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
@@ -47,6 +48,7 @@ export default function HomePage() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <HeroSection totalDesa={mockDesa.length} tahun={2024} />
+      <PondasiTransparansiSection />
 
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
       <div>
@@ -88,7 +90,7 @@ export default function HomePage() {
             />
           </div>
           <div className="flex-1 flex flex-col justify-center p-6 sm:p-8 text-center lg:text-left">
-            <h2 className="text-lg font-bold text-slate-800 mb-2">Ini hakmu sebagai warga.</h2>
+            <h2 className="text-lg font-bold text-slate-800 mb-2">Mengawasi desa adalah bentuk menjaga desa.</h2>
             <p className="text-slate-500 text-sm mb-5 max-w-md mx-auto lg:mx-0">
               Data anggaran desamu adalah milik publik — bukan milik kepala desa, bukan milik kabupaten.
               Temukan fakta di balik angka-angka itu dan jadilah bagian dari pengawasan.

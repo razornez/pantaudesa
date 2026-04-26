@@ -1,6 +1,4 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend } from "@/lib/resend";
 
 const PURPOSE_LABEL: Record<string, string> = {
   REGISTER:  "verifikasi pendaftaran",

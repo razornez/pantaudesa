@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { issueLoginTicket } from "@/lib/login-ticket";
 import { verifyPin } from "@/lib/pin";
 import { createOtp } from "@/lib/otp";
 import { sendOtpEmail } from "@/lib/send-otp";
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     }
 
     // PIN correct — return ok. Client will call NextAuth signIn("pin") next.
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, loginToken: issueLoginTicket(user.id, emailLower) });
   } catch (error) {
     return handleApiError(error, "POST /api/auth/login");
   }

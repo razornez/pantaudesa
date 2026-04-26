@@ -5,6 +5,7 @@ import {
   TrendingUp, ArrowRight, ChevronDown,
   Megaphone, Users, HelpCircle,
 } from "lucide-react";
+import { AUTHORITY_HIGHLIGHTS, PHILOSOPHY } from "@/lib/copy";
 
 export const metadata: Metadata = {
   title: "Panduan & FAQ — PantauDesa",
@@ -190,6 +191,32 @@ export default function PanduanPage() {
         <p className="text-slate-500 text-sm max-w-xl mx-auto leading-relaxed">
           Semua yang perlu kamu tahu tentang memantau anggaran desa, bersuara, dan memperjuangkan transparansi.
         </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Arah PantauDesa</p>
+          <h2 className="mt-3 text-xl font-black text-slate-900">{PHILOSOPHY.homeTitle}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600">{PHILOSOPHY.homeIntro}</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600">{PHILOSOPHY.homeBody}</p>
+          <div className="mt-4 rounded-2xl bg-indigo-50 px-4 py-3 text-sm leading-relaxed text-indigo-900">
+            {PHILOSOPHY.homeClosing}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-300">Batas Wewenang</p>
+          <h2 className="mt-3 text-xl font-black text-white">{PHILOSOPHY.authorityTitle}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-300">{PHILOSOPHY.authorityIntro}</p>
+          <div className="mt-4 space-y-2.5">
+            {AUTHORITY_HIGHLIGHTS.map((item) => (
+              <div key={item.level} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-sm font-bold text-white">{item.level}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-300">{item.scope}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Quick nav ─────────────────────────────────────────────────────── */}

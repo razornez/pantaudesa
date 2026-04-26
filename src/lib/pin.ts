@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
-import { Resend } from "resend";
 import { db } from "@/lib/db";
+import { resend } from "@/lib/resend";
 
 const MAX_ATTEMPTS = 5;
 const FREEZE_1_MS  = 5  * 60 * 1000;  // 5 menit
@@ -96,7 +96,6 @@ async function sendUnfreezeEmail(userId: string, email: string, nama: string): P
 
     const token   = Buffer.from(`${userId}:${code}`).toString("base64url");
     const link    = `${process.env.AUTH_URL ?? process.env.NEXTAUTH_URL}/lupa-pin?email=${encodeURIComponent(email)}&token=${token}`;
-    const resend  = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
       from:    process.env.RESEND_FROM ?? "noreply@razornez.net",

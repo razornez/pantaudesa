@@ -183,6 +183,44 @@ export const HERO = {
   ctaAll:    "Lihat Semua Desa",
 } as const;
 
+export const PHILOSOPHY = {
+  homeTitle: "Kenapa desa harus dipantau?",
+  homeIntro:
+    "Karena desa adalah akar dari kemakmuran masyarakat. Saat dana sampai ke desa lalu dikelola dengan terbuka, manfaatnya terasa paling dekat: jalan, posyandu, irigasi, bantuan sosial, sampai pelayanan dasar warga.",
+  homeBody:
+    "PantauDesa tidak dibangun untuk mengajak orang membenci aparat desa. Platform ini dibangun agar warga dan pemerintah desa sama-sama punya pijakan yang jernih: mana yang sudah berjalan baik, mana yang perlu dibenahi, dan di titik mana anggaran berhenti tersalurkan dengan benar.",
+  homeClosing:
+    "Kalau struktur paling bawah sehat, transparan, dan responsif, pengawasan ke tingkat atas juga jadi lebih kuat dan lebih adil.",
+  authorityTitle: "Awasi sesuai kewenangan, supaya kritik tepat sasaran",
+  authorityIntro:
+    "Tidak semua masalah adalah tanggung jawab kepala desa. Warga perlu tahu batas wewenang tiap level pemerintahan agar pengawasan tidak berubah jadi tuduhan yang salah alamat.",
+  authorityNote:
+    "Pantau yang menjadi urusan desa, lalu eskalasikan dengan benar saat masalahnya memang berada di tingkat kecamatan, kabupaten, atau provinsi.",
+} as const;
+
+export const AUTHORITY_HIGHLIGHTS = [
+  {
+    level: "Desa",
+    scope: "APBDes, jalan desa, drainase lingkungan, posyandu, BUMDes, pendataan bansos desa",
+    tone: "bg-emerald-50 border-emerald-200 text-emerald-800",
+  },
+  {
+    level: "Camat",
+    scope: "Pembinaan dan koordinasi antar desa, pengawasan administratif, fasilitasi masalah lintas desa",
+    tone: "bg-sky-50 border-sky-200 text-sky-800",
+  },
+  {
+    level: "Bupati/Wali Kota",
+    scope: "Jalan kabupaten, puskesmas, sekolah negeri kabupaten, APBD kabupaten, dinas teknis",
+    tone: "bg-amber-50 border-amber-200 text-amber-800",
+  },
+  {
+    level: "Gubernur/Provinsi",
+    scope: "Jalan provinsi, program provinsi, bantuan provinsi, koordinasi lintas kabupaten",
+    tone: "bg-violet-50 border-violet-200 text-violet-800",
+  },
+] as const;
+
 // ─── Dokumen publik ───────────────────────────────────────────────────────────
 
 export const DOKUMEN = {

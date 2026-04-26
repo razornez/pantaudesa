@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 
-const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_SIZE_BYTES = 500 * 1024; // 500 KB
 const ALLOWED_TYPES  = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
 
 // POST /api/users/avatar — accepts multipart/form-data with field "file"
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Format ${fileType || "file"} tidak didukung. Gunakan JPG, PNG, WebP, atau foto dari galeri.` }, { status: 400 });
     }
     if (file.size > MAX_SIZE_BYTES) {
-      return NextResponse.json({ error: "Ukuran foto terlalu besar. Maksimal 2 MB." }, { status: 400 });
+      return NextResponse.json({ error: "Ukuran foto terlalu besar. Maksimal 500 KB." }, { status: 400 });
     }
 
     // Convert to base64 data URL — stored directly in DB (no external storage needed for MVP)

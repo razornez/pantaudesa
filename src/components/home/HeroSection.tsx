@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
+import { HERO } from "@/lib/copy";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
             className={`animate-fade-up delay-100 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium mb-5 border border-white/20 bg-white/10 text-indigo-100 backdrop-blur-sm ${ready ? "" : "opacity-0"}`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,231,183,0.9)]" />
-            Data {tahun} · {totalDesa} Desa Terpantau
+            {HERO.badge(tahun, totalDesa)}
           </div>
 
           {/* Headline dengan brush highlight */}
@@ -145,8 +146,7 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
           <p
             className={`animate-fade-up delay-200 text-indigo-100 text-sm sm:text-base max-w-md mb-7 leading-relaxed drop-shadow ${ready ? "" : "opacity-0"}`}
           >
-            Setiap tahun desamu mendapat miliaran rupiah dari negara.
-            Uang itu untuk kamu — rakyatnya. Temukan faktanya.
+            {HERO.subtitle}
           </p>
 
           {/* CTA */}
@@ -158,7 +158,7 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
               className="group inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition-all text-sm shadow-xl shadow-indigo-900/40"
             >
               <Search size={15} />
-              Cari Desamu
+              {HERO.ctaSearch}
               <kbd className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-100/70 border border-indigo-200/60 text-indigo-400 group-hover:bg-indigo-100 transition-colors">
                 ⌘K
               </kbd>
@@ -168,10 +168,17 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
               href="/desa"
               className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white font-medium px-5 py-2.5 rounded-xl hover:bg-white/20 transition-colors text-sm border border-white/20"
             >
-              Lihat Semua Desa
+              {HERO.ctaAll}
               <ArrowRight size={15} />
             </Link>
           </div>
+
+          <p
+            className={`animate-fade-up delay-300 mt-4 max-w-lg text-xs leading-relaxed text-indigo-100/85 ${ready ? "" : "opacity-0"}`}
+          >
+            Mengawasi desa bukan berarti memusuhi desa. Justru karena desa adalah titik paling dekat
+            antara anggaran negara dan kehidupan warga, di situlah transparansi harus paling terasa.
+          </p>
         </div>
 
         {/* ── Kanan: Receipt card (mengambang di atas area ilustrasi) ────────── */}

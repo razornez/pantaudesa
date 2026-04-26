@@ -5,14 +5,9 @@ import { db } from "@/lib/db";
 // Cek semua dependency: DB, env vars, Resend.
 // Hanya aktif di non-production atau dengan secret header.
 
-export async function GET(req: Request) {
-  const secret = req.headers.get("x-debug-secret");
-  const isAllowed =
-    process.env.NODE_ENV !== "production" ||
-    (secret && secret === process.env.DEBUG_SECRET);
-
-  if (!isAllowed) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
 
   const results: Record<string, unknown> = {};
