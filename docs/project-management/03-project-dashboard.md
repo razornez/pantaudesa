@@ -5,26 +5,27 @@ Owner: Iwan (CEO / Business Analyst / Designer)
 
 ## Executive summary
 
-PantauDesa sudah memiliki fondasi produk, bisnis, desain, roadmap, sales kit, launch plan, dan operating system tim. Namun dari sisi implementasi fitur produk, mayoritas pekerjaan masih berada di tahap planning dan backlog.
+PantauDesa sudah memiliki fondasi produk, bisnis, desain, roadmap, sales kit, launch plan, dan operating system tim. Dari sisi implementasi fitur produk, sebagian pekerjaan MVP mulai bergerak: `PondasiTransparansiSection` untuk civic narrative homepage sudah selesai menurut catatan Asep, tetapi belum tercatat sebelumnya di issue #9.
 
 Status saat ini:
 
 - Product direction: kuat dan sudah terdokumentasi.
 - Team operating system: sudah mulai terbentuk.
 - Codebase: sudah ada aplikasi Next.js dengan scope dashboard warga, mock data, chart, auth dependencies, dan testing scripts.
-- MVP polish: belum selesai.
-- Auth meaning, badge reputation, civic narrative, dan responsibility guide: sudah didefinisikan di docs, belum selesai di UI.
+- MVP polish: mulai berjalan, tetapi belum selesai.
+- Auth meaning, badge reputation, civic narrative, dan responsibility guide: sudah didefinisikan di docs; civic narrative homepage sudah mulai diimplementasikan melalui `PondasiTransparansiSection`.
 - Data/admin/monetization: sudah masuk roadmap, belum fase implementasi utama.
 
 ## Current overall progress
 
 Estimated overall project progress: **18%**
 
-Estimated MVP progress: **28%**
+Estimated MVP progress: **29%**
 
 Catatan:
-- Angka ini adalah baseline awal versi Iwan berdasarkan docs, README, issue backlog, dan informasi repo yang sudah terbaca.
-- Angka harus diperbarui setelah Asep memberi CTO review dan Ujang melakukan implementasi source code.
+- Angka ini adalah baseline awal versi Iwan berdasarkan docs, README, issue backlog, informasi repo yang sudah terbaca, dan update dari Asep.
+- Update terbaru: issue #9 dinaikkan dari 20% menjadi 40% dengan status `partial` karena `PondasiTransparansiSection` di homepage sudah selesai, tetapi page edukasi/CTA dan pencatatan issue belum lengkap.
+- Angka harus diperbarui lagi setelah Asep memberi CTO review formal dan Ujang melakukan update issue/commit yang lengkap.
 
 ## Progress calculation
 
@@ -52,7 +53,7 @@ Status score:
 | Monetization and sales offer | #6 | 8% | partial | 55% | Sales kit dan launch plan sudah ada; landing page/pitch/prospect belum selesai |
 | Auth meaning | #7 | 5% | ready-for-review | 20% | Copy strategy siap, butuh review Asep dan implementasi Ujang |
 | Badge reputation | #8 | 3% | ready-for-review | 20% | Strategy siap, butuh architecture/MVP decision |
-| Civic narrative highlight | #9 | 1% | ready-for-review | 20% | Copy siap, UI/page belum implement |
+| Civic narrative highlight | #9 | 1% | partial | 40% | `PondasiTransparansiSection` homepage sudah selesai menurut catatan Asep; masih perlu pencatatan issue, CTA/page edukasi, dan verifikasi Iwan/Asep |
 | Responsibility guide | #10 | 1% | ready-for-review | 20% | Copy siap, UI/page belum implement |
 
 ## MVP definition
@@ -86,6 +87,10 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Next brief for Asep and Ujang sudah dibuat.
 - Commissioner reporting system sudah dibuat.
 
+### Product/UI implementation signals
+
+- `PondasiTransparansiSection` di homepage sudah selesai menurut catatan Asep untuk issue #9.
+
 ### Backlog
 
 - Issues #1 sampai #11 sudah dibuat sebagai baseline backlog.
@@ -96,6 +101,7 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Sistem kerja Iwan-Asep-Ujang sudah didefinisikan tetapi belum sepenuhnya diterapkan ke semua issue/commit/PR.
 - Progress reporting sudah mulai dibuat tetapi belum otomatis dari issue status.
 - Product docs sudah kuat, tetapi implementasi UI masih perlu diverifikasi oleh Asep/Ujang.
+- Issue #9 sekarang partial: homepage civic narrative sudah mulai terlihat melalui `PondasiTransparansiSection`, namun page edukasi, CTA, dan status issue masih perlu dirapikan.
 
 ## Not started / needs execution
 
@@ -104,8 +110,7 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Data demo disclaimer in UI.
 - Auth page rewrite.
 - Badge UI/popover/profile explanation.
-- Homepage highlight: kenapa desa perlu dipantau.
-- Page `/tentang/kenapa-desa-dipantau`.
+- Page `/tentang/kenapa-desa-dipantau` jika belum dibuat.
 - Detail desa card: tanyakan ke pihak yang tepat.
 - Page `/panduan/kewenangan`.
 - Admin/import/data model final.
@@ -149,7 +154,7 @@ Mitigation:
 Website bisa dianggap menyerang desa jika copy tidak adil.
 
 Mitigation:
-- Prioritaskan #9 dan #10.
+- Prioritaskan #9 dan #10. #9 sudah partial melalui `PondasiTransparansiSection`, tetapi tetap perlu verifikasi copy/placement dan penyelesaian page edukasi.
 
 ## Next sprint recommendation
 
@@ -177,6 +182,12 @@ Asep harus membaca:
 
 Lalu Asep memberi CTO review dengan status ready / needs-adjustment / blocked.
 
+Khusus #9:
+- Konfirmasi file/komponen `PondasiTransparansiSection`.
+- Pastikan copy tidak menuduh desa.
+- Pastikan placement homepage tepat.
+- Tentukan apakah page `/tentang/kenapa-desa-dipantau` masih perlu dibuat di sprint ini.
+
 ## Instructions for Ujang
 
 Ujang mulai implementasi setelah Asep review. Jika belum ada review Asep, Ujang boleh mulai copy-only MVP untuk #7 dengan status partial.
@@ -188,6 +199,11 @@ Urutan implementasi:
 3. #10.
 4. #8.
 5. #11.
+
+Khusus #9:
+- Update issue #9 dengan Implementation Update.
+- Sebutkan bahwa `PondasiTransparansiSection` sudah selesai.
+- Jelaskan remaining task: CTA/page edukasi/verifikasi copy jika masih ada.
 
 ## Next commissioner report format
 
