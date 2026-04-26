@@ -34,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where:  { email },
           select: {
             id: true, email: true, nama: true, name: true,
-            username: true, avatarUrl: true, image: true,
+            username: true,
             role: true, emailVerified: true,
           },
         });
@@ -56,9 +56,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id:       user.id,
           email:    user.email,
           name:     user.nama ?? user.name ?? "",
-          image:    user.avatarUrl ?? user.image ?? null,
           username: user.username ?? "",
           role:     user.role as string,
+          // Avatar sengaja tidak masuk JWT agar cookie session tetap kecil.
         };
       },
     }),
@@ -70,6 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const u        = user as Record<string, unknown>;
         token.username = (u.username as string | undefined) ?? "";
         token.role     = (u.role     as string | undefined) ?? "WARGA";
+        // Tidak ada token.image; avatar di-fetch dari API saat dibutuhkan.
       }
       return token;
     },
