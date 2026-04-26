@@ -131,11 +131,11 @@ function VoiceMiniCard({ voice }: { voice: ReturnType<typeof getVoicesByAuthor>[
 // ─── Badge info popup ─────────────────────────────────────────────────────────
 
 const TIER_BENEFITS: Record<BadgeTier, string[]> = {
-  1: ["Dapat bersuara di forum desa", "Dapat memberi vote pada suara warga lain"],
-  2: ["Suara lebih diprioritaskan dalam feed", "Dapat membalas suara warga lain"],
-  3: ["Badge Bintang di profil publik", "Suara diutamakan oleh perangkat desa"],
-  4: ["Badge Pahlawan yang dikenal komunitas", "Reputasi tinggi dalam verifikasi laporan"],
-  5: ["Badge Pejuang Desa eksklusif", "Suara menjadi referensi utama komunitas desa"],
+  1: ["Bisa menyimpan desa pantauan", "Bisa mengikuti perkembangan desa"],
+  2: ["Label reputasi tampil di kontribusi", "Bisa mengikuti lebih banyak desa"],
+  3: ["Badge tampil di profil publik", "Bisa mengusulkan pembaruan data"],
+  4: ["Kontribusi lebih dipercaya komunitas", "Bisa membantu memberi sinyal kualitas laporan"],
+  5: ["Masuk daftar apresiasi komunitas", "Bisa menjadi trusted contributor awal"],
 };
 
 function BadgeInfoPopup({ badge, score, onClose }: { badge: UserBadge; score: number; onClose: () => void }) {

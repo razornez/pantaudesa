@@ -59,3 +59,22 @@ Status: partial
 
 ### Need review from Asep/Iwan
 - Pastikan placement card di detail desa tidak mengganggu flow baca data anggaran.
+
+## Backlog #8 — Badge MVP
+
+## Implementation Update — Ujang
+
+Status: partial
+
+### Done
+- Level badge diselaraskan dengan strategi produk: Warga Peduli sampai Penggerak Desa Terbuka.
+- Halaman `/badge` dibuat untuk menjelaskan level, arti, cara naik level, dan aturan anti-spam.
+- Profil publik sudah memiliki badge kecil yang bisa diklik untuk melihat detail.
+- Profil saya ditambah section `Apa arti badge kamu?`.
+
+### Remaining
+- Asep perlu review apakah struktur static/deterministic sudah cukup untuk MVP.
+- Iwan perlu review apakah manfaat badge sudah terasa tanpa membuatnya seperti gimmick.
+
+### Need review from Asep/Iwan
+- Pastikan badge tidak mendorong spam kontribusi dan tetap menekankan kualitas.

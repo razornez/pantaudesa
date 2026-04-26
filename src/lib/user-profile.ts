@@ -3,7 +3,7 @@
  * Semua pure functions — tidak ada UI knowledge di sini.
  */
 
-import { getAllVoices, CitizenVoice, VoiceReply } from "./citizen-voice";
+import { getAllVoices, CitizenVoice } from "./citizen-voice";
 
 // ─── Trust badge ──────────────────────────────────────────────────────────────
 
@@ -20,11 +20,11 @@ export interface UserBadge {
 }
 
 export const USER_BADGES: Record<BadgeTier, UserBadge> = {
-  1: { tier: 1, label: "Pengamat",       emoji: "👁️",  description: "Baru bergabung, mulai memperhatikan.",  color: "bg-slate-100",    textColor: "text-slate-600",    minScore: 0   },
-  2: { tier: 2, label: "Warga Aktif",    emoji: "🙋",  description: "Mulai aktif bersuara untuk desanya.",   color: "bg-sky-100",      textColor: "text-sky-700",      minScore: 20  },
-  3: { tier: 3, label: "Suara Terpercaya",emoji: "⭐", description: "Suara-suaranya sering terbukti benar.", color: "bg-amber-100",    textColor: "text-amber-700",    minScore: 60  },
-  4: { tier: 4, label: "Pahlawan Desa",  emoji: "🦸",  description: "Konsisten membantu warga lain dan desa.", color: "bg-indigo-100",  textColor: "text-indigo-700",   minScore: 120 },
-  5: { tier: 5, label: "Pejuang Desa",   emoji: "🏆",  description: "Kontributor terpercaya dan paling vokal.", color: "bg-violet-100", textColor: "text-violet-700",   minScore: 250 },
+  1: { tier: 1, label: "Warga Peduli",           emoji: "🌱", description: "Mulai ikut memantau dan memahami data desa.",        color: "bg-slate-100",   textColor: "text-slate-600",  minScore: 0   },
+  2: { tier: 2, label: "Pemantau Desa",          emoji: "🔎", description: "Aktif mengikuti perkembangan desa dan membaca data.", color: "bg-sky-100",     textColor: "text-sky-700",    minScore: 20  },
+  3: { tier: 3, label: "Kontributor Warga",      emoji: "🤝", description: "Mulai memberi kontribusi yang membantu komunitas.",  color: "bg-amber-100",   textColor: "text-amber-700",  minScore: 60  },
+  4: { tier: 4, label: "Penjaga Transparansi",   emoji: "🛡️", description: "Konsisten menjaga transparansi dengan cara sehat.",  color: "bg-indigo-100", textColor: "text-indigo-700", minScore: 120 },
+  5: { tier: 5, label: "Penggerak Desa Terbuka", emoji: "🏅", description: "Kontributor berdampak yang dipercaya komunitas.",    color: "bg-violet-100", textColor: "text-violet-700", minScore: 250 },
 };
 
 // ─── Trust score ──────────────────────────────────────────────────────────────
