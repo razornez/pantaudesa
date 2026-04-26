@@ -40,3 +40,22 @@ Status: partial
 
 ### Need review from Asep/Iwan
 - Pastikan narasi "memantau bukan menuduh" sudah cukup kuat untuk pengunjung baru.
+
+## Backlog #10 — Responsibility Guide
+
+## Implementation Update — Ujang
+
+Status: partial
+
+### Done
+- Card `Tanyakan ke pihak yang tepat` ditambahkan di detail desa.
+- Halaman `/panduan/kewenangan` dibuat dengan kategori desa, kabupaten/kota, provinsi, dan pusat.
+- Disclaimer verifikasi sumber resmi ditambahkan di halaman panduan.
+- Copy utama panduan disimpan di `src/lib/copy.ts`.
+
+### Remaining
+- Asep perlu review apakah taxonomy kewenangan cukup aman untuk MVP static.
+- Iwan perlu review copy final agar tidak terlalu absolut secara hukum.
+
+### Need review from Asep/Iwan
+- Pastikan placement card di detail desa tidak mengganggu flow baca data anggaran.

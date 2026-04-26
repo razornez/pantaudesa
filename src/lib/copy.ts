@@ -261,6 +261,33 @@ export const WHY_MONITORING_PAGE = {
     "Jika desa terbuka, bekerja baik, dan warganya aktif bertanya dengan cara yang benar, pengawasan ke tingkat kecamatan, kabupaten, provinsi, sampai pusat akan lebih mudah dibangun.",
 } as const;
 
+export const AUTHORITY_GUIDE_PAGE = {
+  eyebrow: "Panduan kewenangan",
+  title: "Tanyakan ke pihak yang tepat sebelum menyimpulkan masalah desa.",
+  intro:
+    "Tidak semua masalah di wilayah desa otomatis menjadi kewenangan pemerintah desa. Ada urusan yang berada di desa, kecamatan, kabupaten/kota, provinsi, atau pemerintah pusat. Panduan ini membantu warga bertanya lebih tepat sasaran.",
+  disclaimer:
+    "Catatan: pembagian kewenangan di halaman ini bersifat panduan umum. Detail hukum, program, dan kanal resmi perlu diverifikasi kembali dengan sumber pemerintah yang berlaku.",
+  categories: [
+    {
+      level: "Biasanya terkait desa",
+      items: ["APBDes", "Program desa", "Dokumen publik desa", "Perangkat desa", "Musyawarah desa", "BUMDes"],
+    },
+    {
+      level: "Bisa terkait kecamatan/kabupaten/kota",
+      items: ["Jalan kabupaten", "Program dinas", "Perizinan tertentu", "Puskesmas", "Pembinaan pemerintahan desa"],
+    },
+    {
+      level: "Bisa terkait provinsi",
+      items: ["Jalan provinsi", "Program lintas kabupaten/kota", "Bantuan provinsi", "Kebijakan sektoral provinsi"],
+    },
+    {
+      level: "Bisa terkait pemerintah pusat",
+      items: ["Dana transfer pusat", "Program nasional", "Bantuan sosial nasional", "Regulasi kementerian"],
+    },
+  ],
+} as const;
+
 export const AUTHORITY_HIGHLIGHTS = [
   {
     level: "Desa",

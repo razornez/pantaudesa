@@ -15,6 +15,7 @@ import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
 import TransparansiCard from "@/components/desa/TransparansiCard";
+import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import { getVoicesForDesa } from "@/lib/citizen-voice";
 
@@ -137,6 +138,9 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* ── 5. KINERJA ANGGARAN — collapsible (chart, APBDes, riwayat) ─────── */}
       <KinerjaAnggaranCard desa={desa} />
+
+      {/* ── 5b. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
+      <ResponsibilityGuideCard />
 
       {/* ── 6. TRANSPARANSI — tab: skor / perangkat / dokumen ─────────────── */}
       <TransparansiCard desa={desa} />
