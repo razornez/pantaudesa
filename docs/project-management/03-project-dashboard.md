@@ -1,31 +1,30 @@
 # PantauDesa Project Dashboard
 
-Last updated: 2026-04-26
+Last updated: 2026-04-27
 Owner: Iwan (CEO / Business Analyst / Designer)
+CTO Review: Asep — Sprint 01 dinaikkan ke `done`, menunggu verifikasi Iwan.
 
 ## Executive summary
 
-PantauDesa sudah memiliki fondasi produk, bisnis, desain, roadmap, sales kit, launch plan, dan operating system tim. Dari sisi implementasi fitur produk, sebagian pekerjaan MVP mulai bergerak: `PondasiTransparansiSection` untuk civic narrative homepage sudah selesai menurut catatan Asep, tetapi belum tercatat sebelumnya di issue #9.
+Sprint 01 selesai di level implementasi. Asep sudah review semua issue dan menaikkan status ke `done`. Iwan perlu verifikasi copy tone dan product alignment sebelum status naik ke `verified`. Ada 4 carry-over kecil ke Sprint 02 yang tidak blocking.
 
 Status saat ini:
 
-- Product direction: kuat dan sudah terdokumentasi.
-- Team operating system: sudah mulai terbentuk.
-- Codebase: sudah ada aplikasi Next.js dengan scope dashboard warga, mock data, chart, auth dependencies, dan testing scripts.
-- MVP polish: mulai berjalan, tetapi belum selesai.
-- Auth meaning, badge reputation, civic narrative, dan responsibility guide: sudah didefinisikan di docs; civic narrative homepage sudah mulai diimplementasikan melalui `PondasiTransparansiSection`.
-- Data/admin/monetization: sudah masuk roadmap, belum fase implementasi utama.
+- Product direction: kuat dan terdokumentasi lengkap.
+- Team operating system: aktif dipakai — role trace di semua commit Sprint 01.
+- Sprint 01: `done` oleh Asep, `needs-verification` oleh Iwan.
+- Data/admin/monetization: masuk roadmap, belum fase implementasi.
 
 ## Current overall progress
 
-Estimated overall project progress: **23%**
+Estimated overall project progress: **28%**
 
-Estimated MVP progress: **36%**
+Estimated MVP progress: **45%**
 
 Catatan:
-- Angka ini adalah baseline awal versi Iwan berdasarkan docs, README, issue backlog, informasi repo yang sudah terbaca, dan update dari Asep.
-- Update terbaru: issue #9 dinaikkan dari 20% menjadi 40% dengan status `partial` karena `PondasiTransparansiSection` di homepage sudah selesai, tetapi page edukasi/CTA dan pencatatan issue belum lengkap.
-- Angka harus diperbarui lagi setelah Asep memberi CTO review formal dan Ujang melakukan update issue/commit yang lengkap.
+- Sprint 01 issues #7, #8, #9, #10, #11 dinaikkan ke `done` oleh Asep (CTO) pada 2026-04-27.
+- Angka MVP naik dari 36% ke 45% setelah Sprint 01 `done`.
+- Akan naik ke ~55% setelah Iwan verifikasi dan status menjadi `verified`.
 
 ## Progress calculation
 
@@ -51,10 +50,11 @@ Status score:
 | Data model/admin/import | #4 | 15% | todo | 5% | Prisma dependency ada, tapi data/admin workflow belum tervalidasi dari source |
 | Civic action and participation | #5 | 10% | todo | 5% | Belum masuk implementasi utama |
 | Monetization and sales offer | #6 | 8% | partial | 55% | Sales kit dan launch plan sudah ada; landing page/pitch/prospect belum selesai |
-| Auth meaning | #7 | 5% | partial | 60% | Auth copy MVP sudah diimplementasikan, butuh review Asep/Iwan |
-| Badge reputation | #8 | 3% | partial | 60% | Badge page dan profile explanation sudah ada, masih static MVP |
-| Civic narrative highlight | #9 | 1% | partial | 60% | Homepage CTA dan page edukasi sudah dibuat, butuh review copy |
-| Responsibility guide | #10 | 1% | partial | 60% | Detail desa card dan page panduan kewenangan sudah dibuat |
+| Auth meaning | #7 | 5% | done | 90% | Auth copy MVP selesai. Carry-over: NAVBAR_COPY. Needs Iwan verification. |
+| Badge reputation | #8 | 3% | done | 90% | Badge page dan profile explanation selesai. Carry-over: UX hint BadgePill. |
+| Civic narrative highlight | #9 | 1% | done | 90% | Homepage + page edukasi selesai. Paling siap verified. |
+| Responsibility guide | #10 | 1% | done | 90% | Card + page kewenangan selesai. Carry-over: hardcode card copy ke copy.ts. |
+| Workflow adoption | #11 | 10% | done | 90% | Role trace aktif, worklog lokal lengkap. Carry-over: .env.example. |
 
 ## MVP definition
 
@@ -101,14 +101,16 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Sistem kerja Iwan-Asep-Ujang sudah didefinisikan tetapi belum sepenuhnya diterapkan ke semua issue/commit/PR.
 - Progress reporting sudah mulai dibuat tetapi belum otomatis dari issue status.
 - Product docs sudah kuat, tetapi implementasi UI masih perlu diverifikasi oleh Asep/Ujang.
-- Issue #9 sekarang partial: homepage civic narrative sudah mulai terlihat melalui `PondasiTransparansiSection`, namun page edukasi, CTA, dan status issue masih perlu dirapikan.
-- Sprint 01 issues #7, #8, #9, #10, dan #11 sudah punya implementation update lokal di `docs/project-management/05-sprint-01-implementation-updates.md`.
+- Issue #9 sekarang partial: homepage civic narrative, page edukasi, CTA, dan catatan lokal sudah dirapikan, namun masih perlu review Asep/Iwan dan sinkronisasi ke GitHub Issue.
+- Sprint 01 issues #7, #8, #9, #10, dan #11 sudah punya implementation update lokal di `docs/project-management/05-sprint-01-implementation-updates.md`, termasuk blok komentar yang siap disalin ke GitHub Issues.
+- Status Sprint 01 tetap `partial` sampai Asep/Iwan memberi review eksplisit.
 
 ## Not started / needs execution
 
 - `.env.example`.
 - Build/lint/test report.
 - Data demo disclaimer in UI.
+- Salin implementation update lokal ke komentar GitHub Issues #7, #8, #9, #10, dan #11 saat akses tersedia.
 - Auth page final review oleh Asep/Iwan.
 - Badge architecture review sebelum scoring engine/data model.
 - Homepage highlight final review oleh Iwan.
@@ -190,7 +192,7 @@ Khusus #9:
 
 ## Instructions for Ujang
 
-Ujang mulai implementasi setelah Asep review. Jika belum ada review Asep, Ujang boleh mulai copy-only MVP untuk #7 dengan status partial.
+Ujang menunggu review Asep/Iwan sebelum menaikkan status. Sambil menunggu, update lokal di `docs/project-management/05-sprint-01-implementation-updates.md` bisa disalin ke komentar issue GitHub sesuai nomor backlog.
 
 Urutan implementasi:
 
