@@ -254,10 +254,62 @@ Backlog: #3
 **Status:** `todo`
 **Backlog:** #12
 **Branch:** `ujang/sprint2`
+**CTO Review:** `ready` — lihat `docs/cto/02-asep-worklog.md` section #12
 
-**Tunggu dulu.** Task ini dimulai setelah T-01 sampai T-05 selesai dan Asep selesai review #12.
+**Kerjakan dalam dua langkah — jangan skip langkah 1:**
 
-Baca sprint plan: `docs/project-management/06-sprint-02-plan.md` — Track A untuk panduan wording dan contoh good vs bad copy.
+**Langkah 1 — Audit dulu, jangan ubah kode:**
+
+Buka setiap halaman berikut dan tandai copy yang tidak bisa dipahami warga awam dalam 5 detik. Catat temuan di bagian "T-06 Findings" di bawah task ini sebelum mengubah apapun:
+
+- Homepage: stats cards, alert dini, chart label, leaderboard
+- Detail desa: APBDes section, skor transparansi, dokumen publik
+- Footer disclaimer
+
+Panduan wording ada di `docs/project-management/06-sprint-02-plan.md` — Track A. Wajib baca dulu.
+
+**Langkah 2 — Update copy yang paling kritis:**
+
+Setelah findings dicatat dan Asep/Iwan setuju, baru ubah copy. Semua update wajib ke `copy.ts` dulu. Tidak boleh hardcode di JSX.
+
+**Done when:**
+- [ ] Findings dicatat di bawah (T-06 Findings) sebelum ada perubahan kode
+- [ ] Copy update masuk `copy.ts`, tidak hardcode di JSX
+- [ ] Tidak ada istilah teknis tanpa penjelasan di halaman utama
+- [ ] Mobile dicek setelah setiap perubahan — tidak ada overflow teks
+- [ ] Copy tidak menuduh desa
+- [ ] Iwan review final sebelum `done`
+
+**T-06 Findings — isi di sini setelah audit:**
+
+```
+(Ujang isi temuan audit di sini sebelum mulai ubah kode)
+Contoh format:
+- Homepage stats cards: "Realisasi anggaran" → tidak jelas untuk warga awam
+- Detail desa: "Serapan per bidang" → perlu penjelasan singkat
+```
+
+**Commit langkah 1 (audit saja):**
+```
+docs(wording): add T-06 audit findings for plain language review
+
+Initiated-by: Iwan (CEO)
+Reviewed-by: Asep (CTO)
+Executed-by: Ujang (Programmer)
+Status: in-progress
+Backlog: #12
+```
+
+**Commit langkah 2 (setelah update):**
+```
+feat(wording): simplify copy for warga awam
+
+Initiated-by: Iwan (CEO)
+Reviewed-by: Asep (CTO)
+Executed-by: Ujang (Programmer)
+Status: partial
+Backlog: #12
+```
 
 ---
 

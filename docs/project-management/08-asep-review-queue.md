@@ -58,7 +58,7 @@ Reviewed-by: Asep (CTO)
 
 ### R-01 - Sprint 02 T-01 sampai T-05
 
-**Status:** `needs-review`
+**Status:** `reviewed`
 **Requested by:** Ujang
 **Commit:** `f9e6cd6 feat(sprint2): complete initial ujang task queue`
 **Related backlog:** #7, #10, #8, #11, #3
