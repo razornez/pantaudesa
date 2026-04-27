@@ -2,29 +2,30 @@
 
 Last updated: 2026-04-27
 Owner: Iwan (CEO / Business Analyst / Designer)
-CTO Review: Asep — Sprint 01 dinaikkan ke `done`, menunggu verifikasi Iwan.
+Last review: Asep (CTO) — Sprint 01 verified oleh Iwan pada 2026-04-27
 
 ## Executive summary
 
-Sprint 01 selesai di level implementasi. Asep sudah review semua issue dan menaikkan status ke `done`. Iwan perlu verifikasi copy tone dan product alignment sebelum status naik ke `verified`. Ada 4 carry-over kecil ke Sprint 02 yang tidak blocking.
+Sprint 01 selesai dan **verified** oleh seluruh tim. Auth civic copy, civic narrative, responsibility guide, badge MVP, dan workflow adoption sudah live dan aman sebagai MVP static. Sprint 02 siap dimulai dengan fokus wording awam dan data trust layer — bukan scheduler atau data automation dulu.
 
 Status saat ini:
 
+- Sprint 01: `verified` oleh Iwan, `done` oleh Asep.
 - Product direction: kuat dan terdokumentasi lengkap.
-- Team operating system: aktif dipakai — role trace di semua commit Sprint 01.
-- Sprint 01: `done` oleh Asep, `needs-verification` oleh Iwan.
-- Data/admin/monetization: masuk roadmap, belum fase implementasi.
+- Team operating system: aktif — role trace di semua commit Sprint 01.
+- Sprint 02: siap dimulai. Fokus: plain language dan data trust layer.
+- Data/admin/scheduler: masuk roadmap fase berikutnya, belum boleh dieksekusi sebelum schema dan data pipeline siap.
 
 ## Current overall progress
 
-Estimated overall project progress: **28%**
+Estimated overall project progress: **32%**
 
-Estimated MVP progress: **45%**
+Estimated MVP progress: **55%**
 
 Catatan:
-- Sprint 01 issues #7, #8, #9, #10, #11 dinaikkan ke `done` oleh Asep (CTO) pada 2026-04-27.
-- Angka MVP naik dari 36% ke 45% setelah Sprint 01 `done`.
-- Akan naik ke ~55% setelah Iwan verifikasi dan status menjadi `verified`.
+- Sprint 01 #7, #8, #9, #10, #11 status `verified` per 2026-04-27.
+- MVP naik dari 45% ke 55% setelah verified.
+- Sprint 02 carry-over (#7 navbar, #8 badge hint, #10 card copy, #11 env) masuk hitungan Sprint 02.
 
 ## Progress calculation
 
@@ -43,18 +44,17 @@ Status score:
 
 | Epic | Related issues | Weight | Status | Progress | Notes |
 |---|---:|---:|---|---:|---|
-| Company/project operating system | #11 | 10% | partial | 70% | Docs, implementation update log, dan role trace commit sudah mulai diterapkan |
-| Product/business/design foundation | #1 | 15% | partial | 70% | README, product strategy, business model, design brief, roadmap sudah ada; env/build/data demo belum selesai |
-| MVP citizen dashboard polish | #2 | 20% | todo | 15% | UI sudah ada sebagian di app, tapi checklist polish belum ditandai selesai |
-| Trust layer and data disclaimer | #3 | 12% | todo | 10% | Sudah ada di docs, belum jelas implementasi UI |
-| Data model/admin/import | #4 | 15% | todo | 5% | Prisma dependency ada, tapi data/admin workflow belum tervalidasi dari source |
-| Civic action and participation | #5 | 10% | todo | 5% | Belum masuk implementasi utama |
-| Monetization and sales offer | #6 | 8% | partial | 55% | Sales kit dan launch plan sudah ada; landing page/pitch/prospect belum selesai |
-| Auth meaning | #7 | 5% | done | 90% | Auth copy MVP selesai. Carry-over: NAVBAR_COPY. Needs Iwan verification. |
-| Badge reputation | #8 | 3% | done | 90% | Badge page dan profile explanation selesai. Carry-over: UX hint BadgePill. |
-| Civic narrative highlight | #9 | 1% | done | 90% | Homepage + page edukasi selesai. Paling siap verified. |
-| Responsibility guide | #10 | 1% | done | 90% | Card + page kewenangan selesai. Carry-over: hardcode card copy ke copy.ts. |
-| Workflow adoption | #11 | 10% | done | 90% | Role trace aktif, worklog lokal lengkap. Carry-over: .env.example. |
+| Company/project operating system | #11 | 10% | verified | 100% | Role trace, worklog, dashboard aktif. Carry-over: .env.example di Sprint 02. |
+| Product/business/design foundation | #1 | 15% | partial | 70% | README dan docs lengkap. Carry-over: env.example, data disclaimer UI. |
+| MVP citizen dashboard polish | #2 | 20% | in-progress | 40% | UI ada. Sprint 02 fokus polish wording dan trust layer. |
+| Trust layer and data disclaimer | #3 | 12% | ready | 20% | Masuk Sprint 02 sebagai prioritas utama. |
+| Data model/admin/import | #4 | 15% | todo | 5% | Belum. Perlu schema + source registry sebelum implementasi. |
+| Civic action and participation | #5 | 10% | todo | 5% | Belum. Masuk fase berikutnya. |
+| Monetization and sales offer | #6 | 8% | partial | 55% | Sales kit ada. Pitch deck dan outreach belum. |
+| Auth meaning | #7 | 5% | verified | 100% | Selesai. Carry-over Sprint 02: NAVBAR_COPY + sinyal Navbar. |
+| Badge reputation | #8 | 3% | verified | 100% | Selesai. Carry-over Sprint 02: UX hint BadgePill di profil. |
+| Civic narrative highlight | #9 | 1% | verified | 100% | Selesai. Tidak ada carry-over. |
+| Responsibility guide | #10 | 1% | verified | 100% | Selesai. Carry-over Sprint 02: hardcode card copy ke copy.ts, disclaimer card. |
 
 ## MVP definition
 
@@ -71,151 +71,77 @@ MVP PantauDesa dianggap siap demo publik awal jika:
 - Badge basic bisa dipahami sebagai reputasi kontribusi.
 - Mobile view nyaman.
 
-## Done / completed so far
+## Done / verified — Sprint 01
 
-### Documentation and strategy
+- Auth copy civic participation: login dan register bukan lagi form SaaS generik.
+- Block "Kenapa perlu akun?" ada di login dan register.
+- Homepage civic narrative: `PondasiTransparansiSection` dan halaman `/tentang/kenapa-desa-dipantau`.
+- Card "Tanyakan ke pihak yang tepat" di detail desa.
+- Halaman `/panduan/kewenangan` dengan disclaimer verifikasi.
+- Badge labels sesuai product docs: Warga Peduli → Penggerak Desa Terbuka.
+- Halaman `/badge` dengan aturan anti-spam.
+- Section "Apa arti badge kamu?" di profil.
+- Role trace aktif di semua commit Sprint 01.
 
-- README sudah berubah dari template Next.js menjadi README PantauDesa.
-- Product strategy sudah dibuat dan diperluas.
-- Business model sudah dibuat.
-- Design brief sudah dibuat dan diperluas.
-- Roadmap/backlog sudah dibuat.
-- Sales kit sudah dibuat.
-- 30-day launch plan sudah dibuat.
-- Auth, badge, and civic narrative strategy sudah dibuat.
-- Team operating system sudah dibuat.
-- Next brief for Asep and Ujang sudah dibuat.
-- Commissioner reporting system sudah dibuat.
+## Sprint 02 — Carry-over dan fokus baru
 
-### Product/UI implementation signals
+### Carry-over Sprint 01 (kecil, tidak blocking)
 
-- `PondasiTransparansiSection` di homepage sudah selesai menurut catatan Asep untuk issue #9.
+- `NAVBAR_COPY` + sinyal "Data publik bebas diakses" di Navbar — #7
+- Hardcode copy `ResponsibilityGuideCard` dipindah ke `copy.ts` — #10
+- Disclaimer kecil di card detail desa — #10
+- Label "Lihat arti badge ↓" di profil saya — #8
+- `.env.example` di root project — #11
 
-### Backlog
+### Sprint 02 fokus utama
 
-- Issues #1 sampai #11 sudah dibuat sebagai baseline backlog.
-- Prioritas produk sudah jelas: auth meaning, badge reputation, civic narrative, responsibility guide.
-
-## In progress / partially done
-
-- Sistem kerja Iwan-Asep-Ujang sudah didefinisikan tetapi belum sepenuhnya diterapkan ke semua issue/commit/PR.
-- Progress reporting sudah mulai dibuat tetapi belum otomatis dari issue status.
-- Product docs sudah kuat, tetapi implementasi UI masih perlu diverifikasi oleh Asep/Ujang.
-- Issue #9 sekarang partial: homepage civic narrative, page edukasi, CTA, dan catatan lokal sudah dirapikan, namun masih perlu review Asep/Iwan dan sinkronisasi ke GitHub Issue.
-- Sprint 01 issues #7, #8, #9, #10, dan #11 sudah punya implementation update lokal di `docs/project-management/05-sprint-01-implementation-updates.md`, termasuk blok komentar yang siap disalin ke GitHub Issues.
-- Status Sprint 01 tetap `partial` sampai Asep/Iwan memberi review eksplisit.
-
-## Not started / needs execution
-
-- `.env.example`.
-- Build/lint/test report.
-- Data demo disclaimer in UI.
-- Salin implementation update lokal ke komentar GitHub Issues #7, #8, #9, #10, dan #11 saat akses tersedia.
-- Auth page final review oleh Asep/Iwan.
-- Badge architecture review sebelum scoring engine/data model.
-- Homepage highlight final review oleh Iwan.
-- Responsibility guide legal/content review oleh Asep/Iwan.
-- Admin/import/data model final.
-- Civic action form/watchlist/contribution flow.
-- Landing page service offer.
-- Pitch deck.
-- Outreach tracking.
+1. **Wording simplification** — audit copy yang terlalu teknis atau keras untuk warga awam (#12)
+2. **Data trust layer** — disclaimer data demo lebih visible di homepage dan detail desa (#3)
+3. **Tidak boleh masuk Sprint 02:** scheduler, data automation, admin import — perlu schema + source registry + staging + audit log dulu
 
 ## Current risks
 
-### Risk 1 — Docs stronger than implementation
+### Risk 1 — Data masih mock tanpa disclaimer yang cukup prominent
 
-Banyak fondasi produk sudah terdokumentasi, tetapi belum semuanya terlihat di UI/source code.
+Footer sudah ada disclaimer tapi tidak cukup terlihat di tengah halaman.
 
-Mitigation:
-- Sprint berikutnya harus fokus implementasi kecil yang visible.
+Mitigation: Sprint 02 prioritaskan trust layer dan data disclaimer di UI.
 
-### Risk 2 — Team AI communication can drift
+### Risk 2 — Wording masih teknis di beberapa halaman
 
-Iwan, Asep, dan Ujang berjalan di tempat berbeda. Jika tidak mencatat di repo, alignment akan hilang.
+Beberapa copy di luar Sprint 01 belum diaudit untuk warga awam.
 
-Mitigation:
-- Semua keputusan harus masuk docs, issue comment, commit message, atau changelog.
+Mitigation: Sprint 02 wording audit (#12).
 
-### Risk 3 — Auth can feel like generic SaaS
+### Risk 3 — Scheduler/data automation terlalu dini
 
-Jika auth copy tidak diperbaiki, pengunjung awam tidak paham kenapa perlu daftar.
+Sudah ada analisis dan docs untuk scheduler, tapi eksekusi terlalu awal tanpa fondasi data.
 
-Mitigation:
-- Prioritaskan #7.
+Mitigation: Tidak masuk Sprint 02. Harus didahului schema Supabase/Prisma, source registry, raw snapshot, staging, dan audit log.
 
-### Risk 4 — Badge can become gimmick
+## Instructions for Asep — Sprint 02
 
-Jika badge tidak punya manfaat dan arti, fitur ini membosankan.
+1. Review Sprint 02 plan di `docs/project-management/06-sprint-02-plan.md` jika sudah dibuat Iwan.
+2. Beri CTO Review untuk carry-over Sprint 01 dan issue #12 wording audit.
+3. Pastikan data trust layer tidak memerlukan perubahan database — cukup UI/copy dulu.
+4. Konfirmasi scheduler/data automation tidak masuk scope Sprint 02.
 
-Mitigation:
-- Prioritaskan #8 setelah auth/civic narrative.
+## Instructions for Ujang — Sprint 02
 
-### Risk 5 — Civic narrative can be misunderstood
+Mulai dengan carry-over Sprint 01 dulu, lalu masuk fokus Sprint 02.
 
-Website bisa dianggap menyerang desa jika copy tidak adil.
-
-Mitigation:
-- Prioritaskan #9 dan #10. #9 sudah partial melalui `PondasiTransparansiSection`, tetapi tetap perlu verifikasi copy/placement dan penyelesaian page edukasi.
-
-## Next sprint recommendation
-
-Sprint 1 focus:
-
-> Membuat pengunjung memahami misi PantauDesa dan alasan partisipasi warga.
-
-Sprint 1 target issues:
-
-1. #7 Auth UX.
-2. #9 Homepage highlight.
-3. #10 Responsibility guide.
-4. #8 Badge MVP.
-5. #11 Workflow labels/status.
-
-## Instructions for Asep
-
-Asep harus membaca:
-
-- `docs/company/01-commissioner-reporting-system.md`
-- `docs/project-management/01-team-operating-system.md`
-- `docs/project-management/02-next-brief-for-asep-and-ujang.md`
-- `docs/project-management/03-project-dashboard.md`
-- Issues #7, #8, #9, #10, #11.
-
-Lalu Asep memberi CTO review dengan status ready / needs-adjustment / blocked.
-
-Khusus #9:
-- Konfirmasi file/komponen `PondasiTransparansiSection`.
-- Pastikan copy tidak menuduh desa.
-- Pastikan placement homepage tepat.
-- Tentukan apakah page `/tentang/kenapa-desa-dipantau` masih perlu dibuat di sprint ini.
-
-## Instructions for Ujang
-
-Ujang menunggu review Asep/Iwan sebelum menaikkan status. Sambil menunggu, update lokal di `docs/project-management/05-sprint-01-implementation-updates.md` bisa disalin ke komentar issue GitHub sesuai nomor backlog.
-
-Urutan implementasi:
-
-1. #7.
-2. #9.
-3. #10.
-4. #8.
-5. #11.
-
-Khusus #9:
-- Update issue #9 dengan Implementation Update.
-- Sebutkan bahwa `PondasiTransparansiSection` sudah selesai.
-- Jelaskan remaining task: CTA/page edukasi/verifikasi copy jika masih ada.
+Urutan:
+1. Carry-over: NAVBAR_COPY, card copy ke copy.ts, badge hint, .env.example.
+2. Data disclaimer lebih prominent di homepage dan detail desa.
+3. Wording audit setelah Asep review #12.
 
 ## Next commissioner report format
 
-Saat Komisaris bertanya progress, Iwan harus menjawab dengan:
+Saat Komisaris bertanya progress, Iwan menjawab dengan:
 
-- Overall progress.
-- MVP progress.
-- Status per epic.
-- Done / in progress / todo.
-- Risks.
-- Next instruction for Asep.
-- Next instruction for Ujang.
-- Sprint target.
+- Overall progress: 32%.
+- MVP progress: 55%.
+- Sprint 01: verified.
+- Sprint 02: dimulai, fokus wording + trust layer.
+- Risks: data disclaimer belum prominent, wording masih perlu audit.
+- Next: Ujang mulai carry-over + Sprint 02 task.
