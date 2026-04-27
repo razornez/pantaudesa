@@ -287,3 +287,9 @@ Status: partial
 
 Lapor ke Asep dan Iwan lewat update di file ini atau commit message.
 Asep akan menaikkan status di dashboard dan membuka task berikutnya.
+
+Prompt pendek untuk review:
+
+```text
+Asep, cek `docs/project-management/08-asep-review-queue.md` dan review item paling atas yang statusnya `needs-review`.
+```
