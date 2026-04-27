@@ -2,7 +2,7 @@
 
 Date: 2026-04-27
 Executor: Ujang
-Status: blocked-temp-dev-db-network
+Status: temp-dev-migration-validated-generate-blocked
 
 ## Command Authority
 
@@ -20,7 +20,10 @@ Rangga checklist was used as support only. No conflict was found with Iwan's ins
 
 - Temp Supabase dev DB credentials were used only as process environment variables.
 - Secrets were not written to `.env`, `.env.local`, or committed docs.
-- Shared Supabase was not used for reset/dev validation.
+- Confirmed temp DB host before migration commands: `aws-1-ap-northeast-1.pooler.supabase.com`.
+- Did not use `aws-1-ap-south-1.pooler.supabase.com`.
+- Did not use the old direct DB host.
+- Did not use shared Supabase.
 - No `migrate resolve` or `migrate deploy` was run on shared Supabase.
 - No seed was run.
 - No read path switch was made.
@@ -32,40 +35,31 @@ Target: temporary Supabase dev DB only.
 
 | Command | Result | Notes |
 | --- | --- | --- |
-| `git pull` | Pass after escalation | Pulled command-chain policy and Rangga oversight checklist. |
-| `npx prisma migrate status` | Fail | Targeted the temp DB host, but Prisma returned `Schema engine error`. |
-| `npx prisma migrate reset --force --skip-generate` | Fail | Targeted the temp DB host, but Prisma returned `Schema engine error`. |
-| `npx prisma migrate dev --skip-generate` | Fail | Targeted the temp DB host, but Prisma returned `Schema engine error`. |
+| `git pull` | Pass after escalation | Repo was already up to date. |
+| host guard check | Pass | Script refused old shared/direct hosts and confirmed `aws-1-ap-northeast-1.pooler.supabase.com`. |
+| `npx prisma migrate status` before reset | Expected non-zero | Temp DB had 2 pending migrations: `0001_baseline_existing_schema`, `0002_sprint_03_data_foundation`. |
+| `npx prisma migrate reset --force --skip-generate` | Pass | Applied both migrations to temp dev DB. |
+| `npx prisma migrate dev --skip-generate` | Pass | Already in sync; no pending migration or schema change. |
+| `npx prisma migrate status` after dev | Pass | Database schema is up to date. |
 | `npx prisma validate` | Pass | Current Prisma schema is valid. |
 | `npx prisma generate` | Fail | Existing local Windows Prisma engine DLL rename lock: `query_engine-windows.dll.node.tmp... -> query_engine-windows.dll.node`. |
+| `npx prisma generate --no-engine` | Pass diagnostic | Client generation succeeds without replacing the Windows engine DLL. Not counted as full normal generate pass. |
 | `npx tsc --noEmit` | Pass | No TypeScript errors. |
 | `npm run test` | Pass | 3 test files, 42 tests. |
-| `npx prisma migrate status` with `sslmode=require` | Fail | Same `Schema engine error`. |
-| `npx prisma migrate reset --force --skip-generate` with `sslmode=require` | Fail | Same `Schema engine error`. |
-| `npx prisma migrate dev --skip-generate` with `sslmode=require` | Fail | Same `Schema engine error`. |
-| `npx prisma migrate status` with URL-encoded password and `sslmode=require` | Fail | Same `Schema engine error`. |
-| `Test-NetConnection` to temp DB host on port `5432` | Fail | Local TCP connection failed. |
-| `Resolve-DnsName` for temp DB host | Partial | Host resolved to IPv6 `AAAA` only from this machine. |
+| `npx prisma migrate diff --from-empty --to-schema-datasource prisma/schema.prisma` | Pass | Read-only confirmation of objects present in temp dev DB. |
 
-## Migration Folders
+## Migration Folders Applied
 
-Expected migration folders remain:
+Applied on temp dev DB:
 
 - `0001_baseline_existing_schema`
 - `0002_sprint_03_data_foundation`
 
-Applied on temp dev DB: no.
-
-Reason:
-
-- Prisma could not connect through schema engine.
-- TCP connection to the temp DB host on port `5432` failed from this machine.
+`migrate status` after validation reports the database schema is up to date.
 
 ## Tables Created
 
-Baseline/auth/user/voice tables created on temp DB: not confirmed.
-
-Expected baseline tables:
+Baseline/auth/user/voice tables confirmed present through read-only datasource diff:
 
 - `users`
 - `otp_codes`
@@ -77,15 +71,24 @@ Expected baseline tables:
 - `sessions`
 - `verification_tokens`
 
-Sprint 03 tables created on temp DB: not confirmed.
-
-Expected Sprint 03 tables:
+Sprint 03 tables confirmed present through read-only datasource diff:
 
 - `desa`
 - `data_sources`
 - `anggaran_desa_summaries`
 - `apbdes_items`
 - `dokumen_publik`
+
+Sprint 03 enums confirmed present:
+
+- `AccessStatus`
+- `DataAvailability`
+- `DataStatus`
+- `DocumentStatus`
+- `DocumentType`
+- `ScopeType`
+- `SourceType`
+- `StatusSerapan`
 
 ## Generate Status
 
@@ -96,34 +99,46 @@ Classification:
 - Existing local environment/file-lock issue.
 - Same class as previous reports: Prisma cannot rename the Windows query engine DLL in `src/generated/prisma`.
 
-No full generate pass is claimed.
+Diagnostic `npx prisma generate --no-engine`: pass.
 
-## Blocker
+No full normal generate pass is claimed.
 
-Temp dev DB validation is blocked by connectivity/schema-engine failure.
+## Auth/User/Voice Safety
 
-Observed from this machine:
+Auth/user/voice baseline objects were created by `0001_baseline_existing_schema` in the temp dev DB.
 
-- temp DB host resolves only to IPv6 `AAAA`,
-- TCP connection to port `5432` fails,
-- Prisma schema engine reports a generic schema engine error for migrate commands.
+Sprint 03 migration validation did not require:
 
-Likely next need:
+- changing `Voice.desaId`,
+- adding a `Voice` to `Desa` relation,
+- touching API/auth/voice/scheduler/scraper code,
+- seed or read path changes.
 
-- provide a Supabase pooler connection string for the temp dev DB that works over IPv4 from this machine, or
-- provide another temporary dev DB reachable from this environment, or
-- ask Iwan/Owner to approve a different validation path.
+## Blockers
+
+Migration validation blocker: none on temp dev DB.
+
+Remaining local blocker:
+
+- normal `npx prisma generate` still fails due to Windows Prisma engine DLL rename lock.
+
+This appears environment-local and not migration-content-related because:
+
+- migrations applied successfully,
+- `prisma validate` passed,
+- `generate --no-engine` passed,
+- TypeScript passed,
+- tests passed.
 
 ## Recommendation
 
-Shared Supabase baseline/deploy must not proceed yet.
+Iwan can review this report and approve the next shared Supabase baseline/deploy gate if comfortable with the remaining local generate DLL-lock issue.
 
-Reason:
+Recommended next gate, only after Iwan approval:
 
-- Temp dev DB migration validation did not complete.
-- Baseline and Sprint 03 migrations were not applied in an isolated DB.
+- run `npx prisma migrate resolve --applied 0001_baseline_existing_schema` on shared Supabase,
+- run `npx prisma migrate deploy` on shared Supabase,
+- verify shared Supabase status,
+- keep seed/read path blocked until shared migration report is reviewed.
 
-Need Iwan decision:
-
-- provide reachable temp dev DB connection details, preferably pooler/direct URL that resolves from this machine, then rerun validation, or
-- approve a separate fallback strategy in a new decision document.
+Do not proceed to shared Supabase without Iwan approval after this report.
