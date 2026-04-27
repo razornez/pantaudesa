@@ -7,6 +7,7 @@ import BudgetBarChart from "./BudgetBarChart";
 import APBDesBreakdown from "./APBDesBreakdown";
 import RiwayatChart from "./RiwayatChart";
 import OutputFisikCards from "./OutputFisikCards";
+import { KINERJA_CARD } from "@/lib/copy";
 
 export default function KinerjaAnggaranCard({ desa }: { desa: Desa }) {
   const [open, setOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function KinerjaAnggaranCard({ desa }: { desa: Desa }) {
       >
         <div>
           <p className="text-sm font-bold text-slate-800">Kinerja &amp; Rincian Anggaran</p>
-          <p className="text-xs text-slate-400 mt-0.5">Chart historis, APBDes per bidang, output fisik, tren 5 tahun</p>
+          <p className="text-xs text-slate-400 mt-0.5">{KINERJA_CARD.subtitle}</p>
         </div>
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${open ? "bg-indigo-100" : "bg-slate-100"}`}>
           {open

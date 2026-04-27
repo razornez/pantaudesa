@@ -51,13 +51,13 @@ export const SECTION = {
   // Home page
   ringkasanNasional:    "Kondisi Anggaran Desa Se-Indonesia",
   ringkasanNasionalSub: "Gambaran besar penggunaan uang negara untuk desa-desa di seluruh Indonesia",
-  alertDini:            "Desa yang Harus Kamu Perhatikan",
+  alertDini:            "Desa yang Perlu Dicek Lebih Dulu",
   alertDiniSub: (n: number) =>
-    `${n} desa baru menggunakan kurang dari separuh anggarannya — warga perlu bertanya ke kepala desa`,
+    `${n} desa baru menggunakan kurang dari separuh anggarannya. Warga bisa mulai bertanya dengan data.`,
   tren:          "Bagaimana Tren Penggunaan Anggaran Tahun Ini?",
-  trenSub:       "Akumulasi anggaran yang sudah dipakai vs total yang seharusnya dipakai sepanjang tahun",
-  distribusi:    "Berapa Banyak Desa yang Bermasalah?",
-  distribusiSub: "Proporsi desa berdasarkan kinerja penggunaan anggarannya",
+  trenSub:       "Bandingkan uang desa yang tersedia dengan yang sudah digunakan tiap bulan",
+  distribusi:    "Berapa Desa yang Sudah Baik, dan Berapa yang Perlu Dicek?",
+  distribusiSub: "Gambaran desa berdasarkan seberapa banyak anggaran yang sudah digunakan",
   topBaik:       "Desa Paling Rajin",
   topBaikSub:    "5 desa yang paling aktif dan bertanggung jawab menggunakan anggarannya",
   topRendah:     "Desa yang Harus Diawasi",
@@ -130,7 +130,7 @@ export const SKOR = {
     responsif:   "Cepat merespons pertanyaan warga?",
   },
   nationalLabel: "Rata-rata Keterbukaan Desa se-Indonesia",
-  nationalSub:   "Komposit dari ketepatan laporan, kelengkapan dokumen, konsistensi serapan & responsivitas",
+  nationalSub:   "Gabungan dari laporan tepat waktu, dokumen terbuka, penggunaan anggaran yang jelas, dan respons desa ke warga",
 } as const;
 
 // ─── Sumber pendapatan desa ───────────────────────────────────────────────────
@@ -147,7 +147,7 @@ export const PENDAPATAN = {
 export const BUDGET_ITEMS = {
   totalAnggaran: { label: "Uang yang Diterima Desa" },
   terealisasi:   { label: "Sudah Digunakan" },
-  belumTerserap: { label: "Belum Jelas Penggunaannya" },
+  belumTerserap: { label: "Belum Terpakai / Perlu Dicek" },
   persentase:    { label: "Sudah Terpakai" },
 } as const;
 
@@ -234,6 +234,10 @@ export const RESPONSIBILITY_CARD = {
     "Tidak semua masalah di wilayah desa menjadi kewenangan pemerintah desa. Lihat dulu apakah hal ini terkait APBDes, program desa, kewenangan kabupaten, provinsi, atau pusat agar pertanyaanmu lebih tepat sasaran.",
   cta: "Lihat panduan kewenangan",
   disclaimer: "Panduan kewenangan bersifat umum. Detail perlu diverifikasi dengan sumber resmi.",
+} as const;
+
+export const KINERJA_CARD = {
+  subtitle: "Riwayat dan rincian penggunaan uang desa: grafik, daftar kegiatan, hasil pembangunan, dan perubahan 5 tahun",
 } as const;
 
 export const PHILOSOPHY = {

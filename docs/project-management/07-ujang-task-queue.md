@@ -276,7 +276,7 @@ Backlog: #3
 ---
 
 ### T-06 · Wording audit — copy teknis ke bahasa awam
-**Status:** `in-progress`
+**Status:** `partial`
 **Backlog:** #12
 **Branch:** `ujang/sprint2`
 **CTO Review:** `ready` — lihat `docs/cto/02-asep-worklog.md` section #12
@@ -373,10 +373,10 @@ import { KINERJA_CARD } from "@/lib/copy";
 
 **Done when:**
 - [x] Findings dicatat di bawah (T-06 Findings) sebelum ada perubahan kode
-- [ ] 6 item critical diupdate di `copy.ts`
-- [ ] `KinerjaAnggaranCard` subtitle dipindah ke `copy.ts` dan diupdate
-- [ ] Mobile dicek setelah update — tidak ada overflow teks di card kecil
-- [ ] Copy tidak menuduh desa — verifikasi `distribusi`, `alertDini`, `belumTerserap`
+- [x] 6 item critical diupdate di `copy.ts`
+- [x] `KinerjaAnggaranCard` subtitle dipindah ke `copy.ts` dan diupdate
+- [x] Mobile dicek setelah update — tidak ada overflow teks di card kecil untuk copy T-06 yang diubah
+- [x] Copy tidak menuduh desa — verifikasi `distribusi`, `alertDini`, `belumTerserap`
 - [ ] Iwan review tone sebelum `done`
 
 **T-06 Findings — isi di sini setelah audit:**
@@ -423,6 +423,24 @@ Executed-by: Ujang (Programmer)
 Status: in-progress
 Backlog: #12
 ```
+
+**Implementation Update — Ujang ke Iwan**
+
+Status: partial
+
+Done:
+- [x] `SECTION.distribusi` dan `distribusiSub` dibuat lebih awam dan tidak menuduh.
+- [x] `SECTION.alertDini` dan `alertDiniSub` dibuat lebih netral.
+- [x] `SECTION.trenSub` diganti ke bahasa warga.
+- [x] `SKOR.nationalSub` disederhanakan dari istilah komposit/responsivitas.
+- [x] `BUDGET_ITEMS.belumTerserap.label` diganti menjadi `Belum Terpakai / Perlu Dicek`.
+- [x] Subtitle `KinerjaAnggaranCard` dipindah ke `KINERJA_CARD` di `src/lib/copy.ts`.
+
+Perlu dicek Iwan:
+- Tone final untuk `Desa yang Perlu Dicek Lebih Dulu`.
+- Apakah `Belum Terpakai / Perlu Dicek` sudah cukup netral untuk warga dan desa.
+- Apakah subtitle `KinerjaAnggaranCard` terlalu panjang di mobile.
+- Catatan visual: screenshot mobile menunjukkan copy T-06 yang diubah aman, tetapi masih ada clipping horizontal lama di beberapa area lain seperti tombol download/detail desa dan beberapa card data. Itu di luar scope 6 item critical T-06.
 
 **Commit langkah 2 (setelah update):**
 ```
