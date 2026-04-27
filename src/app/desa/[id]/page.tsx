@@ -3,14 +3,14 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
-  Megaphone, ArrowRight, ExternalLink, Info,
+  Megaphone, ArrowRight, ExternalLink,
 } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
-import { BUDGET_ITEMS, DATA_DISCLAIMER, DATA_STATUS_COPY, PENDAPATAN, PENGADUAN } from "@/lib/copy";
+import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 import DownloadButton from "@/components/desa/DownloadButton";
-import DesaHeroCard from "@/components/desa/DesaHeroCard";
+import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
@@ -75,23 +75,8 @@ export default async function DesaDetailPage({ params }: Props) {
         <DownloadButton desa={desa} />
       </div>
 
-      {/* ── 1. HERO CARD — nama, badge, profil, progress, verdict ─────────── */}
-      <DesaHeroCard desa={desa} />
-
-      <section className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sky-600 shadow-sm">
-            <Info size={15} />
-          </div>
-          <div className="min-w-0">
-            <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">
-              {DATA_STATUS_COPY.demo.label}
-            </span>
-            <p className="mt-2 text-sm font-bold text-slate-800">{DATA_DISCLAIMER.detailTitle}</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-600">{DATA_DISCLAIMER.detailBody}</p>
-          </div>
-        </div>
-      </section>
+      {/* ── 1. FIRST VIEW — identity, quick read, safe data status ────────── */}
+      <DesaDetailFirstView desa={desa} />
 
       {/* ── 2. KELENGKAPAN DESA — aset / fasilitas / lembaga / bumdes ────── */}
       {profil && <KelengkapanDesa profil={profil} />}
@@ -158,7 +143,9 @@ export default async function DesaDetailPage({ params }: Props) {
       <ResponsibilityGuideCard />
 
       {/* ── 6. TRANSPARANSI — tab: skor / perangkat / dokumen ─────────────── */}
-      <TransparansiCard desa={desa} />
+      <div id="dokumen-desa">
+        <TransparansiCard desa={desa} />
+      </div>
 
       {/* ── 7. TANGGUNG JAWAB ────────────────────────────────────────────── */}
       <TanggungJawabSection desa={desa} />
