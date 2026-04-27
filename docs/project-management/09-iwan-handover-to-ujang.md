@@ -61,7 +61,7 @@ Tidak perlu dikerjakan ulang.
 
 ### T-06 — Wording audit dan critical copy update
 
-Status terakhir: `partial`
+Status terakhir: `verified-by-product`
 
 Ujang sudah melakukan commit:
 
@@ -157,15 +157,18 @@ Status: verified / needs-adjustment
 
 ## Current decision
 
-T-06 critical wording update sudah boleh masuk review Iwan.
+T-06 critical wording update sudah diverifikasi dari sisi produk oleh Iwan.
 
 Status sekarang:
 
-`waiting-iwan-product-verification`
+`verified-by-product`
 
 ## Next action
 
-Iwan harus melakukan Product Verification untuk T-06 sebelum Ujang lanjut task berikutnya.
+Ujang menunggu instruksi Iwan untuk task berikutnya.
+
+Jangan lanjut ke medium/low wording items dulu.
+Jangan menyentuh data automation, scheduler, scraper, Prisma schema, auth flow, atau API routes.
 
 Initiated-by: Iwan (CEO)
 Reviewed-by: Iwan (Acting Product Reviewer)

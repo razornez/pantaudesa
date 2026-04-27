@@ -276,7 +276,7 @@ Backlog: #3
 ---
 
 ### T-06 · Wording audit — copy teknis ke bahasa awam
-**Status:** `partial`
+**Status:** `verified-by-product`
 **Backlog:** #12
 **Branch:** `ujang/sprint2`
 **CTO Review:** `ready` — lihat `docs/cto/02-asep-worklog.md` section #12
@@ -377,7 +377,7 @@ import { KINERJA_CARD } from "@/lib/copy";
 - [x] `KinerjaAnggaranCard` subtitle dipindah ke `copy.ts` dan diupdate
 - [x] Mobile dicek setelah update — tidak ada overflow teks di card kecil untuk copy T-06 yang diubah
 - [x] Copy tidak menuduh desa — verifikasi `distribusi`, `alertDini`, `belumTerserap`
-- [ ] Iwan review tone sebelum `done`
+- [x] Iwan review tone sebelum `done`
 
 **T-06 Findings — isi di sini setelah audit:**
 
@@ -426,7 +426,7 @@ Backlog: #12
 
 **Implementation Update — Ujang ke Iwan**
 
-Status: partial
+Status: verified-by-product
 
 Done:
 - [x] `SECTION.distribusi` dan `distribusiSub` dibuat lebih awam dan tidak menuduh.
@@ -437,10 +437,26 @@ Done:
 - [x] Subtitle `KinerjaAnggaranCard` dipindah ke `KINERJA_CARD` di `src/lib/copy.ts`.
 
 Perlu dicek Iwan:
-- Tone final untuk `Desa yang Perlu Dicek Lebih Dulu`.
-- Apakah `Belum Terpakai / Perlu Dicek` sudah cukup netral untuk warga dan desa.
-- Apakah subtitle `KinerjaAnggaranCard` terlalu panjang di mobile.
+- [x] Tone final untuk `Desa yang Perlu Dicek Lebih Dulu`.
+- [x] Apakah `Belum Terpakai / Perlu Dicek` sudah cukup netral untuk warga dan desa.
+- [x] Apakah subtitle `KinerjaAnggaranCard` terlalu panjang di mobile.
 - Catatan visual: screenshot mobile menunjukkan copy T-06 yang diubah aman, tetapi masih ada clipping horizontal lama di beberapa area lain seperti tombol download/detail desa dan beberapa card data. Itu di luar scope 6 item critical T-06.
+
+**Product Verification — Iwan**
+
+Task: T-06 critical wording update
+Status: verified
+
+Verified:
+- [x] Copy tone sudah lebih awam.
+- [x] Tidak menuduh desa.
+- [x] Tetap kredibel.
+- [x] Selaras dengan arah PantauDesa.
+
+Notes:
+- Critical scope T-06 ditutup sebagai `verified-by-product`.
+- Medium/low wording items tetap ditunda sampai ada instruksi baru dari Iwan.
+- Tidak ada task baru yang dibuka dari update ini.
 
 **Commit langkah 2 (setelah update):**
 ```
@@ -469,7 +485,8 @@ Status: partial
 - [x] T-05 Data disclaimer homepage
 
 ### Remaining
-- T-06 Wording audit — findings sudah dicatat; implementasi copy menunggu persetujuan Asep/Iwan atas findings
+- Tidak ada remaining untuk T-06 critical scope.
+- Medium/low wording items tetap ditunda sampai ada instruksi baru dari Iwan.
 
 ### Blocker
 - tidak ada
