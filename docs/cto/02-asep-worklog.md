@@ -2,6 +2,78 @@
 
 ---
 
+## 2026-04-27 — R-02 T-06 Wording Audit Findings
+
+### Scope reviewed
+- T-06 findings dari Ujang di `07-ujang-task-queue.md`
+- Cross-check kode aktual: `copy.ts`, `KinerjaAnggaranCard.tsx`, `SeharusnyaAdaSection.tsx`, `BudgetBarChart.tsx`, `KelengkapanDesa.tsx`, `AlertDiniSection.tsx`, `desa/[id]/page.tsx`
+
+### Status: `reviewed — Langkah 2 boleh dimulai`
+
+### CTO Review
+
+## CTO Review — Asep
+
+Status: `ready` — dengan batasan scope
+
+### Review findings Ujang
+
+Findings akurat. Semua item yang diflag sudah diverifikasi ada di kode. Kualitas audit bagus — Ujang membedakan mana yang kritis, mana yang teknis-tapi-aman, dan memberi saran implementasi yang realistis.
+
+**Konfirmasi per item:**
+
+- `distribusi: "Berapa Banyak Desa yang Bermasalah?"` — **kritis**, harus diganti. Kata "Bermasalah" menyimpulkan sebelum ada bukti.
+- `alertDiniSub: "warga perlu bertanya ke kepala desa"` — **kritis**, menekan. Ganti ke netral.
+- `alertDini: "Desa yang Harus Kamu Perhatikan"` — **kritis**, terasa seperti tuduhan. Ganti ke "Desa yang Perlu Dicek Lebih Dulu".
+- `trenSub: "Akumulasi anggaran..."` — **kritis**, terlalu laporan. Ganti ke bahasa warga.
+- `nationalSub: "Komposit dari ketepatan laporan..."` — **kritis**, tidak bisa dipahami awam.
+- `KinerjaAnggaranCard` subtitle `"Chart historis, APBDes per bidang..."` — **kritis**, campur bahasa Inggris.
+- `belumTerserap: "Belum Jelas Penggunaannya"` — **kritis**, menyimpulkan hal negatif.
+- `SeharusnyaAdaSection: "Berdasarkan regulasi Dana Desa & alokasi APBDes"` — **medium**, terlalu legalistik.
+- `SIPD, OMSPAN & OpenData DJPK Kemenkeu` di detail desa — **medium**, boleh diberi arti singkat.
+- `BudgetBarChart: "Realisasi", "Selisih"` — **low**, istilah ini masih umum dipakai di konteks anggaran, cukup diberi subtitle penjelas.
+- `KelengkapanDesa: "Omset/Tahun", "ROI visual"` — **low**, bisa diberi label alternatif tapi tidak blocking.
+
+**Jawaban pertanyaan Ujang:**
+
+1. **Findings sudah cukup untuk mulai Langkah 2** — scope sudah jelas, prioritas sudah diurutkan.
+2. **Fokus ke critical saja dulu** — kerjakan 5 item kritis terlebih dahulu, medium dan low boleh menyusul atau masuk Sprint 03.
+3. **APBDes, serapan, realisasi tidak harus diganti** — istilah ini dikenal di konteks pemerintahan. Cukup diberi subtitle/hint penjelas, tidak perlu dihapus. SIPD/OMSPAN/DJPK harus diberi penjelasan karena benar-benar tidak dikenal awam.
+4. **Risiko oversimplifikasi rendah** — selama copy tetap faktual dan tidak menghilangkan konteks, wording sederhana justru meningkatkan trust. Yang berbahaya adalah menghapus istilah resmi tanpa pengganti.
+
+### Risiko Langkah 2
+
+- `"Belum Jelas Penggunaannya"` ada di `copy.ts` baris 150 sebagai `belumTerserap.label`. Ganti hati-hati — ini tampil di stats card homepage dan detail desa. Verifikasi dua tempat setelah update.
+- `distribusiSub` baru jangan terlalu panjang — card kecil, mobile terbatas. Maksimal 60 karakter.
+- `KinerjaAnggaranCard` subtitle — ini hardcode di JSX komponen, bukan di `copy.ts`. Ujang harus tambahkan ke `copy.ts` dulu sebelum update.
+- `alertDiniSub` adalah fungsi `(n: number) =>` — pastikan versi baru tetap terima parameter `n`.
+
+### Scope Langkah 2 yang disetujui
+
+**Kerjakan dulu (critical):**
+1. `SECTION.distribusi` — ganti "Bermasalah" ke netral
+2. `SECTION.alertDini` + `alertDiniSub` — ganti ke bahasa warga yang tidak menekan
+3. `SECTION.trenSub` — ganti ke bahasa 5 detik
+4. `STATS.nationalSub` — ganti "Komposit dari..." ke penjelasan awam
+5. `copy.ts belumTerserap.label` — ganti ke netral, verifikasi 2 lokasi tampil
+6. `KinerjaAnggaranCard` subtitle — pindahkan ke `copy.ts` dulu, lalu update
+
+**Tunda ke Sprint 03 (medium/low):**
+- SIPD/OMSPAN/DJPK — tambah penjelasan singkat
+- `SeharusnyaAdaSection` disclaimer
+- `BudgetBarChart` label
+- `KelengkapanDesa` Omset/ROI
+
+### Instruction for Ujang
+
+Langkah 2 boleh dimulai. Baca task T-06 Langkah 2 yang sudah diupdate di `07-ujang-task-queue.md`.
+
+### Instruction for Iwan
+
+Setelah Ujang selesai Langkah 2 critical, Iwan review tone copy sebelum status T-06 naik ke `done`.
+
+---
+
 ## 2026-04-27 — Sprint 02 R-01 + #12 + #13
 
 ### Scope reviewed

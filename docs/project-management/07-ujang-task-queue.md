@@ -268,17 +268,91 @@ Buka setiap halaman berikut dan tandai copy yang tidak bisa dipahami warga awam 
 
 Panduan wording ada di `docs/project-management/06-sprint-02-plan.md` — Track A. Wajib baca dulu.
 
-**Langkah 2 — Update copy yang paling kritis:**
+**Langkah 2 — Update copy critical (Asep sudah approve):**
 
-Setelah findings dicatat dan Asep/Iwan setuju, baru ubah copy. Semua update wajib ke `copy.ts` dulu. Tidak boleh hardcode di JSX.
+CTO Review: `ready`. Baca detail di `docs/cto/02-asep-worklog.md` — section R-02.
+
+Kerjakan 6 item critical ini saja dulu. Item medium/low tunda ke Sprint 03.
+
+**Item 1 — `SECTION.distribusi` di `src/lib/copy.ts`**
+```typescript
+// SEBELUM
+distribusi:    "Berapa Banyak Desa yang Bermasalah?",
+distribusiSub: "Proporsi desa berdasarkan kinerja penggunaan anggarannya",
+
+// SESUDAH
+distribusi:    "Berapa Desa yang Sudah Baik, dan Berapa yang Perlu Dicek?",
+distribusiSub: "Gambaran desa berdasarkan seberapa banyak anggaran yang sudah digunakan",
+```
+
+**Item 2 — `SECTION.alertDini` + `alertDiniSub` di `src/lib/copy.ts`**
+```typescript
+// SEBELUM
+alertDini:    "Desa yang Harus Kamu Perhatikan",
+alertDiniSub: (n: number) => `${n} desa baru menggunakan kurang dari separuh anggarannya — warga perlu bertanya ke kepala desa`,
+
+// SESUDAH
+alertDini:    "Desa yang Perlu Dicek Lebih Dulu",
+alertDiniSub: (n: number) => `${n} desa baru menggunakan kurang dari separuh anggarannya. Warga bisa mulai bertanya dengan data.`,
+```
+
+**Item 3 — `SECTION.trenSub` di `src/lib/copy.ts`**
+```typescript
+// SEBELUM
+trenSub: "Akumulasi anggaran yang sudah dipakai vs total yang seharusnya dipakai sepanjang tahun",
+
+// SESUDAH
+trenSub: "Bandingkan uang desa yang tersedia dengan yang sudah digunakan tiap bulan",
+```
+
+**Item 4 — `STATS.nationalSub` di `src/lib/copy.ts`**
+
+Cari baris dengan `"Komposit dari ketepatan laporan, kelengkapan dokumen, konsistensi serapan & responsivitas"`:
+```typescript
+// SEBELUM
+nationalSub: "Komposit dari ketepatan laporan, kelengkapan dokumen, konsistensi serapan & responsivitas",
+
+// SESUDAH
+nationalSub: "Gabungan dari laporan tepat waktu, dokumen terbuka, penggunaan anggaran yang jelas, dan respons desa ke warga",
+```
+
+**Item 5 — `belumTerserap.label` di `src/lib/copy.ts`**
+
+Cari `belumTerserap`:
+```typescript
+// SEBELUM
+belumTerserap: { label: "Belum Jelas Penggunaannya" },
+
+// SESUDAH
+belumTerserap: { label: "Belum Terpakai / Perlu Dicek" },
+```
+⚠️ Setelah update, cek dua tempat tampil: homepage stats card dan detail desa.
+
+**Item 6 — `KinerjaAnggaranCard` subtitle — pindah ke `copy.ts` dulu**
+
+File: `src/components/desa/KinerjaAnggaranCard.tsx` baris ~23.
+Tambahkan ke `src/lib/copy.ts`:
+```typescript
+export const KINERJA_CARD = {
+  subtitle: "Riwayat dan rincian penggunaan uang desa: grafik, daftar kegiatan, hasil pembangunan, dan perubahan 5 tahun",
+} as const;
+```
+Lalu di `KinerjaAnggaranCard.tsx`:
+```tsx
+import { KINERJA_CARD } from "@/lib/copy";
+// Ganti:
+// "Chart historis, APBDes per bidang, output fisik, tren 5 tahun"
+// Dengan:
+{KINERJA_CARD.subtitle}
+```
 
 **Done when:**
 - [x] Findings dicatat di bawah (T-06 Findings) sebelum ada perubahan kode
-- [ ] Copy update masuk `copy.ts`, tidak hardcode di JSX
-- [ ] Tidak ada istilah teknis tanpa penjelasan di halaman utama
-- [ ] Mobile dicek setelah setiap perubahan — tidak ada overflow teks
-- [ ] Copy tidak menuduh desa
-- [ ] Iwan review final sebelum `done`
+- [ ] 6 item critical diupdate di `copy.ts`
+- [ ] `KinerjaAnggaranCard` subtitle dipindah ke `copy.ts` dan diupdate
+- [ ] Mobile dicek setelah update — tidak ada overflow teks di card kecil
+- [ ] Copy tidak menuduh desa — verifikasi `distribusi`, `alertDini`, `belumTerserap`
+- [ ] Iwan review tone sebelum `done`
 
 **T-06 Findings — isi di sini setelah audit:**
 

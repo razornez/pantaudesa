@@ -58,7 +58,7 @@ Reviewed-by: Asep (CTO)
 
 ### R-02 - Sprint 02 T-06 wording audit findings
 
-**Status:** `needs-review`
+**Status:** `reviewed`
 **Requested by:** Ujang
 **Related backlog:** #12
 **Related task queue:** `docs/project-management/07-ujang-task-queue.md`
