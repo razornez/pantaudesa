@@ -115,6 +115,25 @@ export const STATS = {
 
 export const DATA_DISCLAIMER = {
   short: "Data yang ditampilkan bersifat ilustrasi. Integrasi data resmi sedang disiapkan.",
+  detailTitle: "Catatan tentang data desa ini",
+  detailBody:
+    "Sebagian data di halaman ini masih bersifat demo/ilustrasi untuk menguji pengalaman pengguna. Jangan gunakan data ini sebagai dasar tuduhan atau kesimpulan resmi sebelum ada sumber dan verifikasi yang jelas.",
+  statusLabel: "Data demo",
+} as const;
+
+export const DATA_STATUS_COPY = {
+  demo: {
+    label: "Data demo",
+    description: "Data ilustrasi untuk menguji pengalaman pengguna.",
+  },
+  imported: {
+    label: "Data impor",
+    description: "Data diambil dari sumber tertentu dan masih perlu dicek.",
+  },
+  verified: {
+    label: "Data terverifikasi",
+    description: "Data sudah dicek sebelum ditampilkan ke publik.",
+  },
 } as const;
 
 export const SKOR = {
@@ -362,5 +381,5 @@ export const FILTER = {
 export const FOOTER = {
   tagline:   "Kami hadir untuk menjawab pertanyaan yang selama ini tidak pernah dijawab — tentang uang desamu.",
   copyright: (year: number) => `© ${year} PantauDesa`,
-  note:      "Data bersifat ilustrasi. Integrasi data resmi sedang disiapkan.",
+  note:      DATA_DISCLAIMER.short,
 } as const;

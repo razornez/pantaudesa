@@ -471,6 +471,27 @@ Backlog: #12
 
 ---
 
+## Implementation Update — Ujang
+
+Batch: Sprint 02 Batch A
+Status: partial
+
+### Done
+- [x] T-07 Data Trust Notice di Detail Desa
+- [x] T-08 Data Status Badge Copy
+- [x] T-09 Footer and Detail Disclaimer Consistency
+- [x] T-10 Update Task Queue Report
+
+### Need Iwan review
+- [ ] Copy tone disclaimer
+- [ ] Placement detail notice
+- [ ] Apakah wording cukup jelas tanpa menakutkan user
+
+### Blocker
+- tidak ada
+
+---
+
 ## Update status setelah semua T-01 sampai T-05 selesai
 
 ```
