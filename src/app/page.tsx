@@ -51,10 +51,15 @@ export default function HomePage() {
 
       <section>
         <div className="mb-4 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              {DATA_DISCLAIMER.statusLabel}
+            </span>
+          </div>
           <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang perlu dilihat lebih dulu</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Urutan ini memakai data demo untuk membantu warga membaca indikator awal, bukan untuk menyimpulkan kesalahan.
+            Urutan ini memakai data demo untuk membantu warga membaca indikator awal; angka persentase belum menjadi fakta final atau terverifikasi.
           </p>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-4 items-start">

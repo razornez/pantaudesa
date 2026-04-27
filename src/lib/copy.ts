@@ -49,7 +49,7 @@ export const BIDANG_CITIZEN_LABELS: Record<string, { label: string; hint: string
 
 export const SECTION = {
   // Home page
-  ringkasanNasional:    "Kondisi Anggaran Desa Se-Indonesia",
+  ringkasanNasional:    "Apa yang Sedang Dipetakan?",
   ringkasanNasionalSub: "Gambaran besar penggunaan uang negara untuk desa-desa di seluruh Indonesia",
   alertDini:            "Prioritas Cek Transparansi",
   alertDiniSub: (n: number) =>
@@ -58,7 +58,7 @@ export const SECTION = {
   trenSub:       "Bandingkan uang desa yang tersedia dengan yang sudah digunakan tiap bulan",
   distribusi:    "Berapa Desa yang Sudah Baik, dan Berapa yang Perlu Dicek?",
   distribusiSub: "Gambaran desa berdasarkan seberapa banyak anggaran yang sudah digunakan",
-  topBaik:       "Desa Paling Rajin",
+  topBaik:       "Desa dengan Capaian Tinggi",
   topBaikSub:    "5 desa yang paling aktif dan bertanggung jawab menggunakan anggarannya",
   topRendah:     "Desa yang Perlu Ditinjau",
   topRendahSub:  "5 desa dengan penggunaan anggaran paling rendah dan perlu dicek sumbernya",
