@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "seed:demo": "node prisma/seed-demo.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
