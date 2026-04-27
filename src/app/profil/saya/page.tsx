@@ -432,7 +432,10 @@ export default function SayaProfilePage() {
             <div className="ring-4 ring-white rounded-full">
               <UserAvatar nama={user.nama} avatarUrl={avatarUrl} size="lg" />
             </div>
-            <BadgePill badge={trustStats.badge} compact />
+            <div className="text-right">
+              <BadgePill badge={trustStats.badge} compact />
+              <p className="text-[10px] text-slate-400 mt-0.5">Lihat arti ↓</p>
+            </div>
           </div>
           <p className="text-base font-black text-slate-900">{user.nama}</p>
           <p className="text-xs text-slate-400">@{user.username}</p>

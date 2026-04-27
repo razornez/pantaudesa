@@ -9,6 +9,7 @@ import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/lib/auth-context";
 import { getUnreadCount } from "@/lib/user-profile";
 import { getAvatarBg, getInitial } from "@/lib/citizen-voice";
+import { NAVBAR_COPY } from "@/lib/copy";
 
 const navLinks = [
   { href: "/",           label: "Beranda"     },
@@ -40,7 +41,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname        = usePathname();
   const router          = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
 
   const isHidden = pathname.startsWith("/desa-admin") || pathname.startsWith("/admin") || pathname === "/login";
   if (isHidden) return null;
@@ -53,9 +54,16 @@ export default function Navbar() {
   const renderRight = () => {
     if (!user) {
       return (
-        <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm">
-          Masuk
-        </Link>
+        <>
+          {!loading && (
+            <span className="hidden sm:inline text-xs text-slate-400 mr-1">
+              {NAVBAR_COPY.publicDataNote} &middot;
+            </span>
+          )}
+          <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm">
+            Masuk
+          </Link>
+        </>
       );
     }
 

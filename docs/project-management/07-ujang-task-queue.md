@@ -24,7 +24,7 @@ Jika ada blocker, ubah status ke `blocked` dan tulis keterangan di kolom Notes.
 ## Antrian aktif — Sprint 02
 
 ### T-01 · NAVBAR_COPY — sinyal data publik
-**Status:** `todo`
+**Status:** `done`
 **Backlog:** #7
 **Branch:** `ujang/sprint2`
 
@@ -53,8 +53,8 @@ Di `src/components/layout/Navbar.tsx`, cari area render tombol login untuk user 
 ```
 
 **Done when:**
-- [ ] Tampil di desktop saat belum login
-- [ ] Tidak tampil di mobile (`hidden sm:inline`)
+- [x] Tampil di desktop saat belum login
+- [x] Tidak tampil di mobile (`hidden sm:inline`)
 
 **Commit:**
 ```
@@ -70,7 +70,7 @@ Backlog: #7
 ---
 
 ### T-02 · `ResponsibilityGuideCard` — pindah copy ke `copy.ts`
-**Status:** `todo`
+**Status:** `done`
 **Backlog:** #10
 **Branch:** `ujang/sprint2`
 
@@ -103,8 +103,8 @@ Update `src/components/desa/ResponsibilityGuideCard.tsx`:
 ```
 
 **Done when:**
-- [ ] Tidak ada string UI hardcode di JSX komponen
-- [ ] Disclaimer tampil di bawah card
+- [x] Tidak ada string UI hardcode di JSX komponen
+- [x] Disclaimer tampil di bawah card
 
 **Commit:**
 ```
@@ -120,7 +120,7 @@ Backlog: #10
 ---
 
 ### T-03 · Badge hint di profil saya
-**Status:** `todo`
+**Status:** `done`
 **Backlog:** #8
 **Branch:** `ujang/sprint2`
 
@@ -139,7 +139,7 @@ Cari `<BadgePill badge={trustStats.badge} compact />` di sekitar baris 435. Tamb
 ```
 
 **Done when:**
-- [ ] Ada petunjuk visual kecil mengarah ke `BadgeMeaningCard` di bawah
+- [x] Ada petunjuk visual kecil mengarah ke `BadgeMeaningCard` di bawah
 
 **Commit:**
 ```
@@ -155,7 +155,7 @@ Backlog: #8
 ---
 
 ### T-04 · `.env.example`
-**Status:** `todo`
+**Status:** `done`
 **Backlog:** #11
 **Branch:** `ujang/sprint2`
 
@@ -190,8 +190,8 @@ DEBUG_SECRET=
 ```
 
 **Done when:**
-- [ ] File ada di root, tidak berisi nilai sensitif
-- [ ] Bisa di-commit (tidak masuk `.gitignore`)
+- [x] File ada di root, tidak berisi nilai sensitif
+- [x] Bisa di-commit (tidak masuk `.gitignore`)
 
 **Commit:**
 ```
@@ -207,7 +207,7 @@ Backlog: #11
 ---
 
 ### T-05 · Data disclaimer di homepage
-**Status:** `todo`
+**Status:** `done`
 **Backlog:** #3
 **Branch:** `ujang/sprint2`
 
@@ -234,8 +234,8 @@ Di `src/app/page.tsx`, import `DATA_DISCLAIMER` dan tambahkan setelah komponen `
 ```
 
 **Done when:**
-- [ ] Disclaimer tampil di homepage setelah stats cards
-- [ ] Copy dari `copy.ts`, tidak hardcode di JSX
+- [x] Disclaimer tampil di homepage setelah stats cards
+- [x] Copy dari `copy.ts`, tidak hardcode di JSX
 
 **Commit:**
 ```

@@ -113,6 +113,10 @@ export const STATS = {
 
 // ─── Skor transparansi ────────────────────────────────────────────────────────
 
+export const DATA_DISCLAIMER = {
+  short: "Data yang ditampilkan bersifat ilustrasi. Integrasi data resmi sedang disiapkan.",
+} as const;
+
 export const SKOR = {
   labels: {
     transparan: "Desa ini cukup terbuka ke warganya",
@@ -183,6 +187,10 @@ export const HERO = {
   ctaAll:    "Lihat Semua Desa",
 } as const;
 
+export const NAVBAR_COPY = {
+  publicDataNote: "Data publik bebas diakses",
+} as const;
+
 export const AUTH_COPY = {
   whyAccountTitle: "Kenapa perlu akun?",
   whyAccountBody:
@@ -218,6 +226,14 @@ export const AUTH_COPY = {
       "Bangun profil warga peduli yang bisa dipercaya komunitas.",
     ],
   },
+} as const;
+
+export const RESPONSIBILITY_CARD = {
+  title: "Tanyakan ke pihak yang tepat",
+  body:
+    "Tidak semua masalah di wilayah desa menjadi kewenangan pemerintah desa. Lihat dulu apakah hal ini terkait APBDes, program desa, kewenangan kabupaten, provinsi, atau pusat agar pertanyaanmu lebih tepat sasaran.",
+  cta: "Lihat panduan kewenangan",
+  disclaimer: "Panduan kewenangan bersifat umum. Detail perlu diverifikasi dengan sumber resmi.",
 } as const;
 
 export const PHILOSOPHY = {

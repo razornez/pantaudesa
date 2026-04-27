@@ -10,7 +10,7 @@ import AlertDiniSection from "@/components/home/AlertDiniSection";
 import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
 import { mockSummaryStats, mockTrendData, mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
-import { SECTION } from "@/lib/copy";
+import { DATA_DISCLAIMER, SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 
 export default function HomePage() {
@@ -55,6 +55,9 @@ export default function HomePage() {
         <h2 className="text-lg font-semibold text-slate-800 mb-1">{SECTION.ringkasanNasional}</h2>
         <p className="text-sm text-slate-500 mb-4">{SECTION.ringkasanNasionalSub}</p>
         <StatsCards stats={mockSummaryStats} />
+        <p className="text-center text-xs text-slate-400 pb-2">
+          {DATA_DISCLAIMER.short}
+        </p>
       </div>
 
       {/* ── Peringatan Dini ───────────────────────────────────────────────── */}

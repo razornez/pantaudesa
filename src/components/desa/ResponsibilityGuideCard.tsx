@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Scale } from "lucide-react";
+import { RESPONSIBILITY_CARD } from "@/lib/copy";
 
 export default function ResponsibilityGuideCard() {
   return (
@@ -9,17 +10,20 @@ export default function ResponsibilityGuideCard() {
           <Scale size={18} />
         </div>
         <div className="flex-1">
-          <p className="text-base font-black text-amber-950">Tanyakan ke pihak yang tepat</p>
+          <p className="text-base font-black text-amber-950">{RESPONSIBILITY_CARD.title}</p>
           <p className="mt-2 text-sm leading-relaxed text-amber-800">
-            Tidak semua masalah di wilayah desa menjadi kewenangan pemerintah desa. Lihat dulu apakah hal ini terkait APBDes, program desa, kewenangan kabupaten, provinsi, atau pusat agar pertanyaanmu lebih tepat sasaran.
+            {RESPONSIBILITY_CARD.body}
           </p>
           <Link
             href="/panduan/kewenangan"
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-amber-700"
           >
-            Lihat panduan kewenangan
+            {RESPONSIBILITY_CARD.cta}
             <ArrowRight size={14} />
           </Link>
+          <p className="mt-3 text-[10px] text-amber-700/70 leading-relaxed">
+            {RESPONSIBILITY_CARD.disclaimer}
+          </p>
         </div>
       </div>
     </section>
