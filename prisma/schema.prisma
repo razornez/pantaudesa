@@ -160,6 +160,152 @@ enum Role {
   ADMIN
 }
 
+// Data Desa Foundation
+
+model Desa {
+  id             String     @id @default(cuid())
+  kodeDesa       String?    @unique
+  nama           String
+  slug           String     @unique
+  kecamatan      String
+  kabupaten      String
+  provinsi       String
+  tahunData      Int
+  jumlahPenduduk Int?
+  kategori       String?
+  websiteUrl     String?
+  dataStatus     DataStatus @default(DEMO)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  anggaranSummaries AnggaranDesaSummary[]
+  apbdesItems       APBDesItem[]
+  dokumenPublik     DokumenPublik[]
+  dataSources       DataSource[]
+
+  @@index([provinsi, kabupaten])
+  @@index([dataStatus])
+  @@map("desa")
+}
+
+model AnggaranDesaSummary {
+  id                  String        @id @default(cuid())
+  desaId              String
+  tahun               Int
+  totalAnggaran       Decimal       @db.Decimal(18, 2)
+  totalRealisasi      Decimal       @db.Decimal(18, 2)
+  persentaseRealisasi Int
+  statusSerapan       StatusSerapan
+  sumberData          String?
+  dataStatus          DataStatus    @default(DEMO)
+  sourceId            String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  desa   Desa        @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  source DataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@unique([desaId, tahun])
+  @@index([tahun, statusSerapan])
+  @@index([dataStatus])
+  @@map("anggaran_desa_summaries")
+}
+
+model APBDesItem {
+  id         String     @id @default(cuid())
+  desaId     String
+  tahun      Int
+  kodeBidang String?
+  namaBidang String
+  anggaran   Decimal    @db.Decimal(18, 2)
+  realisasi  Decimal    @db.Decimal(18, 2)
+  persentase Int
+  dataStatus DataStatus @default(DEMO)
+  sourceId   String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  desa   Desa        @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  source DataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([desaId, tahun])
+  @@index([dataStatus])
+  @@map("apbdes_items")
+}
+
+model DokumenPublik {
+  id           String         @id @default(cuid())
+  desaId       String
+  tahun        Int
+  namaDokumen  String
+  jenisDokumen String?
+  status       DocumentStatus @default(UNKNOWN)
+  url          String?
+  dataStatus   DataStatus     @default(DEMO)
+  sourceId     String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  desa   Desa        @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  source DataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([desaId, tahun])
+  @@index([status])
+  @@index([dataStatus])
+  @@map("dokumen_publik")
+}
+
+model DataSource {
+  id            String     @id @default(cuid())
+  desaId        String?
+  sourceName    String
+  sourceType    SourceType
+  url           String?
+  notes         String?
+  lastCheckedAt DateTime?
+  dataStatus    DataStatus @default(DEMO)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  desa              Desa?                  @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  anggaranSummaries AnggaranDesaSummary[]
+  apbdesItems       APBDesItem[]
+  dokumenPublik     DokumenPublik[]
+
+  @@index([desaId])
+  @@index([sourceType])
+  @@index([dataStatus])
+  @@map("data_sources")
+}
+
+enum DataStatus {
+  DEMO
+  IMPORTED
+  NEEDS_REVIEW
+  VERIFIED
+  OUTDATED
+  REJECTED
+}
+
+enum StatusSerapan {
+  BAIK
+  SEDANG
+  RENDAH
+}
+
+enum DocumentStatus {
+  TERSEDIA
+  BELUM
+  UNKNOWN
+}
+
+enum SourceType {
+  DEMO
+  MANUAL
+  IMPORTED
+  OFFICIAL
+}
+
 // ─── NextAuth v5 required tables ──────────────────────────────────────────────
 
 model Account {
