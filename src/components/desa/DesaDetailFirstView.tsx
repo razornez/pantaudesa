@@ -4,7 +4,6 @@ import {
   Globe2,
   Info,
   MapPin,
-  SearchCheck,
   ShieldCheck,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
@@ -121,20 +120,6 @@ export default function DesaDetailFirstView({ desa }: Props) {
             <p className="mt-2 text-sm font-bold text-slate-800">Data halaman ini masih untuk panduan baca.</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               Ini data demo untuk membantu melihat alur PantauDesa. Belum mewakili data resmi final, dan angka APBDes tidak boleh dibaca sebagai kesimpulan sebelum sumbernya direview.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sky-600">
-            <SearchCheck size={16} />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-900">Kenapa halaman ini perlu dibaca?</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              Ada informasi desa, sumber publik, dan dokumen yang bisa membantu warga mulai bertanya dengan tenang. Memantau bukan menuduh; mulai dari sumber, status, lalu dokumen.
             </p>
           </div>
         </div>

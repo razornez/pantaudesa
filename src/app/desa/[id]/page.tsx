@@ -11,6 +11,7 @@ import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy
 import { ASSETS } from "@/lib/assets";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
+import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
@@ -77,6 +78,8 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* ── 1. FIRST VIEW — identity, quick read, safe data status ────────── */}
       <DesaDetailFirstView desa={desa} />
+
+      <SourceDocumentSnapshotSection desa={desa} />
 
       {/* ── 2. KELENGKAPAN DESA — aset / fasilitas / lembaga / bumdes ────── */}
       {profil && <KelengkapanDesa profil={profil} />}
