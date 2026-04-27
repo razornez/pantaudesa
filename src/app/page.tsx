@@ -7,6 +7,10 @@ import TrendChart from "@/components/home/TrendChart";
 import SerapanDonut from "@/components/home/SerapanDonut";
 import DesaLeaderboard from "@/components/home/DesaLeaderboard";
 import AlertDiniSection from "@/components/home/AlertDiniSection";
+import CitizenJourneySection from "@/components/home/CitizenJourneySection";
+import DataStatusCardsSection from "@/components/home/DataStatusCardsSection";
+import DocumentDeskSection from "@/components/home/DocumentDeskSection";
+import PilotAreaStorySection from "@/components/home/PilotAreaStorySection";
 import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
 import { mockSummaryStats, mockTrendData, mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
@@ -72,6 +76,10 @@ export default function HomePage() {
         </div>
       </section>
 
+      <CitizenJourneySection />
+      <DataStatusCardsSection />
+      <DocumentDeskSection />
+      <PilotAreaStorySection />
       <PondasiTransparansiSection />
 
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
