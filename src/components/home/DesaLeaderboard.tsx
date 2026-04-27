@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, TrendingDown, MapPin } from "lucide-react";
+import { ArrowRight, TrendingDown, MapPin, Trophy, Map, Search, type LucideIcon } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { BADGE_STYLES } from "@/lib/badge";
-import { formatRupiah, getSerapanColor } from "@/lib/utils";
+import { getSerapanColor } from "@/lib/utils";
 import { ASSETS } from "@/lib/assets";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type View = "terbaik" | "provinsi" | "diawasi";
+type View = "terbaik" | "provinsi" | "ditinjau";
 
 interface ProvinsiRow {
   provinsi: string;
@@ -66,16 +66,16 @@ function RankRow({ desa, rank, warning = false }: { desa: Desa; rank: number; wa
   return (
     <Link
       href={`/desa/${desa.id}`}
-      className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0 ${warning ? "hover:bg-rose-50/30" : ""}`}
+      className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0 ${warning ? "hover:bg-amber-50/40" : ""}`}
     >
       <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-black ${
-        warning ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-500"
+        warning ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
       }`}>
-        {warning ? "!" : rank}
+        {warning ? "?" : rank}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <p className={`text-sm font-semibold truncate ${warning ? "text-slate-700 group-hover:text-rose-700" : "text-slate-800 group-hover:text-indigo-600"} transition-colors`}>
+          <p className={`text-sm font-semibold truncate ${warning ? "text-slate-700 group-hover:text-amber-700" : "text-slate-800 group-hover:text-indigo-600"} transition-colors`}>
             {desa.nama}
           </p>
           {badge && styles && (
@@ -89,11 +89,11 @@ function RankRow({ desa, rank, warning = false }: { desa: Desa; rank: number; wa
         </p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        {warning && <TrendingDown size={12} className="text-rose-400" />}
+        {warning && <TrendingDown size={12} className="text-amber-500" />}
         <div className="hidden sm:block w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
           <div className={`h-full rounded-full ${getSerapanColor(desa.persentaseSerapan)}`} style={{ width: `${desa.persentaseSerapan}%` }} />
         </div>
-        <span className={`text-sm font-black ${warning ? "text-rose-600" : desa.persentaseSerapan >= 85 ? "text-emerald-600" : "text-amber-600"}`}>
+        <span className={`text-sm font-black ${warning ? "text-amber-700" : desa.persentaseSerapan >= 85 ? "text-emerald-600" : "text-amber-600"}`}>
           {desa.persentaseSerapan}%
         </span>
       </div>
@@ -142,10 +142,10 @@ interface Props {
 export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }: Props) {
   const [view, setView] = useState<View>("terbaik");
 
-  const views: { id: View; label: string; emoji: string }[] = [
-    { id: "terbaik",  label: "Desa Terbaik",  emoji: "🏆" },
-    { id: "provinsi", label: "Per Provinsi",   emoji: "🗺️" },
-    { id: "diawasi",  label: "Perlu Diawasi",  emoji: "🚨" },
+  const views: { id: View; label: string; icon: LucideIcon }[] = [
+    { id: "terbaik",  label: "Capaian Tinggi", icon: Trophy },
+    { id: "provinsi", label: "Per Provinsi",   icon: Map },
+    { id: "ditinjau", label: "Perlu Ditinjau", icon: Search },
   ];
 
   return (
@@ -163,14 +163,16 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
           />
           <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/90" />
           <div className="absolute bottom-2 left-4">
-            <h2 className="text-base font-black text-slate-900 drop-shadow-sm">Peringkat Desa</h2>
-            <p className="text-[10px] text-slate-600 font-medium">Berdasarkan serapan anggaran &amp; transparansi</p>
+            <h2 className="text-base font-black text-slate-900 drop-shadow-sm">Prioritas Cek Transparansi</h2>
+            <p className="text-[10px] text-slate-600 font-medium">Urutan bantu baca data demo, bukan penilaian final</p>
           </div>
         </div>
         <div className="px-5 pb-0 pt-1">
           {/* View toggle */}
           <div className="flex gap-1">
-            {views.map(v => (
+            {views.map(v => {
+              const Icon = v.icon;
+              return (
               <button
                 key={v.id}
                 onClick={() => setView(v.id)}
@@ -180,9 +182,10 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 }`}
               >
-                <span>{v.emoji}</span> {v.label}
+                <Icon size={13} /> {v.label}
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -214,12 +217,12 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
         </div>
       )}
 
-      {/* ── Diawasi view ──────────────────────────────────────────────── */}
-      {view === "diawasi" && (
+      {/* ── Ditinjau view ──────────────────────────────────────────────── */}
+      {view === "ditinjau" && (
         <div>
-          <div className="px-4 py-3 bg-rose-50/40 border-b border-rose-100 flex items-center gap-2">
-            <span className="text-lg">🚨</span>
-            <p className="text-xs text-rose-700 font-semibold">Serapan sangat rendah — warga perlu aktif mengawasi</p>
+          <div className="px-4 py-3 bg-amber-50/60 border-b border-amber-100 flex items-center gap-2">
+            <Search size={14} className="text-amber-600 flex-shrink-0" />
+            <p className="text-xs text-amber-800 font-semibold">Indikator serapan rendah dalam data demo, perlu dicek bersama sumbernya.</p>
           </div>
           {topRendah.map((d, i) => <RankRow key={d.id} desa={d} rank={i + 1} warning />)}
         </div>

@@ -1,4 +1,4 @@
-import { TrendingUp, MapPin, Wallet, CheckCircle2, AlertCircle, XCircle, Shield } from "lucide-react";
+import { TrendingUp, MapPin, Wallet, CheckCircle2, AlertCircle, Search, Shield } from "lucide-react";
 import { SummaryStats } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
 import { STATS, SKOR } from "@/lib/copy";
@@ -69,9 +69,9 @@ export default function StatsCards({ stats }: Props) {
       label: STATS.desaRendah.label,
       value: stats.desaSerapanRendah,
       sub:   STATS.desaRendah.sub(pctRendah),
-      icon:  XCircle,
-      color: "text-rose-600",
-      bg:    "bg-rose-50",
+      icon:  Search,
+      color: "text-amber-700",
+      bg:    "bg-amber-50",
     },
   ];
 

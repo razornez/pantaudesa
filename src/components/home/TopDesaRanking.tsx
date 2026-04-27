@@ -209,9 +209,9 @@ export default function TopDesaRanking({ topBaik, topRendah }: Props) {
         <div className="px-5 pt-5 pb-3 border-b border-rose-50 bg-rose-50/30">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">🚨</span>
-            <h2 className="text-base font-bold text-slate-800">Desa Perlu Diawasi</h2>
+            <h2 className="text-base font-bold text-slate-800">Desa Perlu Ditinjau</h2>
           </div>
-          <p className="text-xs text-slate-500 ml-8">Serapan anggaran sangat rendah — warga perlu turun tangan</p>
+          <p className="text-xs text-slate-500 ml-8">Indikator serapan rendah dan perlu dicek bersama sumbernya</p>
         </div>
 
         <div className="divide-y divide-slate-50">

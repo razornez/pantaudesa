@@ -10,14 +10,14 @@
 export const STATUS_LABELS: Record<string, string> = {
   baik:   "Kinerjanya Baik",
   sedang: "Perlu Ditingkatkan",
-  rendah: "Perlu Diawasi",
+  rendah: "Perlu Ditinjau",
 };
 
 export const STATUS_FILTER_LABELS: Record<string, string> = {
   semua:  "Semua Desa",
   baik:   "Kinerja Baik ≥85%",
   sedang: "Perlu Ditingkatkan (60–84%)",
-  rendah: "Perlu Diawasi (<60%)",
+  rendah: "Perlu Ditinjau (<60%)",
 };
 
 // ─── Bidang APBDes → label ramah warga ───────────────────────────────────────
@@ -51,17 +51,17 @@ export const SECTION = {
   // Home page
   ringkasanNasional:    "Kondisi Anggaran Desa Se-Indonesia",
   ringkasanNasionalSub: "Gambaran besar penggunaan uang negara untuk desa-desa di seluruh Indonesia",
-  alertDini:            "Desa yang Perlu Dicek Lebih Dulu",
+  alertDini:            "Prioritas Cek Transparansi",
   alertDiniSub: (n: number) =>
-    `${n} desa baru menggunakan kurang dari separuh anggarannya. Warga bisa mulai bertanya dengan data.`,
+    `${n} desa dalam data demo perlu ditinjau lebih dulu karena indikator serapannya masih rendah.`,
   tren:          "Bagaimana Tren Penggunaan Anggaran Tahun Ini?",
   trenSub:       "Bandingkan uang desa yang tersedia dengan yang sudah digunakan tiap bulan",
   distribusi:    "Berapa Desa yang Sudah Baik, dan Berapa yang Perlu Dicek?",
   distribusiSub: "Gambaran desa berdasarkan seberapa banyak anggaran yang sudah digunakan",
   topBaik:       "Desa Paling Rajin",
   topBaikSub:    "5 desa yang paling aktif dan bertanggung jawab menggunakan anggarannya",
-  topRendah:     "Desa yang Harus Diawasi",
-  topRendahSub:  "5 desa dengan penggunaan anggaran paling rendah — warga perlu turun tangan",
+  topRendah:     "Desa yang Perlu Ditinjau",
+  topRendahSub:  "5 desa dengan penggunaan anggaran paling rendah dan perlu dicek sumbernya",
   peringkat:     "Provinsi Mana yang Desanya Paling Baik?",
   peringkatSub:  "Rata-rata kinerja penggunaan anggaran per provinsi",
 
@@ -106,7 +106,7 @@ export const STATS = {
     sub:   (pct: number) => `${pct}% dari total desa terpantau`,
   },
   desaRendah: {
-    label: "Desa yang Perlu Diawasi",
+    label: "Desa yang Perlu Ditinjau",
     sub:   (pct: number) => `${pct}% dari total desa terpantau`,
   },
 } as const;
@@ -193,7 +193,7 @@ export const TABLE_HEADERS = {
 export const DONUT_LABELS = {
   baik:   "Kinerja Baik (≥85%)",
   sedang: "Perlu Ditingkatkan (60–84%)",
-  rendah: "Perlu Diawasi (<60%)",
+  rendah: "Perlu Ditinjau (<60%)",
 } as const;
 
 // ─── Hero homepage ────────────────────────────────────────────────────────────

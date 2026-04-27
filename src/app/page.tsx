@@ -48,6 +48,25 @@ export default function HomePage() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <HeroSection totalDesa={mockDesa.length} tahun={2024} />
+
+      <section>
+        <div className="mb-4 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
+          <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang perlu dilihat lebih dulu</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Urutan ini memakai data demo untuk membantu warga membaca indikator awal, bukan untuk menyimpulkan kesalahan.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-4 items-start">
+          <DesaLeaderboard
+            topBaik={topBaik}
+            topRendah={topRendah}
+            provinsiRanking={provinsiRanking}
+          />
+          <AlertDiniSection desa={mockDesa} />
+        </div>
+      </section>
+
       <PondasiTransparansiSection />
 
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
@@ -60,25 +79,19 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* ── Peringatan Dini ───────────────────────────────────────────────── */}
-      <AlertDiniSection desa={mockDesa} />
-
       {/* ── Charts + Leaderboard ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Charts kiri (2/3) */}
-        <div className="lg:col-span-2 space-y-4">
+      <section>
+        <div className="mb-4 max-w-2xl">
+          <h2 className="text-base font-semibold text-slate-800">Gambaran angka pendukung</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Grafik tetap tersedia sebagai konteks tambahan, sementara prioritas cek transparansi tampil lebih dulu.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TrendChart data={mockTrendData} />
           <SerapanDonut stats={mockSummaryStats} />
         </div>
-        {/* Leaderboard kanan (1/3) — unified ranking */}
-        <div className="lg:col-span-1">
-          <DesaLeaderboard
-            topBaik={topBaik}
-            topRendah={topRendah}
-            provinsiRanking={provinsiRanking}
-          />
-        </div>
-      </div>
+      </section>
 
       {/* ── CTA + Citizen Illustration ────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
