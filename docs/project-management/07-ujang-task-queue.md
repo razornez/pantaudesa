@@ -8,6 +8,30 @@ Format status: `todo` → `in-progress` → `partial` → `done`
 
 ---
 
+## ⚠️ Mode aktif: Asep sedang tidak available
+
+Berlaku sampai ada pemberitahuan dari Iwan.
+
+**Selama mode ini:**
+- Ujang report langsung ke Iwan setelah setiap task selesai.
+- Ujang tidak perlu menunggu CTO review untuk task yang instruksinya sudah lengkap di file ini.
+- Jika ada keraguan teknis atau risiko yang tidak jelas, tulis di task sebagai `blocked` dan tanyakan ke Iwan.
+- Iwan akan memutuskan sendiri atau menunggu Asep kembali.
+
+**Cara report Ujang ke Iwan:**
+
+```
+Iwan, T-XX sudah selesai.
+Branch: ujang/sprint2
+Commit: [hash]
+Done:
+- [x] item 1
+- [x] item 2
+Perlu dicek: [tulis jika ada yang perlu review produk/copy dari Iwan]
+```
+
+---
+
 ## Cara kerja
 
 1. Buka file ini.
@@ -15,7 +39,8 @@ Format status: `todo` → `in-progress` → `partial` → `done`
 3. Kerjakan sesuai instruksi.
 4. Ubah status jadi `done` setelah selesai.
 5. Commit dengan role trace.
-6. Lanjut ke task berikutnya.
+6. Report ke Iwan dengan format di atas.
+7. Lanjut ke task berikutnya.
 
 Jika ada blocker, ubah status ke `blocked` dan tulis keterangan di kolom Notes.
 
