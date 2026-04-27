@@ -56,6 +56,64 @@ Reviewed-by: Asep (CTO)
 
 ## Active Review Items
 
+### R-02 - Sprint 02 T-06 wording audit findings
+
+**Status:** `needs-review`
+**Requested by:** Ujang
+**Related backlog:** #12
+**Related task queue:** `docs/project-management/07-ujang-task-queue.md`
+
+#### Scope yang perlu dicek
+
+Ujang sudah melakukan Langkah 1 T-06: audit wording tanpa mengubah kode aplikasi. Findings dicatat di bagian "T-06 Findings" pada `docs/project-management/07-ujang-task-queue.md`.
+
+#### File yang perlu dibaca
+
+- `docs/project-management/07-ujang-task-queue.md`
+- `docs/project-management/06-sprint-02-plan.md`
+- `src/lib/copy.ts`
+- `src/components/home/StatsCards.tsx`
+- `src/components/home/AlertDiniSection.tsx`
+- `src/components/home/TrendChart.tsx`
+- `src/components/home/SerapanDonut.tsx`
+- `src/components/home/DesaLeaderboard.tsx`
+- `src/app/desa/[id]/page.tsx`
+- `src/components/desa/KinerjaAnggaranCard.tsx`
+- `src/components/desa/APBDesBreakdown.tsx`
+- `src/components/desa/SkorTransparansiCard.tsx`
+- `src/components/desa/TransparansiCard.tsx`
+- `src/components/desa/KelengkapanDesa.tsx`
+- `src/components/layout/Footer.tsx`
+
+#### Pertanyaan untuk Asep
+
+1. Apakah findings T-06 sudah cukup untuk mulai Langkah 2?
+2. Apakah scope implementasi awal boleh difokuskan ke copy paling kritis saja?
+3. Apakah istilah teknis seperti APBDes, serapan, realisasi, responsivitas, SIPD, OMSPAN, dan DJPK harus selalu diberi arti singkat di UI?
+4. Apakah ada risiko legal/product trust jika wording dibuat terlalu sederhana?
+
+#### Expected Asep output
+
+```md
+## CTO Review - Asep
+
+Status: ready / needs-adjustment / blocked
+
+### Review
+- ...
+
+### Risiko
+- ...
+
+### Perlu diperbaiki sebelum Langkah 2
+- ...
+
+### Rekomendasi berikutnya
+- Ujang boleh mulai update copy / revisi findings dulu / tunggu Iwan copy review
+
+Reviewed-by: Asep (CTO)
+```
+
 ### R-01 - Sprint 02 T-01 sampai T-05
 
 **Status:** `reviewed`
@@ -131,4 +189,3 @@ Status: ready / needs-adjustment / blocked
 
 Reviewed-by: Asep (CTO)
 ```
-

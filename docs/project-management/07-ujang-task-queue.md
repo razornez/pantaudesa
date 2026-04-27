@@ -251,7 +251,7 @@ Backlog: #3
 ---
 
 ### T-06 · Wording audit — copy teknis ke bahasa awam
-**Status:** `todo`
+**Status:** `in-progress`
 **Backlog:** #12
 **Branch:** `ujang/sprint2`
 **CTO Review:** `ready` — lihat `docs/cto/02-asep-worklog.md` section #12
@@ -273,7 +273,7 @@ Panduan wording ada di `docs/project-management/06-sprint-02-plan.md` — Track 
 Setelah findings dicatat dan Asep/Iwan setuju, baru ubah copy. Semua update wajib ke `copy.ts` dulu. Tidak boleh hardcode di JSX.
 
 **Done when:**
-- [ ] Findings dicatat di bawah (T-06 Findings) sebelum ada perubahan kode
+- [x] Findings dicatat di bawah (T-06 Findings) sebelum ada perubahan kode
 - [ ] Copy update masuk `copy.ts`, tidak hardcode di JSX
 - [ ] Tidak ada istilah teknis tanpa penjelasan di halaman utama
 - [ ] Mobile dicek setelah setiap perubahan — tidak ada overflow teks
@@ -283,10 +283,35 @@ Setelah findings dicatat dan Asep/Iwan setuju, baru ubah copy. Semua update waji
 **T-06 Findings — isi di sini setelah audit:**
 
 ```
-(Ujang isi temuan audit di sini sebelum mulai ubah kode)
-Contoh format:
-- Homepage stats cards: "Realisasi anggaran" → tidak jelas untuk warga awam
-- Detail desa: "Serapan per bidang" → perlu penjelasan singkat
+Audit dicatat sebelum perubahan kode. Status implementasi copy masih menunggu persetujuan Asep/Iwan atas findings ini.
+
+Prioritas kritis untuk Langkah 2:
+- Homepage stats cards: istilah "Rata-rata Penggunaan Anggaran" sudah lebih awam daripada "serapan", tetapi angka persentase belum langsung menjelaskan bahwa itu berarti "berapa banyak uang yang sudah dipakai dari total uang desa".
+- Homepage skor nasional: "Rata-rata Keterbukaan Desa se-Indonesia" cukup jelas, tetapi subcopy "Komposit dari ketepatan laporan, kelengkapan dokumen, konsistensi serapan & responsivitas" terlalu teknis. Perlu diganti ke bahasa seperti "gabungan dari laporan tepat waktu, dokumen terbuka, penggunaan anggaran yang jelas, dan jawaban desa ke warga".
+- Homepage alert dini: "Desa yang Harus Kamu Perhatikan" dan "warga perlu bertanya ke kepala desa" berpotensi terasa menekan/menuduh. Perlu dibuat lebih netral: "Desa yang perlu dicek lebih dulu" dan "warga bisa mulai bertanya dengan data".
+- Homepage trend chart: "Akumulasi anggaran yang sudah dipakai vs total yang seharusnya dipakai sepanjang tahun" masih seperti laporan teknis. Perlu versi 5 detik: "Bandingkan uang yang tersedia dengan uang yang sudah digunakan tiap bulan".
+- Homepage donut/distribusi: "Proporsi desa berdasarkan kinerja penggunaan anggarannya" masih teknis. Perlu bahasa: "Berapa desa yang sudah baik, perlu ditingkatkan, atau perlu dicek warga".
+- Homepage leaderboard: "Berdasarkan serapan anggaran & transparansi" masih memakai istilah teknis. Perlu "berdasarkan uang yang sudah dipakai dan keterbukaan informasi".
+
+Detail desa:
+- Budget summary: label "Belum Jelas Penggunaannya" untuk sisa anggaran bisa terlalu menuduh. Perlu lebih netral: "Belum Terpakai / Perlu Dicek".
+- Sumber pendapatan: "Pendapatan Asli Desa", "ADD", dan "retribusi" perlu penjelasan singkat yang lebih awam karena tidak semua warga tahu istilah tersebut.
+- KinerjaAnggaranCard: "Kinerja & Rincian Anggaran" dan "Chart historis, APBDes per bidang, output fisik, tren 5 tahun" terlalu teknis dan campur bahasa Inggris. Perlu "Riwayat dan rincian uang desa" serta "grafik, daftar penggunaan APBDes, hasil yang seharusnya terlihat, dan perubahan 5 tahun".
+- APBDes section: judul "Anggaran Ini Dipakai untuk Apa Saja?" sudah baik, tetapi subtitle "Rincian penggunaan per bidang" masih teknis. Perlu "dikelompokkan menurut jenis kegiatan desa".
+- BudgetBarChart: "Perbandingan Anggaran & Realisasi", "Realisasi", dan "Selisih" perlu diterjemahkan/ditambah arti, karena ini istilah laporan keuangan.
+- SeharusnyaAdaSection: "Berdasarkan regulasi Dana Desa & alokasi APBDes" terlalu formal. Perlu "berdasarkan aturan dana desa dan rencana anggaran desa".
+- Skor transparansi: "ketepatan", "kelengkapan", "konsistensi", "responsif", dan "/100" cukup ringkas tetapi masih butuh kalimat bantu: "semakin tinggi, semakin mudah warga mendapat informasi".
+- Dokumen publik: "Berdasarkan UU Desa No. 6/2014..." kredibel, tetapi perlu lebih awam dan tidak terlalu legalistik di layar kecil.
+- Kelengkapan desa: "Aset, Fasilitas & Organisasi Masyarakat", "Total Nilai Aset Desa", "Omset/Tahun", "Perbandingan Modal vs Omset", "ROI visual" terlalu teknis untuk warga awam; minimal perlu subtitle penjelas.
+
+Footer/disclaimer:
+- Footer "Data bersifat ilustrasi. Integrasi data resmi sedang disiapkan." sudah cukup pendek dan aman.
+- Detail desa note "Integrasi SIPD, OMSPAN & OpenData DJPK Kemenkeu" terlalu teknis. Perlu diberi arti atau diganti: "sistem data pemerintah dan data resmi Kemenkeu".
+
+Scope implementasi awal yang disarankan:
+- Fokus dulu ke `src/lib/copy.ts` untuk SECTION, STATS, SKOR, PENDAPATAN, BUDGET_ITEMS, DONUT_LABELS, DATA_DISCLAIMER, dan FOOTER.
+- Lalu rapikan hardcoded copy paling kritis di `KinerjaAnggaranCard`, `BudgetBarChart`, `SeharusnyaAdaSection`, `TransparansiCard`, `KelengkapanDesa`, `DesaLeaderboard`, dan note detail desa.
+- Jangan ubah struktur data atau visual besar di T-06; ini wording-only.
 ```
 
 **Commit langkah 1 (audit saja):**
@@ -327,7 +352,7 @@ Status: partial
 - [x] T-05 Data disclaimer homepage
 
 ### Remaining
-- T-06 Wording audit — menunggu Asep review #12
+- T-06 Wording audit — findings sudah dicatat; implementasi copy menunggu persetujuan Asep/Iwan atas findings
 
 ### Blocker
 - tidak ada
