@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2, FolderOpen, Search } from "lucide-react";
 import HeroSection from "@/components/home/HeroSection";
 import StatsCards from "@/components/home/StatsCards";
 import TrendChart from "@/components/home/TrendChart";
@@ -119,10 +119,39 @@ export default function HomePage() {
             />
           </div>
           <div className="flex-1 flex flex-col justify-center p-6 sm:p-8 text-center lg:text-left">
-            <h2 className="text-lg font-bold text-slate-800 mb-2">Mengawasi desa adalah bentuk menjaga desa.</h2>
-            <p className="text-slate-500 text-sm mb-5 max-w-md mx-auto lg:mx-0">
-              Data anggaran desamu adalah milik publik — bukan milik kepala desa, bukan milik kabupaten.
-              Temukan fakta di balik angka-angka itu dan jadilah bagian dari pengawasan.
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Dari bingung jadi tahu harus cek apa</p>
+            <h2 className="mt-1 text-lg font-bold text-slate-800">PantauDesa merapikan bahan bacaan warga.</h2>
+            <div className="my-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-slate-500">
+                    <Search size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">Sebelum</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                      Warga membuka banyak website dan bingung dokumen mana yang terbaru.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-indigo-600">
+                    <FolderOpen size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">Sesudah</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                      PantauDesa merapikan sumber, dokumen, dan status agar lebih mudah dicek.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="mb-5 inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 lg:justify-start">
+              <CheckCircle2 size={14} className="text-emerald-600" />
+              Tetap gunakan sumber dan status data sebelum membuat kesimpulan.
             </p>
             <div>
               <Link
