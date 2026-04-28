@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpDown } from "lucide-react";
 import { Desa, SortField, SortOrder } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { formatRupiahMock, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { TABLE_HEADERS } from "@/lib/copy";
 
 interface Props {
@@ -63,8 +63,8 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
                   <p className="text-xs">{d.kecamatan}</p>
                   <p className="text-xs text-slate-400">{d.kabupaten}, {d.provinsi}</p>
                 </td>
-                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiah(d.totalAnggaran)}</td>
-                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiah(d.terealisasi)}</td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiahMock(d.totalAnggaran)}</td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiahMock(d.terealisasi)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-end gap-1.5">
                     <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(d.status)}`}>

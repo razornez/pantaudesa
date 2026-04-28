@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Megaphone, Sparkles, ChevronDown, ImagePlus, X, RotateCw } from "lucide-react";
 import {
   VOICE_CATEGORIES, VoiceCategory, CitizenVoice,
-  getVoicesForDesa,
 } from "@/lib/citizen-voice";
 import { fetchVoices, submitVoice, submitVote, submitHelpful } from "@/lib/voices-api";
 import VoiceCard from "./VoiceCard";
@@ -93,15 +92,14 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Load voices from API, fall back to mock on error ──────────────────────
+  // Load voices from DB-backed API. No hardcoded fallback in DB-first mode.
   const loadVoices = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchVoices(desaId);
-      // If DB is empty for this desa, show mock data so UI isn't blank
-      setVoices(data.length > 0 ? data : getVoicesForDesa(desaId));
+      setVoices(data);
     } catch {
-      setVoices(getVoicesForDesa(desaId));
+      setVoices([]);
     } finally {
       setLoading(false);
     }

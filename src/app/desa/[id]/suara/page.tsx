@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
-import { mockDesa } from "@/lib/mock-data";
+import { getDesaByIdOrSlugWithFallback, getDesaStaticParamsFromDb } from "@/lib/data/desa-read";
 import { getStatusColor, getStatusLabel } from "@/lib/utils";
 import SuaraWargaSection from "@/components/desa/SuaraWargaSection";
 
@@ -10,12 +10,12 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  return mockDesa.map((d) => ({ id: d.id }));
+  return getDesaStaticParamsFromDb();
 }
 
 export default async function SuaraWargaDesaPage({ params }: Props) {
   const { id } = await params;
-  const desa   = mockDesa.find((d) => d.id === id);
+  const desa   = await getDesaByIdOrSlugWithFallback(id);
 
   if (!desa) return notFound();
 

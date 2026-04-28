@@ -13,25 +13,32 @@ import DataProcessingTrustSection from "@/components/home/DataProcessingTrustSec
 import DocumentDeskSection from "@/components/home/DocumentDeskSection";
 import PilotAreaStorySection from "@/components/home/PilotAreaStorySection";
 import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
-import { mockSummaryStats, mockTrendData, mockDesa } from "@/lib/mock-data";
+import { buildSummaryStats, buildTrendData, getDesaListResult } from "@/lib/data/desa-read";
 import type { Desa } from "@/lib/types";
 import { DATA_DISCLAIMER, SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
-export default function HomePage() {
-  const topBaik = [...mockDesa]
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const desaResult = await getDesaListResult();
+  const desaItems = desaResult.items;
+  const summaryStats = buildSummaryStats(desaItems);
+  const trendData = buildTrendData(desaItems);
+
+  const topBaik = [...desaItems]
     .filter((d) => d.status === "baik")
     .sort((a, b) => b.persentaseSerapan - a.persentaseSerapan)
     .slice(0, 5);
 
-  const topRendah = [...mockDesa]
+  const topRendah = [...desaItems]
     .filter((d) => d.status === "rendah")
     .sort((a, b) => a.persentaseSerapan - b.persentaseSerapan)
     .slice(0, 5);
 
   // Provinsi ranking — includes best desa name per province
-  const byProvinsi = mockDesa.reduce<Record<string, { total: number; count: number; best: Desa }>>((acc, d) => {
+  const byProvinsi = desaItems.reduce<Record<string, { total: number; count: number; best: Desa }>>((acc, d) => {
     if (!acc[d.provinsi]) acc[d.provinsi] = { total: 0, count: 0, best: d };
     acc[d.provinsi].total += d.persentaseSerapan;
     acc[d.provinsi].count += 1;
@@ -53,7 +60,16 @@ export default function HomePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <HeroSection totalDesa={mockDesa.length} tahun={2024} />
+      <HeroSection totalDesa={desaItems.length} tahun={2024} />
+
+      {desaResult.state !== "ready" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-bold">Database belum bisa menampilkan data</p>
+          <p className="mt-1 text-xs leading-relaxed">
+            {desaResult.message} Data hardcoded tidak dipakai sebagai fallback. DB: {desaResult.dbHostAlias}
+          </p>
+        </div>
+      )}
 
       <section>
         <div className="mb-4 max-w-2xl">
@@ -72,7 +88,7 @@ export default function HomePage() {
             topRendah={topRendah}
             provinsiRanking={provinsiRanking}
           />
-          <AlertDiniSection desa={mockDesa} />
+          <AlertDiniSection desa={desaItems} />
         </div>
       </section>
 
@@ -87,7 +103,7 @@ export default function HomePage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-800 mb-1">{SECTION.ringkasanNasional}</h2>
         <p className="text-sm text-slate-500 mb-4">{SECTION.ringkasanNasionalSub}</p>
-        <StatsCards stats={mockSummaryStats} />
+        <StatsCards stats={summaryStats} />
         <p className="text-center text-xs text-slate-400 pb-2">
           {DATA_DISCLAIMER.short}
         </p>
@@ -102,8 +118,8 @@ export default function HomePage() {
           </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <TrendChart data={mockTrendData} />
-          <SerapanDonut stats={mockSummaryStats} />
+          <TrendChart data={trendData} />
+          <SerapanDonut stats={summaryStats} />
         </div>
       </section>
 

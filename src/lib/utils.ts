@@ -13,6 +13,14 @@ export function formatRupiahFull(value: number): string {
   return `Rp ${value.toLocaleString("id-ID")}`;
 }
 
+export function formatRupiahMock(value: number): string {
+  return `${formatRupiah(value)} (mock)`;
+}
+
+export function formatRupiahFullMock(value: number): string {
+  return `${formatRupiahFull(value)} (mock)`;
+}
+
 // ─── Status desa ──────────────────────────────────────────────────────────────
 
 /** Label ramah warga berdasarkan status kinerja. Sumber kebenaran ada di copy.ts. */

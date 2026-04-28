@@ -1,39 +1,38 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Megaphone, Search, Filter, ArrowRight, X, BarChart2, RotateCw } from "lucide-react";
-import { mockDesa } from "@/lib/mock-data";
+import { ArrowRight, BarChart2, Filter, Megaphone, RotateCw, Search, X } from "lucide-react";
 import {
-  getAllVoices, getVoiceStats,
-  VOICE_CATEGORIES, VoiceCategory,
   CitizenVoice,
+  VOICE_CATEGORIES,
+  VoiceCategory,
 } from "@/lib/citizen-voice";
-import { fetchVoices, submitVote, submitHelpful } from "@/lib/voices-api";
+import { fetchVoices, submitHelpful, submitVote } from "@/lib/voices-api";
 import VoiceCard from "@/components/desa/VoiceCard";
-import VoiceStats from "@/components/suara/VoiceStats";
 
-const desaMap = Object.fromEntries(mockDesa.map(d => [d.id, d]));
-
-function GlobalVoiceCard({ voice, helpedIds, onHelpful, onVote, votedIds }: {
-  voice:     CitizenVoice;
+function GlobalVoiceCard({
+  voice,
+  helpedIds,
+  onHelpful,
+  onVote,
+  votedIds,
+}: {
+  voice: CitizenVoice;
   helpedIds: Set<string>;
   onHelpful: (id: string) => void;
-  onVote:    (id: string, type: "BENAR" | "BOHONG") => void;
-  votedIds:  Map<string, "BENAR" | "BOHONG">;
+  onVote: (id: string, type: "BENAR" | "BOHONG") => void;
+  votedIds: Map<string, "BENAR" | "BOHONG">;
 }) {
-  const desa = desaMap[voice.desaId];
   return (
     <div className="space-y-1.5">
-      {desa && (
-        <Link
-          href={`/desa/${desa.id}`}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors"
-        >
-          📍 {desa.nama}
-          <ArrowRight size={10} />
-        </Link>
-      )}
+      <Link
+        href={`/desa/${voice.desaId}`}
+        className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 hover:text-indigo-800"
+      >
+        Data desa dari DB
+        <ArrowRight size={10} />
+      </Link>
       <VoiceCard
         voice={voice}
         onHelpful={onHelpful}
@@ -46,152 +45,153 @@ function GlobalVoiceCard({ voice, helpedIds, onHelpful, onVote, votedIds }: {
 }
 
 export default function SuaraWargaPage() {
-  const [voices,   setVoices]   = useState<CitizenVoice[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const [voices, setVoices] = useState<CitizenVoice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [helpedIds, setHelpedIds] = useState<Set<string>>(new Set());
-  const [votedIds,  setVotedIds]  = useState<Map<string, "BENAR" | "BOHONG">>(new Map());
+  const [votedIds, setVotedIds] = useState<Map<string, "BENAR" | "BOHONG">>(new Map());
 
-  const [searchDesa,  setSearchDesa]  = useState("");
-  const [filterDesa,  setFilterDesa]  = useState("");
-  const [filterCat,   setFilterCat]   = useState<VoiceCategory | "">("");
-  const [showStats,   setShowStats]   = useState(false);
+  const [searchDesa, setSearchDesa] = useState("");
+  const [filterDesa, setFilterDesa] = useState("");
+  const [filterCat, setFilterCat] = useState<VoiceCategory | "">("");
+  const [showStats, setShowStats] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Fetch from API, fall back to mock if empty/error
   useEffect(() => {
     fetchVoices()
-      .then(data => setVoices(data.length > 0 ? data : getAllVoices()))
-      .catch(() => setVoices(getAllVoices()))
+      .then((data) => setVoices(data))
+      .catch(() => setVoices([]))
       .finally(() => setLoading(false));
   }, []);
 
-  const stats = useMemo(() => getVoiceStats(), []);
+  const stats = useMemo(() => {
+    const resolved = voices.filter((voice) => voice.status === "resolved").length;
+    const inProgress = voices.filter((voice) => voice.status === "in_progress").length;
+    const open = voices.filter((voice) => voice.status === "open").length;
+    const desaCount = new Set(voices.map((voice) => voice.desaId)).size;
+    return { total: voices.length, resolved, inProgress, open, desaCount };
+  }, [voices]);
 
   const desaOptions = useMemo(
-    () => [...new Set(voices.map(v => v.desaId))]
-            .map(id => desaMap[id])
-            .filter(Boolean)
-            .sort((a, b) => a.nama.localeCompare(b.nama)),
+    () => [...new Set(voices.map((voice) => voice.desaId))]
+      .map((id) => ({ id, nama: `Desa ${id}`, kabupaten: "Dari data suara warga" }))
+      .sort((a, b) => a.nama.localeCompare(b.nama)),
     [voices]
   );
 
   const filtered = useMemo(() => {
     let result = voices;
-    if (filterDesa) result = result.filter(v => v.desaId === filterDesa);
-    if (filterCat)  result = result.filter(v => v.category === filterCat);
+    if (filterDesa) result = result.filter((voice) => voice.desaId === filterDesa);
+    if (filterCat) result = result.filter((voice) => voice.category === filterCat);
     return result;
   }, [voices, filterDesa, filterCat]);
 
   const handleHelpful = async (id: string) => {
     if (helpedIds.has(id)) return;
-    setHelpedIds(prev => new Set(prev).add(id));
-    setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful: v.helpful + 1 } : v));
+    setHelpedIds((prev) => new Set(prev).add(id));
+    setVoices((prev) => prev.map((voice) => voice.id === id ? { ...voice, helpful: voice.helpful + 1 } : voice));
     try {
       const { helpful } = await submitHelpful(id);
-      setVoices(prev => prev.map(v => v.id === id ? { ...v, helpful } : v));
-    } catch { /* optimistic stays */ }
+      setVoices((prev) => prev.map((voice) => voice.id === id ? { ...voice, helpful } : voice));
+    } catch {
+      // Optimistic update stays; not critical for read-path verification.
+    }
   };
 
   const handleVote = async (id: string, type: "BENAR" | "BOHONG") => {
     if (votedIds.get(id) === type) return;
     const prev = votedIds.get(id);
-    setVotedIds(m => new Map(m).set(id, type));
-    setVoices(vs => vs.map(v => {
-      if (v.id !== id) return v;
-      const votes = { ...v.votes };
+    setVotedIds((map) => new Map(map).set(id, type));
+    setVoices((items) => items.map((voice) => {
+      if (voice.id !== id) return voice;
+      const votes = { ...voice.votes };
       if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]--;
       votes[type === "BENAR" ? "benar" : "bohong"]++;
-      return { ...v, votes };
+      return { ...voice, votes };
     }));
+
     try {
       const updated = await submitVote(id, type);
-      setVoices(vs => vs.map(v => v.id === id ? { ...v, votes: updated } : v));
+      setVoices((items) => items.map((voice) => voice.id === id ? { ...voice, votes: updated } : voice));
     } catch {
-      setVotedIds(m => {
-        const n = new Map(m);
-        if (prev) {
-          n.set(id, prev);
-        } else {
-          n.delete(id);
-        }
-        return n;
+      setVotedIds((map) => {
+        const next = new Map(map);
+        if (prev) next.set(id, prev);
+        else next.delete(id);
+        return next;
       });
-      setVoices(vs => vs.map(v => {
-        if (v.id !== id) return v;
-        const votes = { ...v.votes };
-        votes[type === "BENAR" ? "benar" : "bohong"]--;
-        if (prev) votes[prev === "BENAR" ? "benar" : "bohong"]++;
-        return { ...v, votes };
-      }));
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 p-6 sm:p-8 text-white shadow-xl">
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 p-6 text-white shadow-xl sm:p-8">
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium mb-4">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-sm">
             <Megaphone size={12} />
             Langsung dari warga
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black mb-2 leading-tight">Suara Warga</h1>
-          <p className="text-indigo-100 text-sm max-w-lg mb-4">
-            Kumpulan cerita dan pertanyaan warga tentang kondisi desa.
-            Bukan laporan formal, tapi bahan awal untuk memahami apa yang perlu ditanyakan.
+          <h1 className="mb-2 text-2xl font-black leading-tight sm:text-3xl">Suara Warga</h1>
+          <p className="mb-4 max-w-lg text-sm text-indigo-100">
+            Kumpulan cerita dan pertanyaan warga tentang kondisi desa. Data suara dibaca dari database, tanpa fallback hardcoded.
           </p>
-          <div className="flex flex-wrap gap-4 text-sm items-center">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <div>
-              <span className="font-black text-2xl">{loading ? "—" : voices.length}</span>
-              <span className="text-indigo-200 ml-1.5">suara</span>
+              <span className="text-2xl font-black">{loading ? "-" : voices.length}</span>
+              <span className="ml-1.5 text-indigo-200">suara</span>
             </div>
-            <div className="w-px bg-white/20 h-5" />
+            <div className="h-5 w-px bg-white/20" />
             <div>
-              <span className="font-black text-2xl">{stats.desaCount}</span>
-              <span className="text-indigo-200 ml-1.5">desa</span>
+              <span className="text-2xl font-black">{stats.desaCount}</span>
+              <span className="ml-1.5 text-indigo-200">desa</span>
             </div>
-            <div className="w-px bg-white/20 h-5" />
+            <div className="h-5 w-px bg-white/20" />
             <div>
-              <span className="font-black text-2xl">{stats.resolved}</span>
-              <span className="text-indigo-200 ml-1.5">sudah selesai</span>
+              <span className="text-2xl font-black">{stats.resolved}</span>
+              <span className="ml-1.5 text-indigo-200">sudah selesai</span>
             </div>
             <button
-              onClick={() => setShowStats(v => !v)}
-              className="ml-auto inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+              type="button"
+              onClick={() => setShowStats((value) => !value)}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/25"
             >
               <BarChart2 size={12} />
               {showStats ? "Sembunyikan" : "Lihat"} statistik
             </button>
           </div>
         </div>
-        <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/5 rounded-full" />
-        <div className="absolute -bottom-10 -right-4 w-48 h-48 bg-white/5 rounded-full" />
+        <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/5" />
+        <div className="absolute -bottom-10 -right-4 h-48 w-48 rounded-full bg-white/5" />
       </div>
 
-      {/* ── Stats panel ───────────────────────────────────────────────── */}
-      {showStats && <VoiceStats />}
+      {showStats && (
+        <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm sm:grid-cols-4">
+          <div><p className="text-xl font-black text-slate-800">{stats.total}</p><p className="text-xs text-slate-500">suara DB</p></div>
+          <div><p className="text-xl font-black text-rose-600">{stats.open}</p><p className="text-xs text-slate-500">belum selesai</p></div>
+          <div><p className="text-xl font-black text-amber-600">{stats.inProgress}</p><p className="text-xs text-slate-500">diproses</p></div>
+          <div><p className="text-xl font-black text-emerald-600">{stats.resolved}</p><p className="text-xs text-slate-500">selesai</p></div>
+        </div>
+      )}
 
-      {/* ── CTA tambah cerita ─────────────────────────────────────────── */}
       {!showAddForm ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <div>
-            <p className="text-sm font-bold text-amber-800 mb-0.5">Punya cerita tentang desamu?</p>
-            <p className="text-xs text-amber-600">Pilih desamu dan ceritakan langsung — tidak perlu formal.</p>
+            <p className="mb-0.5 text-sm font-bold text-amber-800">Punya cerita tentang desamu?</p>
+            <p className="text-xs text-amber-600">Pilih desamu dan ceritakan langsung, tidak perlu formal.</p>
           </div>
           <button
+            type="button"
             onClick={() => setShowAddForm(true)}
-            className="flex-shrink-0 inline-flex items-center gap-2 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
+            className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
           >
             <Megaphone size={13} />
             Ceritakan Kondisi Desaku
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-bold text-slate-800">Pilih desa yang ingin kamu ceritakan:</p>
-            <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <button type="button" onClick={() => setShowAddForm(false)} className="text-slate-400 transition-colors hover:text-slate-600">
               <X size={16} />
             </button>
           </div>
@@ -200,43 +200,43 @@ export default function SuaraWargaPage() {
             <input
               type="text"
               value={searchDesa}
-              onChange={e => setSearchDesa(e.target.value)}
+              onChange={(event) => setSearchDesa(event.target.value)}
               placeholder="Cari nama desa..."
-              className="w-full pl-8 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-8 pr-4 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto">
-            {mockDesa
-              .filter(d =>
-                d.nama.toLowerCase().includes(searchDesa.toLowerCase()) ||
-                d.kabupaten.toLowerCase().includes(searchDesa.toLowerCase())
+          <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+            {desaOptions
+              .filter((desa) =>
+                desa.nama.toLowerCase().includes(searchDesa.toLowerCase()) ||
+                desa.kabupaten.toLowerCase().includes(searchDesa.toLowerCase())
               )
-              .map(d => (
+              .map((desa) => (
                 <Link
-                  key={d.id}
-                  href={`/desa/${d.id}/suara`}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all group"
+                  key={desa.id}
+                  href={`/desa/${desa.id}/suara`}
+                  className="group flex items-center justify-between rounded-xl border border-slate-100 p-3 transition-all hover:border-indigo-200 hover:bg-indigo-50"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700">{d.nama}</p>
-                    <p className="text-xs text-slate-400">{d.kabupaten}</p>
+                    <p className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700">{desa.nama}</p>
+                    <p className="text-xs text-slate-400">{desa.kabupaten}</p>
                   </div>
-                  <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                  <ArrowRight size={14} className="text-slate-300 transition-colors group-hover:text-indigo-500" />
                 </Link>
               ))}
           </div>
         </div>
       )}
 
-      {/* ── Filter bar ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-semibold text-slate-600">Tampilkan:</span>
           {(filterDesa || filterCat) && (
             <button
+              type="button"
               onClick={() => { setFilterDesa(""); setFilterCat(""); }}
-              className="ml-auto text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1 transition-colors"
+              className="ml-auto flex items-center gap-1 text-xs text-rose-500 transition-colors hover:text-rose-700"
             >
               <X size={12} /> Reset
             </button>
@@ -245,21 +245,22 @@ export default function SuaraWargaPage() {
         <div className="flex flex-wrap gap-2">
           <select
             value={filterDesa}
-            onChange={e => setFilterDesa(e.target.value)}
-            className="text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+            onChange={(event) => setFilterDesa(event.target.value)}
+            className="cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
           >
             <option value="">Semua Desa</option>
-            {desaOptions.map(d => (
-              <option key={d.id} value={d.id}>{d.nama}</option>
+            {desaOptions.map((desa) => (
+              <option key={desa.id} value={desa.id}>{desa.nama}</option>
             ))}
           </select>
           {(Object.entries(VOICE_CATEGORIES) as [VoiceCategory, typeof VOICE_CATEGORIES[VoiceCategory]][]).map(
             ([cat, { label, emoji, color }]) => (
               <button
+                type="button"
                 key={cat}
-                onClick={() => setFilterCat(prev => prev === cat ? "" : cat)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                  filterCat === cat ? color + " ring-2 ring-offset-1 ring-current/20" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                onClick={() => setFilterCat((prev) => prev === cat ? "" : cat)}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                  filterCat === cat ? color + " ring-2 ring-current/20 ring-offset-1" : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                 }`}
               >
                 {emoji} {label}
@@ -272,27 +273,23 @@ export default function SuaraWargaPage() {
         </p>
       </div>
 
-      {/* ── Feed ──────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-400">
           <RotateCw size={18} className="animate-spin" />
           <span className="text-sm font-semibold text-slate-500">Memuat suara warga...</span>
-          <span className="max-w-xs text-xs leading-relaxed">
-            Sedang mengambil cerita warga yang tersedia. Kalau belum ada, halaman akan menampilkan ajakan untuk mulai bercerita.
-          </span>
+          <span className="max-w-xs text-xs leading-relaxed">Sedang mengambil cerita warga dari database.</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
             <Megaphone size={18} />
           </div>
-          <p className="mt-4 text-sm font-bold text-slate-800">
-            Belum ada suara warga yang bisa ditampilkan.
-          </p>
+          <p className="mt-4 text-sm font-bold text-slate-800">Belum ada suara warga yang bisa ditampilkan.</p>
           <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500">
             Jadilah warga pertama yang membagikan kondisi desamu.
           </p>
           <button
+            type="button"
             onClick={() => setShowAddForm(true)}
             className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
           >
@@ -302,10 +299,10 @@ export default function SuaraWargaPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map(v => (
+          {filtered.map((voice) => (
             <GlobalVoiceCard
-              key={v.id}
-              voice={v}
+              key={voice.id}
+              voice={voice}
               helpedIds={helpedIds}
               onHelpful={handleHelpful}
               onVote={handleVote}

@@ -1,5 +1,5 @@
 import DesaListClient from "@/components/desa/DesaListClient";
-import { getDesaListWithFallback } from "@/lib/data/desa-read";
+import { getDesaListResult } from "@/lib/data/desa-read";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,15 @@ interface Props {
 
 export default async function DesaListPage({ searchParams }: Props) {
   const params = await searchParams;
-  const desa = await getDesaListWithFallback();
+  const result = await getDesaListResult();
 
-  return <DesaListClient desa={desa} initialSearch={params?.cari ?? ""} />;
+  return (
+    <DesaListClient
+      desa={result.items}
+      initialSearch={params?.cari ?? ""}
+      readState={result.state}
+      readMessage={result.message}
+      dbHostAlias={result.dbHostAlias}
+    />
+  );
 }

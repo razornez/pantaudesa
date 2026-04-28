@@ -6,7 +6,8 @@ import {
   Megaphone, ArrowRight,
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
-import { formatRupiah, formatRupiahFull } from "@/lib/utils";
+import { getVoicesForDesaFromDb } from "@/lib/data/voice-read";
+import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
 import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 import DownloadButton from "@/components/desa/DownloadButton";
@@ -20,7 +21,6 @@ import TransparansiCard from "@/components/desa/TransparansiCard";
 import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
-import { getVoicesForDesa } from "@/lib/citizen-voice";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 import type { Metadata } from "next";
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!desa) return { title: "Desa Tidak Ditemukan" };
 
   const title       = `${desa.nama} — Anggaran ${desa.tahun}`;
-  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Indikator serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)} (data demo).`;
+  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Indikator serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)} (mock dari database).`;
 
   return {
     title,
@@ -56,13 +56,14 @@ export default async function DesaDetailPage({ params }: Props) {
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
-  const voicePreview = getVoicesForDesa(desa.id).slice(0, 2);
+  const voices       = await getVoicesForDesaFromDb(desa.id);
+  const voicePreview = voices.slice(0, 2);
   const profil       = desa.profil;
 
   const budgetItems = [
-    { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFull(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50"  },
-    { icon: CheckCircle2, label: BUDGET_ITEMS.terealisasi.label,   value: formatRupiahFull(desa.terealisasi),   color: "text-emerald-600", bg: "bg-emerald-50" },
-    { icon: Clock,        label: BUDGET_ITEMS.belumTerserap.label, value: formatRupiahFull(selisih),            color: "text-rose-600",    bg: "bg-rose-50"    },
+    { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFullMock(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50"  },
+    { icon: CheckCircle2, label: BUDGET_ITEMS.terealisasi.label,   value: formatRupiahFullMock(desa.terealisasi),   color: "text-emerald-600", bg: "bg-emerald-50" },
+    { icon: Clock,        label: BUDGET_ITEMS.belumTerserap.label, value: formatRupiahFullMock(selisih),            color: "text-rose-600",    bg: "bg-rose-50"    },
     { icon: TrendingUp,   label: BUDGET_ITEMS.persentase.label,    value: `${desa.persentaseSerapan}%`,         color: "text-amber-600",   bg: "bg-amber-50"   },
   ];
 
@@ -165,7 +166,7 @@ export default async function DesaDetailPage({ params }: Props) {
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} aria-hidden />
                       <p className="text-[10px] text-slate-600 leading-tight truncate">{info.label}</p>
                     </div>
-                    <p className="text-sm font-black text-slate-800">{formatRupiah(s.amount)}</p>
+                    <p className="text-sm font-black text-slate-800">{formatRupiahMock(s.amount)}</p>
                     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${pct}%` }} />
                     </div>
@@ -243,8 +244,8 @@ export default async function DesaDetailPage({ params }: Props) {
               <div>
                 <p className="text-sm font-bold text-white">Suara Warga</p>
                 <p className="text-[10px] text-indigo-200">
-                  {getVoicesForDesa(desa.id).length > 0
-                    ? `${getVoicesForDesa(desa.id).length} cerita dari warga`
+                  {voices.length > 0
+                    ? `${voices.length} cerita dari warga`
                     : "Jadilah yang pertama bercerita"}
                 </p>
               </div>

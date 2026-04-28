@@ -2,22 +2,31 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Database, FileCode2, LayoutGrid, List } from "lucide-react";
+import { Database, LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
 import DesaCard from "@/components/desa/DesaCard";
 import DesaTable from "@/components/desa/DesaTable";
 import { StatusSerapan, SortField, SortOrder } from "@/lib/types";
 import { ASSETS } from "@/lib/assets";
-import type { DesaListItem } from "@/lib/data/desa-read";
+import type { DesaListItem, DesaReadState } from "@/lib/data/desa-read";
 
 type ViewMode = "grid" | "table";
 
 interface Props {
   desa: DesaListItem[];
   initialSearch?: string;
+  readState?: DesaReadState;
+  readMessage?: string;
+  dbHostAlias?: string;
 }
 
-export default function DesaListClient({ desa, initialSearch = "" }: Props) {
+export default function DesaListClient({
+  desa,
+  initialSearch = "",
+  readState = "ready",
+  readMessage = "",
+  dbHostAlias = "unknown",
+}: Props) {
   const provinsiList = useMemo(
     () => [...new Set(desa.map((d) => d.provinsi))].sort(),
     [desa]
@@ -82,9 +91,7 @@ export default function DesaListClient({ desa, initialSearch = "" }: Props) {
     setPage(1);
   };
 
-  const dbSeedCount = desa.filter((item) => item.dataOrigin === "database-seed").length;
-  const mockCount = desa.length - dbSeedCount;
-  const isDatabaseMode = dbSeedCount > 0;
+  const isDatabaseReady = readState === "ready";
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -115,19 +122,18 @@ export default function DesaListClient({ desa, initialSearch = "" }: Props) {
         </div>
       </div>
 
-      <div className={`rounded-2xl border px-4 py-3 text-sm ${isDatabaseMode ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+      <div className={`rounded-2xl border px-4 py-3 text-sm ${isDatabaseReady ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
         <div className="flex items-start gap-3">
-          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white ${isDatabaseMode ? "text-emerald-700" : "text-slate-500"}`}>
-            {isDatabaseMode ? <Database size={16} aria-hidden /> : <FileCode2 size={16} aria-hidden />}
+          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white ${isDatabaseReady ? "text-emerald-700" : "text-amber-700"}`}>
+            <Database size={16} aria-hidden />
           </div>
           <div>
             <p className="font-bold">
-              {isDatabaseMode ? "Mode: Database + Angka Demo" : "Mode: Mock/Hardcoded"}
+              {isDatabaseReady ? "Mode: Database + Angka Mock" : "Mode: Database belum tersedia"}
             </p>
             <p className="mt-1 leading-relaxed">
-              {isDatabaseMode
-                ? `${dbSeedCount} desa dibaca dari database seed. Nama, lokasi, dan sumber berasal dari DB; angka APBDes tetap mock/demo supaya tidak terlihat kosong atau resmi.`
-                : `${mockCount} desa masih dari mock/hardcoded lokal. Kalau Ancolmekar/Arjasari/Patrolsari belum muncul, berarti koneksi DB/env seed belum kebaca di runtime ini.`}
+              {readMessage || "Data hardcoded tidak dipakai sebagai fallback."}
+              <span className="ml-1 text-xs font-semibold opacity-75">DB: {dbHostAlias}</span>
             </p>
           </div>
         </div>
@@ -144,7 +150,23 @@ export default function DesaListClient({ desa, initialSearch = "" }: Props) {
         totalResults={filtered.length}
       />
 
-      {paginated.length === 0 ? (
+      {readState !== "ready" ? (
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-amber-100 bg-white px-6 py-12 text-center shadow-sm">
+          <Image
+            src={ASSETS.mascotEmpty}
+            alt="Data desa belum bisa ditampilkan dari database"
+            width={150}
+            height={170}
+            className="object-contain"
+          />
+          <div>
+            <p className="mb-1 text-base font-semibold text-slate-700 sm:text-sm">Data database belum bisa ditampilkan</p>
+            <p className="max-w-sm text-sm leading-relaxed text-slate-500 sm:text-xs">
+              PantauDesa tidak memakai fallback hardcoded. Jalankan seed demo atau cek koneksi DB untuk melihat data desa.
+            </p>
+          </div>
+        </div>
+      ) : paginated.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center shadow-sm">
           <Image
             src={ASSETS.mascotEmpty}

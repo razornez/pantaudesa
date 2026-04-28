@@ -1,41 +1,34 @@
 import Link from "next/link";
-import { Database, FileCode2, MapPin } from "lucide-react";
+import { Database, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { formatRupiahMock, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { CARD } from "@/lib/copy";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
   desa: Desa & {
-    dataOrigin?: "mock-hardcoded" | "database-seed";
+    dataOrigin?: "database";
     identityStatus?: DataStatusKind;
     budgetStatus?: "demo";
     sourceSummary?: string;
   };
 }
 
-function OriginBadge({ origin }: { origin?: "mock-hardcoded" | "database-seed" }) {
-  const isDb = origin === "database-seed";
-  const Icon = isDb ? Database : FileCode2;
-
+function OriginBadge() {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${
-        isDb
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-slate-200 bg-slate-50 text-slate-600"
-      }`}
-      title={isDb ? "Record ini dibaca dari database seed." : "Record ini masih dari mock/hardcoded lokal."}
+      className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800"
+      title="Record ini dibaca dari database."
     >
-      <Icon size={10} aria-hidden />
-      {isDb ? "Dari Database" : "Mock/Hardcoded"}
+      <Database size={10} aria-hidden />
+      Dari Database
     </span>
   );
 }
 
 export default function DesaCard({ desa }: Props) {
   const identityStatus = desa.identityStatus ?? "demo";
-  const sourceSummary = desa.sourceSummary ?? "Record ini masih dari mock/hardcoded lokal, bukan hasil baca database.";
+  const sourceSummary = desa.sourceSummary ?? "Record ini dibaca dari database. Angka demo tetap ditandai mock.";
 
   return (
     <Link
@@ -56,7 +49,7 @@ export default function DesaCard({ desa }: Props) {
         </div>
 
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <OriginBadge origin={desa.dataOrigin} />
+          <OriginBadge />
           <DataStatusBadge status={identityStatus} size="xs" />
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
@@ -75,7 +68,7 @@ export default function DesaCard({ desa }: Props) {
             <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-slate-600">
               <span>{CARD.penyerapan}</span>
               <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                Angka Demo
+                Angka Mock
               </span>
             </div>
             <span className="font-bold text-slate-700">{desa.persentaseSerapan}%</span>
@@ -91,11 +84,11 @@ export default function DesaCard({ desa }: Props) {
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <div className="rounded-xl bg-slate-50 p-3 sm:p-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-[10px]">Diterima</p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiah(desa.totalAnggaran)}</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiahMock(desa.totalAnggaran)}</p>
           </div>
           <div className="rounded-xl bg-slate-50 p-3 sm:p-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-[10px]">Dipakai</p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiah(desa.terealisasi)}</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiahMock(desa.terealisasi)}</p>
           </div>
         </div>
       </div>

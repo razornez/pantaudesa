@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { prisma as db } from "@/lib/prisma";
 import { handleApiError } from "@/lib/api-error";
 import type { VoiceCategory } from "@/lib/citizen-voice";
 
@@ -61,6 +61,8 @@ const VOICE_INCLUDE = {
 
 export async function GET(req: Request) {
   try {
+    if (!db) return NextResponse.json([]);
+
     const { searchParams } = new URL(req.url);
     const desaId = searchParams.get("desaId");
     const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
@@ -84,6 +86,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: "Database belum tersedia" }, { status: 503 });
+    }
+
     const session = await auth();
 
     const body = await req.json();
