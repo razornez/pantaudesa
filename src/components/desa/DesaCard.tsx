@@ -3,13 +3,21 @@ import { MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { CARD } from "@/lib/copy";
-import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
+import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
-  desa: Desa;
+  desa: Desa & {
+    dataOrigin?: "mock" | "hybrid-db-seed";
+    identityStatus?: DataStatusKind;
+    budgetStatus?: "demo";
+    sourceSummary?: string;
+  };
 }
 
 export default function DesaCard({ desa }: Props) {
+  const identityStatus = desa.identityStatus ?? "demo";
+  const sourceSummary = desa.sourceSummary ?? "Data contoh dari mock lokal.";
+
   return (
     <Link
       href={`/desa/${desa.id}`}
@@ -27,6 +35,14 @@ export default function DesaCard({ desa }: Props) {
             {getStatusLabel(desa.status)}
           </span>
         </div>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <DataStatusBadge status={identityStatus} size="xs" />
+          <DataStatusBadge status="demo" size="xs" />
+        </div>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+          {sourceSummary}
+        </p>
 
         <div className="mt-2.5 flex items-start gap-1.5 text-slate-500">
           <MapPin size={13} className="mt-0.5 flex-shrink-0" aria-hidden />
