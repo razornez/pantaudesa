@@ -115,7 +115,10 @@ export default async function DesaDetailPage({ params }: Props) {
         {/* Sumber pendapatan — compact horizontal */}
         {desa.pendapatan && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
-            <p className="text-xs font-bold text-slate-600 mb-3">Dari mana uang desa ini berasal? <span className="font-normal text-amber-600">(data demo)</span></p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-bold text-slate-600">Dari mana uang desa ini berasal?</p>
+              <DataStatusBadge status="demo" size="xs" />
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(
                 [

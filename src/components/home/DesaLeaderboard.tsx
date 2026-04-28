@@ -8,6 +8,7 @@ import { Desa } from "@/lib/types";
 import { BADGE_STYLES } from "@/lib/badge";
 import { getSerapanColor } from "@/lib/utils";
 import { ASSETS } from "@/lib/assets";
+import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,8 +164,11 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
           />
           <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/90" />
           <div className="absolute bottom-2 left-4">
+            <div className="mb-1">
+              <DataStatusBadge status="demo" size="xs" />
+            </div>
             <h2 className="text-base font-black text-slate-900 drop-shadow-sm">Prioritas Cek Transparansi</h2>
-            <p className="text-[10px] text-slate-600 font-medium">Urutan bantu baca data demo, bukan penilaian final</p>
+            <p className="text-[10px] text-slate-600 font-medium">Urutan bantu baca, bukan penilaian final</p>
           </div>
         </div>
         <div className="px-5 pb-0 pt-1">
@@ -222,7 +226,8 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
         <div>
           <div className="px-4 py-3 bg-amber-50/60 border-b border-amber-100 flex items-center gap-2">
             <Search size={14} className="text-amber-600 flex-shrink-0" />
-            <p className="text-xs text-amber-800 font-semibold">Indikator serapan rendah dalam data demo, perlu dicek bersama sumbernya.</p>
+            <DataStatusBadge status="needs-review" />
+            <p className="text-xs text-amber-800 font-semibold">Indikator serapan rendah, perlu dicek bersama sumbernya.</p>
           </div>
           {topRendah.map((d, i) => <RankRow key={d.id} desa={d} rank={i + 1} warning />)}
         </div>
