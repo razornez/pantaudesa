@@ -68,6 +68,29 @@ export default async function DesaDetailPage({ params }: Props) {
     { icon: TrendingUp,   label: BUDGET_ITEMS.persentase.label,    value: `${desa.persentaseSerapan}%`,         color: "text-amber-600",   bg: "bg-amber-50"   },
   ];
 
+  const panduanFlowSteps = [
+    {
+      step: "1",
+      title: "Pahami hak warga",
+      body: "Mulai dari hal yang bisa ditanyakan, bukan langsung menyimpulkan.",
+    },
+    {
+      step: "2",
+      title: "Tanya pihak yang tepat",
+      body: "Bedakan urusan desa, kabupaten, dan layanan lain sebelum bertindak.",
+    },
+    {
+      step: "3",
+      title: "Cek sebelum melapor",
+      body: "Pastikan dokumen, konteks, dan jalur tanya sudah dicoba dulu.",
+    },
+    {
+      step: "4",
+      title: "Sampaikan suara warga",
+      body: "Bagikan kondisi desa atau lanjutkan ke kanal resmi bila sudah siap.",
+    },
+  ] as const;
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
 
@@ -161,26 +184,53 @@ export default async function DesaDetailPage({ params }: Props) {
       <KinerjaAnggaranCard desa={desa} />
       </section>
 
-      {/* ── 6. HAK WARGA — estimasi panduan, bukan bukti (RIGHTS-01, RIGHTS-06) */}
-      <section id="panduan-warga" className="space-y-5">
-      <SeharusnyaAdaSection desa={desa} />
-
-      {/* ── 7. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
-      <ResponsibilityGuideCard />
-
-      {/* ── 8. KELENGKAPAN DESA — moved lower, secondary info ─────────────── */}
+      {/* ── 6. KELENGKAPAN DESA — secondary context before citizen guidance */}
       {profil && <KelengkapanDesa profil={profil} />}
 
-      {/* ── 9. TANGGUNG JAWAB — escalation guide ──────────────────────────── */}
-      <TanggungJawabSection desa={desa} />
+      {/* ── 7. PANDUAN WARGA — connected citizen journey */}
+      <section id="panduan-warga" className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5">
+        <div className="space-y-4">
+          <div className="max-w-2xl">
+            <p className="text-xs font-black uppercase tracking-widest text-amber-700">Panduan Warga</p>
+            <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
+              Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum melapor.
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Alur ini membantu warga bergerak dari memahami konteks, menanyakan hal yang tepat,
+              sampai menyampaikan kondisi desa tanpa membuat data demo terlihat seperti temuan final.
+            </p>
+          </div>
 
-      {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
-      <div id="pre-report-checklist">
-        <PreReportChecklistCard kabupaten={desa.kabupaten} />
-      </div>
+          <ol className="grid gap-2 sm:grid-cols-4" aria-label="Alur panduan warga">
+            {panduanFlowSteps.map((item) => (
+              <li key={item.step} className="rounded-2xl border border-amber-100 bg-white/85 p-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
+                    {item.step}
+                  </span>
+                  <p className="text-xs font-black text-slate-800">{item.title}</p>
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{item.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-      {/* ── 11. SUARA WARGA + PAK WASPADA CTA ─────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <SeharusnyaAdaSection desa={desa} />
+
+        {/* ── 8. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
+        <ResponsibilityGuideCard />
+
+        {/* ── 9. TANGGUNG JAWAB — escalation guide ──────────────────────────── */}
+        <TanggungJawabSection desa={desa} />
+
+        {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
+        <div id="pre-report-checklist">
+          <PreReportChecklistCard kabupaten={desa.kabupaten} />
+        </div>
+
+        {/* ── 11. SUARA WARGA + PAK WASPADA CTA ─────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
         {/* Suara warga preview */}
         <Link
           href={`/desa/${desa.id}/suara`}

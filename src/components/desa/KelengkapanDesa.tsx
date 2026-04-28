@@ -6,10 +6,10 @@ import {
   ShieldCheck, Users, Heart, BookOpen, Dumbbell, Store,
   Stethoscope, GraduationCap, Leaf, ChevronDown, ChevronUp,
   TrendingUp, CheckCircle2, XCircle, Coins, BarChart3,
-  Wheat, Trees,
 } from "lucide-react";
 import { ProfilDesa, AsetDesa, FasilitasDesa, LembagaDesa } from "@/lib/types";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
+import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 type Tab = "aset" | "fasilitas" | "lembaga" | "bumdes";
 
@@ -390,14 +390,17 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       {/* Header — clean dark, no image */}
-      <div className="bg-slate-800 px-5 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-          <span className="text-base">🏛️</span>
+      <div className="bg-slate-800 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-base">🏛️</span>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelengkapan Desa</p>
+            <h2 className="text-sm font-black text-white leading-tight">Aset, Fasilitas &amp; Organisasi Masyarakat</h2>
+          </div>
         </div>
-        <div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelengkapan Desa</p>
-          <h2 className="text-sm font-black text-white leading-tight">Aset, Fasilitas &amp; Organisasi Masyarakat</h2>
-        </div>
+        <DataStatusBadge status="demo" size="xs" className="self-start" />
       </div>
 
       {/* Tabs */}
