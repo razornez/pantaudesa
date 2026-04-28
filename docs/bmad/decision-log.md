@@ -239,3 +239,35 @@ References:
 Implication:
 
 - future tasks should create/update BMAD story/status docs first.
+
+---
+
+## 2026-04-28 — Batch-first executor workflow adopted
+
+Decision:
+
+- New technical work should be prepared as batch-ready execution prompts.
+- Rangga prepares story/prompt/acceptance/guardrails/docs.
+- Ujang/Asep execute technical work locally, run QA/guardrails, commit, and push.
+- Implementation notes should be embedded in commit messages unless a separate report file is explicitly requested.
+- After Owner says OK, Rangga reviews latest commits and updates BMAD/docs/status.
+
+Reason:
+
+- saves token,
+- prevents Iwan/Rangga/Ujang/Asep task collision,
+- keeps technical executors focused on code/local QA,
+- keeps documentation/status work centralized with Rangga,
+- allows Asep to take handover from Ujang without losing rules/context.
+
+References:
+
+- `docs/bmad/workflow.md`
+- `docs/bmad/boundary-rules.md`
+- `docs/bmad/sprint-status.md`
+
+Implication:
+
+- future tasks should not be sent as vague one-off instructions.
+- prompts to Ujang/Asep must include scope, out-of-scope, acceptance criteria, QA, guardrails, commit message requirements, and report-back format.
+- docs-only/status-only work may still be executed directly by Rangga.
