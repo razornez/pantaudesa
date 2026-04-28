@@ -224,7 +224,7 @@ export const HERO = {
   title:     "Uang desamu sudah dipakai untuk apa?",
   subtitle:  "Setiap tahun desamu mendapat miliaran rupiah dari negara. Uang itu untuk kamu — rakyatnya. Cari desamu dan lihat: sudah dipakai dengan benar atau belum.",
   ctaSearch: "Cari Desamu Sekarang",
-  ctaAll:    "Lihat Semua Desa",
+  ctaAll:    "Cara Membaca Data",
 } as const;
 
 export const NAVBAR_COPY = {
@@ -409,7 +409,7 @@ export const PENGADUAN = {
 // ─── Filter bar ───────────────────────────────────────────────────────────────
 
 export const FILTER = {
-  searchPlaceholder: "Cari nama desa, kecamatan, atau kabupaten...",
+  searchPlaceholder: "Ketik nama desa, kecamatan, atau kabupaten",
   allProvinsi:       "Semua Provinsi",
   filterLabel:       "Tampilkan:",
   totalResults:      (n: number) => `Ditemukan ${n} desa`,

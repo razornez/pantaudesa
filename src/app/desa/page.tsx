@@ -13,7 +13,10 @@ import { ASSETS } from "@/lib/assets";
 type ViewMode = "grid" | "table";
 
 export default function DesaListPage() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("cari") ?? "";
+  });
   const [provinsi, setProvinsi] = useState("");
   const [status, setStatus] = useState<StatusSerapan>("semua");
   const [sortField, setSortField] = useState<SortField>("nama");

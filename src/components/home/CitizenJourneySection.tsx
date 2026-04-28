@@ -14,37 +14,37 @@ type Step = {
 
 const steps: Step[] = [
   {
-    title: "Cari desa",
+    title: "Cari Desa",
     body: "Mulai dari nama desa, kecamatan, atau kabupaten yang ingin kamu pahami.",
     icon: Search,
   },
   {
-    title: "Lihat sumber",
-    body: "Cek apakah dokumen atau tautan publiknya sudah ditemukan.",
-    icon: FileSearch,
-  },
-  {
-    title: "Baca status",
-    body: "Bedakan data demo, impor, perlu review, dan data yang kelak terverifikasi.",
+    title: "Lihat status data",
+    body: "Pahami apakah informasinya masih demo, sumber ditemukan, atau perlu review.",
     icon: BadgeCheck,
   },
   {
-    title: "Tanya tepat",
-    body: "Gunakan temuan awal untuk bertanya dengan tenang ke pihak yang sesuai.",
+    title: "Baca sumber/dokumen",
+    body: "Cek dokumen atau tautan publik sebelum menilai angka dan ringkasan.",
+    icon: FileSearch,
+  },
+  {
+    title: "Tanya atau sampaikan suara warga",
+    body: "Gunakan bahan awal untuk bertanya dengan tenang atau membagikan kondisi desa.",
     icon: MessageSquare,
   },
 ];
 
 export default function CitizenJourneySection() {
   return (
-    <section>
+    <section id="alur-warga">
       <div className="mb-4 max-w-2xl">
         <p className="text-xs font-semibold uppercase tracking-wide text-sky-600">Alur warga</p>
         <h2 className="mt-1 text-lg font-semibold text-slate-800">
           Dari penasaran jadi tahu harus cek apa
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          PantauDesa membantu warga membaca informasi publik desa langkah demi langkah.
+          Cari desa, lihat status data, baca sumber atau dokumen, lalu ajukan pertanyaan atau sampaikan suara warga dengan tenang.
         </p>
       </div>
 

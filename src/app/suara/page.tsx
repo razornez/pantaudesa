@@ -107,7 +107,15 @@ export default function SuaraWargaPage() {
       const updated = await submitVote(id, type);
       setVoices(vs => vs.map(v => v.id === id ? { ...v, votes: updated } : v));
     } catch {
-      setVotedIds(m => { const n = new Map(m); prev ? n.set(id, prev) : n.delete(id); return n; });
+      setVotedIds(m => {
+        const n = new Map(m);
+        if (prev) {
+          n.set(id, prev);
+        } else {
+          n.delete(id);
+        }
+        return n;
+      });
       setVoices(vs => vs.map(v => {
         if (v.id !== id) return v;
         const votes = { ...v.votes };
@@ -130,8 +138,8 @@ export default function SuaraWargaPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black mb-2 leading-tight">Suara Warga</h1>
           <p className="text-indigo-100 text-sm max-w-lg mb-4">
-            Kumpulan cerita nyata dari warga desa-desa seluruh Indonesia.
-            Bukan laporan formal — ini suara yang jujur, apa adanya.
+            Kumpulan cerita dan pertanyaan warga tentang kondisi desa.
+            Bukan laporan formal, tapi bahan awal untuk memahami apa yang perlu ditanyakan.
           </p>
           <div className="flex flex-wrap gap-4 text-sm items-center">
             <div>
@@ -176,7 +184,7 @@ export default function SuaraWargaPage() {
             className="flex-shrink-0 inline-flex items-center gap-2 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
           >
             <Megaphone size={13} />
-            Ceritakan
+            Ceritakan Kondisi Desaku
           </button>
         </div>
       ) : (
@@ -266,13 +274,31 @@ export default function SuaraWargaPage() {
 
       {/* ── Feed ──────────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
+        <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-400">
           <RotateCw size={18} className="animate-spin" />
-          <span className="text-sm">Memuat suara warga...</span>
+          <span className="text-sm font-semibold text-slate-500">Memuat suara warga...</span>
+          <span className="max-w-xs text-xs leading-relaxed">
+            Sedang mengambil cerita warga yang tersedia. Kalau belum ada, halaman akan menampilkan ajakan untuk mulai bercerita.
+          </span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-          <p className="text-slate-400 text-sm">Belum ada suara yang sesuai filter.</p>
+        <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+            <Megaphone size={18} />
+          </div>
+          <p className="mt-4 text-sm font-bold text-slate-800">
+            Belum ada suara warga yang bisa ditampilkan.
+          </p>
+          <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500">
+            Jadilah warga pertama yang membagikan kondisi desamu.
+          </p>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+          >
+            <Megaphone size={13} />
+            Ceritakan Kondisi Desaku
+          </button>
         </div>
       ) : (
         <div className="space-y-4">

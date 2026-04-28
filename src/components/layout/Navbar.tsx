@@ -13,8 +13,8 @@ import { NAVBAR_COPY } from "@/lib/copy";
 
 const navLinks = [
   { href: "/",           label: "Beranda"     },
-  { href: "/desa",       label: "Data Desa"   },
-  { href: "/suara",      label: "Suara Warga" },
+  { href: "/desa",       label: "Cari Desa"   },
+  { href: "/suara-warga", label: "Suara Warga" },
   { href: "/bandingkan", label: "Bandingkan"  },
   { href: "/panduan",    label: "Panduan"     },
 ];

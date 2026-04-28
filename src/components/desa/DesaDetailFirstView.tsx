@@ -72,14 +72,14 @@ export default function DesaDetailFirstView({ desa }: Props) {
                 href="#dokumen-desa"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
               >
-                Lihat dokumen yang tersedia
+                Lihat Dokumen
                 <ArrowRight size={14} />
               </a>
               <a
                 href="#status-data"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Cara membaca status data
+                Cara Membaca Data
               </a>
             </div>
           </div>

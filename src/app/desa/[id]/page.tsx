@@ -209,7 +209,7 @@ export default async function DesaDetailPage({ params }: Props) {
             </div>
           )}
           <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
-            <span className="text-[11px] text-indigo-600 font-semibold">Lihat semua & tambah ceritamu</span>
+            <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
             <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
           </div>
         </Link>

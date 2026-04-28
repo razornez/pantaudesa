@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import type { FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
-import { HERO } from "@/lib/copy";
+import { FILTER, HERO } from "@/lib/copy";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,7 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
   const router = useRouter();
   const [ready,        setReady]        = useState(false);
   const [barsAnimated, setBarsAnimated] = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState("");
 
   useEffect(() => {
     const t1 = setTimeout(() => setReady(true),        80);
@@ -70,6 +71,12 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [router]);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    router.push(query ? `/desa?cari=${encodeURIComponent(query)}` : "/desa");
+  };
 
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-2xl">
@@ -151,26 +158,38 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
 
           {/* CTA */}
           <div
-            className={`animate-fade-up delay-300 flex flex-col sm:flex-row gap-3 ${ready ? "" : "opacity-0"}`}
+            className={`animate-fade-up delay-300 space-y-3 ${ready ? "" : "opacity-0"}`}
           >
-            <Link
-              href="/desa"
-              className="group inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition-all text-sm shadow-xl shadow-indigo-900/40"
-            >
-              <Search size={15} />
-              {HERO.ctaSearch}
-              <kbd className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-100/70 border border-indigo-200/60 text-indigo-400 group-hover:bg-indigo-100 transition-colors">
-                ⌘K
-              </kbd>
-            </Link>
+            <form onSubmit={handleSearch} className="flex flex-col gap-2 sm:flex-row">
+              <label htmlFor="home-desa-search" className="sr-only">
+                Cari desa, kecamatan, atau kabupaten
+              </label>
+              <div className="relative min-w-0 flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-200" aria-hidden />
+                <input
+                  id="home-desa-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={FILTER.searchPlaceholder}
+                  className="w-full rounded-xl border border-white/25 bg-white/95 py-2.5 pl-9 pr-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 shadow-xl shadow-indigo-900/35 outline-none transition focus:border-white focus:ring-2 focus:ring-white/60"
+                />
+              </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-xl shadow-indigo-900/40 transition-colors hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-700"
+              >
+                {HERO.ctaSearch}
+              </button>
+            </form>
 
-            <Link
-              href="/desa"
+            <a
+              href="#alur-warga"
               className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white font-medium px-5 py-2.5 rounded-xl hover:bg-white/20 transition-colors text-sm border border-white/20"
             >
               {HERO.ctaAll}
               <ArrowRight size={15} />
-            </Link>
+            </a>
           </div>
 
           <p
