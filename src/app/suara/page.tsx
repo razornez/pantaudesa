@@ -30,7 +30,7 @@ function GlobalVoiceCard({
         href={`/desa/${voice.desaId}`}
         className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 hover:text-indigo-800"
       >
-        Data desa dari DB
+        Lihat data desa
         <ArrowRight size={10} />
       </Link>
       <VoiceCard
@@ -132,7 +132,7 @@ export default function SuaraWargaPage() {
           </div>
           <h1 className="mb-2 text-2xl font-black leading-tight sm:text-3xl">Suara Warga</h1>
           <p className="mb-4 max-w-lg text-sm text-indigo-100">
-            Kumpulan cerita dan pertanyaan warga tentang kondisi desa. Data suara dibaca dari database, tanpa fallback hardcoded.
+            Kumpulan cerita dan pertanyaan warga tentang kondisi desa. Gunakan cerita ini sebagai bahan awal untuk memahami situasi di lapangan.
           </p>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div>
@@ -165,7 +165,7 @@ export default function SuaraWargaPage() {
 
       {showStats && (
         <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm sm:grid-cols-4">
-          <div><p className="text-xl font-black text-slate-800">{stats.total}</p><p className="text-xs text-slate-500">suara DB</p></div>
+          <div><p className="text-xl font-black text-slate-800">{stats.total}</p><p className="text-xs text-slate-500">suara warga</p></div>
           <div><p className="text-xl font-black text-rose-600">{stats.open}</p><p className="text-xs text-slate-500">belum selesai</p></div>
           <div><p className="text-xl font-black text-amber-600">{stats.inProgress}</p><p className="text-xs text-slate-500">diproses</p></div>
           <div><p className="text-xl font-black text-emerald-600">{stats.resolved}</p><p className="text-xs text-slate-500">selesai</p></div>
@@ -277,7 +277,7 @@ export default function SuaraWargaPage() {
         <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-400">
           <RotateCw size={18} className="animate-spin" />
           <span className="text-sm font-semibold text-slate-500">Memuat suara warga...</span>
-          <span className="max-w-xs text-xs leading-relaxed">Sedang mengambil cerita warga dari database.</span>
+          <span className="max-w-xs text-xs leading-relaxed">Sebentar ya, kami sedang menyiapkan cerita warga.</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
