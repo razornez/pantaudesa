@@ -1,7 +1,7 @@
 # PantauDesa BMAD-lite Sprint Status
 
-Date: 2026-04-28
-Status: active-sprint-status
+Date: 2026-04-29
+Status: sprint-03-closeout-ready
 Prepared-by: Rangga / BMAD-lite orchestration
 
 ## Current sprint
@@ -20,84 +20,85 @@ Updated Owner goal:
 - dummy/mock fields must be clearly marked, e.g. `Rp1 M (mock)`;
 - no `verified` status;
 - no official numeric APBDes extraction;
-- voices/comments/replies/votes/helpfuls should also be DB-backed.
+- voices/comments/replies/votes/helpfuls should also be DB-backed;
+- loading/caching/performance should be acceptable for DB-backed pages.
 
 ## Current active task
 
-- `docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md`
+- `docs/bmad/tasks/sprint-03-005-user-friendly-empty-loading-performance.md`
 
 ## Current task status
 
-`READY_FOR_IWAN_GATE_AND_UJANG_ASEP_EXECUTION`
+`ACCEPTED_FOR_SPRINT_03_CLOSEOUT`
 
 Why:
 
-- Owner explicitly wants Sprint 03 to cover DB-first displayed data as one larger batch;
-- task file has been created for Ujang/Asep;
-- batch includes seed expansion, DB-only displayed reads, voice DB reads, mock field labels, and no hardcoded runtime fallback;
-- implementation should be handled locally by Ujang/Asep because it needs DB env, seed execution, QA, route checks, and performance observation.
+- Owner confirmed Ujang/Asep work is safe;
+- Rangga reviewed commit `43f564acfb0d98502289ef5423c5b2e9912888e4` against Sprint 03-005;
+- route skeletons were added;
+- public read caching/revalidation was added;
+- source/freshness info was added;
+- redundant demo badges were reduced;
+- QA was reported passing by Ujang;
+- guardrails were respected.
 
-## Recently completed / reported
+Review file:
+
+- `docs/bmad/reviews/sprint-03-005-rangga-review.md`
+
+## Completed Sprint 03 work
 
 1. UI trust cleanup accepted/mostly closed.
 2. Shared Supabase migration applied.
 3. Demo seed Option A reported QA pass.
 4. Hybrid DB + mock flagging implemented.
-5. Latest code fixes added:
-   - request-time DB read with `force-dynamic`,
-   - Prisma env guards,
-   - mock fallback crash safety,
-   - actual-data province filter.
+5. DB-first displayed data batch completed:
+   - displayed data moved to DB-first reads,
+   - hardcoded/mock displayed data seeded into DB as demo/mock rows,
+   - voice/comment/reply/vote/helpful examples moved into DB,
+   - no silent hardcoded fallback for displayed datasets.
+6. Sprint 03-005 UX/performance closeout completed:
+   - loading skeletons for DB-backed routes,
+   - 5-minute cache/revalidation for public desa list/detail reads,
+   - detail voice preview optimized,
+   - user-facing technical DB/fallback/hardcoded copy removed,
+   - source/freshness summaries added,
+   - redundant demo badges reduced.
 
-## Current batch objective
+## Latest accepted technical commit
 
-Sprint 03-004 should move beyond hybrid fallback:
+- `43f564acfb0d98502289ef5423c5b2e9912888e4` — `fix(perf): add db-first loading and source freshness`
 
-- seed all currently displayed hardcoded/mock datasets into DB;
-- move displayed runtime reads to DB services;
-- remove silent hardcoded fallback for displayed data;
-- use controlled empty/unavailable states if DB is unavailable;
-- keep static copy/config constants allowed in code;
-- flag all dummy/mock numeric/record values clearly;
-- keep official/source-backed imported data unverified but not necessarily labelled mock;
-- preserve no verified/no official numeric extraction/no scraper guardrails.
+Reported QA in commit:
 
-## Immediate handoff prompt
+- `npx prisma validate`: PASS
+- `npx tsc --noEmit`: PASS
+- `npm run test`: PASS
+- `npm run build`: PASS
+- route checks: PASS
 
-Use this short handoff:
+Reported performance note:
 
-```text
-Ujang, pull latest main, read docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md, execute as one Sprint 03 DB-first batch, run QA/guardrails, commit with implementation note, push, then report commit SHA + QA/route summary. Do not widen scope beyond the task file.
-```
+- `/desa` warm route around 256ms after cache;
+- detail pages show skeleton immediately;
+- warm detail server responses around 1.1s on remote DB.
 
-If Asep takes over:
+## Known risks to carry forward
 
-```text
-Asep, pull latest main, read docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md, continue from latest commit, keep the same scope/guardrails, run QA, commit/push only necessary fixes, then report commit SHA + QA/route summary.
-```
+- Remote Supabase cold reads can still take several seconds.
+- Build still emits pre-existing Turbopack NFT trace warning around Prisma route import.
+- Next dev logs still show unexpected ResolveMetadata root span warning.
+- Cache invalidation is broad (`desa-public`) and may need refinement when Sprint 04 source review/admin workflow exists.
 
-## Required QA for current task
+## Recommended next step
 
-Run locally/staging:
+Prepare Sprint 03 closeout decision for Iwan/Owner:
 
-```bash
-npx prisma validate
-npx tsc --noEmit
-npm run test
-npm run build
-```
+- close Sprint 03, or
+- open a focused Sprint 03 rework only if Owner finds visual/runtime issues, or
+- move to Sprint 04 Source Review Workflow planning.
 
-Route checks:
-
-- `/`
-- `/desa`
-- `/desa?cari=ancolmekar`
-- `/desa/ancolmekar`
-- `/desa/4`
-- `/suara-warga`
-- `/suara`
-
-## Blocked / not next
+## Blocked / not next without new gate
 
 Do not proceed yet to:
 
@@ -117,8 +118,9 @@ Do not proceed yet to:
 | Shared Supabase migration | APPLIED | Report 47. |
 | Demo seed Option A | REPORTED_QA_PASS | Report 51. |
 | Hybrid DB + mock flagging | IMPLEMENTED | Superseded by DB-first all displayed data goal. |
-| DB-first all displayed data batch | READY_FOR_IWAN_GATE_AND_UJANG_ASEP_EXECUTION | Task file prepared. |
-| Runtime DB connection check | ABSORBED INTO SPRINT-03-004 | Covered by larger DB-first batch. |
-| Service layer hardening | CANDIDATE_AFTER_BATCH | Depends on Sprint 03-004 result. |
+| DB-first all displayed data batch | COMPLETED | Commit `5ccc8fbe...`; all displayed data moved DB-first with demo/mock rows. |
+| Loading/caching/source closeout | ACCEPTED_FOR_SPRINT_03_CLOSEOUT | Commit `43f564ac...`; Rangga review complete. |
+| Runtime DB connection check | ABSORBED | Covered by larger DB-first and performance batches. |
+| Service layer hardening | PARTIALLY COVERED | Cache/detail reads improved; deeper observability can move to future if needed. |
 | Source review workflow | FUTURE SPRINT 04 CANDIDATE | Not opened. |
 | Verified / official numeric extraction | BLOCKED | Needs future governance. |
