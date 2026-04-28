@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { Database, FileCode2, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { CARD } from "@/lib/copy";
@@ -7,16 +7,35 @@ import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatus
 
 interface Props {
   desa: Desa & {
-    dataOrigin?: "mock" | "hybrid-db-seed";
+    dataOrigin?: "mock-hardcoded" | "database-seed";
     identityStatus?: DataStatusKind;
     budgetStatus?: "demo";
     sourceSummary?: string;
   };
 }
 
+function OriginBadge({ origin }: { origin?: "mock-hardcoded" | "database-seed" }) {
+  const isDb = origin === "database-seed";
+  const Icon = isDb ? Database : FileCode2;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${
+        isDb
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-slate-200 bg-slate-50 text-slate-600"
+      }`}
+      title={isDb ? "Record ini dibaca dari database seed." : "Record ini masih dari mock/hardcoded lokal."}
+    >
+      <Icon size={10} aria-hidden />
+      {isDb ? "Dari Database" : "Mock/Hardcoded"}
+    </span>
+  );
+}
+
 export default function DesaCard({ desa }: Props) {
   const identityStatus = desa.identityStatus ?? "demo";
-  const sourceSummary = desa.sourceSummary ?? "Data contoh dari mock lokal.";
+  const sourceSummary = desa.sourceSummary ?? "Record ini masih dari mock/hardcoded lokal, bukan hasil baca database.";
 
   return (
     <Link
@@ -37,8 +56,8 @@ export default function DesaCard({ desa }: Props) {
         </div>
 
         <div className="mt-2 flex flex-wrap gap-1.5">
+          <OriginBadge origin={desa.dataOrigin} />
           <DataStatusBadge status={identityStatus} size="xs" />
-          <DataStatusBadge status="demo" size="xs" />
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
           {sourceSummary}
@@ -55,7 +74,9 @@ export default function DesaCard({ desa }: Props) {
           <div className="mb-2 flex items-center justify-between gap-2 text-sm sm:text-xs">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-slate-600">
               <span>{CARD.penyerapan}</span>
-              <DataStatusBadge status="demo" size="xs" />
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                Angka Demo
+              </span>
             </div>
             <span className="font-bold text-slate-700">{desa.persentaseSerapan}%</span>
           </div>
