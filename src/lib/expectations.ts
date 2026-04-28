@@ -56,15 +56,15 @@ function apbdesAmount(desa: Desa, kode: string): number {
 
 function ringkasanByStatus(persen: number): { text: string; tone: DesaExpectation["ringkasanTone"] } {
   if (persen >= 85) return {
-    text: "Desa ini aktif menggunakan anggarannya. Pastikan hasilnya benar-benar terasa di lapangan.",
+    text: "Indikator serapan demo tinggi. Warga bisa cek apakah hasilnya terasa di lapangan dengan melihat dokumen publik desa.",
     tone: "positive",
   };
   if (persen >= 60) return {
-    text: `Masih ada ${100 - persen}% anggaran yang belum jelas. Warga berhak menanyakan rencana penggunaannya.`,
+    text: `Masih ada ${100 - persen}% anggaran yang belum tercatat terpakai di data demo. Warga bisa bertanya rencana penggunaannya ke desa.`,
     tone: "warning",
   };
   return {
-    text: `Lebih dari separuh anggaran belum terpakai. Ini bukan normal — warga perlu bertanya langsung ke kepala desa.`,
+    text: `Indikator serapan demo masih rendah. Data ini perlu dicek dari sumber dokumen resmi sebelum membuat kesimpulan apapun.`,
     tone: "danger",
   };
 }

@@ -150,6 +150,27 @@ export const SKOR = {
   },
   nationalLabel: "Rata-rata Keterbukaan Desa se-Indonesia",
   nationalSub:   "Gabungan dari laporan tepat waktu, dokumen terbuka, penggunaan anggaran yang jelas, dan respons desa ke warga",
+  methodologyTitle:  "Cara menghitung skor ini",
+  methodologyItems: [
+    "Ketersediaan dokumen publik (APBDes, RKPDes, Laporan Realisasi)",
+    "Kelengkapan laporan tahunan",
+    "Konsistensi serapan anggaran sepanjang tahun",
+    "Respons desa terhadap kanal pertanyaan warga",
+  ],
+  methodologyNote: "Skor ini adalah simulasi demo — bukan skor resmi atau final. Angka sebenarnya bergantung pada sumber data yang sudah diverifikasi.",
+} as const;
+
+// ─── SeharusnyaAdaSection safety copy (RIGHTS-01, RIGHTS-06) ─────────────────
+
+export const SEHARUSNYA_ADA = {
+  estimasiCaution: "Angka ini adalah estimasi panduan, bukan bukti pelanggaran.",
+  sectionDisclaimer: "Daftar ini disusun sebagai panduan membaca anggaran, bukan sebagai bukti ada atau tidaknya pelanggaran. Warga perlu mengecek sumber dokumen resmi sebelum membuat kesimpulan.",
+  statusLabels: {
+    wajib:        "Wajib menurut regulasi",
+    direncanakan: "Masuk rencana APBDes",
+    tanyakan:     "Perlu ditanyakan ke desa",
+  },
+  verdictDemoNote: "Angka serapan ini adalah data demo untuk panduan baca. Bukan kesimpulan final.",
 } as const;
 
 // ─── Sumber pendapatan desa ───────────────────────────────────────────────────
@@ -357,13 +378,32 @@ export const DOKUMEN = {
   belum:    "Belum ada — kamu berhak memintanya!",
 } as const;
 
-// ─── Pengaduan ────────────────────────────────────────────────────────────────
+// ─── Pre-report checklist gate (REPORT-01 through REPORT-07) ─────────────────
+
+export const PRE_REPORT = {
+  gateTitle:   "Cek Langkah Sebelum Melapor",
+  gateSubtitle: "Laporan yang kuat adalah laporan yang sudah disiapkan dengan baik. Pastikan hal-hal ini sebelum melanjutkan.",
+  checklist: [
+    "Pastikan data berasal dari dokumen resmi yang bisa dibagikan.",
+    "Cek apakah masalah termasuk kewenangan desa, bukan kabupaten atau provinsi.",
+    "Dokumentasikan bukti lapangan — foto, catatan, atau dokumen pendukung.",
+    "Gunakan jalur bertanya ke desa terlebih dahulu sebelum eskalasi.",
+  ],
+  ctaReady:    "Saya sudah cek — lanjut melihat jalur pelaporan",
+  ctaNotReady: "Belum siap — kembali ke panduan",
+  lapor:       "Lapor ke LAPOR.go.id",
+  hotline:     "Hotline 1708",
+  inspektorat: (kab: string) => `Inspektorat ${kab}`,
+  note:        "Jalur pelaporan di atas adalah untuk masalah yang benar-benar terkait kewenangan desa dan sudah didukung bukti. Baca panduan kewenangan sebelum melapor.",
+} as const;
+
+// ─── Pengaduan (Pak Waspada CTA — kept for homepage bottom CTA) ──────────────
 
 export const PENGADUAN = {
-  title:       "Ada yang Tidak Beres?",
-  subtitle:    "Jika ada yang tidak sesuai — jalan rusak padahal ada anggarannya, bansos tidak merata, fasilitas dijanjikan tapi tidak ada — kamu berhak melapor. Suaramu penting.",
-  lapor:       "Lapor ke LAPOR.go.id",
-  inspektorat: (kab: string) => `Hubungi Inspektorat ${kab}`,
+  title:       "Ada yang Ingin Ditanyakan?",
+  subtitle:    "Sebelum melapor, ada baiknya bertanya dulu ke pihak desa. Jika sudah ada bukti dan masalahnya memang kewenangan desa, baru eskalasi ke jalur resmi.",
+  lapor:       "Cek Langkah Sebelum Melapor",
+  inspektorat: (kab: string) => `Panduan Inspektorat ${kab}`,
 } as const;
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────

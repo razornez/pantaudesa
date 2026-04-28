@@ -1,9 +1,10 @@
 import Image from "next/image";
-import { CheckCircle2, ClipboardList, HelpCircle, ChevronRight } from "lucide-react";
+import { CheckCircle2, ClipboardList, HelpCircle, ChevronRight, Info } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
 import { getExpectations, ExpectedStatus } from "@/lib/expectations";
 import { ASSETS } from "@/lib/assets";
+import { SEHARUSNYA_ADA } from "@/lib/copy";
 
 interface Props {
   desa: Desa;
@@ -23,34 +24,34 @@ const STATUS_CONFIG: Record<ExpectedStatus, {
     iconColor: "text-emerald-500",
     badgeBg:   "bg-emerald-100",
     badgeText: "text-emerald-700",
-    label:     "Wajib ada",
+    label:     SEHARUSNYA_ADA.statusLabels.wajib,
   },
   direncanakan: {
     icon:      ClipboardList,
     iconColor: "text-indigo-500",
     badgeBg:   "bg-indigo-100",
     badgeText: "text-indigo-700",
-    label:     "Dalam APBDes",
+    label:     SEHARUSNYA_ADA.statusLabels.direncanakan,
   },
   tanyakan: {
     icon:      HelpCircle,
     iconColor: "text-amber-500",
     badgeBg:   "bg-amber-100",
     badgeText: "text-amber-700",
-    label:     "Tanyakan ke desa",
+    label:     SEHARUSNYA_ADA.statusLabels.tanyakan,
   },
 };
 
 const SECTION_TITLE: Record<ExpectedStatus, string> = {
   wajib:        "Wajib Ada — Diatur oleh Regulasi",
   direncanakan: "Sudah Direncanakan dalam APBDes",
-  tanyakan:     "Tanyakan Langsung ke Kepala Desa",
+  tanyakan:     "Bisa Ditanyakan ke Desa",
 };
 
 const SECTION_DESC: Record<ExpectedStatus, string> = {
-  wajib:        "Poin-poin ini bukan janji — ini kewajiban yang diatur undang-undang.",
-  direncanakan: "Ini yang sudah masuk dalam rencana anggaran desa tahun ini.",
-  tanyakan:     "Warga berhak bertanya soal ini. Jika tidak ada jawaban, itu sudah jadi masalah.",
+  wajib:        "Poin-poin ini adalah kewajiban yang diatur undang-undang, bukan janji sukarela.",
+  direncanakan: "Ini yang sudah masuk dalam rencana anggaran desa tahun ini berdasarkan data demo.",
+  tanyakan:     "Warga berhak bertanya soal ini — data di bawah adalah panduan, bukan kesimpulan ada atau tidaknya pelanggaran.",
 };
 
 const TONE_STYLE: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -142,15 +143,15 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
           {/* Teks */}
           <div className="px-5 sm:pl-4 sm:pr-6 py-5 flex-1">
             <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">
-              Hak Wargamu
+              Panduan Hak Warga
             </p>
             <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
-              Dengan{" "}
+              Apa yang bisa ditanyakan warga dari anggaran{" "}
               <span className="text-amber-300">{formatRupiah(desa.totalAnggaran)}</span>
-              {", "}desa ini seharusnya bisa memberikan ini:
+              {" "}ini?
             </h2>
             <p className="text-slate-400 text-xs mt-2">
-              Berdasarkan regulasi Dana Desa &amp; alokasi APBDes {desa.tahun}
+              Panduan berdasarkan regulasi Dana Desa &amp; data demo APBDes {desa.tahun}
             </p>
           </div>
         </div>
@@ -159,22 +160,32 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
       {/* Body */}
       <div className="bg-slate-50 px-5 sm:px-6 py-5 space-y-6">
 
+        {/* Estimasi caution — RIGHTS-06 */}
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <Info size={14} className="text-amber-600 flex-shrink-0 mt-0.5" aria-hidden />
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-bold">{SEHARUSNYA_ADA.estimasiCaution}</span>
+            {" "}{SEHARUSNYA_ADA.sectionDisclaimer}
+          </p>
+        </div>
+
         <ItemGroup status="wajib"        items={items} />
         <ItemGroup status="direncanakan" items={items} />
         <ItemGroup status="tanyakan"     items={items} />
 
-        {/* Verdict bar */}
+        {/* Verdict bar — with demo note */}
         <div className={`rounded-xl border p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 ${toneStyle.bg} ${toneStyle.border}`}>
           <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${toneStyle.badge} flex items-center justify-center text-white font-black text-sm`}>
             {desa.persentaseSerapan}%
           </div>
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-semibold mb-0.5 ${toneStyle.text}`}>
-              Kenyataannya: {desa.persentaseSerapan}% anggaran sudah terserap
+              Indikator serapan: {desa.persentaseSerapan}%
             </p>
             <p className={`text-xs leading-relaxed ${toneStyle.text} opacity-80`}>
               {ringkasan}
             </p>
+            <p className="text-[10px] text-slate-500 mt-1.5">{SEHARUSNYA_ADA.verdictDemoNote}</p>
           </div>
         </div>
       </div>

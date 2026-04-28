@@ -1,5 +1,5 @@
 import { SkorTransparansi } from "@/lib/types";
-import { Shield } from "lucide-react";
+import { Shield, Info, FlaskConical } from "lucide-react";
 import { SECTION, SKOR } from "@/lib/copy";
 import { getTransparencyVerdict } from "@/lib/verdicts";
 import { getVerdictColors } from "@/lib/utils";
@@ -33,7 +33,7 @@ export default function SkorTransparansiCard({ skor }: Props) {
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
-            <Shield size={16} className={colors.icon} />
+            <Shield size={16} className={colors.icon} aria-hidden />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-slate-800">{SECTION.skor}</h2>
@@ -48,7 +48,7 @@ export default function SkorTransparansiCard({ skor }: Props) {
 
       <VerdictBanner verdict={verdict} className="mb-4 bg-white/60" />
 
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 mb-4">
         {METRICS.map(({ key }) => {
           const val   = skor[key] as number;
           const label = SKOR.metricLabels[key];
@@ -64,6 +64,23 @@ export default function SkorTransparansiCard({ skor }: Props) {
             </div>
           );
         })}
+      </div>
+
+      {/* Methodology disclosure — SCORE-01, METRIC-06 */}
+      <div className="rounded-xl border border-white/70 bg-white/50 px-4 py-3 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <Info size={13} className="text-slate-500 flex-shrink-0" aria-hidden />
+          <p className="text-xs font-bold text-slate-700">{SKOR.methodologyTitle}</p>
+        </div>
+        <ul className="space-y-1 ml-5">
+          {SKOR.methodologyItems.map((item, i) => (
+            <li key={i} className="text-[11px] text-slate-600 leading-relaxed list-disc">{item}</li>
+          ))}
+        </ul>
+        <div className="flex items-start gap-1.5 pt-1 border-t border-white/50">
+          <FlaskConical size={12} className="text-amber-600 flex-shrink-0 mt-0.5" aria-hidden />
+          <p className="text-[10px] text-amber-800 leading-relaxed font-medium">{SKOR.methodologyNote}</p>
+        </div>
       </div>
     </div>
   );

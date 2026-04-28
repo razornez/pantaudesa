@@ -1,5 +1,5 @@
 import { PerangkatDesa } from "@/lib/types";
-import { User, Phone } from "lucide-react";
+import { User, Building2 } from "lucide-react";
 import { SECTION } from "@/lib/copy";
 
 interface Props {
@@ -36,8 +36,8 @@ export default function PerangkatDesaSection({ perangkat }: Props) {
               )}
               {p.kontak && (
                 <div className="flex items-center gap-1 mt-1">
-                  <Phone size={10} className="text-slate-400" />
-                  <span className="text-xs text-slate-500">{p.kontak}</span>
+                  <Building2 size={10} className="text-slate-400" aria-hidden />
+                  <span className="text-xs text-slate-500">Nomor kantor desa — hubungi via kanal resmi</span>
                 </div>
               )}
             </div>
