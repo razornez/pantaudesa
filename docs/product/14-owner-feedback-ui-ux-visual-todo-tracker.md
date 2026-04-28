@@ -52,26 +52,37 @@ Total Owner Feedback Items: **66**
 
 | Status | Count |
 |---|---:|
-| ACCEPTED | 39 / 66 |
+| ACCEPTED | 49 / 66 |
 | DONE_PENDING_REVIEW | 0 / 66 |
-| IN_PROGRESS | 1 / 66 |
+| IN_PROGRESS | 0 / 66 |
 | REWORK | 0 / 66 |
 | BLOCKED | 9 / 66 |
 | DEFERRED | 6 / 66 |
-| TODO | 11 / 66 |
+| TODO | 2 / 66 |
 
 ## Latest accepted gate
 
-Gate accepted: **Navigation and Citizen Journey Cleanup**.
+Gate accepted: **Data Desa + Mobile Readability Closeout**.
 
 Accepted after:
 
-- Ujang implementation batch,
-- Rangga batch review,
-- Rangga owner visual pass checklist,
-- Iwan final approval for tracker update.
+- Iwan opened Data Desa + Mobile Readability Closeout batch,
+- Ujang/Rangga implementation closeout support,
+- Ujang verification,
+- Owner/Iwan review confirmation,
+- Iwan final tracker update approval.
 
 References:
+
+- `docs/product/28-data-desa-mobile-readability-closeout-report.md`
+- commit `ff93e7500e24124cc7414aa060936cba3be28fa8`
+- commit `972563cc08d20ddd96f0b1d9015acf45b5e63e43`
+- commit `15bea37692a34bbfded4b20154623d9c62d7d0fe`
+- commit `45a002d5cdaa6cf349fcfe741f827b39eb9c20f4`
+
+Previous accepted gate: **Navigation and Citizen Journey Cleanup**.
+
+Previous references:
 
 - `docs/product/25-navigation-citizen-journey-batch-report.md`
 - `docs/product/26-rangga-navigation-citizen-journey-batch-review.md`
@@ -79,9 +90,9 @@ References:
 - commit `0d104899284ae632f6d82023fa30fdc367cea1c2`
 - commit `1cee0c156b15aa86fb2bc27eed672250e3f07fbb`
 
-Previous accepted gate: **Reusable Status Badge System + Consistency Sweep**.
+Earlier accepted gate: **Reusable Status Badge System + Consistency Sweep**.
 
-Previous references:
+Earlier references:
 
 - `docs/product/18-status-badge-system-report.md`
 - `docs/product/19-rangga-status-badge-system-review.md`
@@ -101,6 +112,7 @@ Previous references:
 | A11Y-03 | ACCEPTED | Heading structure accepted. |
 | A11Y-04 | ACCEPTED | Touch target baseline accepted. |
 | A11Y-05 | ACCEPTED | Aria-label baseline accepted. |
+| A11Y-06 | ACCEPTED | Mobile/low-vision readability accepted after Data Desa + Mobile Readability Closeout. |
 
 ### Homepage accepted
 
@@ -150,6 +162,18 @@ Previous references:
 | JOURNEY-03 | ACCEPTED | Homepage search/find desa is visually prominent and easy to use. |
 | JOURNEY-04 | ACCEPTED | User journey accepted: Cari desa → lihat status data → baca sumber/dokumen → tanya/sampaikan suara warga. |
 
+### Data Desa card density accepted
+
+| ID | Status | Note |
+|---|---|---|
+| DATA-DESA-01 | ACCEPTED | DesaCard shows fewer visible data points and is easier to scan. |
+| DATA-DESA-02 | ACCEPTED | Row 1 shows `nama desa + status badge` only. |
+| DATA-DESA-03 | ACCEPTED | Row 2 shows location: kecamatan/kabupaten/provinsi. |
+| DATA-DESA-04 | ACCEPTED | Row 3 shows one simple progress/serapan visual signal with data status nearby. |
+| DATA-DESA-05 | ACCEPTED | Row 4 shows only two numbers: `Diterima` and `Dipakai`. |
+| DATA-DESA-06 | ACCEPTED | Population, category, per-capita, and extra metadata are not shown in the list card first view. |
+| DATA-DESA-07 | ACCEPTED | Cards feel clickable and retain accessible link label/focus treatment. |
+
 ### Suara Warga accepted
 
 | ID | Status | Note |
@@ -165,16 +189,23 @@ Previous references:
 |---|---|---|
 | TEST-01 | ACCEPTED | First-click validation note accepted: users should choose homepage search / `Cari Desa` as first action. |
 | TEST-02 | ACCEPTED | Data-status comprehension note accepted: users should understand demo/review/source/verified framing and not treat demo data as official. |
+| TEST-03 | ACCEPTED | Mobile main journey note accepted: user can scan `/desa`, open detail, and understand next action. |
+| TEST-07 | ACCEPTED | Long detail page mobile scroll note accepted: user stays oriented and primary information is readable without pinch zoom. |
 
 ## In progress
 
+No active in-progress owner feedback items after Data Desa + Mobile Readability Closeout acceptance.
+
+## Remaining TODO items
+
 | ID | Status | Note |
 |---|---|---|
-| A11Y-06 | IN_PROGRESS | Mobile/low-vision readability still needs follow-up review. |
+| HOME-06 | TODO | Data Demo/status badges should remain visually memorable near important demo metrics. Candidate for final homepage trust polish, UI-only. |
+| HOME-07 | TODO | Visual feel should remain modern, warm, data-rich, and human. Candidate for final homepage trust polish, UI-only. |
 
 ## Gates that remain blocked
 
-These remain blocked even after Navigation and Citizen Journey Cleanup acceptance:
+These remain blocked even after Data Desa + Mobile Readability Closeout acceptance:
 
 | Gate | Status | Reason |
 |---|---|---|
@@ -200,30 +231,23 @@ These are intentionally deferred and should not be opened before core trust/jour
 
 ## Recommended next gate
 
-No new gate opened by this tracker update.
+No new gate is opened by this tracker update.
 
-Potential next batch remains pending Iwan direction.
+Recommended next UI-only batch if Iwan wants to close remaining TODO:
 
-If Iwan asks for the next UI-only batch, the safest candidate is **Data Desa + Mobile Readability Closeout**.
+**Homepage Trust Polish Closeout**
 
 Candidate tracker IDs:
 
-- `A11Y-06`
-- `DATA-DESA-01`
-- `DATA-DESA-02`
-- `DATA-DESA-03`
-- `DATA-DESA-04`
-- `DATA-DESA-05`
-- `DATA-DESA-06`
-- `DATA-DESA-07`
-- `TEST-03`
-- `TEST-07`
+- `HOME-06`
+- `HOME-07`
 
-Why this remains a candidate:
+Why this is the safest next step:
 
-- Data Desa card density was owner-approved first pass but still needs tracker reconciliation if Iwan confirms.
-- A11Y-06 remains in progress.
-- This keeps the next step UI-only and within one affected area cluster.
+- Only 2 canonical TODO items remain.
+- This is polish/reduction work, not homepage expansion.
+- It keeps the product aligned with accepted `HOME-08`: future homepage work should not add major sections.
+- It can improve trust/status framing and visual warmth without touching data layer.
 
 ## Alternative future gate options
 
@@ -250,7 +274,7 @@ Only open if Iwan explicitly asks.
 
 This tracker update does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, active `Terverifikasi` state, Risk Radar, Score Orb, animation/micro-interactions, advanced dataviz, or new dependency work.
 
-Initiated-by: Iwan final approval for Navigation and Citizen Journey Cleanup tracker update
-Reviewed-by: Rangga visual pass + Iwan final approval
+Initiated-by: Owner/Iwan review confirmation for Data Desa + Mobile Readability Closeout
+Reviewed-by: Owner/Iwan
 Executed-by: ChatGPT Freelancer / Rangga
 Status: canonical-status-tracker
