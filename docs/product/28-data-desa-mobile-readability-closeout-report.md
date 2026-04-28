@@ -4,6 +4,7 @@ Date: 2026-04-28
 Status: DONE_PENDING_REVIEW
 Executed-by: Rangga / implementation closeout support
 Gate opened-by: Iwan
+Verified-by: Ujang
 
 ## Batch name
 
@@ -133,33 +134,36 @@ Open `http://localhost:3000/desa/4` on mobile:
 
 ## QA Commands
 
-Recommended commands for local executor/reviewer:
-
-- `npx tsc --noEmit`
-- `npm run test`
-- `npx eslint src/app/desa/page.tsx src/components/desa/DesaCard.tsx src/components/desa/SearchFilterBar.tsx src/components/desa/DesaTable.tsx`
+- `npx tsc --noEmit` - PASS
+- `npm run test` - PASS after sandbox escalation for Vitest/esbuild spawn; 42/42 tests passed
+- `npx eslint src/app/desa/page.tsx src/components/desa/DesaCard.tsx src/components/desa/SearchFilterBar.tsx src/components/desa/DesaTable.tsx` - PASS
 
 QA execution note:
 
-- These commands were not executed from this review environment.
-- Reviewer should run them locally before final Owner/Iwan acceptance.
-- This report is source/diff-based and marks the batch as `DONE_PENDING_REVIEW`, not final `ACCEPTED`.
+- Initial `npm run test` in the sandbox failed with `spawn EPERM` while loading Vitest/esbuild config.
+- Rerun with approved escalation passed.
+- This report remains `DONE_PENDING_REVIEW`, not final `ACCEPTED`.
 
 ## Screenshots Or Notes
 
-Source-based route notes:
+Local route/mobile notes from Ujang verification:
 
-- `/desa` remains the primary Data Desa list route.
-- `/desa` still reads the `cari` query for prefilled search.
-- `/desa/4` remains the detail route used for mobile journey validation.
-- No live localhost screenshot was generated in this environment.
+- `http://localhost:3000/desa` returned 200.
+- `http://localhost:3000/desa/4` returned 200.
+- `/desa` SSR contains `Data Desa`, the search placeholder, `Data Demo`, `Diterima`, and `Dipakai`.
+- `/desa` SSR does not contain `jiwa` or `kategori` in the card/list HTML.
+- `/desa/4` SSR contains `Lihat Dokumen`, `Cara Membaca Data`, `Cek Langkah Sebelum Melapor`, `Data Demo`, and `Ceritakan Kondisi Desaku`.
+- Chrome headless was able to open `/desa` at a 360px viewport after sandbox escalation; DOM showed mobile-stacked search/filter controls, 44px view toggles, Data Demo near serapan, and the four-row card hierarchy.
+- Screenshot generation through Chrome headless was attempted but the sandboxed Chrome run could not write screenshot files due Windows/Crashpad permission behavior. DOM/route checks were used as local evidence instead.
+- Source review confirmed grid view/card hierarchy, table min-width horizontal scroll behavior, search/filter/provinsi/status/reset controls, card focus/click affordance, and detail journey CTAs.
 
-Mobile viewport notes to verify locally:
+Manual reviewer notes still recommended before final acceptance:
 
-- Test around 360px width for small Android devices.
-- Test around 390px width for common iPhone viewport.
-- Test `/desa` grid view first, then table view.
-- Test opening `/desa/4` from a card and scrolling through the long detail page.
+- Open `/desa` around 360px and 390px.
+- Check grid view, then table view.
+- Try search/filter/provinsi/status/reset.
+- Tab to a card and open detail.
+- Open `/desa/4` on mobile and scroll the long detail page for orientation.
 
 ## Known Risks
 
