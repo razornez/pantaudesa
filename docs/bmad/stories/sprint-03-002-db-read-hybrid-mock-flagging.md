@@ -1,7 +1,7 @@
 # Story Sprint 03-002 — DB Read Hybrid + Mock Flagging
 
 Date: 2026-04-28
-Status: DONE_PENDING_QA
+Status: DONE_PENDING_OWNER_QA
 Prepared-by: Rangga / BMAD-lite orchestration
 
 ## Goal
@@ -69,12 +69,19 @@ Out of scope:
 ## Files changed
 
 - `src/lib/prisma.ts`
+- `src/lib/db.ts`
 - `src/lib/data/desa-read.ts`
 - `src/components/desa/DesaListClient.tsx`
 - `src/app/desa/page.tsx`
 - `src/components/desa/DesaCard.tsx`
 - `src/app/desa/[id]/page.tsx`
 - `docs/engineering/52-sprint-03-db-read-hybrid-mock-flagging-report.md`
+
+## Latest fix commits pulled into BMAD status
+
+- `14166a02e63cb1633ad2f77ce7a47cbbc30e4026` — force dynamic DB read at request time, dynamic detail route, actual-data province filter.
+- `aeff7fb5b9b37f520a99ecdacbd5793c9803fdb7` — guard DB access with URL check / lazy Prisma import.
+- `187078163fc0668f3d8dac850969921fc59bc1bf` — guard PrismaClient instantiation against missing/bad `DATABASE_URL` and return null safely.
 
 ## QA commands
 
@@ -94,20 +101,27 @@ Route checks:
 - `/desa/ancolmekar`
 - `/desa/4`
 
-## Current issue
+## Current issue status
 
-Owner reported Ancolmekar not visible.
+Original issue:
 
-Likely interpretation:
+- Ancolmekar was not visible.
 
-- runtime is in `Mock/Hardcoded` fallback mode, or
-- DB seed exists in a different database than runtime reads, or
-- `DATABASE_URL` is missing/wrong in runtime, or
-- latest code/env has not been deployed/restarted.
+Latest code resolution:
+
+- `/desa` now uses request-time DB read through `dynamic = "force-dynamic"`.
+- `/desa/[id]` resolves dynamically instead of relying on static params.
+- Prisma no longer crashes at import time when `DATABASE_URL` is missing/bad.
+- fallback remains safe and explicit.
+
+Current expected QA outcome:
+
+- If intended DB env is present, Ancolmekar should appear.
+- If intended DB env is missing/bad, page should clearly show `Mode: Mock/Hardcoded` without crashing.
 
 ## Next recommended story
 
-Create and run:
+Create/run if Owner wants proof before acceptance:
 
 - `Sprint 03-003 — DB Runtime Connection Check`
 
@@ -115,7 +129,7 @@ Purpose:
 
 - confirm runtime DB host/alias without exposing secrets,
 - confirm count of `desa` rows from runtime DB,
-- confirm whether `/desa` should be in DB mode,
+- confirm whether `/desa` is in DB mode,
 - avoid feature expansion.
 
 ## Report reference
