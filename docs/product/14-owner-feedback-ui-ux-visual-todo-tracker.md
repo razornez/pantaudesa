@@ -16,6 +16,17 @@ Purpose: One source of truth for Owner UI/UX/visual feedback with measurable pro
 - Iwan remains command owner.
 - Owner approves sensitive visual/trust/data gates.
 
+## Review protocol
+
+- Every implementation report must list the exact tracker IDs being addressed.
+- Every implementation report must include affected pages/routes.
+- Every implementation report must include what reviewers should check.
+- Pushed code means `DONE_PENDING_REVIEW`, not `ACCEPTED`.
+- Iwan/Rangga reviews implementation against tracker IDs.
+- Owner-sensitive items need Owner approval before `ACCEPTED`.
+- Mismatch against acceptance criteria becomes `REWORK`.
+- If work expands into seed/read path/schema/DB/API/scraper/numeric extraction without explicit gate approval, mark related item `BLOCKED`.
+
 ## Status values
 
 - `TODO`
@@ -32,24 +43,46 @@ Total Owner Feedback Items: **66**
 
 | Status | Count |
 |---|---:|
-| ACCEPTED | 1 / 66 |
-| DONE_PENDING_REVIEW | 5 / 66 |
+| ACCEPTED | 7 / 66 |
+| DONE_PENDING_REVIEW | 0 / 66 |
 | IN_PROGRESS | 1 / 66 |
 | REWORK | 0 / 66 |
 | BLOCKED | 9 / 66 |
 | DEFERRED | 6 / 66 |
-| TODO | 44 / 66 |
+| TODO | 43 / 66 |
+
+Note: ACCEPTED includes A11Y-01 through A11Y-05 plus the previously accepted homepage first-pass guardrails HOME-01 and HOME-08.
+
+## Next gate
+
+Next gate is **Detail safety/hierarchy**.
+
+Tracker IDs in next gate:
+
+- `DETAIL-HIER-01`
+- `DETAIL-HIER-06`
+- `DETAIL-RISK-01`
+- `DETAIL-RISK-02`
+- `REPORT-01` to `REPORT-07`
+- `SCORE-01`
+- `METRIC-06`
+- `RIGHTS-01`
+- `RIGHTS-06`
+
+Purpose:
+
+Prevent PantauDesa from looking accusatory, overconfident, or unsafe before seed/read path/data expansion.
 
 ## 1. Accessibility
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| A11Y-01 | All pages | WCAG AA color contrast | Normal text contrast meets WCAG AA. Small captions avoid low-contrast `text-slate-400` on white unless decorative. | P0 | Low-vision users may not read important text. | Asep | Rangga/Iwan | DONE_PENDING_REVIEW | `docs/product/13-asep-frontend-ui-ux-handover-and-visual-audit-plan.md`, commit `70b6184` | Needs acceptance review confirmation. |
-| A11Y-02 | All interactive elements | Visible keyboard focus | Buttons, links, toggles, cards, and icon controls show clear `focus-visible` ring. | P0 | Keyboard users must know where focus is. | Asep | Rangga/Iwan | DONE_PENDING_REVIEW | `docs/product/13...`, commit `70b6184` | Needs regression check on new components. |
-| A11Y-03 | Homepage + Detail | Heading structure | Homepage and desa detail have logical semantic h1/h2/h3 structure. | P0 | Screen readers and SEO need readable hierarchy. | Asep | Rangga/Iwan | DONE_PENDING_REVIEW | `docs/product/13...` | Asep says h1 exists; confirm after latest UI changes. |
-| A11Y-04 | Mobile / all controls | Touch targets | Important tap targets meet minimum 44×44px, especially nav, cards, votes, CTAs. | P0 | Mobile users may struggle with small targets. | Asep | Rangga/Iwan | DONE_PENDING_REVIEW | `docs/product/13...`, commit `70b6184` | Needs mobile spot check. |
-| A11Y-05 | Buttons/cards/icons | Aria labels | Icon-only and ambiguous controls have descriptive `aria-label`; decorative icons are `aria-hidden`. | P0 | Assistive tech needs clear labels. | Asep | Rangga/Iwan | DONE_PENDING_REVIEW | `docs/product/13...`, commit `70b6184` | Needs acceptance review. |
-| A11Y-06 | Mobile / low vision | Mobile/low-vision readability | Mobile text remains readable; no critical info uses tiny text; layout spacing supports scanning. | P1 | Ordinary users may miss meaning on phone. | Asep | Rangga | IN_PROGRESS | `docs/product/13...` | Partially addressed by contrast/touch target; full mobile readability still needs review. |
+| A11Y-01 | All pages | WCAG AA color contrast | Normal text contrast meets WCAG AA. Small captions avoid low-contrast `text-slate-400` on white unless decorative. | P0 | Low-vision users may not read important text. | Asep | Rangga/Iwan | ACCEPTED | `docs/product/13-asep-frontend-ui-ux-handover-and-visual-audit-plan.md`, commit `70b6184` | Accepted by Iwan/Owner update. |
+| A11Y-02 | All interactive elements | Visible keyboard focus | Buttons, links, toggles, cards, and icon controls show clear `focus-visible` ring. | P0 | Keyboard users must know where focus is. | Asep | Rangga/Iwan | ACCEPTED | `docs/product/13...`, commit `70b6184` | Accepted by Iwan/Owner update. |
+| A11Y-03 | Homepage + Detail | Heading structure | Homepage and desa detail have logical semantic h1/h2/h3 structure. | P0 | Screen readers and SEO need readable hierarchy. | Asep | Rangga/Iwan | ACCEPTED | `docs/product/13...` | Accepted by Iwan/Owner update. |
+| A11Y-04 | Mobile / all controls | Touch targets | Important tap targets meet minimum 44×44px, especially nav, cards, votes, CTAs. | P0 | Mobile users may struggle with small targets. | Asep | Rangga/Iwan | ACCEPTED | `docs/product/13...`, commit `70b6184` | Accepted by Iwan/Owner update. |
+| A11Y-05 | Buttons/cards/icons | Aria labels | Icon-only and ambiguous controls have descriptive `aria-label`; decorative icons are `aria-hidden`. | P0 | Assistive tech needs clear labels. | Asep | Rangga/Iwan | ACCEPTED | `docs/product/13...`, commit `70b6184` | Accepted by Iwan/Owner update. |
+| A11Y-06 | Mobile / low vision | Mobile/low-vision readability | Mobile text remains readable; no critical info uses tiny text; layout spacing supports scanning. | P1 | Ordinary users may miss meaning on phone. | Asep | Rangga | IN_PROGRESS | `docs/product/13...` | Remains in progress; full mobile readability still needs review. |
 
 ## 2. Primary user journey
 
@@ -71,7 +104,7 @@ Total Owner Feedback Items: **66**
 | HOME-05 | Homepage | Risk radar | Risk/radar concept must be non-accusatory, framed as `Yang Perlu Dicek` or `Radar Baca Data`, not corruption risk. | P3 | Visual idea is important but sensitive. | Rangga concept, Asep later | Owner/Iwan | BLOCKED | `docs/product/14-owner-feedback-ui-ux-visual-acceptance-criteria.md` | Blocked until methodology and wording approved. |
 | HOME-06 | Homepage / status | Stronger Data Demo/status visual system | Data Demo/status badges are visually memorable and appear near important demo metrics. | P1 | Users must not read demo as official. | Asep | Rangga/Iwan | TODO | `docs/product/06-homepage-ui-task-1-1-copy-cleanup-report.md` | Badge exists in first pass; reusable system still not done. |
 | HOME-07 | Homepage / visual identity | Warm civic-tech premium direction | Visual feel is modern, warm, data-rich, and human, not stiff government portal or generic SaaS. | P1 | Owner wants fresh, not boring government site. | Owner/Rangga/Asep | Owner | TODO | Owner feedback, `docs/product/03-homepage-visual-concept-and-iwan-alignment.md` | Needs visual review against live UI. |
-| HOME-08 | Homepage | Do not expand homepage endlessly | Future homepage work should not add more major sections; only polish/reduce after first pass. | P1 | Avoid returning to crowded homepage. | Iwan/Rangga | Owner | ACCEPTED | `docs/product/09-sprint-04a-homepage-acceptance-review.md` | Counted in HOME-01 acceptance; keep as operating rule. |
+| HOME-08 | Homepage | Do not expand homepage endlessly | Future homepage work should not add more major sections; only polish/reduce after first pass. | P1 | Avoid returning to crowded homepage. | Iwan/Rangga | Owner | ACCEPTED | `docs/product/09-sprint-04a-homepage-acceptance-review.md` | Keep as operating rule. |
 
 ## 4. Data Desa page
 
@@ -144,19 +177,19 @@ Total Owner Feedback Items: **66**
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| DETAIL-HIER-01 | Desa Detail | Avoid information overload | First view is not data dump; advanced data collapsed. | P1 | Users get confused by too much info. | Asep/Ujang | Rangga/Owner | TODO | `docs/product/10...` | Core 04B principle. |
+| DETAIL-HIER-01 | Desa Detail | Avoid information overload | First view is not data dump; advanced data collapsed. | P1 | Users get confused by too much info. | Asep/Ujang | Rangga/Owner | TODO | `docs/product/10...` | Core 04B principle. Next gate. |
 | DETAIL-HIER-02 | Desa Detail | Split into Ringkasan, Anggaran, Dokumen & Transparansi, Panduan Warga | Detail page visibly groups these areas. | P1 | Clear mental model for citizens. | Asep/Ujang | Rangga/Owner | TODO | Owner feedback | Section labels should be visible. |
 | DETAIL-HIER-03 | Mobile Detail | Sticky mobile mini-summary | Mobile sticky summary shows desa + data status + safe quick actions. | P2 | Long page needs orientation. | Asep | Rangga/Owner | TODO | `docs/product/13...` | Must not harm accessibility. |
 | DETAIL-HIER-04 | Detail visual grouping | Visual grouping: Insight, Education, Action | Sections have type labels or visual rhythm indicating insight/education/action. | P2 | Avoid monotony. | Asep/Ujang | Rangga/Owner | TODO | Owner feedback | Use simple labels/backgrounds. |
 | DETAIL-HIER-05 | Detail copy | Copy reduction to bullets | Long copy becomes bullets, cards, or expandable text. | P2 | Users should not be overwhelmed. | Rangga copy, Asep execute | Rangga | TODO | Owner feedback | Apply across detail page. |
-| DETAIL-HIER-06 | Detail first view | First view must not be data dump | Above fold shows identity, status, quick summary, source/doc snapshot, not all metrics. | P1 | First impression should guide, not overwhelm. | Asep/Ujang | Rangga/Owner | TODO | `docs/product/10...` | Critical for 04B acceptance. |
+| DETAIL-HIER-06 | Detail first view | First view must not be data dump | Above fold shows identity, status, quick summary, source/doc snapshot, not all metrics. | P1 | First impression should guide, not overwhelm. | Asep/Ujang | Rangga/Owner | TODO | `docs/product/10...` | Critical for 04B acceptance. Next gate. |
 
 ## 11. Detail page data interpretation risk
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| DETAIL-RISK-01 | Desa Detail | Prevent Data Demo being read as official | Data Demo badge and microcopy appear near first view and key values. | P0 | Screenshot/user interpretation risk. | Asep | Rangga/Iwan | TODO | `docs/product/10...` | Required before read path. |
-| DETAIL-RISK-02 | Desa Detail | Add status near every large number | Large Rupiah, percentages, scores, and charts show status badge or nearby disclaimer. | P0 | Numbers create false authority. | Asep | Rangga/Iwan | TODO | Owner feedback | Required before DB data. |
+| DETAIL-RISK-01 | Desa Detail | Prevent Data Demo being read as official | Data Demo badge and microcopy appear near first view and key values. | P0 | Screenshot/user interpretation risk. | Asep | Rangga/Iwan | TODO | `docs/product/10...` | Required before read path. Next gate. |
+| DETAIL-RISK-02 | Desa Detail | Add status near every large number | Large Rupiah, percentages, scores, and charts show status badge or nearby disclaimer. | P0 | Numbers create false authority. | Asep | Rangga/Iwan | TODO | Owner feedback | Required before DB data. Next gate. |
 | DETAIL-RISK-03 | Desa Detail | Avoid authority bias from Rp besar, 96%, 94/100, names/contact | Big values and names cannot appear without context/methodology/status. | P0 | Users may trust/screenshot out of context. | Asep/Rangga | Owner/Iwan | TODO | `docs/product/13...` | High risk. |
 | DETAIL-RISK-04 | Desa Detail / sharing | Screenshot sharing risk reduced | First-screen and score/metrics areas include enough context that screenshots do not mislead. | P1 | Screenshots can circulate without context. | Asep/Rangga | Owner/Iwan | TODO | Owner feedback | Needs manual screenshot review. |
 
@@ -164,13 +197,13 @@ Total Owner Feedback Items: **66**
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| REPORT-01 | Detail CTA | Replace direct `Lapor ke LAPOR.go.id` | Direct LAPOR CTA replaced with pre-report safety gate. | P0 | Avoid unsafe escalation without context. | Asep | Rangga/Iwan | TODO | `docs/product/13...` | D-02 in Asep plan. |
-| REPORT-02 | Detail CTA | Use `Cek Langkah Sebelum Melapor` | CTA label changes to checklist-first wording. | P0 | Encourage responsible action. | Asep | Rangga/Iwan | TODO | Owner feedback | Required copy. |
-| REPORT-03 | Report checklist | Checklist item 1 | `Pastikan data berasal dari dokumen resmi.` | P0 | Reports should be evidence-based. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Must appear before external report. |
-| REPORT-04 | Report checklist | Checklist item 2 | `Cek apakah masalah termasuk kewenangan desa.` | P0 | Avoid wrong authority escalation. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Must be clear. |
-| REPORT-05 | Report checklist | Checklist item 3 | `Dokumentasikan bukti lapangan.` | P0 | Encourage responsible reporting. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Must be non-intimidating. |
-| REPORT-06 | Report checklist | Checklist item 4 | `Gunakan jalur tanya dulu sebelum eskalasi.` | P0 | Memantau bukan menuduh. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Must be included. |
-| REPORT-07 | Report CTA | Report CTA only after context/checklist | External reporting option appears only after checklist/context interaction. | P0 | Prevent impulsive report CTA. | Asep | Rangga/Iwan | TODO | Owner feedback | No direct external CTA first. |
+| REPORT-01 | Detail CTA | Replace direct `Lapor ke LAPOR.go.id` | Direct LAPOR CTA replaced with pre-report safety gate. | P0 | Avoid unsafe escalation without context. | Asep | Rangga/Iwan | TODO | `docs/product/13...` | Next gate. |
+| REPORT-02 | Detail CTA | Use `Cek Langkah Sebelum Melapor` | CTA label changes to checklist-first wording. | P0 | Encourage responsible action. | Asep | Rangga/Iwan | TODO | Owner feedback | Next gate. |
+| REPORT-03 | Report checklist | Checklist item 1 | `Pastikan data berasal dari dokumen resmi.` | P0 | Reports should be evidence-based. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Next gate. |
+| REPORT-04 | Report checklist | Checklist item 2 | `Cek apakah masalah termasuk kewenangan desa.` | P0 | Avoid wrong authority escalation. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Next gate. |
+| REPORT-05 | Report checklist | Checklist item 3 | `Dokumentasikan bukti lapangan.` | P0 | Encourage responsible reporting. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Next gate. |
+| REPORT-06 | Report checklist | Checklist item 4 | `Gunakan jalur tanya dulu sebelum eskalasi.` | P0 | Memantau bukan menuduh. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Next gate. |
+| REPORT-07 | Report CTA | Report CTA only after context/checklist | External reporting option appears only after checklist/context interaction. | P0 | Prevent impulsive report CTA. | Asep | Rangga/Iwan | TODO | Owner feedback | Next gate. |
 
 ## 13. Detail metric hierarchy
 
@@ -181,7 +214,7 @@ Total Owner Feedback Items: **66**
 | METRIC-03 | Detail primary metrics | Primary: serapan | Serapan appears with status and explanation; not final if demo. | P1 | Percentage may imply judgment. | Asep | Rangga/Iwan | TODO | Owner feedback | Label demo/needs_review. |
 | METRIC-04 | Detail primary metrics | Primary: dokumen tersedia | Document availability appears as primary because document-first. | P1 | Source/document should come before conclusions. | Asep | Rangga/Iwan | TODO | Owner feedback | Near top. |
 | METRIC-05 | Detail secondary metrics | Secondary: aset desa | Aset desa not first-fold dominant; shown after core context or collapsed. | P2 | Avoid clutter. | Asep | Rangga | TODO | Owner feedback | Check `KelengkapanDesa`. |
-| METRIC-06 | Detail secondary metrics | Secondary: skor keterbukaan | Score shown only after methodology/status context. | P0 | Score authority risk. | Asep/Rangga | Owner/Iwan | TODO | Owner feedback | High trust risk. |
+| METRIC-06 | Detail secondary metrics | Secondary: skor keterbukaan | Score shown only after methodology/status context. | P0 | Score authority risk. | Asep/Rangga | Owner/Iwan | TODO | Owner feedback | High trust risk. Next gate with SCORE-01. |
 | METRIC-07 | Detail secondary metrics | Secondary: rincian sumber dana | Source fund details are not primary first-fold content. | P2 | Avoid overwhelming users. | Asep | Rangga | TODO | Owner feedback | Collapse if dense. |
 | METRIC-08 | Detail tertiary metrics | Tertiary: daftar aset detail | Detailed asset list is lower/collapsed. | P2 | Detail page too crowded. | Asep | Rangga | TODO | Owner feedback | Move down/collapse. |
 | METRIC-09 | Detail tertiary metrics | Tertiary: panduan eskalasi | Escalation guide appears after context/checklist, not as first action. | P1 | Avoid unsafe action. | Asep/Rangga | Iwan | TODO | Owner feedback | Related REPORT items. |
@@ -190,12 +223,12 @@ Total Owner Feedback Items: **66**
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| RIGHTS-01 | Hak Wargamu / SeharusnyaAda | Avoid overclaiming | Section does not present estimates/plans as proof of violation. | P0 | Avoid accusation and legal risk. | Asep/Rangga | Owner/Iwan | TODO | `docs/product/13...` | High trust risk. |
+| RIGHTS-01 | Hak Wargamu / SeharusnyaAda | Avoid overclaiming | Section does not present estimates/plans as proof of violation. | P0 | Avoid accusation and legal risk. | Asep/Rangga | Owner/Iwan | TODO | `docs/product/13...` | High trust risk. Next gate. |
 | RIGHTS-02 | Hak Wargamu | Label: Wajib menurut regulasi | Items that are regulatory requirements use this label. | P1 | Clarify certainty level. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Needs data mapping. |
 | RIGHTS-03 | Hak Wargamu | Label: Estimasi berdasarkan jumlah penduduk | Estimates use this label. | P1 | Avoid treating estimates as facts. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required. |
 | RIGHTS-04 | Hak Wargamu | Label: Masuk rencana APBDes | Planned items use this label. | P1 | Separate plan from obligation. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required. |
 | RIGHTS-05 | Hak Wargamu | Label: Perlu ditanyakan ke desa | Unclear items use this label. | P1 | Safe civic action. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required. |
-| RIGHTS-06 | Hak Wargamu | Microcopy caution | Copy: `Angka ini adalah estimasi panduan, bukan bukti pelanggaran.` | P0 | Avoid overclaiming. | Asep/Rangga | Iwan/Owner | TODO | Owner feedback | Must be visible. |
+| RIGHTS-06 | Hak Wargamu | Microcopy caution | Copy: `Angka ini adalah estimasi panduan, bukan bukti pelanggaran.` | P0 | Avoid overclaiming. | Asep/Rangga | Iwan/Owner | TODO | Owner feedback | Must be visible. Next gate. |
 | RIGHTS-07 | Hak Wargamu | Stronger visual checklist treatment | Section uses checklist treatment to guide reading, not scare users. | P2 | More engaging and clearer. | Asep | Rangga/Owner | TODO | Owner feedback | Visual after labels/copy. |
 
 ## 15. Contact/personal data risk
@@ -210,7 +243,7 @@ Total Owner Feedback Items: **66**
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| DOC-01 | Desa Detail | Document section near top | Document/source section appears above heavy budget metrics. | P1 | Users need evidence/context first. | Asep | Rangga/Owner | TODO | `docs/product/10...` | D-01 related. |
+| DOC-01 | Desa Detail | Document section near top | Document/source section appears above heavy budget metrics. | P1 | Users need evidence/context first. | Asep | Rangga/Owner | TODO | `docs/product/10...` | Related to detail safety hierarchy. |
 | DOC-02 | Document cards | APBDes 2024 card | APBDes 2024 card exists if data/mock supports it, with status and source. | P2 | Documents should be tangible. | Asep/Ujang | Rangga | TODO | Owner feedback | Mock/static first. |
 | DOC-03 | Document cards | RKPDes card | RKPDes card exists if available/mock, with status and source. | P2 | Planning docs matter. | Asep/Ujang | Rangga | TODO | Owner feedback | Mock/static first. |
 | DOC-04 | Document cards | Laporan Realisasi card | Laporan Realisasi card exists with status and source. | P2 | Realization document is important. | Asep/Ujang | Rangga | TODO | Owner feedback | Mock/static first. |
@@ -223,7 +256,7 @@ Total Owner Feedback Items: **66**
 
 | ID | Area/Page | Feedback item | Acceptance criteria | Priority | Owner concern | Executor | Reviewer | Status | Related commit/doc | Notes/Rework needed |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SCORE-01 | Detail / score | `94/100` must show methodology | Any score has visible tooltip/info explaining methodology and demo status. | P0 | Score appears authoritative. | Asep/Rangga | Owner/Iwan | TODO | `docs/product/13...` | Must happen before score prominence. |
+| SCORE-01 | Detail / score | `94/100` must show methodology | Any score has visible tooltip/info explaining methodology and demo status. | P0 | Score appears authoritative. | Asep/Rangga | Owner/Iwan | TODO | `docs/product/13...` | Next gate with METRIC-06. |
 | SCORE-02 | Score tooltip | Methodology: Ketersediaan dokumen publik | Tooltip includes this factor. | P1 | Explain score basis. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required text. |
 | SCORE-03 | Score tooltip | Methodology: Kelengkapan laporan | Tooltip includes this factor. | P1 | Explain score basis. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required text. |
 | SCORE-04 | Score tooltip | Methodology: Konsistensi serapan | Tooltip includes this factor. | P1 | Explain score basis. | Asep/Rangga | Rangga/Iwan | TODO | Owner feedback | Required text. |
@@ -274,7 +307,7 @@ Total Owner Feedback Items: **66**
 
 ## Blocked items summary
 
-Current blocked items:
+Current blocked items include:
 
 - `STATUS-03`, `STATUS-07`: active verified state blocked until verification workflow exists.
 - `TRUST-05`: review/verified workflow copy can exist, but actual workflow blocked.
@@ -286,26 +319,26 @@ Current blocked items:
 
 ## Unclear items / needs clarification
 
-1. Whether P0 accessibility work is officially ACCEPTED by Iwan/Owner or only DONE_PENDING_REVIEW.
-2. Whether D-01/D-02 from Asep are already in progress after the latest handoff; this tracker marks related items TODO until implementation report exists.
-3. Exact wording and methodology for `Risk Radar`.
-4. Exact product logic for `Warga Cermat` badge.
-5. Whether `Keterbukaan Score Orb` should exist at all before transparency methodology is mature.
-6. Whether personal official contact can ever be shown, or only office/official channels.
-7. Whether `Terverifikasi` should appear as disabled educational state or be hidden entirely until workflow exists.
+1. Whether D-01/D-02 from Asep are already in progress after the latest handoff; this tracker marks related items TODO until implementation report exists.
+2. Exact wording and methodology for `Risk Radar`.
+3. Exact product logic for `Warga Cermat` badge.
+4. Whether `Keterbukaan Score Orb` should exist at all before transparency methodology is mature.
+5. Whether personal official contact can ever be shown, or only office/official channels.
+6. Whether `Terverifikasi` should appear as disabled educational state or be hidden entirely until workflow exists.
 
 ## Recommended review flow
 
 1. Iwan/Owner review this tracker and confirm no feedback item is missing.
 2. Iwan marks next small gate from the tracker.
 3. Asep/Ujang execution reports must reference tracker IDs.
-4. Rangga reviews implementation against specific tracker IDs.
-5. Status moves:
+4. Each implementation report must list affected pages/routes and what reviewers should check.
+5. Rangga reviews implementation against specific tracker IDs.
+6. Status moves:
    - pushed implementation → `DONE_PENDING_REVIEW`
    - accepted review → `ACCEPTED`
    - mismatch → `REWORK`
    - needs closed gate → `BLOCKED`
-6. Owner-sensitive items require Owner approval before being marked accepted.
+7. Owner-sensitive items require Owner approval before being marked accepted.
 
 ## Immediate recommended next gate
 
@@ -317,8 +350,10 @@ Recommended next small gate:
   - `DETAIL-RISK-01`
   - `DETAIL-RISK-02`
   - `REPORT-01` through `REPORT-07`
-  - `SCORE-01` and `SCORE-06`
-  - `RIGHTS-01` and `RIGHTS-06`
+  - `SCORE-01`
+  - `METRIC-06`
+  - `RIGHTS-01`
+  - `RIGHTS-06`
 
 Reason:
 
