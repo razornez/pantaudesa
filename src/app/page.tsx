@@ -64,9 +64,9 @@ export default async function HomePage() {
 
       {desaResult.state !== "ready" && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <p className="font-bold">Database belum bisa menampilkan data</p>
+          <p className="font-bold">Data belum siap ditampilkan</p>
           <p className="mt-1 text-xs leading-relaxed">
-            {desaResult.message} Data hardcoded tidak dipakai sebagai fallback. DB: {desaResult.dbHostAlias}
+            Beberapa bagian halaman belum bisa memuat data terbaru. Coba muat ulang beberapa saat lagi.
           </p>
         </div>
       )}
@@ -79,7 +79,7 @@ export default async function HomePage() {
           </div>
           <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang perlu dilihat lebih dulu</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Urutan ini memakai data demo untuk membantu warga membaca indikator awal; angka persentase belum menjadi fakta final atau terverifikasi.
+            Urutan ini memakai data contoh untuk membantu warga membaca indikator awal; angka persentase belum menjadi fakta final atau terverifikasi.
           </p>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-4 items-start">
