@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
+import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
   desa: Desa;
@@ -15,31 +16,32 @@ interface Props {
 interface SnapshotCard {
   title: string;
   status: string;
+  statusKind?: DataStatusKind;
   body: string;
   icon: LucideIcon;
   tone: "indigo" | "sky" | "emerald" | "amber";
 }
 
-const toneClasses: Record<SnapshotCard["tone"], { card: string; icon: string; badge: string }> = {
+const toneClasses: Record<SnapshotCard["tone"], { card: string; icon: string; fallbackBadge: string }> = {
   indigo: {
     card: "border-indigo-100 bg-indigo-50/60",
     icon: "bg-white text-indigo-600",
-    badge: "bg-white text-indigo-700",
+    fallbackBadge: "bg-white text-indigo-700",
   },
   sky: {
     card: "border-sky-100 bg-sky-50/70",
     icon: "bg-white text-sky-600",
-    badge: "bg-white text-sky-700",
+    fallbackBadge: "bg-white text-sky-700",
   },
   emerald: {
     card: "border-emerald-100 bg-emerald-50/70",
     icon: "bg-white text-emerald-600",
-    badge: "bg-white text-emerald-700",
+    fallbackBadge: "bg-white text-emerald-700",
   },
   amber: {
     card: "border-amber-100 bg-amber-50/80",
     icon: "bg-white text-amber-700",
-    badge: "bg-white text-amber-700",
+    fallbackBadge: "bg-white text-amber-700",
   },
 };
 
@@ -64,6 +66,7 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
     {
       title: "Website desa",
       status: hasWebsite ? "Sumber ditemukan" : "Belum tercatat",
+      statusKind: hasWebsite ? "source-found" : undefined,
       body: hasWebsite
         ? "Website desa tersedia untuk mulai membaca informasi publik tanpa menumpuk tautan teknis di ringkasan."
         : "Website desa belum tercatat di data demo ini.",
@@ -80,13 +83,15 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
     {
       title: "Dokumen APBDes/Realisasi",
       status: documentStatus,
+      statusKind: hasApbdes || hasRealisasi ? "source-found" : undefined,
       body: documentBody,
       icon: FileText,
       tone: "emerald",
     },
     {
       title: "Status review",
-      status: "Perlu review",
+      status: "Perlu Review",
+      statusKind: "needs-review",
       body: "Semua sumber dan dokumen di halaman ini perlu dicek sebelum menjadi rujukan resmi.",
       icon: ShieldCheck,
       tone: "amber",
@@ -125,9 +130,13 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-black text-slate-900">{card.title}</p>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone.badge}`}>
-                        {card.status}
-                      </span>
+                      {card.statusKind
+                        ? <DataStatusBadge status={card.statusKind} />
+                        : (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone.fallbackBadge}`}>
+                            {card.status}
+                          </span>
+                        )}
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-slate-600">
                       {card.body}

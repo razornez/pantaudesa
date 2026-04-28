@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
-  Megaphone, ArrowRight, FlaskConical,
+  Megaphone, ArrowRight,
 } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
@@ -20,6 +20,7 @@ import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
 import { getVoicesForDesa } from "@/lib/citizen-voice";
+import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 import type { Metadata } from "next";
 
@@ -92,12 +93,7 @@ export default async function DesaDetailPage({ params }: Props) {
       <div className="space-y-3">
 
         {/* Demo status strip — DETAIL-RISK-01/02 */}
-        <div className="flex items-center gap-2 px-1">
-          <FlaskConical size={13} className="text-amber-600 flex-shrink-0" aria-hidden />
-          <p className="text-xs text-amber-700 font-semibold">
-            {DATA_DISCLAIMER.statusLabel} — {DATA_DISCLAIMER.short}
-          </p>
-        </div>
+        <DataStatusBadge status="demo" showMicrocopy className="w-full sm:w-auto" />
 
         {/* 4 stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -110,7 +106,7 @@ export default async function DesaDetailPage({ params }: Props) {
                 </div>
                 <p className="text-[10px] text-slate-600 mb-0.5 leading-tight">{item.label}</p>
                 <p className={`text-sm font-black ${item.color} leading-tight`}>{item.value}</p>
-                <p className="text-[9px] text-amber-600 mt-1 font-medium">Data demo</p>
+                <DataStatusBadge status="demo" size="xs" className="mt-1" />
               </div>
             );
           })}

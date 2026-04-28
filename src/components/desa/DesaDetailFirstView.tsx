@@ -7,7 +7,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
-import { DATA_DISCLAIMER, DATA_STATUS_COPY } from "@/lib/copy";
+import { DATA_STATUS_COPY } from "@/lib/copy";
+import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
   desa: Desa;
@@ -25,12 +26,14 @@ export default function DesaDetailFirstView({ desa }: Props) {
       value: DATA_STATUS_COPY.demo.label,
       body: "Contoh tampilan, bukan data resmi final.",
       icon: ShieldCheck,
+      statusKind: "demo" as DataStatusKind,
     },
     {
       label: "Sumber publik",
       value: hasWebsite ? "Sumber ditemukan" : "Belum tercatat",
       body: hasWebsite ? "Website desa tersedia untuk mulai dicek." : "Sumber web belum tercatat di data demo.",
       icon: Globe2,
+      statusKind: hasWebsite ? "source-found" as DataStatusKind : undefined,
     },
     {
       label: "Dokumen",
@@ -50,9 +53,7 @@ export default function DesaDetailFirstView({ desa }: Props) {
                 <MapPin size={13} />
                 Kartu Identitas Desa
               </span>
-              <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                {DATA_DISCLAIMER.statusLabel}
-              </span>
+              <DataStatusBadge status="demo" size="md" />
             </div>
 
             <h1 className="mt-4 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
@@ -96,7 +97,12 @@ export default function DesaDetailFirstView({ desa }: Props) {
                       </div>
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{fact.label}</p>
-                        <p className="mt-0.5 text-sm font-black text-slate-900">{fact.value}</p>
+                        <div className="mt-1">
+                          {fact.statusKind
+                            ? <DataStatusBadge status={fact.statusKind} />
+                            : <p className="text-sm font-black text-slate-900">{fact.value}</p>
+                          }
+                        </div>
                         <p className="mt-1 text-xs leading-relaxed text-slate-500">{fact.body}</p>
                       </div>
                     </div>
@@ -114,9 +120,7 @@ export default function DesaDetailFirstView({ desa }: Props) {
             <Info size={15} />
           </div>
           <div className="min-w-0">
-            <span className="inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-amber-700">
-              {DATA_STATUS_COPY.demo.label}
-            </span>
+            <DataStatusBadge status="demo" />
             <p className="mt-2 text-sm font-bold text-slate-800">Data halaman ini masih untuk panduan baca.</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               Ini data demo untuk membantu melihat alur PantauDesa. Belum mewakili data resmi final, dan angka APBDes tidak boleh dibaca sebagai kesimpulan sebelum sumbernya direview.
