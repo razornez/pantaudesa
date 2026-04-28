@@ -6,6 +6,7 @@ import {
   Megaphone, ArrowRight,
 } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
+import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
@@ -27,13 +28,30 @@ import type { Metadata } from "next";
 
 interface Props { params: Promise<{ id: string }> }
 
+const SEEDED_DESA_SLUGS = [
+  "ancolmekar",
+  "arjasari",
+  "baros",
+  "batukarut",
+  "lebakwangi",
+  "mangunjaya",
+  "mekarjaya",
+  "patrolsari",
+  "pinggirsari",
+  "rancakole",
+  "wargaluyu",
+];
+
 export async function generateStaticParams() {
-  return mockDesa.map((d) => ({ id: d.id }));
+  return [
+    ...mockDesa.map((d) => ({ id: d.id })),
+    ...SEEDED_DESA_SLUGS.map((id) => ({ id })),
+  ];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const desa   = mockDesa.find((d) => d.id === id);
+  const desa = await getDesaByIdOrSlugWithFallback(id);
   if (!desa) return { title: "Desa Tidak Ditemukan" };
 
   const title       = `${desa.nama} — Anggaran ${desa.tahun}`;
@@ -54,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DesaDetailPage({ params }: Props) {
   const { id } = await params;
-  const desa   = mockDesa.find((d) => d.id === id);
+  const desa = await getDesaByIdOrSlugWithFallback(id);
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
