@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Database, MapPin } from "lucide-react";
+import { CalendarClock, FileText, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiahMock, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
 import { CARD } from "@/lib/copy";
@@ -14,21 +14,9 @@ interface Props {
   };
 }
 
-function OriginBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800"
-      title="Record ini dibaca dari database."
-    >
-      <Database size={10} aria-hidden />
-      Dari Database
-    </span>
-  );
-}
-
 export default function DesaCard({ desa }: Props) {
   const identityStatus = desa.identityStatus ?? "demo";
-  const sourceSummary = desa.sourceSummary ?? "Record ini dibaca dari database. Angka demo tetap ditandai mock.";
+  const sourceSummary = desa.sourceSummary ?? desa.ringkasanSumber ?? "Sumber publik belum tercatat.";
 
   return (
     <Link
@@ -48,13 +36,24 @@ export default function DesaCard({ desa }: Props) {
           </span>
         </div>
 
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <OriginBadge />
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <DataStatusBadge status={identityStatus} size="xs" />
+          {desa.jumlahDokumenPendukung !== undefined && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+              <FileText size={10} aria-hidden />
+              {desa.jumlahDokumenPendukung} dokumen
+            </span>
+          )}
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
           {sourceSummary}
         </p>
+        {desa.terakhirDiperbaruiLabel && (
+          <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+            <CalendarClock size={10} aria-hidden />
+            {desa.terakhirDiperbaruiLabel}
+          </p>
+        )}
 
         <div className="mt-2.5 flex items-start gap-1.5 text-slate-500">
           <MapPin size={13} className="mt-0.5 flex-shrink-0" aria-hidden />
@@ -67,9 +66,7 @@ export default function DesaCard({ desa }: Props) {
           <div className="mb-2 flex items-center justify-between gap-2 text-sm sm:text-xs">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-slate-600">
               <span>{CARD.penyerapan}</span>
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                Angka Mock
-              </span>
+              <span className="text-[10px] font-bold text-amber-700">(mock)</span>
             </div>
             <span className="font-bold text-slate-700">{desa.persentaseSerapan}%</span>
           </div>

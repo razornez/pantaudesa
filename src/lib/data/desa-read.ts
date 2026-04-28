@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Desa, SummaryStats, TrendData } from "@/lib/types";
 
@@ -17,6 +18,64 @@ export interface DesaListReadResult {
   message: string;
   dbHostAlias: string;
 }
+
+type SourceRecord = {
+  sourceName: string;
+  sourceUrl: string | null;
+  accessStatus: string;
+  dataStatus: "demo" | "imported" | "needs_review" | "outdated" | "rejected" | "verified";
+  lastCheckedAt: Date | null;
+  updatedAt: Date;
+};
+
+type SummaryRecord = {
+  tahun: number;
+  totalAnggaran: bigint | number | null;
+  totalRealisasi: bigint | number | null;
+  persentaseRealisasi: unknown;
+  statusSerapan: string;
+  dataStatus: string;
+  updatedAt: Date;
+};
+
+type APBDesRecord = {
+  tahun: number;
+  kodeBidang: string | null;
+  namaBidang: string;
+  anggaran: bigint | number | null;
+  realisasi: bigint | number | null;
+  persentase: unknown;
+  dataStatus: string;
+  updatedAt: Date;
+};
+
+type DocumentRecord = {
+  tahun: number | null;
+  namaDokumen: string;
+  jenisDokumen: string;
+  status: string;
+  dataStatus: string;
+  updatedAt: Date;
+};
+
+type DesaRecord = {
+  id: string;
+  slug: string;
+  nama: string;
+  kecamatan: string;
+  kabupaten: string;
+  provinsi: string;
+  tahunData: number | null;
+  jumlahPenduduk: number | null;
+  kategori: string | null;
+  websiteUrl: string | null;
+  dataStatus: string;
+  updatedAt: Date;
+  dataSources: SourceRecord[];
+  anggaranSummaries: SummaryRecord[];
+  apbdesItems: APBDesRecord[];
+  dokumenPublik: DocumentRecord[];
+};
 
 const DOCUMENT_KIND: Record<string, string> = {
   apbdes: "Keuangan",
@@ -55,6 +114,21 @@ function normalizeStatus(value: string | null | undefined, percent: number): Des
   return "rendah";
 }
 
+function formatFreshness(date: Date | null | undefined) {
+  if (!date) return "Belum ada tanggal pembaruan";
+  return `Terakhir diperbarui: ${new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date)}`;
+}
+
+function latestDate(dates: Array<Date | null | undefined>) {
+  const valid = dates.filter((date): date is Date => Boolean(date));
+  if (valid.length === 0) return null;
+  return new Date(Math.max(...valid.map((date) => date.getTime())));
+}
+
 function makeSkorTransparansi(percent: number, documentCount: number, sourceCount: number) {
   const kelengkapan = Math.min(100, 40 + documentCount * 10);
   const ketepatan = Math.min(100, 50 + sourceCount * 12);
@@ -74,7 +148,7 @@ function makePendapatan(total: number) {
   return { danaDesa, add, pades, bantuanKeuangan };
 }
 
-function mapDesaRecord(record: Awaited<ReturnType<typeof fetchDesaRecords>>[number]): DesaListItem {
+function mapDesaRecord(record: DesaRecord): DesaListItem {
   const latestSummary = [...record.anggaranSummaries].sort((a, b) => b.tahun - a.tahun)[0];
   const tahun = latestSummary?.tahun ?? record.tahunData ?? 2024;
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
@@ -104,6 +178,20 @@ function mapDesaRecord(record: Awaited<ReturnType<typeof fetchDesaRecords>>[numb
   );
   const hasSource = record.dataSources.length > 0 || Boolean(record.websiteUrl);
   const identityStatus = hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo";
+  const sourceNames = record.dataSources
+    .map((source) => source.sourceName)
+    .filter(Boolean);
+  const freshnessDate = latestDate([
+    record.updatedAt,
+    latestSummary?.updatedAt,
+    ...record.dataSources.map((source) => source.lastCheckedAt ?? source.updatedAt),
+    ...record.dokumenPublik.map((doc) => doc.updatedAt),
+  ]);
+  const freshnessLabel = formatFreshness(freshnessDate);
+  const documentCount = record.dokumenPublik.length;
+  const sourceSummary = sourceNames[0]
+    ? `Sumber: ${sourceNames[0]}. Dokumen pendukung: ${documentCount}.`
+    : `Sumber publik belum tercatat. Dokumen pendukung: ${documentCount}.`;
 
   return {
     id: record.slug || record.id,
@@ -122,30 +210,184 @@ function mapDesaRecord(record: Awaited<ReturnType<typeof fetchDesaRecords>>[numb
     dokumen,
     skorTransparansi: makeSkorTransparansi(percent, dokumen.length, record.dataSources.length),
     pendapatan: makePendapatan(totalAnggaran),
+    sumber: record.dataSources.map((source) => ({
+      nama: source.sourceName,
+      status: source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
+      perluReview: source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
+    })),
+    jumlahSumber: record.dataSources.length,
+    jumlahDokumenPendukung: documentCount,
+    terakhirDiperbaruiLabel: freshnessLabel,
+    ringkasanSumber: sourceSummary,
     dataOrigin: "database",
     identityStatus,
     budgetStatus: "demo",
-    sourceSummary: hasSource
-      ? "Nama, lokasi, sumber, dan angka demo dibaca dari database. Angka anggaran tetap bertanda mock."
-      : "Record desa dan angka demo dibaca dari database. Sumber publik belum tersedia.",
+    sourceSummary,
   };
 }
 
-async function fetchDesaRecords() {
+async function fetchDesaRecords(): Promise<DesaRecord[]> {
   if (!prisma) return [];
 
   return prisma.desa.findMany({
     orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      nama: true,
+      kecamatan: true,
+      kabupaten: true,
+      provinsi: true,
+      tahunData: true,
+      jumlahPenduduk: true,
+      kategori: true,
+      websiteUrl: true,
+      dataStatus: true,
+      updatedAt: true,
       dataSources: {
-        select: { dataStatus: true, accessStatus: true },
+        select: {
+          sourceName: true,
+          sourceUrl: true,
+          accessStatus: true,
+          dataStatus: true,
+          lastCheckedAt: true,
+          updatedAt: true,
+        },
       },
-      anggaranSummaries: true,
-      apbdesItems: true,
-      dokumenPublik: true,
+      anggaranSummaries: {
+        orderBy: { tahun: "desc" },
+        take: 1,
+        select: {
+          tahun: true,
+          totalAnggaran: true,
+          totalRealisasi: true,
+          persentaseRealisasi: true,
+          statusSerapan: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
+      apbdesItems: {
+        select: {
+          tahun: true,
+          kodeBidang: true,
+          namaBidang: true,
+          anggaran: true,
+          realisasi: true,
+          persentase: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
+      dokumenPublik: {
+        select: {
+          tahun: true,
+          namaDokumen: true,
+          jenisDokumen: true,
+          status: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
     },
   });
 }
+
+async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | null> {
+  if (!prisma) return null;
+
+  return prisma.desa.findFirst({
+    where: {
+      OR: [
+        { id: idOrSlug },
+        { slug: idOrSlug },
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      nama: true,
+      kecamatan: true,
+      kabupaten: true,
+      provinsi: true,
+      tahunData: true,
+      jumlahPenduduk: true,
+      kategori: true,
+      websiteUrl: true,
+      dataStatus: true,
+      updatedAt: true,
+      dataSources: {
+        orderBy: { updatedAt: "desc" },
+        select: {
+          sourceName: true,
+          sourceUrl: true,
+          accessStatus: true,
+          dataStatus: true,
+          lastCheckedAt: true,
+          updatedAt: true,
+        },
+      },
+      anggaranSummaries: {
+        orderBy: { tahun: "desc" },
+        take: 1,
+        select: {
+          tahun: true,
+          totalAnggaran: true,
+          totalRealisasi: true,
+          persentaseRealisasi: true,
+          statusSerapan: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
+      apbdesItems: {
+        orderBy: [{ tahun: "desc" }, { kodeBidang: "asc" }],
+        select: {
+          tahun: true,
+          kodeBidang: true,
+          namaBidang: true,
+          anggaran: true,
+          realisasi: true,
+          persentase: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
+      dokumenPublik: {
+        orderBy: [{ tahun: "desc" }, { namaDokumen: "asc" }],
+        select: {
+          tahun: true,
+          namaDokumen: true,
+          jenisDokumen: true,
+          status: true,
+          dataStatus: true,
+          updatedAt: true,
+        },
+      },
+    },
+  });
+}
+
+async function fetchDesaItems() {
+  return (await fetchDesaRecords()).map(mapDesaRecord);
+}
+
+async function fetchDesaDetailItem(idOrSlug: string) {
+  const record = await fetchDesaDetailRecord(idOrSlug);
+  return record ? mapDesaRecord(record) : null;
+}
+
+const getCachedDesaItems = unstable_cache(
+  fetchDesaItems,
+  ["pantau-desa-public-list-v3"],
+  { revalidate: 300, tags: ["desa-public"] }
+);
+
+const getCachedDesaDetailItem = unstable_cache(
+  fetchDesaDetailItem,
+  ["pantau-desa-public-detail-v3"],
+  { revalidate: 300, tags: ["desa-public"] }
+);
 
 export async function getDesaListResult(): Promise<DesaListReadResult> {
   const dbHostAlias = getDbHostAlias();
@@ -154,34 +396,34 @@ export async function getDesaListResult(): Promise<DesaListReadResult> {
     return {
       items: [],
       state: "unavailable",
-      message: "DATABASE_URL belum tersedia atau tidak valid. Data hardcoded tidak digunakan sebagai fallback.",
+      message: "Data desa belum siap ditampilkan. Coba muat ulang beberapa saat lagi.",
       dbHostAlias,
     };
   }
 
   try {
-    const records = await fetchDesaRecords();
-    if (records.length === 0) {
+    const items = await getCachedDesaItems();
+    if (items.length === 0) {
       return {
         items: [],
         state: "empty",
-        message: "Database terbaca, tetapi belum ada desa yang bisa ditampilkan.",
+        message: "Belum ada desa yang bisa ditampilkan.",
         dbHostAlias,
       };
     }
 
     return {
-      items: records.map(mapDesaRecord),
+      items,
       state: "ready",
-      message: `${records.length} desa dibaca dari database. Angka demo ditandai sebagai mock.`,
+      message: `${items.length} desa siap dibaca.`,
       dbHostAlias,
     };
   } catch (error) {
-    console.error("[desa-read] DB query failed without hardcoded fallback:", error);
+    console.error("[desa-read] public desa read failed:", error);
     return {
       items: [],
       state: "unavailable",
-      message: "Database belum bisa dibaca. Data hardcoded tidak digunakan sebagai fallback.",
+      message: "Data desa belum bisa dimuat. Coba muat ulang beberapa saat lagi.",
       dbHostAlias,
     };
   }
@@ -193,8 +435,12 @@ export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
 }
 
 export async function getDesaByIdOrSlugWithFallback(idOrSlug: string): Promise<DesaListItem | null> {
-  const result = await getDesaListResult();
-  return result.items.find((desa) => desa.id === idOrSlug || desa.id.toString() === idOrSlug) ?? null;
+  try {
+    return await getCachedDesaDetailItem(idOrSlug);
+  } catch (error) {
+    console.error("[desa-read] public desa detail read failed:", error);
+    return null;
+  }
 }
 
 export async function getDesaStaticParamsFromDb(): Promise<Array<{ id: string }>> {

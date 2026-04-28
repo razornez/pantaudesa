@@ -15,7 +15,7 @@ function createPrismaClient(): PrismaClient | null {
   if (!valid) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
-        "[prisma] DATABASE_URL missing or unsupported protocol — Prisma disabled, mock data will be used."
+        "[prisma] DATABASE_URL missing or unsupported protocol; Prisma reads are disabled."
       );
     }
     return null;

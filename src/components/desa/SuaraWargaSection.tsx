@@ -92,7 +92,7 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load voices from DB-backed API. No hardcoded fallback in DB-first mode.
+  // Load voices from the public API; empty states stay honest when no story exists.
   const loadVoices = useCallback(async () => {
     setLoading(true);
     try {

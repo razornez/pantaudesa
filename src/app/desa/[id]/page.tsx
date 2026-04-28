@@ -6,7 +6,7 @@ import {
   Megaphone, ArrowRight,
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
-import { getVoicesForDesaFromDb } from "@/lib/data/voice-read";
+import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
 import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
 import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
@@ -21,7 +21,6 @@ import TransparansiCard from "@/components/desa/TransparansiCard";
 import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
-import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 import type { Metadata } from "next";
 
@@ -35,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!desa) return { title: "Desa Tidak Ditemukan" };
 
   const title       = `${desa.nama} — Anggaran ${desa.tahun}`;
-  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Indikator serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)} (mock dari database).`;
+  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Indikator serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)}; nilai bertanda mock adalah contoh baca.`;
 
   return {
     title,
@@ -56,8 +55,8 @@ export default async function DesaDetailPage({ params }: Props) {
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
-  const voices       = await getVoicesForDesaFromDb(desa.id);
-  const voicePreview = voices.slice(0, 2);
+  const voiceSummary = await getVoicePreviewForDesaFromDb(desa.id);
+  const voicePreview = voiceSummary.preview;
   const profil       = desa.profil;
 
   const budgetItems = [
@@ -122,8 +121,9 @@ export default async function DesaDetailPage({ params }: Props) {
       <section id="anggaran" className="space-y-5">
       <div className="space-y-3">
 
-        {/* Demo status strip — DETAIL-RISK-01/02 */}
-        <DataStatusBadge status="demo" showMicrocopy className="w-full sm:w-auto" />
+        <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+          Angka yang bertanda (mock) adalah contoh untuk membantu membaca halaman, bukan angka resmi final.
+        </p>
 
         {/* 4 stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -136,7 +136,6 @@ export default async function DesaDetailPage({ params }: Props) {
                 </div>
                 <p className="text-[10px] text-slate-600 mb-0.5 leading-tight">{item.label}</p>
                 <p className={`text-sm font-black ${item.color} leading-tight`}>{item.value}</p>
-                <DataStatusBadge status="demo" size="xs" className="mt-1" />
               </div>
             );
           })}
@@ -147,7 +146,7 @@ export default async function DesaDetailPage({ params }: Props) {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold text-slate-600">Dari mana uang desa ini berasal?</p>
-              <DataStatusBadge status="demo" size="xs" />
+              <span className="text-[10px] font-bold text-amber-700">(mock)</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(
@@ -244,8 +243,8 @@ export default async function DesaDetailPage({ params }: Props) {
               <div>
                 <p className="text-sm font-bold text-white">Suara Warga</p>
                 <p className="text-[10px] text-indigo-200">
-                  {voices.length > 0
-                    ? `${voices.length} cerita dari warga`
+                  {voiceSummary.total > 0
+                    ? `${voiceSummary.total} cerita dari warga`
                     : "Jadilah yang pertama bercerita"}
                 </p>
               </div>

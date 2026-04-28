@@ -17,7 +17,6 @@ import { buildSummaryStats, buildTrendData, getDesaListResult } from "@/lib/data
 import type { Desa } from "@/lib/types";
 import { DATA_DISCLAIMER, SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
-import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +74,9 @@ export default async function HomePage() {
         <div className="mb-4 max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
-            <DataStatusBadge status="demo" />
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+              angka bertanda mock
+            </span>
           </div>
           <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang perlu dilihat lebih dulu</h2>
           <p className="text-sm text-slate-500 mt-1">

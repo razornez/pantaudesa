@@ -48,7 +48,10 @@ const toneClasses: Record<SnapshotCard["tone"], { card: string; icon: string; fa
 export default function SourceDocumentSnapshotSection({ desa }: Props) {
   const docs = desa.dokumen ?? [];
   const availableDocs = docs.filter((doc) => doc.tersedia);
-  const hasWebsite = Boolean(desa.profil?.website);
+  const sourceNames = desa.sumber?.map((source) => source.nama).filter(Boolean) ?? [];
+  const needsReviewSource = desa.sumber?.some((source) => source.perluReview) ?? false;
+  const hasSource = sourceNames.length > 0 || Boolean(desa.profil?.website);
+  const primarySource = sourceNames[0] ?? desa.profil?.website;
   const hasApbdes = availableDocs.some((doc) => /apbdes/i.test(doc.nama));
   const hasRealisasi = availableDocs.some((doc) => /realisasi/i.test(doc.nama));
   const documentStatus =
@@ -60,23 +63,25 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
         ? "APBDes ada sebagai dokumen referensi. Realisasi masih perlu dicek lebih lanjut."
         : hasRealisasi
           ? "Dokumen realisasi ada sebagai referensi. APBDes masih perlu dicek lebih lanjut."
-          : "Dokumen APBDes/Realisasi belum tercatat di data demo ini.";
+          : "Dokumen APBDes/Realisasi belum tercatat untuk desa ini.";
 
   const cards: SnapshotCard[] = [
     {
-      title: "Website desa",
-      status: hasWebsite ? "Sumber ditemukan" : "Belum tercatat",
-      statusKind: hasWebsite ? "source-found" : undefined,
-      body: hasWebsite
-        ? "Website desa tersedia untuk mulai membaca informasi publik tanpa menumpuk tautan teknis di ringkasan."
-        : "Website desa belum tercatat di data demo ini.",
+      title: "Sumber utama",
+      status: hasSource ? "Sumber ditemukan" : "Belum tercatat",
+      statusKind: hasSource ? "source-found" : undefined,
+      body: hasSource
+        ? `${primarySource} menjadi rujukan awal. Sumber ini belum berarti terverifikasi.`
+        : "Sumber publik belum tercatat untuk desa ini.",
       icon: Globe2,
       tone: "indigo",
     },
     {
-      title: "Halaman kecamatan",
-      status: "Belum tercatat",
-      body: `Belum ada halaman kecamatan ${desa.kecamatan} yang dicatat sebagai sumber di data demo ini.`,
+      title: "Sumber lain",
+      status: sourceNames.length > 1 ? `${sourceNames.length - 1} sumber lain` : "Belum tercatat",
+      body: sourceNames.length > 1
+        ? sourceNames.slice(1, 3).join("; ")
+        : `Belum ada sumber tambahan untuk ${desa.kecamatan} yang tercatat di ringkasan ini.`,
       icon: Building2,
       tone: "sky",
     },
@@ -90,9 +95,11 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
     },
     {
       title: "Status review",
-      status: "Perlu Review",
-      statusKind: "needs-review",
-      body: "Semua sumber dan dokumen di halaman ini perlu dicek sebelum menjadi rujukan resmi.",
+      status: needsReviewSource ? "Perlu Review" : "Belum diverifikasi",
+      statusKind: needsReviewSource ? "needs-review" : undefined,
+      body: needsReviewSource
+        ? "Ada sumber atau dokumen yang perlu dicek ulang sebelum menjadi rujukan."
+        : "Sumber dapat dibaca sebagai referensi, tetapi belum dinyatakan terverifikasi.",
       icon: ShieldCheck,
       tone: "amber",
     },
@@ -112,7 +119,7 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
           </div>
           <p className="max-w-md text-xs leading-relaxed text-slate-500">
             Ringkasan ini membantu warga tahu apa yang bisa mulai dibaca tanpa
-            menganggapnya sebagai kesimpulan final.
+            menganggapnya sebagai kesimpulan final. {desa.terakhirDiperbaruiLabel}
           </p>
         </div>
 

@@ -165,7 +165,9 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
           <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/90" />
           <div className="absolute bottom-2 left-4">
             <div className="mb-1">
-              <DataStatusBadge status="demo" size="xs" />
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                angka mock
+              </span>
             </div>
             <h2 className="text-base font-black text-slate-900 drop-shadow-sm">Prioritas Cek Transparansi</h2>
             <p className="text-[10px] text-slate-600 font-medium">Urutan bantu baca, bukan penilaian final</p>

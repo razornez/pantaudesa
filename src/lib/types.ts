@@ -163,6 +163,16 @@ export interface Desa {
   skorTransparansi?: SkorTransparansi;
   pendapatan?: PendapatanDesa;
   profil?: ProfilDesa;
+  sumber?: {
+    nama: string;
+    status: "demo" | "imported" | "needs_review" | "outdated" | "rejected";
+    perluReview: boolean;
+  }[];
+  identityStatus?: "demo" | "source-found" | "needs-review";
+  jumlahSumber?: number;
+  jumlahDokumenPendukung?: number;
+  terakhirDiperbaruiLabel?: string;
+  ringkasanSumber?: string;
 }
 
 export interface TrendData {

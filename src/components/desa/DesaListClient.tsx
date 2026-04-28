@@ -90,6 +90,9 @@ export default function DesaListClient({
   };
 
   const isDataReady = readState === "ready";
+  const totalSumber = desa.reduce((acc, item) => acc + (item.jumlahSumber ?? 0), 0);
+  const totalDokumen = desa.reduce((acc, item) => acc + (item.jumlahDokumenPendukung ?? 0), 0);
+  const freshnessLabel = desa.find((item) => item.terakhirDiperbaruiLabel)?.terakhirDiperbaruiLabel;
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -131,7 +134,7 @@ export default function DesaListClient({
             </p>
             <p className="mt-1 leading-relaxed">
               {isDataReady
-                ? "Sebagian angka masih bertanda mock karena dipakai sebagai contoh tampilan."
+                ? `${desa.length} desa, ${totalSumber} sumber, dan ${totalDokumen} dokumen pendukung tercatat. ${freshnessLabel ?? "Tanggal pembaruan belum tercatat."} Angka yang bertanda (mock) masih contoh baca.`
                 : "Kami belum bisa menampilkan daftar desa saat ini. Coba muat ulang beberapa saat lagi."}
             </p>
           </div>

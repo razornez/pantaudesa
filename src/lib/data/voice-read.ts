@@ -65,7 +65,7 @@ export async function getAllVoicesFromDb() {
   try {
     return (await fetchVoiceRecords()).map(mapVoice);
   } catch (error) {
-    console.error("[voice-read] DB query failed without hardcoded fallback:", error);
+    console.error("[voice-read] public voice read failed:", error);
     return [];
   }
 }
@@ -74,8 +74,48 @@ export async function getVoicesForDesaFromDb(desaId: string) {
   try {
     return (await fetchVoiceRecords(desaId)).map(mapVoice);
   } catch (error) {
-    console.error("[voice-read] DB query failed without hardcoded fallback:", error);
+    console.error("[voice-read] public desa voice read failed:", error);
     return [];
+  }
+}
+
+export type DesaVoicePreview = {
+  total: number;
+  preview: Array<Pick<CitizenVoice, "id" | "category" | "text" | "author">>;
+};
+
+export async function getVoicePreviewForDesaFromDb(desaId: string): Promise<DesaVoicePreview> {
+  if (!prisma) return { total: 0, preview: [] };
+
+  try {
+    const [total, records] = await Promise.all([
+      prisma.voice.count({ where: { desaId } }),
+      prisma.voice.findMany({
+        where: { desaId },
+        orderBy: { createdAt: "desc" },
+        take: 2,
+        select: {
+          id: true,
+          category: true,
+          text: true,
+          isAnon: true,
+          author: { select: { nama: true, name: true, username: true } },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      preview: records.map((record) => ({
+        id: record.id,
+        category: record.category,
+        text: record.text,
+        author: authorName(record.author, record.isAnon),
+      })),
+    };
+  } catch (error) {
+    console.error("[voice-read] public desa voice preview read failed:", error);
+    return { total: 0, preview: [] };
   }
 }
 

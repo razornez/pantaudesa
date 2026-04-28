@@ -7,7 +7,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
-import { DATA_STATUS_COPY } from "@/lib/copy";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
@@ -18,22 +17,22 @@ export default function DesaDetailFirstView({ desa }: Props) {
   const profil = desa.profil;
   const availableDocs = desa.dokumen?.filter((doc) => doc.tersedia).length ?? 0;
   const totalDocs = desa.dokumen?.length ?? 0;
-  const hasWebsite = Boolean(profil?.website);
+  const hasSource = (desa.jumlahSumber ?? 0) > 0 || Boolean(profil?.website);
+  const primarySource = desa.sumber?.[0]?.nama ?? profil?.website;
 
   const quickFacts = [
     {
       label: "Status data",
-      value: DATA_STATUS_COPY.demo.label,
-      body: "Contoh tampilan, bukan data resmi final.",
+      value: "Panduan baca",
+      body: "Angka yang bertanda (mock) adalah contoh, bukan kesimpulan resmi.",
       icon: ShieldCheck,
-      statusKind: "demo" as DataStatusKind,
     },
     {
       label: "Sumber publik",
-      value: hasWebsite ? "Sumber ditemukan" : "Belum tercatat",
-      body: hasWebsite ? "Website desa tersedia untuk mulai dicek." : "Sumber web belum tercatat di data demo.",
+      value: hasSource ? "Sumber ditemukan" : "Belum tercatat",
+      body: hasSource ? `Rujukan awal: ${primarySource}.` : "Sumber publik belum tercatat.",
       icon: Globe2,
-      statusKind: hasWebsite ? "source-found" as DataStatusKind : undefined,
+      statusKind: hasSource ? "source-found" as DataStatusKind : undefined,
     },
     {
       label: "Dokumen",
@@ -53,7 +52,9 @@ export default function DesaDetailFirstView({ desa }: Props) {
                 <MapPin size={13} />
                 Kartu Identitas Desa
               </span>
-              <DataStatusBadge status="demo" size="md" />
+              {desa.identityStatus === "needs-review"
+                ? <DataStatusBadge status="needs-review" size="md" />
+                : hasSource && <DataStatusBadge status="source-found" size="md" />}
             </div>
 
             <h1 className="mt-4 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
@@ -66,6 +67,11 @@ export default function DesaDetailFirstView({ desa }: Props) {
             <p className="mt-5 max-w-2xl text-sm leading-relaxed text-slate-600">
               Baca informasi publik {desa.nama} dengan status sumber yang jelas. PantauDesa membantu warga melihat sumber dan dokumen yang tersedia sebelum membuat kesimpulan.
             </p>
+            {desa.terakhirDiperbaruiLabel && (
+              <p className="mt-3 text-xs font-semibold text-slate-500">
+                {desa.terakhirDiperbaruiLabel}
+              </p>
+            )}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <a
@@ -114,10 +120,9 @@ export default function DesaDetailFirstView({ desa }: Props) {
             <Info size={15} />
           </div>
           <div className="min-w-0">
-            <DataStatusBadge status="demo" />
-            <p className="mt-2 text-sm font-bold text-slate-800">Data halaman ini masih untuk panduan baca.</p>
+            <p className="text-sm font-bold text-slate-800">Baca angka dengan konteks sumber.</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              Ini data demo untuk membantu melihat alur PantauDesa. Belum mewakili data resmi final, dan angka APBDes tidak boleh dibaca sebagai kesimpulan sebelum sumbernya direview.
+              Nilai yang bertanda (mock) dipakai sebagai contoh tampilan. Gunakan sumber dan dokumen di bawah ini sebelum menjadikan angka sebagai rujukan.
             </p>
           </div>
         </div>

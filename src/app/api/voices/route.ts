@@ -87,7 +87,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     if (!db) {
-      return NextResponse.json({ error: "Database belum tersedia" }, { status: 503 });
+      return NextResponse.json({ error: "Layanan penyimpanan belum siap" }, { status: 503 });
     }
 
     const session = await auth();
