@@ -32,6 +32,15 @@ function makeDemoBudgetFallback(index: number) {
   return mockDesa[index % mockDesa.length];
 }
 
+function mergeProfilWebsite(desa: Desa, websiteUrl: string | null): Desa["profil"] {
+  if (!desa.profil) return undefined;
+
+  return {
+    ...desa.profil,
+    website: websiteUrl ?? desa.profil.website,
+  };
+}
+
 export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
   try {
     const dbDesa = await prisma.desa.findMany({
@@ -66,10 +75,7 @@ export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
         tahun: desa.tahunData ?? demoBudget.tahun,
         penduduk: desa.jumlahPenduduk ?? demoBudget.penduduk,
         kategori: desa.kategori ?? demoBudget.kategori,
-        profil: {
-          ...demoBudget.profil,
-          website: desa.websiteUrl ?? demoBudget.profil?.website,
-        },
+        profil: mergeProfilWebsite(demoBudget, desa.websiteUrl),
         dataOrigin: "hybrid-db-seed",
         identityStatus: hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo",
         budgetStatus: "demo",
