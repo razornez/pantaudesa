@@ -182,14 +182,6 @@ export default function HeroSection({ totalDesa, tahun }: Props) {
                 {HERO.ctaSearch}
               </button>
             </form>
-
-            <a
-              href="#alur-warga"
-              className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white font-medium px-5 py-2.5 rounded-xl hover:bg-white/20 transition-colors text-sm border border-white/20"
-            >
-              {HERO.ctaAll}
-              <ArrowRight size={15} />
-            </a>
           </div>
 
           <p
