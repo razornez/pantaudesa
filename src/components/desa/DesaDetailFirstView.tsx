@@ -75,12 +75,6 @@ export default function DesaDetailFirstView({ desa }: Props) {
                 Lihat Dokumen
                 <ArrowRight size={14} />
               </a>
-              <a
-                href="#status-data"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Cara Membaca Data
-              </a>
             </div>
           </div>
 

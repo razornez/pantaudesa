@@ -22,8 +22,8 @@ Requested-by: Iwan
 - `src/app/globals.css`
 - `src/components/home/AlertDiniSection.tsx`
 - `src/components/home/StatsCards.tsx`
-- `src/components/desa/DetailStickySummary.tsx`
 - `src/components/desa/SeharusnyaAdaSection.tsx`
+- `src/components/desa/DesaDetailFirstView.tsx`
 - `src/components/ui/AnimatedCounter.tsx`
 - `src/components/ui/DataStatusBadge.tsx`
 - `docs/product/31-visual-design-first-pass-report.md`
@@ -51,15 +51,16 @@ Requested-by: Iwan
   - `Perlu Review`
   - disabled/future `Terverifikasi`
 
-### Sticky Detail Summary
+### Detail Hero CTA Cleanup
 
-- Added `DetailStickySummary` under detail navigation.
-- Sticky mini-summary shows:
-  - Serapan
-  - Dokumen tersedia
-  - Keterbukaan
-  - Status Demo
-- Links point to the existing detail anchors.
+- Removed the secondary `Cara Membaca Data` button from the detail hero.
+- Kept `Lihat Dokumen` as the primary hero action.
+- The explanatory status panel still remains in the first view for safe data reading context.
+
+### Sticky Detail Summary Rollback
+
+- Removed `DetailStickySummary` from `/desa/[id]` because it interfered with the detail reading experience.
+- Deleted the component file instead of leaving unused UI code behind.
 
 ### Hak Wargamu Visual Lift
 
@@ -80,7 +81,8 @@ Requested-by: Iwan
 
 - `/`: `Risk Radar` feels more clickable but still civic-safe.
 - `/`: national stats animate without changing final values.
-- `/desa/4`: sticky summary stays usable while scrolling and does not cover content awkwardly.
+- `/desa/4`: hero should no longer show the `Cara Membaca Data` button.
+- `/desa/4`: no sticky mini-summary should appear between `DetailSectionNav` and document/source sections.
 - `/desa/4`: Hak Warga feels more prominent but does not overclaim.
 - Status badges remain readable at `xs`, `sm`, and `md` sizes.
 - Reduced-motion users are not forced through distracting animation.
@@ -88,7 +90,7 @@ Requested-by: Iwan
 ## QA Commands
 
 - `npx tsc --noEmit` - PASS
-- `npx eslint src/app/page.tsx 'src/app/desa/[id]/page.tsx' src/components/home/AlertDiniSection.tsx src/components/home/StatsCards.tsx src/components/desa/DetailStickySummary.tsx src/components/desa/SeharusnyaAdaSection.tsx src/components/ui/DataStatusBadge.tsx src/components/ui/AnimatedCounter.tsx` - PASS
+- `npx eslint src/app/page.tsx 'src/app/desa/[id]/page.tsx' src/components/desa/DesaDetailFirstView.tsx src/components/home/AlertDiniSection.tsx src/components/home/StatsCards.tsx src/components/desa/SeharusnyaAdaSection.tsx src/components/ui/DataStatusBadge.tsx src/components/ui/AnimatedCounter.tsx` - PASS
 - `npm run test` - PASS after sandbox escalation for Vitest/esbuild spawn; 42/42 tests passed
 - `npm run lint` - FAIL due existing unrelated lint debt outside this batch:
   - `src/app/desa-admin/dokumen/page.tsx`
@@ -101,11 +103,12 @@ Requested-by: Iwan
 ## Route Checks
 
 - `http://localhost:3000/` - 200; contains `Risk Radar`, `Perlu Review`, and `Sinyal awal untuk desa yang perlu dicek dulu`.
-- `http://localhost:3000/desa/4` - 200; contains sticky summary labels `Serapan`, `Dokumen`, `Keterbukaan`, plus `Panduan Hak Warga` and `Data Demo`.
+- `http://localhost:3000/desa/4` - 200; contains `Lihat Dokumen`, `Panduan Hak Warga`, and `Data Demo`.
+- `http://localhost:3000/desa/4` - confirmed `Cara Membaca Data` button copy is no longer rendered.
 
 ## Known Risks
 
-- Sticky summary adds another persistent visual element on detail pages; reviewers should check mobile overlap with the navbar.
+- Removing the sticky detail summary lowers persistent orientation support, but reduces visual interference on long detail pages.
 - Animated counters are client-side visual enhancement only; final values are unchanged.
 - Full repo lint still has old unrelated debt.
 
