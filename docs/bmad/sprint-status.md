@@ -18,40 +18,61 @@ Move PantauDesa from mock-only UI toward safe database-backed foundation without
 
 ## Current story status
 
-`DONE_PENDING_QA`
+`DONE_PENDING_OWNER_QA`
 
-## Current issue
+Why:
 
-Owner reported:
+- initial hybrid DB + mock flagging implementation exists,
+- latest fixes address the known Ancolmekar/runtime problems,
+- latest commit messages report TypeScript clean, 42/42 tests pass, and lint clean,
+- Owner should re-check runtime UI with intended env.
+
+## Current issue and latest resolution
+
+Original issue:
 
 > Ancolmekar is not visible in Data Desa page.
 
-Interpretation:
+Latest fixes from main:
 
-- If Ancolmekar/Arjasari/Patrolsari do not appear, `/desa` is likely rendering mock fallback mode.
-- Likely causes:
-  - runtime `DATABASE_URL` missing,
-  - runtime `DATABASE_URL` points to wrong DB,
-  - seed was run in different DB than the one Next.js reads,
-  - DB read failed and service fell back to mock,
-  - deployed/staging app has not received latest env or build.
+1. Commit `14166a02e63cb1633ad2f77ce7a47cbbc30e4026`
+   - `/desa` now uses `export const dynamic = "force-dynamic"` so DB is read at request time, not cached at build time.
+   - `/desa/[id]` also uses dynamic request-time resolution.
+   - hardcoded seeded slug static params were removed.
+   - province filter now derives from actual `desa` prop instead of `mock-data`.
+   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
 
-## Latest implementation changes
+2. Commit `aeff7fb5b9b37f520a99ecdacbd5793c9803fdb7`
+   - guarded DB access with URL check and lazy Prisma import.
+   - no/wrong `DATABASE_URL` falls back to mock without crash.
+   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
 
-Hybrid DB + mock flagging implemented:
+3. Commit `187078163fc0668f3d8dac850969921fc59bc1bf`
+   - PrismaClient instantiation is guarded against missing/bad `DATABASE_URL`.
+   - `prisma` and `db` can be null safely.
+   - `/desa` shows mock fallback instead of crashing when env is missing/bad.
+   - with valid `DATABASE_URL`, DB desa should show as `database-seed` and budget remains demo/mock.
+   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
 
-- `/desa` reads DB on server where available.
-- if DB read fails or empty, falls back to mock/hardcoded.
-- cards now distinguish:
-  - `Dari Database`,
-  - `Mock/Hardcoded`,
-  - `Angka Demo`.
+## Latest implementation behavior
 
-References:
+If runtime DB is connected and seed exists:
 
-- `docs/engineering/52-sprint-03-db-read-hybrid-mock-flagging-report.md`
+- `/desa` should read seeded Arjasari desa on every request.
+- Ancolmekar should appear.
+- banner should say `Mode: Database + Angka Demo`.
+- DB cards should show `Dari Database`.
+- budget/serapan fields should show `Angka Demo`.
+- `/desa/ancolmekar` should resolve dynamically.
 
-## Immediate QA checklist
+If runtime DB is missing/bad/unreachable:
+
+- `/desa` should not crash.
+- page should fall back to mock/hardcoded list.
+- banner should say `Mode: Mock/Hardcoded`.
+- cards should show `Mock/Hardcoded`.
+
+## Immediate Owner/Asep/Ujang QA checklist
 
 Run locally/staging:
 
@@ -62,42 +83,47 @@ npm run test
 npm run build
 ```
 
-Then check:
+Then check routes:
 
 - `/desa`
 - `/desa?cari=ancolmekar`
 - `/desa/ancolmekar`
 - `/desa/4`
 
-Expected if DB is connected and seed exists:
+Also check runtime host without exposing secret:
 
-- banner says `Mode: Database + Angka Demo`,
-- Ancolmekar appears,
-- Arjasari seeded desa appear,
-- cards show `Dari Database`,
-- budget fields show `Angka Demo`.
+```bash
+node -e "const u=new URL(process.env.DATABASE_URL); console.log(u.host)"
+```
 
-Expected if DB is not connected:
+Expected intended shared Supabase host:
 
-- banner says `Mode: Mock/Hardcoded`,
-- old mock villages appear,
-- cards show `Mock/Hardcoded`,
-- this is graceful fallback, but DB runtime issue still needs fixing.
+```text
+aws-1-ap-south-1.pooler.supabase.com
+```
 
 ## Next recommended story
 
 `Sprint 03 — DB Runtime Connection Check`
+
+Status:
+
+- still useful as QA/report story, but no longer necessarily a code-fix story because latest code already added force-dynamic and Prisma/env guards.
 
 Goal:
 
 - confirm which DB runtime Next.js is reading,
 - verify seed exists in that DB,
 - ensure `/desa` shows database mode in intended environment,
-- do not expand feature scope.
+- document the result.
 
 Candidate story file:
 
 - `docs/bmad/stories/sprint-03-003-db-runtime-connection-check.md`
+
+Recommended output if executed:
+
+- `docs/engineering/53-sprint-03-db-runtime-connection-check-report.md`
 
 ## Blocked / not next
 
@@ -116,10 +142,10 @@ Do not proceed yet to:
 
 | Item | Status | Notes |
 |---|---|---|
-| UI trust cleanup | ACCEPTED / mostly closed | Product UI cycle completed with latest tracker acceptance. |
+| UI trust cleanup | ACCEPTED / mostly closed | Product UI cycle completed with tracker acceptance. |
 | Shared Supabase migration | APPLIED | Report 47. |
 | Demo seed Option A | REPORTED_QA_PASS | Report 51. |
-| Hybrid DB + mock flagging | DONE_PENDING_QA | Report 52, needs runtime verification. |
-| Runtime DB connection check | PLANNED | Recommended next. |
-| Full read path switch | BLOCKED | Needs separate gate after smoke/runtime check. |
+| Hybrid DB + mock flagging | DONE_PENDING_OWNER_QA | Latest fixes should resolve request-time DB read and env-guard crash issues. |
+| Runtime DB connection check | PLANNED / QA-RECOMMENDED | Confirm host, row count, route behavior, and banner mode. |
+| Full read path switch | BLOCKED | Needs separate gate after QA/Owner acceptance. |
 | Numeric APBDes extraction | BLOCKED | Needs future governance. |
