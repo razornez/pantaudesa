@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
 
@@ -41,8 +40,19 @@ function mergeProfilWebsite(desa: Desa, websiteUrl: string | null): Desa["profil
   };
 }
 
+function isDbAvailable(): boolean {
+  const url = process.env.DATABASE_URL ?? "";
+  return url.startsWith("postgresql://") || url.startsWith("postgres://") || url.startsWith("prisma://") || url.startsWith("prisma+postgres://");
+}
+
 export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
+  if (!isDbAvailable()) {
+    console.warn("[desa-read] DATABASE_URL not configured — serving mock data");
+    return defaultMockItems;
+  }
+
   try {
+    const { prisma } = await import("@/lib/prisma");
     const dbDesa = await prisma.desa.findMany({
       orderBy: { nama: "asc" },
       include: {
