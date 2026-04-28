@@ -1,4 +1,4 @@
-# Task Sprint 03-005 — Loading, Caching, and Route Performance
+# Task Sprint 03-005 — Loading, Caching, Trust Copy, and Route Performance
 
 Status: READY_FOR_UJANG_ASEP_EXECUTION
 Executor: Ujang / Asep
@@ -7,7 +7,9 @@ Date: 2026-04-28
 
 ## Goal
 
-Improve the DB-first user experience after Sprint 03-004 by making route transitions feel responsive and DB-backed pages lighter.
+Close Sprint 03 by improving the DB-first user experience, trust clarity, and code quality.
+
+This batch should make DB-backed pages feel faster, cleaner, easier to understand, and easier to maintain.
 
 Rangga already patched the obvious public technical copy in:
 
@@ -15,18 +17,31 @@ Rangga already patched the obvious public technical copy in:
 - `src/app/page.tsx`
 - `src/app/suara/page.tsx`
 
-So Ujang/Asep should focus on technical UX/performance:
+Ujang/Asep should focus on:
 
 1. route-level loading states;
 2. lightweight skeletons/placeholders;
 3. stable layout during navigation;
 4. safe caching/revalidation for public read data;
 5. reducing repeated DB calls and overfetching;
-6. final sweep for any remaining public technical copy.
+6. simplifying repetitive demo/mock badges;
+7. showing useful freshness/source information instead of generic DB/demo explanations;
+8. keeping code clean, maintainable, and performant.
 
 ## Owner feedback
 
 After DB-first switch, clicking from `/desa` to a desa detail can feel frozen for several seconds.
+
+Owner also gave trust/copy feedback:
+
+- text like `Nama, lokasi, sumber, dan angka demo dibaca dari database. Angka anggaran tetap bertanda mock.` is no longer useful;
+- the UI already has mock flags, so avoid repeating generic demo explanations;
+- more important: show when the data was last uploaded/updated;
+- detail pages should explain where the data comes from, using the available source/document records;
+- reduce badges like `Data Demo` / `Data ini masih demo, belum menjadi fakta resmi` where field-level `(mock)` labels already make the meaning clear;
+- keep enough trust signal, but avoid visual clutter;
+- code and files must stay clean, readable, and maintainable;
+- performance is important.
 
 Expected behavior:
 
@@ -98,7 +113,67 @@ Allowed:
 
 Do not reintroduce hardcoded displayed data fallback.
 
-### D. Final copy sweep
+### D. Trust copy and source transparency cleanup
+
+Improve trust clarity without clutter.
+
+Change/remove generic text like:
+
+```text
+Nama, lokasi, sumber, dan angka demo dibaca dari database. Angka anggaran tetap bertanda mock.
+```
+
+Replace with more useful information, such as:
+
+- `Terakhir diperbarui: <tanggal>` if available;
+- `Sumber data: <nama sumber>` where available;
+- `Dokumen pendukung: <jumlah dokumen>` where useful;
+- `Sebagian angka masih bertanda (mock)` only when needed and not already obvious in the field.
+
+Detail pages should show where data is sourced from:
+
+- source registry / `DataSource`,
+- public document rows / `DokumenPublik`,
+- website/source name when available,
+- status such as `Perlu dicek ulang` when relevant.
+
+Avoid making source-backed/imported data look verified.
+
+Do not activate `verified` / `Terverifikasi`.
+
+### E. Badge simplification
+
+Reduce repeated global demo badges where the same information is already clear from field-level labels like `(mock)`.
+
+Examples to reduce or remove when redundant:
+
+- `Data Demo`,
+- `Data ini masih demo, belum menjadi fakta resmi`,
+- repeated status badges near every number when the number already says `(mock)`.
+
+Keep trust clarity:
+
+- if a value is mock, it must still be obvious;
+- if a source needs review, it should remain visible;
+- if data is imported/source-backed but not verified, do not claim verified.
+
+### F. Code quality and maintainability
+
+Keep code and files clean.
+
+Expectations:
+
+- avoid large messy components where simple extraction helps;
+- reuse small helper functions/components for repeated loading skeletons or trust labels;
+- avoid duplicating copy strings across many files when a shared helper/copy constant is better;
+- keep server DB read logic separated from client components;
+- avoid client-side Prisma or secret access;
+- keep TypeScript types clear;
+- prefer simple SOLID-style separation: data mapping, UI rendering, and formatting should not be mixed unnecessarily.
+
+Do not over-refactor unrelated code.
+
+### G. Final copy sweep
 
 Rangga already patched the known technical copy.
 
@@ -137,8 +212,14 @@ Technical comments/logs can remain if not visible to users.
 8. No hardcoded displayed data fallback is reintroduced.
 9. Mock/demo values remain clearly flagged where displayed.
 10. No public UI shows technical DB/fallback/hardcoded/seed/host copy.
-11. No `verified` activation.
-12. No new dependency.
+11. Redundant `Data Demo` badges/copy are reduced where field-level `(mock)` already explains the value.
+12. `/desa` shows useful freshness/source summary instead of generic DB/demo explanation.
+13. `/desa/[id]` shows clear source/document information for where data comes from.
+14. `Terakhir diperbarui` or equivalent freshness info appears where available.
+15. No `verified` activation.
+16. No new dependency.
+17. Code remains organized: no messy broad refactor, no duplicated heavy logic, no client-side DB secret usage.
+18. TypeScript types remain clear and build-safe.
 
 ## QA
 
@@ -188,7 +269,15 @@ Guardrails:
 - DB-first displayed data policy remains
 - no hardcoded displayed data fallback reintroduced
 
+Trust/source cleanup:
+- redundant demo badges reduced: yes/no
+- freshness/source info added: yes/no
+- detail source/document info visible: yes/no
+
 Performance note:
+- ...
+
+Code quality note:
 - ...
 
 Known risks:
@@ -198,7 +287,7 @@ Known risks:
 ## Report back
 
 ```text
-Task: Sprint 03-005 Loading, Caching, and Route Performance
+Task: Sprint 03-005 Loading, Caching, Trust Copy, and Route Performance
 Status: PASS / REWORK / BLOCKED
 Routes checked:
 - /:
@@ -217,7 +306,13 @@ Copy check:
 - remaining public technical terms removed: yes/no
 Loading check:
 - detail route loading visible: yes/no
+Trust/source check:
+- redundant demo badges reduced: yes/no
+- freshness/source info shown: yes/no
+- detail source/document info shown: yes/no
 Performance note:
+- ...
+Code quality note:
 - ...
 Files changed:
 Commit SHA(s):
@@ -227,11 +322,11 @@ Known risks/blockers:
 ## Short handoff
 
 ```text
-Ujang, pull latest main, read docs/bmad/tasks/sprint-03-005-user-friendly-empty-loading-performance.md, focus on loading/skeleton, caching/revalidation, and DB route performance. Copy cleanup was already patched by Rangga, but do a final sweep. Run QA/guardrails, commit with implementation note, push, then report commit SHA + QA/route/performance summary. Do not widen scope beyond the task file.
+Ujang, pull latest main, read docs/bmad/tasks/sprint-03-005-user-friendly-empty-loading-performance.md, focus on loading/skeleton, caching/revalidation, DB route performance, trust/source copy cleanup, and reducing redundant demo badges. Copy cleanup was already started by Rangga, but do a final sweep. Run QA/guardrails, commit with implementation note, push, then report commit SHA + QA/route/performance/source-summary. Do not widen scope beyond the task file.
 ```
 
 If Asep takes over:
 
 ```text
-Asep, pull latest main, read docs/bmad/tasks/sprint-03-005-user-friendly-empty-loading-performance.md, continue from latest commit, keep the same scope/guardrails, run QA, commit/push only necessary fixes, then report commit SHA + QA/route/performance summary.
+Asep, pull latest main, read docs/bmad/tasks/sprint-03-005-user-friendly-empty-loading-performance.md, continue from latest commit, keep the same scope/guardrails, run QA, commit/push only necessary fixes, then report commit SHA + QA/route/performance/source-summary.
 ```
