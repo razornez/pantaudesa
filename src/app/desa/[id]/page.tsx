@@ -5,7 +5,6 @@ import {
   ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
   Megaphone, ArrowRight,
 } from "lucide-react";
-import { mockDesa } from "@/lib/mock-data";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
@@ -26,28 +25,9 @@ import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 interface Props { params: Promise<{ id: string }> }
-
-const SEEDED_DESA_SLUGS = [
-  "ancolmekar",
-  "arjasari",
-  "baros",
-  "batukarut",
-  "lebakwangi",
-  "mangunjaya",
-  "mekarjaya",
-  "patrolsari",
-  "pinggirsari",
-  "rancakole",
-  "wargaluyu",
-];
-
-export async function generateStaticParams() {
-  return [
-    ...mockDesa.map((d) => ({ id: d.id })),
-    ...SEEDED_DESA_SLUGS.map((id) => ({ id })),
-  ];
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;

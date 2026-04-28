@@ -1,6 +1,8 @@
 import DesaListClient from "@/components/desa/DesaListClient";
 import { getDesaListWithFallback } from "@/lib/data/desa-read";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   searchParams?: Promise<{ cari?: string }>;
 }

@@ -6,7 +6,6 @@ import { Database, FileCode2, LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
 import DesaCard from "@/components/desa/DesaCard";
 import DesaTable from "@/components/desa/DesaTable";
-import { provinsiList } from "@/lib/mock-data";
 import { StatusSerapan, SortField, SortOrder } from "@/lib/types";
 import { ASSETS } from "@/lib/assets";
 import type { DesaListItem } from "@/lib/data/desa-read";
@@ -19,6 +18,11 @@ interface Props {
 }
 
 export default function DesaListClient({ desa, initialSearch = "" }: Props) {
+  const provinsiList = useMemo(
+    () => [...new Set(desa.map((d) => d.provinsi))].sort(),
+    [desa]
+  );
+
   const [search, setSearch] = useState(initialSearch);
   const [provinsi, setProvinsi] = useState("");
   const [status, setStatus] = useState<StatusSerapan>("semua");
