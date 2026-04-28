@@ -10,69 +10,73 @@ Sprint 03 — Data Foundation
 
 ## Sprint goal
 
-Move PantauDesa from mock-only UI toward safe database-backed foundation without making demo/imported data look verified or official.
+Move PantauDesa into DB-first displayed data mode so performance and behavior can be tested against database-backed reads, while preserving clear trust labels and blocking false verification.
 
-## Current active story
+Updated Owner goal:
 
-- `docs/bmad/stories/sprint-03-002-db-read-hybrid-mock-flagging.md`
+- all displayed data should come from DB;
+- current hardcoded/dummy displayed data should be inserted into DB as mock/demo records;
+- UI should not silently read hardcoded fallback data if DB is unavailable;
+- dummy/mock fields must be clearly marked, e.g. `Rp1 M (mock)`;
+- no `verified` status;
+- no official numeric APBDes extraction;
+- voices/comments/replies/votes/helpfuls should also be DB-backed.
 
-## Current story status
+## Current active task
 
-`DONE_PENDING_OWNER_QA`
+- `docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md`
+
+## Current task status
+
+`READY_FOR_IWAN_GATE_AND_UJANG_ASEP_EXECUTION`
 
 Why:
 
-- initial hybrid DB + mock flagging implementation exists,
-- latest fixes address the known Ancolmekar/runtime problems,
-- latest commit messages report TypeScript clean, 42/42 tests pass, and lint clean,
-- Owner should re-check runtime UI with intended env.
+- Owner explicitly wants Sprint 03 to cover DB-first displayed data as one larger batch;
+- task file has been created for Ujang/Asep;
+- batch includes seed expansion, DB-only displayed reads, voice DB reads, mock field labels, and no hardcoded runtime fallback;
+- implementation should be handled locally by Ujang/Asep because it needs DB env, seed execution, QA, route checks, and performance observation.
 
-## Current issue and latest resolution
+## Recently completed / reported
 
-Original issue:
+1. UI trust cleanup accepted/mostly closed.
+2. Shared Supabase migration applied.
+3. Demo seed Option A reported QA pass.
+4. Hybrid DB + mock flagging implemented.
+5. Latest code fixes added:
+   - request-time DB read with `force-dynamic`,
+   - Prisma env guards,
+   - mock fallback crash safety,
+   - actual-data province filter.
 
-> Ancolmekar is not visible in Data Desa page.
+## Current batch objective
 
-Latest fixes from main:
+Sprint 03-004 should move beyond hybrid fallback:
 
-1. Commit `14166a02e63cb1633ad2f77ce7a47cbbc30e4026`
-   - `/desa` now uses `export const dynamic = "force-dynamic"` so DB is read at request time, not cached at build time.
-   - `/desa/[id]` also uses dynamic request-time resolution.
-   - hardcoded seeded slug static params were removed.
-   - province filter now derives from actual `desa` prop instead of `mock-data`.
-   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
+- seed all currently displayed hardcoded/mock datasets into DB;
+- move displayed runtime reads to DB services;
+- remove silent hardcoded fallback for displayed data;
+- use controlled empty/unavailable states if DB is unavailable;
+- keep static copy/config constants allowed in code;
+- flag all dummy/mock numeric/record values clearly;
+- keep official/source-backed imported data unverified but not necessarily labelled mock;
+- preserve no verified/no official numeric extraction/no scraper guardrails.
 
-2. Commit `aeff7fb5b9b37f520a99ecdacbd5793c9803fdb7`
-   - guarded DB access with URL check and lazy Prisma import.
-   - no/wrong `DATABASE_URL` falls back to mock without crash.
-   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
+## Immediate handoff prompt
 
-3. Commit `187078163fc0668f3d8dac850969921fc59bc1bf`
-   - PrismaClient instantiation is guarded against missing/bad `DATABASE_URL`.
-   - `prisma` and `db` can be null safely.
-   - `/desa` shows mock fallback instead of crashing when env is missing/bad.
-   - with valid `DATABASE_URL`, DB desa should show as `database-seed` and budget remains demo/mock.
-   - commit message reports TypeScript clean, 42/42 tests pass, lint clean.
+Use this short handoff:
 
-## Latest implementation behavior
+```text
+Ujang, pull latest main, read docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md, execute as one Sprint 03 DB-first batch, run QA/guardrails, commit with implementation note, push, then report commit SHA + QA/route summary. Do not widen scope beyond the task file.
+```
 
-If runtime DB is connected and seed exists:
+If Asep takes over:
 
-- `/desa` should read seeded Arjasari desa on every request.
-- Ancolmekar should appear.
-- banner should say `Mode: Database + Angka Demo`.
-- DB cards should show `Dari Database`.
-- budget/serapan fields should show `Angka Demo`.
-- `/desa/ancolmekar` should resolve dynamically.
+```text
+Asep, pull latest main, read docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md, continue from latest commit, keep the same scope/guardrails, run QA, commit/push only necessary fixes, then report commit SHA + QA/route summary.
+```
 
-If runtime DB is missing/bad/unreachable:
-
-- `/desa` should not crash.
-- page should fall back to mock/hardcoded list.
-- banner should say `Mode: Mock/Hardcoded`.
-- cards should show `Mock/Hardcoded`.
-
-## Immediate Owner/Asep/Ujang QA checklist
+## Required QA for current task
 
 Run locally/staging:
 
@@ -83,60 +87,27 @@ npm run test
 npm run build
 ```
 
-Then check routes:
+Route checks:
 
+- `/`
 - `/desa`
 - `/desa?cari=ancolmekar`
 - `/desa/ancolmekar`
 - `/desa/4`
-
-Also check runtime host without exposing secret:
-
-```bash
-node -e "const u=new URL(process.env.DATABASE_URL); console.log(u.host)"
-```
-
-Expected intended shared Supabase host:
-
-```text
-aws-1-ap-south-1.pooler.supabase.com
-```
-
-## Next recommended story
-
-`Sprint 03 — DB Runtime Connection Check`
-
-Status:
-
-- still useful as QA/report story, but no longer necessarily a code-fix story because latest code already added force-dynamic and Prisma/env guards.
-
-Goal:
-
-- confirm which DB runtime Next.js is reading,
-- verify seed exists in that DB,
-- ensure `/desa` shows database mode in intended environment,
-- document the result.
-
-Candidate story file:
-
-- `docs/bmad/stories/sprint-03-003-db-runtime-connection-check.md`
-
-Recommended output if executed:
-
-- `docs/engineering/53-sprint-03-db-runtime-connection-check-report.md`
+- `/suara-warga`
+- `/suara`
 
 ## Blocked / not next
 
 Do not proceed yet to:
 
-- full read path switch,
-- numeric APBDes extraction,
-- homepage stats from DB,
-- detail budget numbers from DB,
 - `verified` activation,
+- official numeric APBDes extraction,
 - scraper/scheduler,
-- admin review workflow,
-- Risk Radar / Score Orb.
+- Risk Radar / Score Orb,
+- new dependency,
+- destructive migration commands,
+- full production data import beyond approved mock/demo DB-first batch.
 
 ## Status board
 
@@ -145,7 +116,9 @@ Do not proceed yet to:
 | UI trust cleanup | ACCEPTED / mostly closed | Product UI cycle completed with tracker acceptance. |
 | Shared Supabase migration | APPLIED | Report 47. |
 | Demo seed Option A | REPORTED_QA_PASS | Report 51. |
-| Hybrid DB + mock flagging | DONE_PENDING_OWNER_QA | Latest fixes should resolve request-time DB read and env-guard crash issues. |
-| Runtime DB connection check | PLANNED / QA-RECOMMENDED | Confirm host, row count, route behavior, and banner mode. |
-| Full read path switch | BLOCKED | Needs separate gate after QA/Owner acceptance. |
-| Numeric APBDes extraction | BLOCKED | Needs future governance. |
+| Hybrid DB + mock flagging | IMPLEMENTED | Superseded by DB-first all displayed data goal. |
+| DB-first all displayed data batch | READY_FOR_IWAN_GATE_AND_UJANG_ASEP_EXECUTION | Task file prepared. |
+| Runtime DB connection check | ABSORBED INTO SPRINT-03-004 | Covered by larger DB-first batch. |
+| Service layer hardening | CANDIDATE_AFTER_BATCH | Depends on Sprint 03-004 result. |
+| Source review workflow | FUTURE SPRINT 04 CANDIDATE | Not opened. |
+| Verified / official numeric extraction | BLOCKED | Needs future governance. |
