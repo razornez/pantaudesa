@@ -76,26 +76,30 @@ export default function DesaListPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Data Desa</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="mt-1 text-sm leading-relaxed text-slate-500">
             Pantau penyerapan anggaran dari seluruh desa terdaftar
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+        <div className="inline-flex w-fit items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
           <button
+            type="button"
             onClick={() => setView("grid")}
-            className={`p-2 rounded-lg transition-colors ${view === "grid" ? "bg-indigo-100 text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
+            aria-label="Tampilkan kartu desa"
+            className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 ${view === "grid" ? "bg-indigo-100 text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
           >
-            <LayoutGrid size={16} />
+            <LayoutGrid size={16} aria-hidden />
           </button>
           <button
+            type="button"
             onClick={() => setView("table")}
-            className={`p-2 rounded-lg transition-colors ${view === "table" ? "bg-indigo-100 text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
+            aria-label="Tampilkan tabel desa"
+            className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 ${view === "table" ? "bg-indigo-100 text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
           >
-            <List size={16} />
+            <List size={16} aria-hidden />
           </button>
         </div>
       </div>
@@ -112,7 +116,7 @@ export default function DesaListPage() {
       />
 
       {paginated.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-12 px-6 flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center shadow-sm">
           <Image
             src={ASSETS.mascotEmpty}
             alt="Pak Waspada tidak menemukan hasil pencarian"
@@ -121,15 +125,15 @@ export default function DesaListPage() {
             className="object-contain"
           />
           <div>
-            <p className="font-semibold text-slate-700 text-sm mb-1">Tidak ada desa yang cocok</p>
-            <p className="text-slate-400 text-xs max-w-xs">
+            <p className="mb-1 text-base font-semibold text-slate-700 sm:text-sm">Tidak ada desa yang cocok</p>
+            <p className="max-w-xs text-sm leading-relaxed text-slate-500 sm:text-xs">
               Pak Waspada sudah mencari ke mana-mana tapi tidak ketemu.
               Coba ubah filter atau kata kunci pencarianmu.
             </p>
           </div>
         </div>
       ) : view === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paginated.map((d) => <DesaCard key={d.id} desa={d} />)}
         </div>
       ) : (
@@ -142,31 +146,35 @@ export default function DesaListPage() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
           <button
+            type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Sebelumnya
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
+              type="button"
               onClick={() => setPage(p)}
-              className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+              aria-label={`Buka halaman ${p}`}
+              className={`min-h-[44px] min-w-[44px] rounded-lg text-sm transition-colors ${
                 p === page
-                  ? "bg-indigo-600 text-white font-semibold"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-indigo-600 font-semibold text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               {p}
             </button>
           ))}
           <button
+            type="button"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Berikutnya
           </button>
