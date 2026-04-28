@@ -43,15 +43,15 @@ const STATUS_CONFIG: Record<ExpectedStatus, {
 };
 
 const SECTION_TITLE: Record<ExpectedStatus, string> = {
-  wajib:        "Wajib Ada — Diatur oleh Regulasi",
+  wajib:        "Ada Dasar Regulasi",
   direncanakan: "Sudah Direncanakan dalam APBDes",
   tanyakan:     "Bisa Ditanyakan ke Desa",
 };
 
 const SECTION_DESC: Record<ExpectedStatus, string> = {
-  wajib:        "Poin-poin ini adalah kewajiban yang diatur undang-undang, bukan janji sukarela.",
-  direncanakan: "Ini yang sudah masuk dalam rencana anggaran desa tahun ini berdasarkan data demo.",
-  tanyakan:     "Warga berhak bertanya soal ini — data di bawah adalah panduan, bukan kesimpulan ada atau tidaknya pelanggaran.",
+  wajib:        "Ada dasar regulasi umum, tetapi penerapannya tetap perlu dicek pada aturan, musyawarah, dan dokumen desa terkait.",
+  direncanakan: "Masuk rencana anggaran dalam data demo. Cek dokumen APBDes sebelum menjadikannya rujukan.",
+  tanyakan:     "Warga bisa bertanya soal ini dengan tenang. Daftar ini bukan kesimpulan ada atau tidaknya pelanggaran.",
 };
 
 const TONE_STYLE: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -150,9 +150,10 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
               <span className="text-amber-300">{formatRupiah(desa.totalAnggaran)}</span>
               {" "}ini?
             </h2>
-            <p className="text-slate-400 text-xs mt-2">
-              Panduan berdasarkan regulasi Dana Desa &amp; data demo APBDes {desa.tahun}
-            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-400">
+              <li>Hak warga perlu dibaca bersama aturan dan dokumen desa.</li>
+              <li>Estimasi ini panduan bertanya, bukan kondisi aktual final.</li>
+            </ul>
           </div>
         </div>
       </div>

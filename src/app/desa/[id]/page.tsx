@@ -11,6 +11,7 @@ import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy
 import { ASSETS } from "@/lib/assets";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
+import DetailSectionNav from "@/components/desa/DetailSectionNav";
 import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
@@ -79,17 +80,24 @@ export default async function DesaDetailPage({ params }: Props) {
       </div>
 
       {/* ── 1. FIRST VIEW — identity, status, safe framing (DETAIL-HIER-01/06, DETAIL-RISK-01) */}
-      <DesaDetailFirstView desa={desa} />
-
-      {/* ── 2. SOURCE & DOCUMENTS — source/doc proof before any numbers (DOC-01) */}
-      <SourceDocumentSnapshotSection desa={desa} />
-
-      {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
-      <div id="dokumen-desa">
-        <TransparansiCard desa={desa} />
+      <div id="ringkasan">
+        <DesaDetailFirstView desa={desa} />
       </div>
 
+      <DetailSectionNav />
+
+      {/* ── 2. SOURCE & DOCUMENTS — source/doc proof before any numbers (DOC-01) */}
+      <section id="dokumen-transparansi" className="space-y-5">
+        <SourceDocumentSnapshotSection desa={desa} />
+
+      {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
+        <div id="dokumen-desa">
+          <TransparansiCard desa={desa} />
+        </div>
+      </section>
+
       {/* ── 4. BUDGET RINGKASAN — after source/doc context (DETAIL-RISK-02, D-01) */}
+      <section id="anggaran" className="space-y-5">
       <div className="space-y-3">
 
         {/* Demo status strip — DETAIL-RISK-01/02 */}
@@ -151,8 +159,10 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* ── 5. KINERJA ANGGARAN — after budget context */}
       <KinerjaAnggaranCard desa={desa} />
+      </section>
 
       {/* ── 6. HAK WARGA — estimasi panduan, bukan bukti (RIGHTS-01, RIGHTS-06) */}
+      <section id="panduan-warga" className="space-y-5">
       <SeharusnyaAdaSection desa={desa} />
 
       {/* ── 7. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
@@ -234,6 +244,7 @@ export default async function DesaDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+      </section>
 
       {/* Data note */}
       <p className="text-[10px] text-slate-400 text-center px-4">

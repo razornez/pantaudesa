@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight, Search, X, TrendingUp, TrendingDown,
-  Minus, MapPin, Users, ChevronRight, BarChart3,
+  Minus, MapPin, ChevronRight, BarChart3,
 } from "lucide-react";
 import { mockDesa } from "@/lib/mock-data";
 import { Desa } from "@/lib/types";
@@ -196,6 +196,28 @@ export default function BandingkanPage() {
   const [desaB, setDesaB] = useState<Desa | null>(null);
 
   const canCompare = desaA && desaB;
+  const presets = [
+    {
+      label: "Serapan tertinggi vs terendah",
+      hint: "Pura Harapan vs Sumber Rejeki",
+      left: mockDesa.find((d) => d.nama === "Desa Pura Harapan"),
+      right: mockDesa.find((d) => d.nama === "Desa Sumber Rejeki"),
+    },
+    {
+      label: "Kabupaten yang sama",
+      hint: "Sumber Rejeki vs Mekar Sari",
+      left: mockDesa.find((d) => d.nama === "Desa Sumber Rejeki"),
+      right: mockDesa.find((d) => d.nama === "Desa Mekar Sari"),
+    },
+    {
+      label: "Status Perlu Ditinjau",
+      hint: "Pura Harapan vs Pantai Indah",
+      left: mockDesa.find((d) => d.nama === "Desa Pura Harapan"),
+      right: mockDesa.find((d) => d.nama === "Desa Pantai Indah"),
+    },
+  ].filter((preset): preset is { label: string; hint: string; left: Desa; right: Desa } =>
+    Boolean(preset.left && preset.right)
+  );
 
   // Riwayat serapan terakhir 3 tahun
   const riwayatA = desaA?.riwayat?.slice(-3) ?? [];
@@ -234,6 +256,25 @@ export default function BandingkanPage() {
         />
       </div>
 
+      <div className="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+        <p className="text-sm font-bold text-slate-800">
+          Tidak tahu mulai dari mana? Coba bandingkan:
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {presets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => { setDesaA(preset.left); setDesaB(preset.right); }}
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            >
+              <span className="block text-xs font-bold text-indigo-700">{preset.label}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-slate-500">{preset.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
       {!canCompare && (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center space-y-3">
@@ -266,9 +307,9 @@ export default function BandingkanPage() {
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Serapan Anggaran</p>
             <div className="space-y-2">
               {[
-                { desa: desaA, side: "left" },
-                { desa: desaB, side: "right" },
-              ].map(({ desa, side }) => (
+                { desa: desaA },
+                { desa: desaB },
+              ].map(({ desa }) => (
                 <div key={desa.id}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-500 truncate max-w-[160px]">{desa.nama}</span>

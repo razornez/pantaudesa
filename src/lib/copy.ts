@@ -166,7 +166,7 @@ export const SEHARUSNYA_ADA = {
   estimasiCaution: "Angka ini adalah estimasi panduan, bukan bukti pelanggaran.",
   sectionDisclaimer: "Daftar ini disusun sebagai panduan membaca anggaran, bukan sebagai bukti ada atau tidaknya pelanggaran. Warga perlu mengecek sumber dokumen resmi sebelum membuat kesimpulan.",
   statusLabels: {
-    wajib:        "Wajib menurut regulasi",
+    wajib:        "Ada dasar regulasi",
     direncanakan: "Masuk rencana APBDes",
     tanyakan:     "Perlu ditanyakan ke desa",
   },

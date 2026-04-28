@@ -9,6 +9,7 @@ import DesaLeaderboard from "@/components/home/DesaLeaderboard";
 import AlertDiniSection from "@/components/home/AlertDiniSection";
 import CitizenJourneySection from "@/components/home/CitizenJourneySection";
 import DataStatusCardsSection from "@/components/home/DataStatusCardsSection";
+import DataProcessingTrustSection from "@/components/home/DataProcessingTrustSection";
 import DocumentDeskSection from "@/components/home/DocumentDeskSection";
 import PilotAreaStorySection from "@/components/home/PilotAreaStorySection";
 import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
@@ -77,6 +78,7 @@ export default function HomePage() {
 
       <CitizenJourneySection />
       <DataStatusCardsSection />
+      <DataProcessingTrustSection />
       <DocumentDeskSection />
       <PilotAreaStorySection />
       <PondasiTransparansiSection />
