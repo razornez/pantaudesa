@@ -4,8 +4,34 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function createPrismaClient(): PrismaClient | null {
+  const url = process.env.DATABASE_URL ?? "";
+  const valid =
+    url.startsWith("postgresql://") ||
+    url.startsWith("postgres://") ||
+    url.startsWith("prisma://") ||
+    url.startsWith("prisma+postgres://");
+
+  if (!valid) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[prisma] DATABASE_URL missing or unsupported protocol — Prisma disabled, mock data will be used."
+      );
+    }
+    return null;
+  }
+
+  try {
+    return new PrismaClient();
+  } catch (e) {
+    console.error("[prisma] Failed to instantiate PrismaClient:", e);
+    return null;
+  }
+}
+
+export const prisma: PrismaClient | null =
+  globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  if (prisma) globalForPrisma.prisma = prisma;
 }

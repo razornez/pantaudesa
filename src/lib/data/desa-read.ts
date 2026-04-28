@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
 
@@ -33,34 +34,18 @@ function makeDemoBudgetFallback(index: number) {
 
 function mergeProfilWebsite(desa: Desa, websiteUrl: string | null): Desa["profil"] {
   if (!desa.profil) return undefined;
-
-  return {
-    ...desa.profil,
-    website: websiteUrl ?? desa.profil.website,
-  };
-}
-
-function isDbAvailable(): boolean {
-  const url = process.env.DATABASE_URL ?? "";
-  return url.startsWith("postgresql://") || url.startsWith("postgres://") || url.startsWith("prisma://") || url.startsWith("prisma+postgres://");
+  return { ...desa.profil, website: websiteUrl ?? desa.profil.website };
 }
 
 export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
-  if (!isDbAvailable()) {
-    console.warn("[desa-read] DATABASE_URL not configured — serving mock data");
-    return defaultMockItems;
-  }
+  if (!prisma) return defaultMockItems;
 
   try {
-    const { prisma } = await import("@/lib/prisma");
     const dbDesa = await prisma.desa.findMany({
       orderBy: { nama: "asc" },
       include: {
         dataSources: {
-          select: {
-            dataStatus: true,
-            accessStatus: true,
-          },
+          select: { dataStatus: true, accessStatus: true },
         },
       },
     });
@@ -95,7 +80,7 @@ export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
       } satisfies DesaListItem;
     });
   } catch (error) {
-    console.error("Failed to read desa from database, falling back to mock data", error);
+    console.error("[desa-read] DB query failed, falling back to mock data:", error);
     return defaultMockItems;
   }
 }
@@ -108,7 +93,6 @@ export async function getDesaByIdOrSlugWithFallback(idOrSlug: string): Promise<D
 export function getMockDesaById(id: string): DesaListItem | null {
   const desa = mockDesa.find((item) => item.id === id);
   if (!desa) return null;
-
   return {
     ...desa,
     dataOrigin: "mock-hardcoded",
