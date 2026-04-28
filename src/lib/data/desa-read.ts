@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { mockDesa } from "@/lib/mock-data";
 import type { Desa } from "@/lib/types";
 
-export type DesaDataOrigin = "mock" | "hybrid-db-seed";
+export type DesaDataOrigin = "mock-hardcoded" | "database-seed";
 
 export type DesaListItem = Desa & {
   dataOrigin: DesaDataOrigin;
@@ -13,10 +13,10 @@ export type DesaListItem = Desa & {
 
 const defaultMockItems: DesaListItem[] = mockDesa.map((desa) => ({
   ...desa,
-  dataOrigin: "mock",
+  dataOrigin: "mock-hardcoded",
   identityStatus: "demo",
   budgetStatus: "demo",
-  sourceSummary: "Data contoh dari mock lokal.",
+  sourceSummary: "Record ini masih dari mock/hardcoded lokal, bukan hasil baca database.",
 }));
 
 function normalizeName(name: string) {
@@ -76,12 +76,12 @@ export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
         penduduk: desa.jumlahPenduduk ?? demoBudget.penduduk,
         kategori: desa.kategori ?? demoBudget.kategori,
         profil: mergeProfilWebsite(demoBudget, desa.websiteUrl),
-        dataOrigin: "hybrid-db-seed",
+        dataOrigin: "database-seed",
         identityStatus: hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo",
         budgetStatus: "demo",
         sourceSummary: hasSource
-          ? "Identitas/sumber berasal dari seed DB; angka APBDes masih demo."
-          : "Identitas berasal dari seed DB; angka APBDes masih demo.",
+          ? "Nama/lokasi/sumber dibaca dari database seed. Angka APBDes masih demo/mock."
+          : "Nama/lokasi dibaca dari database seed. Angka APBDes masih demo/mock.",
       } satisfies DesaListItem;
     });
   } catch (error) {
@@ -101,9 +101,9 @@ export function getMockDesaById(id: string): DesaListItem | null {
 
   return {
     ...desa,
-    dataOrigin: "mock",
+    dataOrigin: "mock-hardcoded",
     identityStatus: "demo",
     budgetStatus: "demo",
-    sourceSummary: "Data contoh dari mock lokal.",
+    sourceSummary: "Record ini masih dari mock/hardcoded lokal, bukan hasil baca database.",
   };
 }
