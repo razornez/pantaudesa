@@ -164,7 +164,54 @@ Implication:
 
 - DB identity/source may be shown,
 - budget numbers remain `Angka Demo`,
-- if Ancolmekar is missing, runtime likely fell back to mock mode.
+- if runtime DB is missing or invalid, UI must fall back to mock with visible `Mock/Hardcoded` mode.
+
+---
+
+## 2026-04-28 — DB read must happen at request time, not build-time cache
+
+Decision:
+
+- `/desa` and `/desa/[id]` should use request-time DB read through `export const dynamic = "force-dynamic"`.
+
+Reason:
+
+- DB-seeded desa such as Ancolmekar were not visible because static/build-time behavior can cache or miss runtime DB state.
+- Dynamic route resolution also removes need for hardcoded seeded slug static params.
+
+References:
+
+- commit `14166a02e63cb1633ad2f77ce7a47cbbc30e4026`
+- `docs/bmad/stories/sprint-03-002-db-read-hybrid-mock-flagging.md`
+
+Implication:
+
+- `/desa` should re-check DB at request time.
+- `/desa/ancolmekar` should resolve through DB/fallback service if DB is available.
+
+---
+
+## 2026-04-28 — Prisma must not crash app when DATABASE_URL is missing/bad
+
+Decision:
+
+- Prisma client creation should be guarded.
+- Missing or unsupported `DATABASE_URL` returns null and triggers mock fallback.
+
+Reason:
+
+- Prisma validates `DATABASE_URL` during client instantiation/module load.
+- Without guard, page can crash before fallback logic runs.
+
+References:
+
+- commit `aeff7fb5b9b37f520a99ecdacbd5793c9803fdb7`
+- commit `187078163fc0668f3d8dac850969921fc59bc1bf`
+
+Implication:
+
+- no/bad env should show `Mode: Mock/Hardcoded`, not a crashed app.
+- valid env should show DB-seeded desa with `Dari Database` and demo budget flags.
 
 ---
 
@@ -184,6 +231,7 @@ Reason:
 References:
 
 - `docs/bmad/project-context.md`
+- `docs/bmad/workflow.md`
 - `docs/bmad/sprint-status.md`
 - `docs/bmad/timeline.md`
 - `docs/bmad/roadmap.md`
