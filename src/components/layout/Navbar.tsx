@@ -60,7 +60,7 @@ export default function Navbar() {
               {NAVBAR_COPY.publicDataNote} &middot;
             </span>
           )}
-          <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm">
+          <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-sm min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
             Masuk
           </Link>
         </>
@@ -71,8 +71,8 @@ export default function Navbar() {
       return (
         <div className="flex items-center gap-1.5">
           {/* Notif bell */}
-          <Link href="/profil/saya?tab=notifikasi" className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
-            <Bell size={16} className="text-slate-500" />
+          <Link href="/profil/saya?tab=notifikasi" aria-label={unread > 0 ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+            <Bell size={16} className="text-slate-500" aria-hidden />
             {unread > 0 && (
               <span className="absolute top-1 right-1 w-4 h-4 bg-indigo-600 rounded-full text-white text-[8px] font-black flex items-center justify-center">
                 {unread > 9 ? "9+" : unread}
@@ -86,8 +86,8 @@ export default function Navbar() {
               {user.nama.split(" ")[0]}
             </span>
           </Link>
-          <button onClick={handleLogout} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors" title="Keluar">
-            <LogOut size={14} />
+          <button onClick={handleLogout} aria-label="Keluar dari akun" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2">
+            <LogOut size={14} aria-hidden />
           </button>
         </div>
       );
@@ -98,13 +98,13 @@ export default function Navbar() {
       <div className="flex items-center gap-2">
         <Link
           href={user.role === "ADMIN" ? "/admin" : "/desa-admin"}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
         >
-          <LayoutDashboard size={13} />
+          <LayoutDashboard size={13} aria-hidden />
           {user.role === "ADMIN" ? "Admin" : "Dashboard"}
         </Link>
-        <button onClick={handleLogout} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors">
-          <LogOut size={14} />
+        <button onClick={handleLogout} aria-label="Keluar dari akun" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2">
+          <LogOut size={14} aria-hidden />
         </button>
       </div>
     );
@@ -129,7 +129,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                   pathname === link.href
                     ? "bg-indigo-50 text-indigo-600"
                     : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50"
@@ -144,8 +144,13 @@ export default function Navbar() {
           <div className="hidden md:flex items-center">{renderRight()}</div>
 
           {/* Mobile toggle */}
-          <button onClick={() => setOpen(!open)} className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
-            {open ? <X size={20} /> : <Menu size={20} />}
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
+            aria-expanded={open}
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          >
+            {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
           </button>
         </div>
       </div>

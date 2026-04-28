@@ -50,7 +50,8 @@ export default function AlertDiniSection({ desa }: Props) {
             <Link
               key={d.id}
               href={`/desa/${d.id}`}
-              className="group bg-white rounded-xl border border-amber-100 p-3.5 hover:border-amber-300 hover:shadow-sm transition-all"
+              className="group bg-white rounded-xl border border-amber-100 p-3.5 hover:border-amber-300 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[44px]"
+              aria-label={`Cek ${d.nama}, serapan ${d.persentaseSerapan}%`}
             >
               <div className="flex items-start justify-between gap-1 mb-2">
                 <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-amber-700 transition-colors">
@@ -71,7 +72,7 @@ export default function AlertDiniSection({ desa }: Props) {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm font-black text-amber-700">{d.persentaseSerapan}% perlu dicek</span>
-                <ArrowRight size={12} className="text-amber-400 group-hover:text-amber-700 transition-colors" />
+                <ArrowRight size={12} className="text-amber-400 group-hover:text-amber-700 transition-colors" aria-hidden />
               </div>
             </Link>
           ))}

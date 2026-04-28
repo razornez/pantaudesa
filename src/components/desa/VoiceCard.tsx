@@ -188,7 +188,8 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
           {officialReply && !showReplies && (
             <button
               onClick={() => setShowReplies(true)}
-              className="w-full text-left flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 mb-3 hover:bg-emerald-100 transition-colors"
+              aria-label="Lihat respons resmi dari desa"
+              className="w-full text-left flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 mb-3 hover:bg-emerald-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
             >
               <Shield size={13} className="text-emerald-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -207,13 +208,14 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
             <button
               onClick={() => onHelpful(voice.id)}
               disabled={helpedIds.has(voice.id)}
-              className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
+              aria-label={`Tandai berguna, ${voice.helpful + (helpedIds.has(voice.id) ? 1 : 0)} sudah menandai`}
+              className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
                 helpedIds.has(voice.id)
                   ? "bg-indigo-50 border-indigo-200 text-indigo-600 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50"
               }`}
             >
-              <ThumbsUp size={11} />
+              <ThumbsUp size={11} aria-hidden />
               {voice.helpful + (helpedIds.has(voice.id) ? 1 : 0)} berguna
             </button>
 
@@ -221,7 +223,8 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
             <button
               onClick={handleBenar}
               disabled={!!votedType}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
+              aria-label={`Tandai cerita ini benar, ${voice.votes.benar} suara`}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
                 votedType === "BENAR"
                   ? "bg-emerald-50 border-emerald-300 text-emerald-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -234,7 +237,8 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
             <button
               onClick={handleBohong}
               disabled={!!votedType}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
+              aria-label={`Tandai cerita ini tidak akurat, ${voice.votes.bohong} suara`}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 ${
                 votedType === "BOHONG"
                   ? "bg-rose-50 border-rose-300 text-rose-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -246,7 +250,9 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
             {/* Replies toggle */}
             <button
               onClick={() => setShowReplies(v => !v)}
-              className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-all ml-auto"
+              aria-label={showReplies ? "Sembunyikan komentar" : `Lihat ${localReplies.length > 0 ? localReplies.length + " " : ""}komentar`}
+              aria-expanded={showReplies}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-all ml-auto min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
             >
               <MessageCircle size={11} />
               {localReplies.length > 0 ? `${localReplies.length} komentar` : "Komentar"}
