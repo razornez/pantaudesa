@@ -2,6 +2,7 @@ import { TrendingUp, MapPin, Wallet, CheckCircle2, AlertCircle, Search, Shield }
 import { SummaryStats } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
 import { STATS, SKOR } from "@/lib/copy";
+import AnimatedCounter from "@/components/ui/AnimatedCounter";
 
 interface Props {
   stats: SummaryStats;
@@ -27,7 +28,8 @@ export default function StatsCards({ stats }: Props) {
   const cards = [
     {
       label: STATS.totalAnggaran.label,
-      value: formatRupiah(stats.totalAnggaranNasional),
+      value: stats.totalAnggaranNasional,
+      format: "rupiah" as const,
       sub:   STATS.totalAnggaran.sub(formatRupiah(stats.totalTerealisasi)),
       icon:  Wallet,
       color: "text-indigo-600",
@@ -35,7 +37,8 @@ export default function StatsCards({ stats }: Props) {
     },
     {
       label: STATS.totalDesa.label,
-      value: stats.totalDesa.toLocaleString("id-ID"),
+      value: stats.totalDesa,
+      format: "number" as const,
       sub:   STATS.totalDesa.sub,
       icon:  MapPin,
       color: "text-sky-600",
@@ -43,7 +46,8 @@ export default function StatsCards({ stats }: Props) {
     },
     {
       label: STATS.rataRataSerapan.label,
-      value: `${stats.rataRataSerapan}%`,
+      value: stats.rataRataSerapan,
+      format: "percent" as const,
       sub:   STATS.rataRataSerapan.sub,
       icon:  TrendingUp,
       color: "text-emerald-600",
@@ -52,6 +56,7 @@ export default function StatsCards({ stats }: Props) {
     {
       label: STATS.desaBaik.label,
       value: stats.desaSerapanBaik,
+      format: "number" as const,
       sub:   STATS.desaBaik.sub(pctBaik),
       icon:  CheckCircle2,
       color: "text-emerald-600",
@@ -60,6 +65,7 @@ export default function StatsCards({ stats }: Props) {
     {
       label: STATS.desaSedang.label,
       value: stats.desaSerapanSedang,
+      format: "number" as const,
       sub:   STATS.desaSedang.sub(pctSedang),
       icon:  AlertCircle,
       color: "text-amber-600",
@@ -68,6 +74,7 @@ export default function StatsCards({ stats }: Props) {
     {
       label: STATS.desaRendah.label,
       value: stats.desaSerapanRendah,
+      format: "number" as const,
       sub:   STATS.desaRendah.sub(pctRendah),
       icon:  Search,
       color: "text-amber-700",
@@ -85,13 +92,15 @@ export default function StatsCards({ stats }: Props) {
           return (
             <div
               key={card.label}
-              className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
+              className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-100 hover:shadow-lg"
             >
-              <div className={`inline-flex p-2 rounded-xl ${card.bg} mb-3`}>
+              <div className={`inline-flex p-2 rounded-xl ${card.bg} mb-3 transition-transform duration-200 group-hover:scale-105`}>
                 <Icon size={18} className={card.color} />
               </div>
               <p className="text-xs text-slate-500 font-medium mb-1">{card.label}</p>
-              <p className={`text-xl sm:text-2xl font-bold ${card.color}`}>{card.value}</p>
+              <p className={`text-xl sm:text-2xl font-bold ${card.color}`}>
+                <AnimatedCounter value={card.value} format={card.format} />
+              </p>
               <p className="text-xs text-slate-400 mt-1">{card.sub}</p>
             </div>
           );
@@ -111,7 +120,7 @@ export default function StatsCards({ stats }: Props) {
         </div>
         <div className="text-right flex-shrink-0">
           <p className={`text-3xl font-black ${skorText}`}>
-            {stats.rataRataSkorTransparansi}
+            <AnimatedCounter value={stats.rataRataSkorTransparansi} />
             <span className="text-sm font-normal text-slate-400">/100</span>
           </p>
           <p className={`text-xs font-semibold ${skorText}`}>{skorLabel(stats.rataRataSkorTransparansi)}</p>

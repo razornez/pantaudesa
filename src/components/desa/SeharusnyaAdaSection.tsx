@@ -84,10 +84,12 @@ function ItemGroup({ status, items }: { status: ExpectedStatus; items: ReturnTyp
           return (
             <div
               key={i}
-              className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all group"
+              className="group flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md"
             >
               <div className="flex-shrink-0 mt-0.5">
-                <Icon size={16} className={cfg.iconColor} />
+                <span className="animate-check-pop inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-50 shadow-sm transition-transform duration-200 group-hover:scale-110">
+                  <Icon size={16} className={cfg.iconColor} />
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -119,6 +121,11 @@ function ItemGroup({ status, items }: { status: ExpectedStatus; items: ReturnTyp
 export default function SeharusnyaAdaSection({ desa }: Props) {
   const { items, ringkasan, ringkasanTone } = getExpectations(desa);
   const toneStyle = TONE_STYLE[ringkasanTone];
+  const hakSummaryCards = [
+    { label: "Ada dasar", value: items.filter((i) => i.status === "wajib").length, className: "border-emerald-300/30 bg-emerald-400/10 text-emerald-100" },
+    { label: "Masuk rencana", value: items.filter((i) => i.status === "direncanakan").length, className: "border-indigo-300/30 bg-indigo-400/10 text-indigo-100" },
+    { label: "Bisa ditanya", value: items.filter((i) => i.status === "tanyakan").length, className: "border-amber-300/40 bg-amber-400/10 text-amber-100" },
+  ];
 
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -154,6 +161,14 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
               <li>Hak warga perlu dibaca bersama aturan dan dokumen desa.</li>
               <li>Estimasi ini panduan bertanya, bukan kondisi aktual final.</li>
             </ul>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {hakSummaryCards.map((card) => (
+                <div key={card.label} className={`rounded-2xl border px-3 py-2 ${card.className}`}>
+                  <p className="text-lg font-black leading-none">{card.value}</p>
+                  <p className="mt-1 text-[10px] font-semibold leading-tight opacity-85">{card.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

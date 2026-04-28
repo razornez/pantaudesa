@@ -66,9 +66,15 @@ const SIZE_CLASS = {
 } as const;
 
 const ICON_SIZE = {
-  xs: 10,
-  sm: 11,
-  md: 13,
+  xs: 8,
+  sm: 9,
+  md: 10,
+} as const;
+
+const ICON_BUBBLE = {
+  xs: "h-3 w-3",
+  sm: "h-3.5 w-3.5",
+  md: "h-4 w-4",
 } as const;
 
 interface Props {
@@ -89,8 +95,10 @@ export function DataStatusBadge({
 
   if (showMicrocopy) {
     return (
-      <div className={`inline-flex items-start gap-2 rounded-xl border px-3 py-2 ${config.panelClass} ${className}`}>
-        <Icon size={14} className={`mt-0.5 flex-shrink-0 ${config.iconClass}`} aria-hidden />
+      <div className={`inline-flex items-start gap-2 rounded-xl border px-3 py-2 shadow-sm ${config.panelClass} ${className}`}>
+        <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/75 shadow-sm">
+          <Icon size={13} className={config.iconClass} aria-hidden />
+        </span>
         <div className="min-w-0">
           <p className={`text-xs font-black leading-tight ${config.textClass}`}>
             {config.label}
@@ -106,11 +114,13 @@ export function DataStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border font-bold leading-none ${SIZE_CLASS[size]} ${config.badgeClass} ${className}`}
+      className={`inline-flex items-center rounded-full border font-bold leading-none shadow-sm transition-all duration-200 hover:-translate-y-0.5 ${SIZE_CLASS[size]} ${config.badgeClass} ${className}`}
       aria-disabled={config.disabled ? true : undefined}
       title={config.microcopy}
     >
-      <Icon size={ICON_SIZE[size]} className={config.iconClass} aria-hidden />
+      <span className={`inline-flex flex-shrink-0 items-center justify-center rounded-full bg-white/75 ${ICON_BUBBLE[size]}`}>
+        <Icon size={ICON_SIZE[size]} className={config.iconClass} aria-hidden />
+      </span>
       {config.label}
     </span>
   );

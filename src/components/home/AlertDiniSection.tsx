@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Search, TrendingDown, ArrowRight } from "lucide-react";
+import { Radar, Search, TrendingDown, ArrowRight } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 import { isDowntrending } from "@/lib/verdicts";
+import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 interface Props {
   desa: Desa[];
@@ -45,34 +46,64 @@ export default function AlertDiniSection({ desa }: Props) {
 
       {/* Kartu desa yang perlu ditinjau */}
       <div className="bg-amber-50 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm">
+              <Radar size={16} aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-black text-amber-950">Risk Radar</p>
+              <p className="text-xs text-amber-700">Sinyal awal untuk desa yang perlu dicek dulu.</p>
+            </div>
+          </div>
+          <DataStatusBadge status="needs-review" />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {perluDitinjau.map((d) => (
+          {perluDitinjau.map((d, i) => (
             <Link
               key={d.id}
               href={`/desa/${d.id}`}
-              className="group bg-white rounded-xl border border-amber-100 p-3.5 hover:border-amber-300 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[44px]"
+              className="group relative min-h-[44px] overflow-hidden rounded-2xl border border-amber-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
               aria-label={`Cek ${d.nama}, serapan ${d.persentaseSerapan}%`}
             >
-              <div className="flex items-start justify-between gap-1 mb-2">
-                <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-amber-700 transition-colors">
-                  {d.nama}
-                </p>
-                {isDowntrending(d.riwayat) && (
-                  <TrendingDown size={13} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mb-2">{d.kabupaten}, {d.provinsi}</p>
+              <div className="risk-radar-grid absolute inset-0 opacity-60" aria-hidden />
+              <div className="relative">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span
+                      className="risk-pulse-dot mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-amber-500"
+                      style={{ animationDelay: `${i * 0.18}s` }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-slate-900 leading-tight group-hover:text-amber-800 transition-colors">
+                        {d.nama}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">{d.kabupaten}, {d.provinsi}</p>
+                    </div>
+                  </div>
+                  {isDowntrending(d.riwayat) && (
+                    <TrendingDown size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                  )}
+                </div>
 
-              <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden mb-1.5">
-                <div
-                  className="h-full bg-amber-500 rounded-full"
-                  style={{ width: `${d.persentaseSerapan}%` }}
-                />
-              </div>
+                <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/80 p-2.5">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Perlu dicek</span>
+                    <span className="text-sm font-black text-amber-800">{d.persentaseSerapan}%</span>
+                  </div>
+                  <div className="h-2 bg-white rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-700 group-hover:brightness-110"
+                      style={{ width: `${d.persentaseSerapan}%` }}
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-amber-700">{d.persentaseSerapan}% perlu dicek</span>
-                <ArrowRight size={12} className="text-amber-400 group-hover:text-amber-700 transition-colors" aria-hidden />
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-600">Buka sumber dan konteks</span>
+                  <ArrowRight size={13} className="text-amber-500 transition-all group-hover:translate-x-1 group-hover:text-amber-700" aria-hidden />
+                </div>
               </div>
             </Link>
           ))}

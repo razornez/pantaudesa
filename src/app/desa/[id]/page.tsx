@@ -12,6 +12,7 @@ import { ASSETS } from "@/lib/assets";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
 import DetailSectionNav from "@/components/desa/DetailSectionNav";
+import DetailStickySummary from "@/components/desa/DetailStickySummary";
 import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
@@ -108,6 +109,7 @@ export default async function DesaDetailPage({ params }: Props) {
       </div>
 
       <DetailSectionNav />
+      <DetailStickySummary desa={desa} />
 
       {/* ── 2. SOURCE & DOCUMENTS — source/doc proof before any numbers (DOC-01) */}
       <section id="dokumen-transparansi" className="space-y-5">
