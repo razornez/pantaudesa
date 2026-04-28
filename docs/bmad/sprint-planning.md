@@ -9,7 +9,7 @@ Prepared-by: Rangga / BMAD-lite orchestration
 Every sprint/task should move through:
 
 ```text
-Goal → Story → Acceptance Criteria → Implementation → QA → Review → Approval → Status Update
+Goal → Story → Task File → Acceptance Criteria → Implementation → QA → Review → Approval → Status Update
 ```
 
 ## Product goal
@@ -19,8 +19,9 @@ Make PantauDesa useful for citizens while preserving data trust:
 - show available public source/document context,
 - avoid false official claims,
 - keep UI readable,
-- move gradually from mock to DB,
-- never mark unreviewed data as verified.
+- move displayed runtime data to DB-first reads,
+- never mark unreviewed data as verified,
+- clearly mark dummy/mock fields as mock/demo when they are shown from DB.
 
 ## Current sprint planning
 
@@ -28,9 +29,17 @@ Make PantauDesa useful for citizens while preserving data trust:
 
 Status: active
 
-Goal:
+Updated goal:
 
-Build DB-backed data foundation safely while preserving mock fallback and trust labels.
+Build a DB-first displayed data foundation so the website can be tested against database-backed reads for performance and behavior.
+
+This means:
+
+- all displayed datasets should come from DB;
+- existing hardcoded/mock displayed data should be seeded into DB as `demo`/mock records;
+- mock budget/voice/detail values can remain, but must be clearly flagged, e.g. `(mock)`;
+- hardcoded displayed data fallback should be removed and replaced with controlled DB empty/unavailable states;
+- no `verified`, no official numeric APBDes extraction, no scraper/scheduler.
 
 ### Completed / reported
 
@@ -38,51 +47,37 @@ Build DB-backed data foundation safely while preserving mock fallback and trust 
 2. Sprint 03 migration applied to shared Supabase.
 3. Demo seed Option A implemented.
 4. Demo seed execution reported QA pass.
+5. Hybrid DB + mock flagging implemented and stabilized with request-time DB read + Prisma env guards.
 
-### Active
+### Active / next batch
 
-Story:
+Story / task:
 
-- DB Read Hybrid + Mock Flagging
+- DB-first All Displayed Data Batch
+
+Task file:
+
+- `docs/bmad/tasks/sprint-03-004-db-first-all-displayed-data-batch.md`
 
 Status:
 
-- DONE_PENDING_QA
+- READY_FOR_IWAN_GATE_AND_UJANG_ASEP_EXECUTION
 
 Acceptance focus:
 
-- `/desa` reads DB when runtime env is correct.
-- `/desa` falls back to mock if DB read fails.
-- DB records show `Dari Database`.
-- mock records show `Mock/Hardcoded`.
-- budget/serapan numbers show `Angka Demo`.
-- no numeric extraction.
-- no verified.
-
-### Next recommended Sprint 03 story
-
-Story:
-
-- DB Runtime Connection Check
-
-Goal:
-
-- diagnose why Ancolmekar is not visible,
-- confirm DB env and target host in runtime,
-- confirm seeded rows are in the DB runtime reads,
-- keep fallback behavior.
-
-Acceptance criteria:
-
-- clear evidence of runtime DB host/alias without secret,
-- clear count of `desa` rows from runtime DB,
-- `/desa` shows `Mode: Database + Angka Demo` when DB is connected,
-- `/desa?cari=ancolmekar` finds Ancolmekar,
-- `/desa/ancolmekar` resolves,
-- `/desa/4` legacy route still works,
-- no source/API/schema/seed change unless explicitly approved.
+- all displayed desa/list/detail data reads from DB;
+- all displayed voices/comments/replies read from DB;
+- hardcoded displayed datasets are seeded into DB as `demo`/mock where needed;
+- mock numeric values show clear field labels such as `(mock)`;
+- no hardcoded displayed data fallback;
+- controlled DB empty/unavailable states exist;
+- no `verified`;
+- no official numeric APBDes extraction;
+- no scraper/scheduler.
 
 ## Sprint 03 later candidates
+
+These may remain after the DB-first batch, depending on implementation result.
 
 ### Service Layer Hardening
 
@@ -101,24 +96,24 @@ Candidate work:
 
 Goal:
 
-- decide whether `/desa` hybrid behavior can be accepted as first production read step.
+- decide whether DB-first displayed data behavior can be accepted for production/testing.
 
 Prerequisites:
 
-- runtime DB connection verified,
-- QA passed,
-- Owner confirms flagging is understandable.
+- DB-first batch QA passed,
+- Owner confirms flagging is understandable,
+- performance feels acceptable enough for next iteration.
 
 ### Detail Page DB Document Registry
 
 Goal:
 
-- show DB `DokumenPublik` references safely in detail page.
+- show DB `DokumenPublik` references safely in detail page if not fully covered by Sprint 03-004.
 
 Boundary:
 
 - document registry only,
-- no numeric extraction,
+- no official numeric extraction,
 - no official verification claim.
 
 ## Sprint 04 candidate planning
@@ -143,7 +138,7 @@ Blocked unless approved:
 
 - admin verification workflow,
 - public verified status,
-- numeric APBDes extraction.
+- official numeric APBDes extraction.
 
 ## Sprint 05 candidate planning
 
@@ -153,7 +148,7 @@ Status: future / blocked
 
 Goal:
 
-Extract numeric APBDes only after source review process exists.
+Extract official numeric APBDes only after source review process exists.
 
 Prerequisites:
 
@@ -167,11 +162,10 @@ Prerequisites:
 Do not open without explicit Iwan/Owner approval:
 
 - scraper/scheduler,
-- full production data import,
-- numeric APBDes extraction,
+- full production data import beyond approved seed/mock DB-first batch,
+- official numeric APBDes extraction,
 - Risk Radar,
 - Score Orb,
 - verified status,
-- broad read path switch,
 - auth/voice schema relation changes,
 - new dependency.
