@@ -52,28 +52,34 @@ Total Owner Feedback Items: **66**
 
 | Status | Count |
 |---|---:|
-| ACCEPTED | 24 / 66 |
+| ACCEPTED | 29 / 66 |
 | DONE_PENDING_REVIEW | 0 / 66 |
 | IN_PROGRESS | 1 / 66 |
 | REWORK | 0 / 66 |
 | BLOCKED | 9 / 66 |
 | DEFERRED | 6 / 66 |
-| TODO | 26 / 66 |
+| TODO | 21 / 66 |
 
 ## Latest accepted gate
 
-Gate accepted as **first-pass / owner-approved for now** after:
+Gate accepted: **Reusable Status Badge System + Consistency Sweep**.
 
-- Asep implementation,
-- Ujang verification/rework,
+Accepted after:
+
+- reusable `DataStatusBadge` implementation,
 - Rangga review,
-- Owner visual approval,
+- Owner first-pass approval,
+- Ujang consistency sweep,
 - Iwan confirmation.
 
-Reference:
+References:
 
-- `docs/product/17-rangga-detail-safety-hierarchy-review.md`
-- commit `9af6c79803e6da547b74df2e55cb9754c2c5a34b`
+- `docs/product/18-status-badge-system-report.md`
+- `docs/product/19-rangga-status-badge-system-review.md`
+- `docs/product/21-status-badge-consistency-sweep-report.md`
+- commit `79f342c09e95994860fc2087268e13d05f15c337`
+- commit `25b50a487bdc61f756301324a2651845bedf1f3e`
+- commit `5f3fd6c83c50a7891626fa97c271b3f21333c5a0`
 
 ## Accepted items
 
@@ -116,6 +122,16 @@ Reference:
 | CONTACT-01 | ACCEPTED | Accepted as first-pass / owner-approved for now. |
 | CONTACT-02 | ACCEPTED | Accepted as first-pass / owner-approved for now. |
 
+### Status badge system accepted
+
+| ID | Status | Note |
+|---|---|---|
+| STATUS-01 | ACCEPTED | Accepted after reusable badge implementation, Rangga review, Owner first-pass approval, and Ujang consistency sweep. Scope: selected important locations, not admin/auth-wide audit. |
+| STATUS-02 | ACCEPTED | Reusable status badge system supports `Data Demo`, `Sumber Ditemukan`, `Perlu Review`, and disabled/future `Terverifikasi`. |
+| STATUS-04 | ACCEPTED | `Data Demo` visual/microcopy accepted. |
+| STATUS-05 | ACCEPTED | `Sumber Ditemukan` visual/microcopy accepted. |
+| STATUS-06 | ACCEPTED | `Perlu Review` visual/microcopy accepted. |
+
 ## In progress
 
 | ID | Status | Note |
@@ -124,10 +140,12 @@ Reference:
 
 ## Gates that remain blocked
 
-These remain blocked even after detail safety/hierarchy first-pass approval:
+These remain blocked even after status badge acceptance:
 
 | Gate | Status | Reason |
 |---|---|---|
+| STATUS-03 | BLOCKED | Active `Terverifikasi` cannot appear until verification workflow exists. |
+| STATUS-07 | BLOCKED | Verified visual can remain disabled/future only; no active data-bearing verified state. |
 | Seed execution | BLOCKED | Data status UX/readiness still needs more gates. |
 | Read path switch | BLOCKED | Avoid making demo/imported data look official. |
 | Schema/DB/API/Prisma | BLOCKED | No technical data-layer gate opened. |
@@ -146,11 +164,9 @@ These are intentionally deferred and should not be opened before core trust/jour
 | Animation / micro-interactions | DEFERRED | Wait until P0/P1 UX is stable. |
 | Advanced dataviz | DEFERRED | Must avoid false authority and verified-data implication. |
 
-## Remaining recommended next gate options
+## Recommended next gate
 
-Iwan/Owner can choose one of these next:
-
-### Option 1 — Data Desa card density
+Next recommended gate: **Data Desa card density**.
 
 Focus tracker IDs:
 
@@ -162,11 +178,16 @@ Focus tracker IDs:
 - `DATA-DESA-06`
 - `DATA-DESA-07`
 
-Why:
+Why this gate next:
 
-Listing cards are still a major scanning point. Reducing density helps ordinary citizens find a desa faster.
+- Data Desa listing is a major user scanning surface.
+- Owner previously flagged Data Desa density as confusing.
+- This gate is visible to users but remains UI-only.
+- It does not require seed/read path/schema/DB/API changes.
 
-### Option 2 — CTA journey / Cari Desa primary funnel
+## Alternative next gate options
+
+### CTA journey / Cari Desa primary funnel
 
 Focus tracker IDs:
 
@@ -175,52 +196,11 @@ Focus tracker IDs:
 - `JOURNEY-03`
 - `JOURNEY-04`
 
-Why:
-
-This strengthens the core path: Cari Desa → status → source/document → safe action.
-
-### Option 3 — Reusable status badge system
-
-Focus tracker IDs:
-
-- `STATUS-01`
-- `STATUS-02`
-- `STATUS-04`
-- `STATUS-05`
-- `STATUS-06`
-
-Still blocked:
-
-- `STATUS-03`
-- `STATUS-07` active verified state.
-
-Why:
-
-Status clarity is required before any future seed/read path work.
-
-### Option 4 — A11Y-06 mobile readability
+### A11Y-06 mobile readability
 
 Focus tracker ID:
 
 - `A11Y-06`
-
-Why:
-
-Mobile readability is still in progress and likely important for ordinary citizens.
-
-## Recommended next choice
-
-Recommended next gate:
-
-> Option 3 — reusable status badge system.
-
-Reason:
-
-It strengthens trust and data interpretation across homepage, listing, and detail pages before any seed/read path discussion.
-
-Alternative if Owner wants visible UX improvement faster:
-
-> Option 1 — Data Desa card density.
 
 ## Status values
 
@@ -236,7 +216,7 @@ Alternative if Owner wants visible UX improvement faster:
 
 This tracker update does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, or active `Terverifikasi` state.
 
-Initiated-by: Iwan confirmation of Owner first-pass approval
+Initiated-by: Iwan confirmation of Status Badge Consistency Sweep acceptance
 Reviewed-by: Pending Iwan/Owner after this tracker update
 Executed-by: ChatGPT Freelancer / Rangga
 Status: canonical-status-tracker
