@@ -30,29 +30,35 @@ export default function SearchFilterBar({
   const hasFilter = search || provinsi || status !== "semua";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
-      <div className="flex gap-2">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder={FILTER.searchPlaceholder}
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder-slate-400"
+            className="min-h-[44px] w-full pl-9 pr-11 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder-slate-400"
           />
           {search && (
-            <button onClick={() => onSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <X size={14} />
+            <button
+              type="button"
+              onClick={() => onSearch("")}
+              aria-label="Hapus kata kunci pencarian"
+              className="absolute right-1.5 top-1/2 flex min-h-[40px] min-w-[40px] -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+            >
+              <X size={14} aria-hidden />
             </button>
           )}
         </div>
-        <div className="relative">
-          <SlidersHorizontal size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <div className="relative sm:w-64">
+          <SlidersHorizontal size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
           <select
             value={provinsi}
             onChange={(e) => onProvinsi(e.target.value)}
-            className="pl-8 pr-8 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition appearance-none cursor-pointer"
+            aria-label="Filter provinsi"
+            className="min-h-[44px] w-full pl-8 pr-8 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition appearance-none cursor-pointer"
           >
             <option value="">{FILTER.allProvinsi}</option>
             {provinsiList.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -61,14 +67,15 @@ export default function SearchFilterBar({
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-slate-500 font-medium flex items-center gap-1 mr-1">
-          <SlidersHorizontal size={12} /> {FILTER.filterLabel}
+        <span className="flex w-full items-center gap-1 text-sm font-semibold text-slate-600 sm:w-auto sm:mr-1">
+          <SlidersHorizontal size={13} aria-hidden /> {FILTER.filterLabel}
         </span>
         {STATUS_OPTIONS.map((opt) => (
           <button
             key={opt.value}
+            type="button"
             onClick={() => onStatus(opt.value)}
-            className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
+            className={`min-h-[36px] px-3 py-1.5 text-xs font-medium rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1 ${
               status === opt.value
                 ? opt.color + " ring-2 ring-offset-1 ring-indigo-300 font-semibold"
                 : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
@@ -79,15 +86,16 @@ export default function SearchFilterBar({
         ))}
         {hasFilter && (
           <button
+            type="button"
             onClick={() => { onSearch(""); onProvinsi(""); onStatus("semua"); }}
-            className="ml-auto text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1 transition-colors"
+            className="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 sm:ml-auto"
           >
-            <X size={12} /> {FILTER.reset}
+            <X size={12} aria-hidden /> {FILTER.reset}
           </button>
         )}
       </div>
 
-      <p className="text-xs text-slate-400">{FILTER.totalResults(totalResults)}</p>
+      <p className="text-sm font-medium text-slate-500">{FILTER.totalResults(totalResults)}</p>
     </div>
   );
 }
