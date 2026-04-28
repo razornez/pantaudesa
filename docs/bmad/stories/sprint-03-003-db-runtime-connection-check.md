@@ -1,12 +1,12 @@
 # Story Sprint 03-003 — DB Runtime Connection Check
 
 Date: 2026-04-28
-Status: PLANNED
+Status: PLANNED_QA_CHECK
 Prepared-by: Rangga / BMAD-lite orchestration
 
 ## Goal
 
-Diagnose why seeded Arjasari desa such as Ancolmekar are not visible in `/desa` and confirm whether the Next.js runtime is reading the intended Supabase database.
+Confirm whether the Next.js runtime is reading the intended shared Supabase database and whether the latest request-time DB read fixes make seeded Arjasari desa visible.
 
 ## Trigger
 
@@ -14,7 +14,16 @@ Owner reported:
 
 > Ancolmekar is not visible in Data Desa page.
 
-This suggests `/desa` is likely rendering mock fallback mode instead of database mode.
+Initial interpretation:
+
+- `/desa` was likely rendering mock fallback mode instead of database mode, or static build caching was hiding request-time DB data.
+
+Latest code changes already address likely code-level causes:
+
+- `14166a02e63cb1633ad2f77ce7a47cbbc30e4026` adds request-time DB read with `dynamic = "force-dynamic"` for `/desa` and `/desa/[id]`.
+- `187078163fc0668f3d8dac850969921fc59bc1bf` guards PrismaClient instantiation when `DATABASE_URL` is missing/bad so fallback does not crash.
+
+This story is now primarily a QA/diagnostic story, not a broad new feature implementation story.
 
 ## Scope
 
@@ -49,6 +58,7 @@ Out of scope:
 - `/desa` mode banner is observed.
 - `/desa?cari=ancolmekar` behavior is observed.
 - `/desa/ancolmekar` behavior is observed.
+- `/desa/4` legacy detail remains safe.
 - A short report is created or appended to engineering/BMAD docs.
 
 ## Suggested safe commands
@@ -65,7 +75,15 @@ Prisma validation:
 npx prisma validate
 ```
 
-Optional count check via a local script or Prisma Studio/query tool, without committing secrets:
+QA:
+
+```bash
+npx tsc --noEmit
+npm run test
+npm run build
+```
+
+Optional count check via a local script, Prisma Studio, or safe DB console, without committing secrets:
 
 ```text
 Count rows in table `desa`.
@@ -98,6 +116,7 @@ If runtime DB is correct and seed exists:
 - `ancolmekar` slug should exist.
 - `/desa` should show `Mode: Database + Angka Demo`.
 - card should show `Dari Database` and `Angka Demo`.
+- `/desa/ancolmekar` should resolve.
 
 If runtime DB is missing/wrong:
 
@@ -121,6 +140,6 @@ Report should include:
 
 ## Status
 
-`PLANNED`
+`PLANNED_QA_CHECK`
 
-Do not execute until Iwan/Owner opens this story/gate explicitly.
+Iwan/Owner may open this as a small QA report gate if they want formal closure before accepting hybrid DB + mock flagging.
