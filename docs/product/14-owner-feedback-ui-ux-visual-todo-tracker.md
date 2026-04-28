@@ -1,7 +1,7 @@
 # Owner Feedback UI/UX Visual To-Do Tracker
 
 Date: 2026-04-28
-Status: canonical-status-tracker
+Status: canonical-status-tracker / case-closed-for-current-owner-review-cycle
 Prepared-by: ChatGPT Freelancer / Rangga
 Purpose: One source of truth for Owner UI/UX/visual feedback progress and gate status.
 
@@ -59,6 +59,19 @@ Total Owner Feedback Items: **66**
 | BLOCKED | 9 / 66 |
 | DEFERRED | 6 / 66 |
 | TODO | 2 / 66 |
+
+## Case status
+
+**CASE CLOSED for the current Owner UI/UX review cycle.**
+
+No new gate is open.
+
+The remaining `TODO` items are parked as future backlog only and are not active tasks:
+
+- `HOME-06`
+- `HOME-07`
+
+Do not start these unless Iwan explicitly reopens a new gate.
 
 ## Latest accepted gate
 
@@ -196,12 +209,14 @@ Earlier references:
 
 No active in-progress owner feedback items after Data Desa + Mobile Readability Closeout acceptance.
 
-## Remaining TODO items
+## Parked backlog / remaining TODO items
+
+These are not active tasks after case closure.
 
 | ID | Status | Note |
 |---|---|---|
-| HOME-06 | TODO | Data Demo/status badges should remain visually memorable near important demo metrics. Candidate for final homepage trust polish, UI-only. |
-| HOME-07 | TODO | Visual feel should remain modern, warm, data-rich, and human. Candidate for final homepage trust polish, UI-only. |
+| HOME-06 | TODO / PARKED | Data Demo/status badges should remain visually memorable near important demo metrics. Reopen only if Iwan asks for a future homepage trust polish gate. |
+| HOME-07 | TODO / PARKED | Visual feel should remain modern, warm, data-rich, and human. Reopen only if Iwan asks for a future homepage trust polish gate. |
 
 ## Gates that remain blocked
 
@@ -231,34 +246,11 @@ These are intentionally deferred and should not be opened before core trust/jour
 
 ## Recommended next gate
 
-No new gate is opened by this tracker update.
+**No next gate. Case closed.**
 
-Recommended next UI-only batch if Iwan wants to close remaining TODO:
+Do not open Homepage Trust Polish, Panduan/Bandingkan IA, visual delight, seed/read path, schema/DB/API/Prisma, scraper/import, or any data-layer work from this tracker.
 
-**Homepage Trust Polish Closeout**
-
-Candidate tracker IDs:
-
-- `HOME-06`
-- `HOME-07`
-
-Why this is the safest next step:
-
-- Only 2 canonical TODO items remain.
-- This is polish/reduction work, not homepage expansion.
-- It keeps the product aligned with accepted `HOME-08`: future homepage work should not add major sections.
-- It can improve trust/status framing and visual warmth without touching data layer.
-
-## Alternative future gate options
-
-### Panduan and Bandingkan IA batch
-
-Potential focus tracker IDs:
-
-- `GUIDE-01` to `GUIDE-08`
-- `COMPARE-01` to `COMPARE-05`
-
-Only open if Iwan explicitly asks.
+Future work requires a fresh explicit Iwan gate.
 
 ## Status values
 
@@ -269,12 +261,13 @@ Only open if Iwan explicitly asks.
 - `REWORK`
 - `BLOCKED`
 - `DEFERRED`
+- `PARKED`
 
 ## Final note
 
-This tracker update does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, active `Terverifikasi` state, Risk Radar, Score Orb, animation/micro-interactions, advanced dataviz, or new dependency work.
+This tracker case closure does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, active `Terverifikasi` state, Risk Radar, Score Orb, animation/micro-interactions, advanced dataviz, or new dependency work.
 
-Initiated-by: Owner/Iwan review confirmation for Data Desa + Mobile Readability Closeout
+Initiated-by: Owner/Iwan case closure after Data Desa + Mobile Readability Closeout acceptance
 Reviewed-by: Owner/Iwan
 Executed-by: ChatGPT Freelancer / Rangga
-Status: canonical-status-tracker
+Status: canonical-status-tracker / case-closed-for-current-owner-review-cycle
