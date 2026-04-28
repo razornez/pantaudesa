@@ -15,29 +15,33 @@ function SortHeader({ label, field, active, onSort }: {
   label: string; field: SortField; active: boolean; order: SortOrder; onSort: (f: SortField) => void;
 }) {
   return (
-    <button onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className="inline-flex min-h-[36px] items-center gap-1 rounded-lg px-1 text-left transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+    >
       {label}
-      <ArrowUpDown size={12} className={active ? "text-indigo-500" : "text-slate-300"} />
+      <ArrowUpDown size={12} className={active ? "text-indigo-500" : "text-slate-300"} aria-hidden />
     </button>
   );
 }
 
 export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead className="border-b border-slate-100 bg-slate-50">
             <tr className="text-xs font-medium text-slate-500">
-              <th className="text-left px-4 py-3">
+              <th className="px-4 py-3 text-left">
                 <SortHeader label={TABLE_HEADERS.nama} field="nama" active={sortField === "nama"} order={sortOrder} onSort={onSort} />
               </th>
-              <th className="text-left px-4 py-3 hidden md:table-cell">{TABLE_HEADERS.wilayah}</th>
-              <th className="text-right px-4 py-3 hidden lg:table-cell">
+              <th className="hidden px-4 py-3 text-left md:table-cell">{TABLE_HEADERS.wilayah}</th>
+              <th className="hidden px-4 py-3 text-right lg:table-cell">
                 <SortHeader label={TABLE_HEADERS.anggaran} field="totalAnggaran" active={sortField === "totalAnggaran"} order={sortOrder} onSort={onSort} />
               </th>
-              <th className="text-right px-4 py-3 hidden lg:table-cell">{TABLE_HEADERS.realisasi}</th>
-              <th className="text-right px-4 py-3">
+              <th className="hidden px-4 py-3 text-right lg:table-cell">{TABLE_HEADERS.realisasi}</th>
+              <th className="px-4 py-3 text-right">
                 <SortHeader label={TABLE_HEADERS.serapan} field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
               </th>
               <th className="px-4 py-3" />
@@ -45,34 +49,40 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
           </thead>
           <tbody className="divide-y divide-slate-50">
             {desa.map((d) => (
-              <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
+              <tr key={d.id} className="group transition-colors hover:bg-slate-50">
                 <td className="px-4 py-3">
-                  <Link href={`/desa/${d.id}`} className="block">
-                    <p className="font-medium text-slate-800 group-hover:text-indigo-600 transition-colors">{d.nama}</p>
-                    <p className="text-xs text-slate-400 md:hidden">{d.kabupaten}</p>
+                  <Link
+                    href={`/desa/${d.id}`}
+                    className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                  >
+                    <p className="font-semibold text-slate-800 transition-colors group-hover:text-indigo-600">{d.nama}</p>
+                    <p className="text-xs leading-relaxed text-slate-500 md:hidden">{d.kabupaten}</p>
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-500 hidden md:table-cell">
+                <td className="hidden px-4 py-3 text-slate-500 md:table-cell">
                   <p className="text-xs">{d.kecamatan}</p>
                   <p className="text-xs text-slate-400">{d.kabupaten}, {d.provinsi}</p>
                 </td>
-                <td className="px-4 py-3 text-right text-slate-700 hidden lg:table-cell">{formatRupiah(d.totalAnggaran)}</td>
-                <td className="px-4 py-3 text-right text-slate-700 hidden lg:table-cell">{formatRupiah(d.terealisasi)}</td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiah(d.totalAnggaran)}</td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiah(d.terealisasi)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${getStatusColor(d.status)}`}>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(d.status)}`}>
                       {getStatusLabel(d.status)}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-2 w-16 overflow-hidden rounded-full bg-slate-100">
                         <div className={`h-full rounded-full ${getSerapanColor(d.persentaseSerapan)}`} style={{ width: `${d.persentaseSerapan}%` }} />
                       </div>
-                      <span className="text-xs text-slate-500">{d.persentaseSerapan}%</span>
+                      <span className="text-xs font-medium text-slate-600">{d.persentaseSerapan}%</span>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <Link href={`/desa/${d.id}`} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">
+                  <Link
+                    href={`/desa/${d.id}`}
+                    className="inline-flex min-h-[36px] items-center rounded-lg px-2 text-xs font-semibold text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                  >
                     Lihat Detail
                   </Link>
                 </td>
