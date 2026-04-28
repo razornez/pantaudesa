@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Database, LayoutGrid, List } from "lucide-react";
+import { Info, LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
 import DesaCard from "@/components/desa/DesaCard";
 import DesaTable from "@/components/desa/DesaTable";
@@ -24,8 +24,6 @@ export default function DesaListClient({
   desa,
   initialSearch = "",
   readState = "ready",
-  readMessage = "",
-  dbHostAlias = "unknown",
 }: Props) {
   const provinsiList = useMemo(
     () => [...new Set(desa.map((d) => d.provinsi))].sort(),
@@ -91,7 +89,7 @@ export default function DesaListClient({
     setPage(1);
   };
 
-  const isDatabaseReady = readState === "ready";
+  const isDataReady = readState === "ready";
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -122,18 +120,19 @@ export default function DesaListClient({
         </div>
       </div>
 
-      <div className={`rounded-2xl border px-4 py-3 text-sm ${isDatabaseReady ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+      <div className={`rounded-2xl border px-4 py-3 text-sm ${isDataReady ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
         <div className="flex items-start gap-3">
-          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white ${isDatabaseReady ? "text-emerald-700" : "text-amber-700"}`}>
-            <Database size={16} aria-hidden />
+          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white ${isDataReady ? "text-emerald-700" : "text-amber-700"}`}>
+            <Info size={16} aria-hidden />
           </div>
           <div>
             <p className="font-bold">
-              {isDatabaseReady ? "Mode: Database + Angka Mock" : "Mode: Database belum tersedia"}
+              {isDataReady ? "Data desa siap dibaca" : "Data desa belum siap ditampilkan"}
             </p>
             <p className="mt-1 leading-relaxed">
-              {readMessage || "Data hardcoded tidak dipakai sebagai fallback."}
-              <span className="ml-1 text-xs font-semibold opacity-75">DB: {dbHostAlias}</span>
+              {isDataReady
+                ? "Sebagian angka masih bertanda mock karena dipakai sebagai contoh tampilan."
+                : "Kami belum bisa menampilkan daftar desa saat ini. Coba muat ulang beberapa saat lagi."}
             </p>
           </div>
         </div>
@@ -154,15 +153,15 @@ export default function DesaListClient({
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-amber-100 bg-white px-6 py-12 text-center shadow-sm">
           <Image
             src={ASSETS.mascotEmpty}
-            alt="Data desa belum bisa ditampilkan dari database"
+            alt="Data desa belum siap ditampilkan"
             width={150}
             height={170}
             className="object-contain"
           />
           <div>
-            <p className="mb-1 text-base font-semibold text-slate-700 sm:text-sm">Data database belum bisa ditampilkan</p>
+            <p className="mb-1 text-base font-semibold text-slate-700 sm:text-sm">Data desa belum tersedia</p>
             <p className="max-w-sm text-sm leading-relaxed text-slate-500 sm:text-xs">
-              PantauDesa tidak memakai fallback hardcoded. Jalankan seed demo atau cek koneksi DB untuk melihat data desa.
+              Beberapa data masih sedang disiapkan. Silakan coba muat ulang halaman ini atau kembali lagi nanti.
             </p>
           </div>
         </div>
