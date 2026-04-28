@@ -191,12 +191,12 @@ export function getResponsibilities(desa: Desa): ProblemCategory[] {
       tips: "Foto koordinat GPS bangunan ilegal menggunakan Google Maps. Ini sangat membantu proses pelaporan.",
     },
 
-    // ── 6. Pelayanan Buruk / Pungli ────────────────────────────────────────
+    // ── 6. Pelayanan / Pungli ──────────────────────────────────────────────
     {
       id:        "pelayanan",
       icon:      "🪪",
       labelTab:  "Pelayanan & Pungli",
-      judul:     "Pelayanan Buruk atau Pungutan Liar",
+      judul:     "Pelayanan Perlu Ditindaklanjuti atau Pungutan Liar",
       deskripsi: "Dipersulit mengurus surat desa, diminta bayar untuk layanan yang seharusnya gratis, atau diperlakukan tidak adil oleh perangkat desa.",
       eskalasi: [
         {

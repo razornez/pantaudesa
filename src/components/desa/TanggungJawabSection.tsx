@@ -37,6 +37,15 @@ const LEVEL_STYLE = {
   },
 } as const;
 
+function isPersonalMobileContact(contact: string): boolean {
+  const digits = contact.replace(/\D/g, "");
+  return digits.startsWith("08") || digits.startsWith("628");
+}
+
+function isReportingUrl(url: string): boolean {
+  return /(lapor\.go\.id|kpk\.go\.id|ombudsman\.go\.id)/i.test(url);
+}
+
 // ─── Sub-komponen: satu langkah eskalasi ─────────────────────────────────────
 
 function EscalationCard({ step, isLast }: { step: ProblemCategory["eskalasi"][number]; isLast: boolean }) {
@@ -65,7 +74,13 @@ function EscalationCard({ step, isLast }: { step: ProblemCategory["eskalasi"][nu
 
         {/* Kontak & URL */}
         <div className="flex flex-wrap gap-2">
-          {step.kontak && (
+          {step.kontak && isPersonalMobileContact(step.kontak) && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600">
+              <Phone size={11} aria-hidden />
+              Nomor kantor desa — hubungi via kanal resmi
+            </span>
+          )}
+          {step.kontak && !isPersonalMobileContact(step.kontak) && (
             <a
               href={`tel:${step.kontak.replace(/\D/g, "")}`}
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-current text-slate-600 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
@@ -76,13 +91,13 @@ function EscalationCard({ step, isLast }: { step: ProblemCategory["eskalasi"][nu
           )}
           {step.url && (
             <a
-              href={step.url}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={isReportingUrl(step.url) ? "#pre-report-checklist" : step.url}
+              target={isReportingUrl(step.url) ? undefined : "_blank"}
+              rel={isReportingUrl(step.url) ? undefined : "noopener noreferrer"}
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
             >
               <ExternalLink size={11} />
-              {step.labelUrl ?? step.url}
+              {isReportingUrl(step.url) ? "Cek langkah sebelum melapor" : (step.labelUrl ?? step.url)}
             </a>
           )}
         </div>
@@ -191,15 +206,13 @@ export default function TanggungJawabSection({ desa }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-slate-700">Untuk semua masalah:</p>
-            <p className="text-xs text-slate-400">LAPOR.go.id · Hotline <strong>1708</strong> · Wajib direspons dalam 5 hari kerja</p>
+            <p className="text-xs text-slate-400">LAPOR.go.id · Hotline <strong>1708</strong> · buka setelah checklist persiapan</p>
           </div>
           <a
-            href="https://www.lapor.go.id"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#pre-report-checklist"
             className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
-            Lapor <ExternalLink size={11} />
+            Cek checklist <ExternalLink size={11} />
           </a>
         </div>
       </div>

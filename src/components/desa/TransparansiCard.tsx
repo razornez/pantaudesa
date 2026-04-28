@@ -12,15 +12,15 @@ import PerangkatDesaSection from "./PerangkatDesaSection";
 type Tab = "transparansi" | "perangkat" | "dokumen";
 
 export default function TransparansiCard({ desa }: { desa: Desa }) {
-  const [tab, setTab] = useState<Tab>("transparansi");
+  const [tab, setTab] = useState<Tab>("dokumen");
   const tersediaCount = desa.dokumen?.filter(d => d.tersedia).length ?? 0;
   const totalDok      = desa.dokumen?.length ?? 0;
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
-    { id: "transparansi", label: "Transparansi", icon: BarChart3 },
-    { id: "perangkat",    label: "Perangkat",    icon: Users2 },
     { id: "dokumen",      label: "Dokumen",       icon: FileText,
       badge: totalDok > 0 ? `${tersediaCount}/${totalDok}` : undefined },
+    { id: "transparansi", label: "Transparansi", icon: BarChart3 },
+    { id: "perangkat",    label: "Perangkat",    icon: Users2 },
   ];
 
   return (
