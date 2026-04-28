@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { LayoutGrid, List } from "lucide-react";
+import { Database, FileCode2, LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
 import DesaCard from "@/components/desa/DesaCard";
 import DesaTable from "@/components/desa/DesaTable";
@@ -78,8 +78,9 @@ export default function DesaListClient({ desa, initialSearch = "" }: Props) {
     setPage(1);
   };
 
-  const dbSeedCount = desa.filter((item) => item.dataOrigin === "hybrid-db-seed").length;
+  const dbSeedCount = desa.filter((item) => item.dataOrigin === "database-seed").length;
   const mockCount = desa.length - dbSeedCount;
+  const isDatabaseMode = dbSeedCount > 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -110,13 +111,22 @@ export default function DesaListClient({ desa, initialSearch = "" }: Props) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-        <p className="font-bold">Status data ditandai jelas</p>
-        <p className="mt-1 leading-relaxed">
-          {dbSeedCount > 0
-            ? `${dbSeedCount} desa memakai identitas/sumber dari seed DB. Angka APBDes di kartu tetap data demo supaya website tidak kosong dan tidak terlihat sebagai data resmi.`
-            : `${mockCount} desa masih memakai data mock/demo lokal supaya website tidak kosong.`}
-        </p>
+      <div className={`rounded-2xl border px-4 py-3 text-sm ${isDatabaseMode ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+        <div className="flex items-start gap-3">
+          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white ${isDatabaseMode ? "text-emerald-700" : "text-slate-500"}`}>
+            {isDatabaseMode ? <Database size={16} aria-hidden /> : <FileCode2 size={16} aria-hidden />}
+          </div>
+          <div>
+            <p className="font-bold">
+              {isDatabaseMode ? "Mode: Database + Angka Demo" : "Mode: Mock/Hardcoded"}
+            </p>
+            <p className="mt-1 leading-relaxed">
+              {isDatabaseMode
+                ? `${dbSeedCount} desa dibaca dari database seed. Nama, lokasi, dan sumber berasal dari DB; angka APBDes tetap mock/demo supaya tidak terlihat kosong atau resmi.`
+                : `${mockCount} desa masih dari mock/hardcoded lokal. Kalau Ancolmekar/Arjasari/Patrolsari belum muncul, berarti koneksi DB/env seed belum kebaca di runtime ini.`}
+            </p>
+          </div>
+        </div>
       </div>
 
       <SearchFilterBar
