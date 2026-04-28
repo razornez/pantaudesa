@@ -52,27 +52,36 @@ Total Owner Feedback Items: **66**
 
 | Status | Count |
 |---|---:|
-| ACCEPTED | 29 / 66 |
+| ACCEPTED | 39 / 66 |
 | DONE_PENDING_REVIEW | 0 / 66 |
 | IN_PROGRESS | 1 / 66 |
 | REWORK | 0 / 66 |
 | BLOCKED | 9 / 66 |
 | DEFERRED | 6 / 66 |
-| TODO | 21 / 66 |
+| TODO | 11 / 66 |
 
 ## Latest accepted gate
 
-Gate accepted: **Reusable Status Badge System + Consistency Sweep**.
+Gate accepted: **Navigation and Citizen Journey Cleanup**.
 
 Accepted after:
 
-- reusable `DataStatusBadge` implementation,
-- Rangga review,
-- Owner first-pass approval,
-- Ujang consistency sweep,
-- Iwan confirmation.
+- Ujang implementation batch,
+- Rangga batch review,
+- Rangga owner visual pass checklist,
+- Iwan final approval for tracker update.
 
 References:
+
+- `docs/product/25-navigation-citizen-journey-batch-report.md`
+- `docs/product/26-rangga-navigation-citizen-journey-batch-review.md`
+- `docs/product/27-rangga-navigation-citizen-journey-owner-visual-pass.md`
+- commit `0d104899284ae632f6d82023fa30fdc367cea1c2`
+- commit `1cee0c156b15aa86fb2bc27eed672250e3f07fbb`
+
+Previous accepted gate: **Reusable Status Badge System + Consistency Sweep**.
+
+Previous references:
 
 - `docs/product/18-status-badge-system-report.md`
 - `docs/product/19-rangga-status-badge-system-review.md`
@@ -132,6 +141,31 @@ References:
 | STATUS-05 | ACCEPTED | `Sumber Ditemukan` visual/microcopy accepted. |
 | STATUS-06 | ACCEPTED | `Perlu Review` visual/microcopy accepted. |
 
+### Navigation and citizen journey accepted
+
+| ID | Status | Note |
+|---|---|---|
+| JOURNEY-01 | ACCEPTED | Homepage first action now clearly pushes citizens to search/find desa first. |
+| JOURNEY-02 | ACCEPTED | Primary CTA language accepted around `Cari Desa`, `Lihat Dokumen`, `Cara Membaca Data`, and `Ceritakan Kondisi Desaku`. `Cari Desamu Sekarang` is accepted as non-blocking campaign/action copy for this batch. |
+| JOURNEY-03 | ACCEPTED | Homepage search/find desa is visually prominent and easy to use. |
+| JOURNEY-04 | ACCEPTED | User journey accepted: Cari desa → lihat status data → baca sumber/dokumen → tanya/sampaikan suara warga. |
+
+### Suara Warga accepted
+
+| ID | Status | Note |
+|---|---|---|
+| VOICE-01 | ACCEPTED | Suara Warga copy frames posts as citizen stories/questions, not formal proof. |
+| VOICE-02 | ACCEPTED | Loading state feels intentional and avoids looking stuck. |
+| VOICE-03 | ACCEPTED | Empty state uses warm safe copy: `Belum ada suara warga yang bisa ditampilkan` and invites first citizen story. |
+| VOICE-04 | ACCEPTED | Voice CTA uses `Ceritakan Kondisi Desaku`. |
+
+### Test notes accepted
+
+| ID | Status | Note |
+|---|---|---|
+| TEST-01 | ACCEPTED | First-click validation note accepted: users should choose homepage search / `Cari Desa` as first action. |
+| TEST-02 | ACCEPTED | Data-status comprehension note accepted: users should understand demo/review/source/verified framing and not treat demo data as official. |
+
 ## In progress
 
 | ID | Status | Note |
@@ -140,7 +174,7 @@ References:
 
 ## Gates that remain blocked
 
-These remain blocked even after status badge acceptance:
+These remain blocked even after Navigation and Citizen Journey Cleanup acceptance:
 
 | Gate | Status | Reason |
 |---|---|---|
@@ -166,10 +200,15 @@ These are intentionally deferred and should not be opened before core trust/jour
 
 ## Recommended next gate
 
-Next recommended gate: **Data Desa card density**.
+No new gate opened by this tracker update.
 
-Focus tracker IDs:
+Potential next batch remains pending Iwan direction.
 
+If Iwan asks for the next UI-only batch, the safest candidate is **Data Desa + Mobile Readability Closeout**.
+
+Candidate tracker IDs:
+
+- `A11Y-06`
 - `DATA-DESA-01`
 - `DATA-DESA-02`
 - `DATA-DESA-03`
@@ -177,30 +216,25 @@ Focus tracker IDs:
 - `DATA-DESA-05`
 - `DATA-DESA-06`
 - `DATA-DESA-07`
+- `TEST-03`
+- `TEST-07`
 
-Why this gate next:
+Why this remains a candidate:
 
-- Data Desa listing is a major user scanning surface.
-- Owner previously flagged Data Desa density as confusing.
-- This gate is visible to users but remains UI-only.
-- It does not require seed/read path/schema/DB/API changes.
+- Data Desa card density was owner-approved first pass but still needs tracker reconciliation if Iwan confirms.
+- A11Y-06 remains in progress.
+- This keeps the next step UI-only and within one affected area cluster.
 
-## Alternative next gate options
+## Alternative future gate options
 
-### CTA journey / Cari Desa primary funnel
+### Panduan and Bandingkan IA batch
 
-Focus tracker IDs:
+Potential focus tracker IDs:
 
-- `JOURNEY-01`
-- `JOURNEY-02`
-- `JOURNEY-03`
-- `JOURNEY-04`
+- `GUIDE-01` to `GUIDE-08`
+- `COMPARE-01` to `COMPARE-05`
 
-### A11Y-06 mobile readability
-
-Focus tracker ID:
-
-- `A11Y-06`
+Only open if Iwan explicitly asks.
 
 ## Status values
 
@@ -214,9 +248,9 @@ Focus tracker ID:
 
 ## Final note
 
-This tracker update does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, or active `Terverifikasi` state.
+This tracker update does not authorize seed, read path, schema/DB/API/Prisma, scraper/import, numeric APBDes extraction, active `Terverifikasi` state, Risk Radar, Score Orb, animation/micro-interactions, advanced dataviz, or new dependency work.
 
-Initiated-by: Iwan confirmation of Status Badge Consistency Sweep acceptance
-Reviewed-by: Pending Iwan/Owner after this tracker update
+Initiated-by: Iwan final approval for Navigation and Citizen Journey Cleanup tracker update
+Reviewed-by: Rangga visual pass + Iwan final approval
 Executed-by: ChatGPT Freelancer / Rangga
 Status: canonical-status-tracker
