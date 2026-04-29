@@ -1,22 +1,26 @@
-# Sprint 04-006 — Consolidated Quality, Data, and Trust Batch
+# Sprint 04-006 — Sprint 04 Consolidated Plan: Quality Gate + Admin Claim 8 Items
 
 Date: 2026-04-29
 Status: approved-for-BMAD-planning / not-yet-executed
 Prepared-by: Rangga / BMAD-lite orchestration
 Owner gate: Iwan/Owner approved BMAD recording, prioritization, and single-PIC restructuring in chat.
 
+## Correction from Rangga
+
+Owner clarified that the "8 items" meant the original Sprint 04 admin claim service items from `docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md`, not the later consolidated quality/data/trust items.
+
+This document now treats Sprint 04-004 Admin Claim as the core Sprint 04 implementation track, with quality gate work as preflight/supporting work.
+
 ## Purpose
 
-Consolidate recent Owner feedback into a structured Sprint 04 execution plan without swallowing every suggestion raw.
+Give Owner a clear Sprint 04 report showing:
 
-This file is now the Owner-facing BMAD execution report for Sprint 04-006. It defines:
-
-1. which feedback is kept, adjusted, skipped, or deferred,
-2. how many task items are planned,
-3. who owns each task as single PIC,
-4. how many execution batches are recommended,
-5. which tasks must run locally,
-6. which tasks Rangga can handle without local QA/runtime work.
+1. the 8 admin claim task items,
+2. the PIC for each item,
+3. how many batches are recommended,
+4. which supporting/preflight tasks should run first,
+5. which feedback is deferred or skipped,
+6. how to avoid two people executing the same task.
 
 ## Ownership rule from Owner
 
@@ -47,500 +51,422 @@ Allowed role types:
 - Website token checker must include SSRF/private URL guard.
 - Demo data must never look official.
 
-## Consolidated feedback decisions
-
-### Execute in Sprint 04
-
-- Lint/build/typecheck/Prisma generate stabilization.
-- GitHub Actions CI quality gate after local commands are stable.
-- Critical Vitest coverage for services, route handlers, auth/error states, and important UI behavior.
-- Server-driven public data query and DB-backed home stats to avoid full-list client behavior.
-- Trust layer consistency for `dataStatus` and `DataStatusBadge`.
-- Security/privacy checklist for public APIs, voice text, admin claim, token, and query params.
-- Voice-to-Desa relation migration planning and gated implementation.
-- Developer documentation minimum readiness.
-- Admin claim verification services after quality gates are stable.
-
-### Execute, but with adjusted wording/scope
-
-- `getDesaListResult()` already exists; the real issue is full-list oriented public read behavior.
-- `Desa` already exists; the real issue is `Voice.desaId` as plain string without relation/FK.
-- `DataStatusBadge` already exists; the real issue is consistent mapping and governance, not enabling verified.
-
-### Skip/defer unless Owner reopens
-
-- NextAuth upgrade: keep as risk note only; do not execute unless there is a concrete auth blocker.
-- Playwright E2E: defer because it likely requires a new dependency and explicit approval.
-- Branch protection: defer until CI is green and stable.
-- Public `verified` activation: blocked until governance workflow exists.
-- GitHub board/label operations: defer until CI, CONTRIBUTING, and issue/PR templates exist.
-
 ---
 
-# Sprint 04 task inventory
+# Sprint 04 core implementation track — Admin Claim 8 Items
 
-Total planned task items: 8
-Recommended execution batches: 6
+Source task:
 
-| Task | Title | PIC | Reviewer / Gate | Batch | Local QA required? | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| 04-006A | Lint & Build Gate Stabilization | Ujang | Rangga review, Owner gate if dependency/version change | Batch 1 | Yes | Planned |
-| 04-006B | GitHub Actions CI Quality Gate | Ujang | Rangga review | Batch 2 | Yes | Planned |
-| 04-006C | Critical Test Foundation | Asep | Rangga review | Batch 2 | Yes | Planned |
-| 04-006D | Public Read Path Scalability | Ujang | Rangga review | Batch 3 | Yes | Planned |
-| 04-006E | Trust Layer, Security, and Privacy Consistency | Asep | Rangga review, Owner gate for verified/security scope | Batch 4 | Yes if UI/API touched | Planned |
-| 04-006F | Voice to Desa Relation Migration | Ujang | Rangga review, Owner migration gate | Batch 5 | Yes | Planned/gated |
-| 04-006G | Developer Documentation & OSS Minimum Readiness | Rangga | Owner review; Ujang only provides prior command results as input | Batch 4 | No direct local QA by Rangga | Planned |
-| 04-006H | Admin Claim Verification Services Batch | Ujang | Rangga review, Owner high-risk gate | Batch 6 | Yes | Planned/gated |
+- `docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md`
 
-## Why 6 batches, not 8 batches
-
-There are 8 task items, but they can be grouped into 6 controlled batches without task ownership collision:
-
-1. Batch 1: Quality stabilization baseline.
-2. Batch 2: CI and tests, owned separately by Ujang and Asep.
-3. Batch 3: Public read path scalability.
-4. Batch 4: Trust/security consistency and docs, owned separately by Asep and Rangga.
-5. Batch 5: Voice-to-Desa migration.
-6. Batch 6: Admin claim services.
-
-Parallel work is allowed only when file ownership and dependencies do not collide.
-
----
-
-# Batch 1 — Quality stabilization baseline
-
-## Task 04-006A — Lint & Build Gate Stabilization
-
-PIC: Ujang
+Total core admin-claim items: 8
+Recommended core admin-claim batches: 5
+Primary PIC: Ujang
 Reviewer: Rangga
-Gate owner: Iwan/Owner if Prisma version/dependency changes are proposed
-Priority: P0
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: medium
-Escalate to high if: Prisma query engine rename/build error persists, auth/session files need refactor, Prisma version changes are proposed, or React Hooks fixes affect user-facing auth/data flow.
-
-### Goal
-
-Make local project quality commands reliable before CI is introduced as a gate.
-
-### Scope
-
-- Fix ESLint errors/warnings, especially React Hooks and unused imports.
-- Do not mass-disable ESLint rules.
-- Fix hook-heavy code only as needed to make logic stable.
-- Extract small hooks only when it reduces lint risk and improves testability.
-- Investigate Prisma query engine rename issue.
-- Confirm whether Prisma rename issue is Windows-specific, file-lock related, cache related, or version related.
-
-### Required validation
-
-```bash
-npm run lint
-npm run test
-npx tsc --noEmit
-npx prisma generate
-npm run build
-```
-
-### Acceptance criteria
-
-- `npm run lint` passes without mass ignores.
-- `npm run test` passes.
-- `npx tsc --noEmit` passes.
-- `npx prisma generate` passes.
-- `npm run build` passes or has a clear environment-specific blocker report.
-- Any Prisma/package update proposal stops for Owner approval.
-
-### Screenshot rule
-
-If UI components are touched, capture desktop and mobile before-after screenshots locally only:
-
-- `.artifacts/screenshots/sprint-04-006a/`
-- `tmp/screenshots/sprint-04-006a/`
-
-Do not commit screenshots unless Owner asks.
-
----
-
-# Batch 2 — CI and critical tests
-
-## Task 04-006B — GitHub Actions CI Quality Gate
-
-PIC: Ujang
-Reviewer: Rangga
-Priority: P0 after 04-006A
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: medium
-Escalate to high if: CI needs production secrets, live DB access, Prisma version updates, package manager changes, or branch protection.
-
-### Goal
-
-Add a minimal non-deployment CI workflow on Linux.
-
-### Scope
-
-Create `.github/workflows/ci.yml` that runs:
-
-```bash
-npx prisma generate
-npm run lint
-npm run test
-npx tsc --noEmit
-npm run build
-```
-
-### Boundaries
-
-- No deployment workflow.
-- No branch protection yet.
-- No new dependency without Owner approval.
-- No production DB requirement.
-- No hardcoded fallback to make CI green.
-
-### Acceptance criteria
-
-- CI runs on PR and push to main.
-- CI uses Linux runner, preferably `ubuntu-latest`.
-- CI failure clearly shows whether failure is Prisma generate, lint, test, typecheck, or build.
-- CI is green or has a documented blocker tied to environment.
-
-## Task 04-006C — Critical Test Foundation
-
-PIC: Asep
-Reviewer: Rangga
-Priority: P1 after 04-006A, can run alongside 04-006B if file ownership does not collide
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: medium
-Escalate to high if: auth mocking, Prisma integration isolation, DB cleanup, token flows, SSRF guard, or route-handler testing becomes complex.
-
-### Goal
-
-Add meaningful tests for risky paths, not just increase coverage percentage.
-
-### Scope
-
-Use existing Vitest setup first.
-
-Add/extend tests for:
-
-- service/helper functions,
-- route handlers under `/api/*`,
-- invalid payloads,
-- unauthenticated and unauthorized access,
-- DB unavailable/error states,
-- public read-path mapper behavior,
-- token invalid/expired/reused behavior where applicable,
-- important UI behavior where current tooling supports it.
-
-### Deferred
-
-Playwright E2E is deferred until Owner approves new dependency.
-
-### Acceptance criteria
-
-- `npm run test` passes locally and in CI.
-- Critical API/service behavior has tests.
-- Tests do not require production DB.
-- No destructive DB reset.
-
----
-
-# Batch 3 — Public data scalability
-
-## Task 04-006D — Public Read Path Scalability
-
-PIC: Ujang
-Reviewer: Rangga
-Priority: P1
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: medium
-Escalate to high if: DB unavailable behavior, cache invalidation, ISR, aggregate stats, or public numeric APBDes framing becomes ambiguous.
-
-### Goal
-
-Move public list/search/home stats away from full-list oriented reads.
-
-### Adjusted finding
-
-`getDesaListResult()` already exists and reads from Prisma. The issue is that public read behavior is still full-list oriented:
-
-- list reads can still load many records,
-- `/desa` passes full `result.items` to client,
-- homepage computes stats/leaderboards from full list in page logic.
-
-### Scope
-
-- Server-driven `getDesaListResult({ search, provinsi, kabupaten, kecamatan, sort, page, pageSize })`.
-- Prisma `where`, `orderBy`, `skip`, `take`.
-- DB-backed total count and pagination metadata.
-- DB-backed filter options.
-- DB-backed `getHomeStats()`.
-- DB-backed leaderboard/trend helpers where safe.
-- Preserve unavailable/empty DB state without hardcoded fallback.
-
-### Boundaries
-
-- No schema/migration.
-- No admin claim changes.
-- No hardcoded fallback.
-- No official numeric APBDes claim.
-- Keep demo/trust badges visible.
-
-### QA requirements
-
-- Desktop/mobile before-after screenshots for `/desa`.
-- Desktop/mobile before-after screenshots for homepage if changed.
-- Verify search/filter/sort/pagination behavior.
-- Verify empty/unavailable state.
-
-### Acceptance criteria
-
-- Client no longer receives unbounded full desa dataset for list browsing.
-- Search/filter/sort/page are represented in URL/search params.
-- Server returns pagination metadata.
-- Home stats are not computed by loading the full list into page logic.
-- Build remains safe when DB is unavailable.
-
----
-
-# Batch 4 — Trust/security consistency and docs
-
-## Task 04-006E — Trust Layer, Security, and Privacy Consistency
-
-PIC: Asep
-Reviewer: Rangga
-Gate owner: Iwan/Owner if verified/security scope expands
-Priority: P1/P2 after 04-006D or when file ownership is clear
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: medium
-Escalate to high if: verified governance, APBDes numeric status, privacy exposure, admin role proof, token security, SSRF, or legal/reputation risk appears.
-
-### Goal
-
-Make public trust framing and security rules consistent before deeper admin claim features.
-
-### Scope
-
-- Audit UI usage of `DataStatusBadge`.
-- Map Prisma `DataStatus` values to UI-safe statuses/copy.
-- Keep `verified` disabled until governance exists.
-- Ensure `source-found` never implies verified.
-- Check public UI for private email/phone exposure.
-- Add validation/security checklist for route handlers.
-- Confirm citizen voice text safe rendering/escaping and length validation.
-- Confirm query param validation and safe parsing.
-
-### Boundaries
-
-- Do not enable `verified`.
-- Do not claim official data truth.
-- Do not add sanitizer dependency without Owner approval.
-- Do not expose private contact details.
-
-### Acceptance criteria
-
-- Status badge usage is consistent across public desa/detail/source/document/perangkat surfaces.
-- Verified remains inactive/disabled.
-- Public copy clearly distinguishes demo/source-found/needs-review.
-- Security/privacy checklist is documented for admin claim and voice APIs.
-
-## Task 04-006G — Developer Documentation & OSS Minimum Readiness
-
-PIC: Rangga
-Reviewer: Owner
-Input provider: Ujang provides command results from 04-006A/04-006B only; Ujang is not co-executor for this task.
-Priority: P2 after commands/CI are known-good
-Recommended model: GPT-5.1 Codex mini
-Reasoning effort: low/medium
-Escalate to high if docs require changing env, CI secrets, deployment, or production DB assumptions.
-
-### Goal
-
-Make local development and contribution flow clear enough without adding unnecessary process overhead.
-
-### Scope
-
-Update or draft:
-
-- README development section,
-- seed demo instructions,
-- Prisma generate/migration notes,
-- lint/test/typecheck/build commands,
-- CI explanation,
-- screenshot audit policy,
-- `CONTRIBUTING.md`,
-- PR template,
-- issue template.
-
-### Deferred
-
-- GitHub board setup.
-- Label taxonomy automation.
-- Community process beyond minimum PR/issue guide.
-
-### Boundaries
-
-- Do not document destructive reset as default workflow.
-- Do not tell contributors to use production DB.
-- Do not commit screenshots.
-
-### Acceptance criteria
-
-- README reflects verified command flow from prior tasks.
-- CONTRIBUTING explains commit, lint, test, CI, and screenshot expectations.
-- Issue/PR templates help future QA/review.
-
----
-
-# Batch 5 — Data integrity migration
-
-## Task 04-006F — Voice to Desa Relation Migration Plan and Gated Implementation
-
-PIC: Ujang
-Reviewer: Rangga
-Gate owner: Iwan/Owner for migration approval
-Priority: P2 after quality/test foundation
+Gate owner: Iwan/Owner for high-risk/security/governance decisions
 Recommended model: GPT-5.1
 Reasoning effort: high
-Escalate to high by default because this touches schema, migration, existing data, and foreign keys.
+Escalate high by default for auth, email, token, role, audit, invite, website checking, SSRF, and reputation risk.
 
-### Goal
+## Admin claim task inventory
 
-Safely connect `Voice.desaId` to existing `Desa` without orphaning voice records.
+| Item | Task ID | Title | PIC | Reviewer/Gate | Batch | Local QA required? | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 04-004A | Submit claim to DB from UI | Ujang | Rangga review | Core Batch 1 | Yes | Establish claim record and action entry point first |
+| 2 | 04-004B | Real admin-claim email magic link | Ujang | Rangga review / Owner if env risk | Core Batch 2 | Yes | Dedicated Resend service, not NextAuth `signIn("resend")` |
+| 3 | 04-004C | Generate real website token | Ujang | Rangga review | Core Batch 2 | Yes | Token shown once, hash stored, expires |
+| 4 | 04-004D | Check token on official village website | Ujang | Rangga review / Owner if SSRF ambiguity | Core Batch 3 | Yes | Single-page safe check only, no crawler |
+| 5 | 04-004E | Status transition PENDING/LIMITED/VERIFIED | Ujang | Rangga review / Owner governance gate | Core Batch 3 | Yes | Verified admin membership, not verified public data |
+| 6 | 04-004F | Real audit events from claim actions | Ujang | Rangga review | Core Batch 1-3 cross-cutting | Yes | Must be implemented alongside every action |
+| 7 | 04-004G | Invite admin service | Ujang | Rangga review | Core Batch 4 | Yes | Verified admin only, max 5 admins per desa |
+| 8 | 04-004H | Fake admin report service | Ujang | Rangga review | Core Batch 5 | Yes | Report only, no auto-suspend |
 
-### Adjusted finding
+## Why Ujang owns all 8 admin-claim items
 
-`Desa` already exists. The gap is that `Voice.desaId` is currently a plain string without a Prisma relation/foreign key.
+The 8 admin claim items touch the same service boundary:
 
-### Required pre-migration audit
+- `DesaAdminClaim`,
+- `DesaAdminMember`,
+- `DesaAdminInvite`,
+- `AdminClaimAudit`,
+- `FakeAdminReport`,
+- token helpers,
+- status transitions,
+- admin claim route handlers,
+- `/profil/klaim-admin-desa` wiring.
 
-- Inspect existing `voices.desaId` values.
-- Determine whether values match `Desa.id`, `Desa.slug`, `kodeDesa`, or legacy/mock identifiers.
-- Produce orphan/mismatch report.
-- Do not delete or mutate old voice data automatically.
+Splitting execution across Ujang and Asep inside this same area would create file-level conflicts and hidden dependencies. Therefore, Ujang is the single PIC for the admin-claim implementation track. Rangga reviews only after completion or handoff checkpoints.
 
-### Implementation scope after audit approval
+## Core admin claim batch sequence
 
-- Add Prisma relation only after data compatibility or migration mapping is approved.
-- Update seed data with valid desa references.
-- Update voice queries/API to use relation where appropriate.
-- Add tests for invalid desa, missing desa, and per-desa voice reads.
+### Core Batch 1 — Claim submit + audit foundation
 
-### Boundaries
+Tasks:
 
-- No destructive migration without Owner approval.
-- No seed reset without Owner approval.
-- No auto-delete orphan voices.
-- Stop and ask if production-like data mismatch exists.
+- 04-004A Submit claim to DB from UI.
+- 04-004F audit event helper and initial `CLAIM_STARTED`/claim action audit events.
 
-### Acceptance criteria
+Why first:
 
-- Orphan report is produced before FK enforcement.
-- FK is added only after data compatibility is confirmed or mapping is approved.
-- Tests cover invalid/missing desa behavior.
+- Every later verification method needs a persisted claim.
+- Every later action must write audit trail.
+
+### Core Batch 2 — Verification method generation
+
+Tasks:
+
+- 04-004B Real admin-claim email magic link.
+- 04-004C Generate real website token.
+
+Why second:
+
+- Both create proof artifacts/tokens but do not require website fetching yet.
+- Both depend on claim + token/audit primitives from Core Batch 1.
+
+### Core Batch 3 — Verification execution + status transition
+
+Tasks:
+
+- 04-004D Check token on official village website.
+- 04-004E Status transition PENDING/LIMITED/VERIFIED.
+- 04-004F audit events for success/failure transitions.
+
+Why third:
+
+- Website checking and email verification both need strict transition rules.
+- `VERIFIED` here means admin membership verification only; it must not activate verified public data values.
+
+### Core Batch 4 — Invite admin service
+
+Task:
+
+- 04-004G Invite admin service.
+
+Why fourth:
+
+- Invite depends on a verified admin member existing.
+- Invite grants `LIMITED`, not verified admin self-promotion.
+
+### Core Batch 5 — Fake admin report service
+
+Task:
+
+- 04-004H Fake admin report service.
+
+Why fifth:
+
+- Can be implemented after membership/invite model is clearer.
+- Must not auto-suspend or auto-punish based on report alone.
 
 ---
 
-# Batch 6 — Admin claim high-risk services
+# Supporting Sprint 04 quality/preflight tasks
 
-## Task 04-006H — Admin Claim Verification Services Batch
+These tasks are not the "8 admin claim items". They exist to reduce risk before or during implementation.
+
+| Support Task | Title | PIC | Batch | Required before admin claim? | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 04-006Q1 | Lint & Build Gate Stabilization | Ujang | Preflight 1 | Yes | Current lint/build must not hide admin-claim regressions |
+| 04-006Q2 | GitHub Actions CI Quality Gate | Ujang | Preflight 2 | Strongly recommended | CI should run lint/test/typecheck/build |
+| 04-006Q3 | Critical Test Foundation | Asep | Preflight 2 | Strongly recommended | Vitest route/service/security tests, no Playwright dependency yet |
+| 04-006Q4 | Developer Docs & QA Checklist | Rangga | Support | No | Docs/checklist only, based on verified commands/logs |
+
+## Preflight task notes
+
+- Q1 should run before admin claim coding.
+- Q2/Q3 can run after Q1 and in parallel with each other if file ownership does not collide.
+- Q4 can be done by Rangga using command results from Ujang; Ujang is input provider only, not co-executor.
+
+---
+
+# Deferred/non-core feedback
+
+The following feedback remains valid but should not replace the admin claim 8-item Sprint 04 core:
+
+1. Public read path scalability — keep as next data-quality task after admin claim gate or run only if Owner explicitly prioritizes it before admin claim.
+2. Voice-to-Desa relation migration — high-risk data integrity task, gated separately; do not mix with admin claim implementation.
+3. DataStatus trust layer consistency — keep guardrail active; only implement if needed by admin claim UI/security path.
+4. NextAuth upgrade — risk note only, do not execute now unless auth blocker appears.
+5. Playwright E2E — defer; requires new dependency approval.
+6. Branch protection — defer until CI is green.
+7. Public `verified` activation — blocked until governance exists.
+8. GitHub board/label operations — defer until minimum docs/templates are ready.
+
+---
+
+# Admin claim detailed task definitions
+
+## 04-004A — Submit claim to DB from UI
 
 PIC: Ujang
 Reviewer: Rangga
-Gate owner: Iwan/Owner for high-risk decisions
-Priority: P2/P3 after quality gate and critical tests are stable
+Batch: Core Batch 1
 Recommended model: GPT-5.1
 Reasoning effort: high
-Escalate to high by default because this touches auth, email, token, website check, role, audit, invite, report, SSRF, and reputation risk.
-
-### Goal
-
-Implement real admin claim services only after quality gates can catch regressions.
 
 ### Scope
 
-Owner-requested admin claim service items remain valid:
-
-1. real admin-claim email magic link via dedicated email service,
-2. real website token generation,
-3. website token checker with SSRF/private URL guard,
-4. submit claim to DB from UI,
-5. status flow PENDING/LIMITED/VERIFIED where verified remains governance-gated,
-6. real audit event from claim actions,
-7. admin invite service,
-8. fake admin report.
-
-### Boundaries
-
-- Do not reuse NextAuth `signIn("resend")` for admin claim email.
-- Use dedicated admin claim email service.
-- Token hash-only, expiring, and single-use where relevant.
-- No `User.role = DESA` as proof of verified admin desa.
-- No verified activation without governance.
-- All claim/invite/report actions must have audit trail.
-- No private email/phone exposure.
-
-### QA requirements
-
-- Local runtime QA.
-- DB checks.
-- Email/dev-mode verification.
-- Route handler tests.
-- Desktop/mobile screenshots for UI changes.
+- Wire `/profil/klaim-admin-desa` to a real submit endpoint.
+- Require authenticated user.
+- Validate desa exists.
+- Create or safely update `DesaAdminClaim` for `(userId, desaId)`.
+- Initial status: `PENDING`.
+- Save selected method: `OFFICIAL_EMAIL`, `WEBSITE_TOKEN`, or `SUPPORT_REVIEW`.
+- Prevent noisy duplicate claims.
+- Write audit event through 04-004F.
 
 ### Acceptance criteria
 
-- Admin claim actions persist to DB.
-- Token and email flows are testable and auditable.
-- Website checker blocks private/internal URLs.
-- Status transitions are safe and logged.
-- Invite/report flows do not imply verified admin without governance.
+- Claim submit persists to DB.
+- Public/unauthenticated request is blocked.
+- Duplicate submit is safe and predictable.
+- UI reads status from DB after submit.
+
+## 04-004B — Real admin-claim email magic link
+
+PIC: Ujang
+Reviewer: Rangga
+Batch: Core Batch 2
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Create dedicated admin-claim email service using Resend.
+- Do not reuse NextAuth `signIn("resend")` directly.
+- Generate cryptographically random token.
+- Store token hash only.
+- Token expires and is single-use where applicable.
+- Send magic link only to allowed official email source.
+- Handle missing Resend env honestly as `RESEND_ENV_MISSING`, not fake success.
+- Verify token from callback/route and grant verified admin membership if valid.
+- Write audit events through 04-004F.
+
+### Acceptance criteria
+
+- Email helper is separate from NextAuth login provider.
+- Raw token is never stored.
+- Valid token verifies claim/admin membership.
+- Invalid/expired/used token fails safely.
+
+## 04-004C — Generate real website token
+
+PIC: Ujang
+Reviewer: Rangga
+Batch: Core Batch 2
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Generate website verification token.
+- Store token hash and expiry.
+- Show raw token once in UI.
+- Provide safe placement instruction for official desa website.
+- Write audit event through 04-004F.
+
+### Acceptance criteria
+
+- Website token exists only as raw value at creation time.
+- DB stores hash only.
+- Token expires.
+- UI copy is clear and does not imply verified public data.
+
+## 04-004D — Check token on official village website
+
+PIC: Ujang
+Reviewer: Rangga
+Gate owner: Owner if SSRF/domain ambiguity appears
+Batch: Core Batch 3
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Implement real website token check endpoint.
+- Require authenticated user.
+- Load claim owned by current user.
+- Validate token exists and is not expired.
+- Validate URL is allowed and tied to official desa website/domain where possible.
+- Fetch only one page safely.
+- Search token text.
+- Reject localhost/private/internal IPs, unsafe schemes, and suspicious redirects.
+- Timeout and response-size limit required.
+- No crawler/recursive fetch.
+- Write audit events through 04-004F.
+
+### Acceptance criteria
+
+- Token found grants verified admin membership through 04-004E.
+- Token not found keeps claim pending.
+- Invalid/private URL is rejected.
+- No generic crawler behavior.
+
+## 04-004E — Status transition PENDING/LIMITED/VERIFIED
+
+PIC: Ujang
+Reviewer: Rangga
+Gate owner: Owner for governance ambiguity
+Batch: Core Batch 3
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Centralize allowed admin claim/member transitions.
+- User cannot set arbitrary status from client.
+- User cannot verify another user's claim.
+- `User.role = DESA` must not imply verified desa admin.
+- Email/website proof can transition claim to `VERIFIED` and member to `VERIFIED_ADMIN`.
+- Invite acceptance can create `LIMITED` membership.
+- `VERIFIED` here is admin membership only, not public data verification.
+- Write audit events through 04-004F.
+
+### Acceptance criteria
+
+- Transitions are enforced in server-side helper/service.
+- Invalid transitions fail safely.
+- Verified public data status remains inactive.
+
+## 04-004F — Real audit events from claim actions
+
+PIC: Ujang
+Reviewer: Rangga
+Batch: Cross-cutting Core Batch 1-3
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Create audit event constants.
+- Create audit write helper.
+- Use helper for all claim/email/website/status/invite/report actions.
+- Avoid scattered raw event strings.
+- Store enough metadata for review without exposing private token/email data.
+
+### Minimum events
+
+- `CLAIM_STARTED`
+- `CLAIM_REUSED`
+- `CLAIM_METHOD_UPDATED`
+- `EMAIL_VERIFICATION_SENT`
+- `EMAIL_PROVIDER_CONFIG_MISSING`
+- `EMAIL_VERIFIED`
+- `EMAIL_FAILED`
+- `EMAIL_TOKEN_EXPIRED`
+- `WEBSITE_TOKEN_CREATED`
+- `WEBSITE_TOKEN_VERIFIED`
+- `WEBSITE_TOKEN_FAILED`
+- `WEBSITE_NOT_ACCEPTED_FOR_AUTO_VERIFY`
+- `ROLE_GRANTED`
+- `INVITE_CREATED`
+- `INVITE_ACCEPTED`
+- `FAKE_ADMIN_REPORT_SUBMITTED`
+- `ADMIN_CLAIM_FLAGGED_BY_PUBLIC`
+
+### Acceptance criteria
+
+- Every important action writes audit.
+- Audit metadata avoids raw token leakage.
+- Audit helper is reusable by all admin claim services.
+
+## 04-004G — Invite admin service
+
+PIC: Ujang
+Reviewer: Rangga
+Batch: Core Batch 4
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Verified desa admin can invite another admin.
+- Enforce max 5 admins per desa.
+- Invite token stored hash-only and expires.
+- Accept invite creates/updates `DesaAdminMember` as `LIMITED`.
+- Send invite email via dedicated admin-claim/invite email helper if env exists.
+- Write audit events through 04-004F.
+
+### Acceptance criteria
+
+- Only verified admin for that desa can invite.
+- Max 5 admin rule enforced.
+- Invite accept handles valid/expired/used token cases.
+- Invite does not create verified admin automatically.
+
+## 04-004H — Fake admin report service
+
+PIC: Ujang
+Reviewer: Rangga
+Batch: Core Batch 5
+Recommended model: GPT-5.1
+Reasoning effort: high
+
+### Scope
+
+- Implement endpoint/service to create `FakeAdminReport`.
+- Required: `desaId`, `reason`.
+- Optional: `reportedUserId`, `description`, `evidenceUrl`, `reporterEmail`.
+- Validate desa exists.
+- Validate evidence URL/email if provided.
+- Write audit events through 04-004F.
+- Do not auto-suspend based on report alone.
+
+### Acceptance criteria
+
+- Valid report creates DB record.
+- Invalid report fails safely.
+- Audit event is written.
+- No automatic punishment/suspension based only on report.
 
 ---
 
-# Sprint 04 execution report summary
+# Sprint 04 report summary
 
-## Task count
+## Core task count
 
-8 task items.
+8 admin claim task items.
 
-## Batch count
+## Supporting/preflight task count
 
-6 execution batches.
+4 supporting tasks.
 
-## PIC distribution
+## Total execution groups
 
-- Ujang: 5 tasks
-  - 04-006A Lint & Build Gate Stabilization
-  - 04-006B GitHub Actions CI Quality Gate
-  - 04-006D Public Read Path Scalability
-  - 04-006F Voice to Desa Relation Migration
-  - 04-006H Admin Claim Verification Services Batch
+5 core admin-claim batches + 2 preflight/support batches.
 
-- Asep: 2 tasks
-  - 04-006C Critical Test Foundation
-  - 04-006E Trust Layer, Security, and Privacy Consistency
+## PIC distribution for core admin claim
 
-- Rangga: 1 task
-  - 04-006G Developer Documentation & OSS Minimum Readiness
+- Ujang: 8 admin-claim implementation items.
+- Rangga: reviewer only.
+- Owner/Iwan: gate owner for high-risk/security/governance decisions.
 
-## Dependency notes
+## PIC distribution for supporting tasks
 
-- 04-006A must run first.
-- 04-006B and 04-006C can run in Batch 2 with different PICs.
-- 04-006D should not overlap with admin claim work.
-- 04-006E should run after 04-006D or only touch non-conflicting files.
-- 04-006G can run from prior command outputs and does not block local engineering.
-- 04-006F is migration-gated and should wait for tests/gates.
-- 04-006H should wait until quality gate and critical tests are stable.
+- Ujang: Q1 lint/build, Q2 CI.
+- Asep: Q3 critical tests.
+- Rangga: Q4 docs/QA checklist.
 
-## Definition of done for Sprint 04-006
+## Recommended order
 
-- Tasks are executed in order without hidden dual ownership.
-- CI catches lint/test/typecheck/build regressions.
-- Public read path avoids unbounded client full-list behavior.
-- Trust badges stay consistent and demo-safe.
-- No verified/public official claims are introduced without governance.
-- Migration work produces an audit/mismatch report before FK enforcement.
-- Admin claim services ship only after security/test gates are ready.
+1. Preflight Q1 — lint/build stabilization.
+2. Preflight Q2/Q3 — CI and critical tests.
+3. Core Batch 1 — claim submit + audit foundation.
+4. Core Batch 2 — email magic link + website token generation.
+5. Core Batch 3 — website token check + status transitions.
+6. Core Batch 4 — invite admin service.
+7. Core Batch 5 — fake admin report service.
+8. Support Q4 — docs/QA checklist update after commands and flow are known.
+
+## Definition of done for Sprint 04 admin claim track
+
+- All 8 owner admin claim items are implemented or explicitly reported blocked with reason.
+- Every item has single PIC execution ownership.
+- Token flows are hash-only, expiring, and single-use where relevant.
+- Website check has SSRF/private URL protection and no crawler behavior.
+- Status transitions cannot be controlled arbitrarily by client.
+- Audit events exist for claim/email/website/status/invite/report actions.
+- Invite admin enforces verified-admin-only and max 5 admin rule.
+- Fake admin report creates report/audit only and does not auto-suspend.
+- UI remains clean and mobile-safe if touched.
+- Required QA commands pass or blockers are clearly reported.
