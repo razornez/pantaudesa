@@ -1,0 +1,65 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { AdminClaimProfileData } from "@/lib/data/admin-claim-read";
+import {
+  buildSupportMailto,
+  getClientSupportEmail,
+  getSelectedDesa,
+  isDemoSession,
+} from "@/components/profil/admin-claim/adminClaimCopy";
+
+export function useAdminClaimProfile() {
+  const [data, setData] = useState<AdminClaimProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/admin-claim/profile")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`admin claim profile load failed: ${response.status}`);
+        }
+
+        const payload = await response.json() as AdminClaimProfileData;
+        if (!active) return;
+
+        setData(payload);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadError(true);
+        setData(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const supportEmail = data?.supportEmail ?? getClientSupportEmail();
+  const defaultDesaId = data?.selectedDesaId ?? data?.desaOptions?.[0]?.id ?? null;
+  const defaultDesa = useMemo(
+    () => getSelectedDesa(data?.desaOptions ?? [], defaultDesaId),
+    [data?.desaOptions, defaultDesaId],
+  );
+  const supportHref = supportEmail && defaultDesa
+    ? buildSupportMailto(supportEmail, defaultDesa.nama)
+    : undefined;
+
+  return {
+    data,
+    loading,
+    loadError,
+    supportEmail,
+    supportHref,
+    defaultDesaId,
+    isDemoAccount: isDemoSession(data),
+  };
+}

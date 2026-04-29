@@ -1,0 +1,145 @@
+import type {
+  AdminClaimDataStatus,
+  AdminClaimDesaOption,
+  AdminClaimProfileData,
+  AdminClaimStateCard,
+} from "@/lib/data/admin-claim-read";
+
+export type ClaimStep = 1 | 2 | 3 | 4;
+export type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN" | "SUPPORT_REVIEW";
+
+export const CLAIM_STEP_LABELS: Array<{ step: ClaimStep; label: string }> = [
+  { step: 1, label: "Pilih desa" },
+  { step: 2, label: "Cara verifikasi" },
+  { step: 3, label: "Instruksi" },
+  { step: 4, label: "Status" },
+];
+
+export const CLAIM_STATUS_BADGE_TEXT: Record<AdminClaimStateCard["status"], { short: string; full: string }> = {
+  none: { short: "Belum klaim", full: "Belum mengajukan" },
+  pending: { short: "Pending", full: "Menunggu verifikasi" },
+  limited: { short: "Terbatas", full: "Akses terbatas" },
+  verified: { short: "Terverifikasi", full: "Admin Desa Terverifikasi" },
+  rejected: { short: "Belum diterima", full: "Pengajuan belum bisa diterima" },
+  suspended: { short: "Ditinjau", full: "Akses sedang ditinjau" },
+  platform: { short: "Platform", full: "Admin Platform" },
+};
+
+export const CLAIM_STATUS_COPY: Record<AdminClaimStateCard["status"], {
+  title: string;
+  note: string;
+  tone: string;
+}> = {
+  none: {
+    title: "Belum mengajukan",
+    note: "Kamu belum punya klaim admin desa yang tercatat.",
+    tone: "border-slate-200 bg-slate-100 text-slate-700",
+  },
+  pending: {
+    title: "Menunggu verifikasi",
+    note: "Kami masih perlu memastikan klaim ini melalui kanal resmi desa.",
+    tone: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  limited: {
+    title: "Akses terbatas",
+    note: "Kamu bisa menyiapkan dokumen atau klarifikasi, tetapi belum tampil sebagai Admin Desa Terverifikasi.",
+    tone: "border-sky-200 bg-sky-50 text-sky-800",
+  },
+  verified: {
+    title: "Admin Desa Terverifikasi",
+    note: "Akun ini sudah terhubung dengan kanal resmi desa.",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  },
+  rejected: {
+    title: "Pengajuan belum bisa diterima",
+    note: "Klaim ini belum memenuhi bukti yang dibutuhkan.",
+    tone: "border-rose-200 bg-rose-50 text-rose-800",
+  },
+  suspended: {
+    title: "Akses sedang ditinjau",
+    note: "Ada laporan atau perubahan yang perlu dicek ulang.",
+    tone: "border-orange-200 bg-orange-50 text-orange-800",
+  },
+  platform: {
+    title: "Admin Platform",
+    note: "Akun ini mengelola ruang pantau lintas desa, bukan verifikasi desa.",
+    tone: "border-violet-200 bg-violet-50 text-violet-800",
+  },
+};
+
+export const METHOD_COPY: Record<ClaimMethod, {
+  title: string;
+  body: string;
+  cta: string;
+  instruction: string;
+  note: string;
+}> = {
+  OFFICIAL_EMAIL: {
+    title: "Email resmi",
+    body: "Pilih ini jika kamu punya akses ke email resmi desa atau email yang tercantum di sumber resmi.",
+    cta: "Pakai email resmi",
+    instruction: "Tahap ini akan memakai email resmi desa. Fitur pengiriman tautan akan diaktifkan pada batch berikutnya.",
+    note: "Belum mengirim email otomatis.",
+  },
+  WEBSITE_TOKEN: {
+    title: "Website resmi",
+    body: "Pilih ini jika kamu bisa menaruh kode verifikasi di website resmi desa.",
+    cta: "Pakai website resmi",
+    instruction: "Tahap ini akan menyiapkan kode unik untuk dipasang di website resmi desa. Pemeriksaan otomatis belum diaktifkan.",
+    note: "Belum memeriksa website otomatis.",
+  },
+  SUPPORT_REVIEW: {
+    title: "Hubungi Kami",
+    body: "Pilih ini jika kamu belum bisa memakai email atau website resmi desa.",
+    cta: "Minta bantuan admin",
+    instruction: "Kami siapkan format bantuan agar admin PantauDesa bisa mengecek kendalamu lewat jalur support.",
+    note: "Email bantuan terbuka hanya saat kamu klik tombol kirim.",
+  },
+};
+
+export function buildSupportMailto(email: string, desaName: string) {
+  const subject = encodeURIComponent(`Kendala Verifikasi Admin Desa - ${desaName}`);
+  const body = encodeURIComponent(
+    [
+      "Nama lengkap:",
+      "Jabatan:",
+      `Nama desa: ${desaName}`,
+      "Kecamatan:",
+      "Kabupaten:",
+      "Provinsi:",
+      "Website resmi desa, jika ada:",
+      "Email resmi desa, jika ada:",
+      "Nomor kontak resmi yang tercantum di website, jika ada:",
+      "Kendala yang dialami:",
+      "Bukti pendukung/link dokumen, jika ada:",
+    ].join("\n"),
+  );
+
+  return `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+export function getClientSupportEmail() {
+  const publicEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim();
+  if (publicEmail) return publicEmail;
+  return process.env.NODE_ENV === "development" ? "support@pantaudesa.local" : null;
+}
+
+export function isDemoSession(data: AdminClaimProfileData | null) {
+  const email = data?.currentUser?.email?.toLowerCase() ?? "";
+  return email.endsWith("@pantaudesa.local");
+}
+
+export function getSelectedDesa(
+  desaOptions: AdminClaimDesaOption[],
+  selectedDesaId: string | null,
+) {
+  return desaOptions.find((desa) => desa.id === selectedDesaId) ?? desaOptions[0] ?? null;
+}
+
+export function getCurrentStatusTone(status: AdminClaimStateCard["status"]) {
+  return CLAIM_STATUS_COPY[status];
+}
+
+export function getCurrentDataStatus(data: AdminClaimProfileData | null): AdminClaimDataStatus {
+  return data?.currentState?.dataStatus ?? "demo";
+}
