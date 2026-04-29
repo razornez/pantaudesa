@@ -99,4 +99,4 @@ New tests (4):
 
 4. **`npm run build` not run**: Build requires production env vars not available locally. Service-layer routes are server-only and don't affect static page generation. TSC passing is the proxy for build correctness here.
 
-5. **`DesaAdminInvite.tokenHash` set to `undefined` not `null` on accept**: Prisma `String?` field — `undefined` means "no change", `null` means "set to null". The accept-invite route uses `undefined` which means tokenHash remains set. Rangga should verify whether clearing tokenHash on accept is required by governance — if yes, schema needs `@db.Text` with explicit null, or a separate boolean `used` flag.
+5. ~~**`DesaAdminInvite.tokenHash` set to `undefined` not `null` on accept**~~ **FIXED** (`9458fa1`): `tokenHash` is `String` (non-nullable), so `undefined` means "do not update" — original token would remain replayable. Fixed by overwriting `tokenHash` with `burnedTokenHash()` (SHA-256 of fresh randomBytes) on accept. Token is now cryptographically burned and cannot be replayed even if intercepted.
