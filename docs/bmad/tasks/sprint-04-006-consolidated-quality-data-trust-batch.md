@@ -1,9 +1,9 @@
 # Sprint 04-006 — Sprint 04 Consolidated Plan: Quality Gate + Admin Claim 8 Items
 
 Date: 2026-04-29
-Status: approved-for-BMAD-planning / not-yet-executed
+Status: approved-for-execution / architect-review-waived-by-owner
 Prepared-by: Rangga / BMAD-lite orchestration
-Owner gate: Iwan/Owner approved BMAD recording, prioritization, and single-PIC restructuring in chat.
+Owner gate: Iwan/Owner approved BMAD recording, prioritization, single-PIC restructuring, and waived Software Architect review gate because external access was unstable.
 
 ## Correction from Rangga
 
@@ -20,7 +20,8 @@ Give Owner a clear Sprint 04 report showing:
 3. how many batches are recommended,
 4. which supporting/preflight tasks should run first,
 5. which feedback is deferred or skipped,
-6. how to avoid two people executing the same task.
+6. how to avoid two people executing the same task,
+7. how TDD-first must be applied before implementation.
 
 ## Ownership rule from Owner
 
@@ -34,6 +35,30 @@ Allowed role types:
 - Reviewer: reviews output after PIC completes work.
 - Input provider: provides logs, screenshots, decisions, or context, but does not execute that task.
 - Gate owner: Iwan/Owner approval where required.
+
+## TDD-first rule from Owner
+
+Every feature or behavior change must be implemented with a TDD-first posture to avoid breaking existing features.
+
+Minimum expectation:
+
+1. Define/write tests or test cases before implementation where practical.
+2. Cover happy path, invalid input, unauthenticated/unauthorized access, ownership mismatch, expired/invalid token, and regression risk.
+3. Implement only enough to make tests pass.
+4. Run the relevant focused tests.
+5. Run the full quality gate before handoff:
+
+```bash
+npm run lint
+npm run test
+npx tsc --noEmit
+npx prisma generate
+npm run build
+```
+
+6. If UI is touched, capture before/after desktop and mobile screenshots in local ignored artifacts only.
+
+TDD applies to Ujang, Asep, and Rangga-authored implementation/docs acceptance criteria.
 
 ## Global guardrails
 
@@ -111,6 +136,14 @@ Why first:
 - Every later verification method needs a persisted claim.
 - Every later action must write audit trail.
 
+TDD minimum:
+
+- public submit blocked,
+- authenticated submit succeeds,
+- invalid desa rejected,
+- duplicate claim is safe,
+- audit event is written.
+
 ### Core Batch 2 — Verification method generation
 
 Tasks:
@@ -122,6 +155,15 @@ Why second:
 
 - Both create proof artifacts/tokens but do not require website fetching yet.
 - Both depend on claim + token/audit primitives from Core Batch 1.
+
+TDD minimum:
+
+- token hash-only persistence,
+- raw token is not stored,
+- expiry is set,
+- invalid/expired/used email token fails,
+- valid email token verifies admin membership,
+- missing Resend env reports honestly.
 
 ### Core Batch 3 — Verification execution + status transition
 
@@ -136,6 +178,16 @@ Why third:
 - Website checking and email verification both need strict transition rules.
 - `VERIFIED` here means admin membership verification only; it must not activate verified public data values.
 
+TDD minimum:
+
+- token found verifies admin membership,
+- token not found remains pending,
+- private URL rejected,
+- unsafe scheme rejected,
+- user cannot verify another user's claim,
+- client cannot set arbitrary status,
+- audit events are written.
+
 ### Core Batch 4 — Invite admin service
 
 Task:
@@ -146,6 +198,15 @@ Why fourth:
 
 - Invite depends on a verified admin member existing.
 - Invite grants `LIMITED`, not verified admin self-promotion.
+
+TDD minimum:
+
+- verified admin required,
+- max 5 admins enforced,
+- invite token hash-only and expiring,
+- expired/used invite rejected,
+- accepted invite creates `LIMITED` membership,
+- audit events are written.
 
 ### Core Batch 5 — Fake admin report service
 
@@ -158,18 +219,26 @@ Why fifth:
 - Can be implemented after membership/invite model is clearer.
 - Must not auto-suspend or auto-punish based on report alone.
 
+TDD minimum:
+
+- valid report creates record,
+- invalid desa rejected,
+- invalid evidence URL rejected,
+- audit event is written,
+- no auto-suspend occurs.
+
 ---
 
 # Supporting Sprint 04 quality/preflight tasks
 
 These tasks are not the "8 admin claim items". They exist to reduce risk before or during implementation.
 
-| Support Task | Title | PIC | Batch | Required before admin claim? | Notes |
-| --- | --- | --- | --- | --- | --- |
-| 04-006Q1 | Lint & Build Gate Stabilization | Ujang | Preflight 1 | Yes | Current lint/build must not hide admin-claim regressions |
-| 04-006Q2 | GitHub Actions CI Quality Gate | Ujang | Preflight 2 | Strongly recommended | CI should run lint/test/typecheck/build |
-| 04-006Q3 | Critical Test Foundation | Asep | Preflight 2 | Strongly recommended | Vitest route/service/security tests, no Playwright dependency yet |
-| 04-006Q4 | Developer Docs & QA Checklist | Rangga | Support | No | Docs/checklist only, based on verified commands/logs |
+| Support Task | Title | PIC | Batch | Required before admin claim? | Recommended model | Reasoning effort | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 04-006Q1 | Lint & Build Gate Stabilization | Ujang | Preflight 1 | Yes | Claude Sonnet / GPT-5.1 Codex mini | medium | Current lint/build must not hide admin-claim regressions |
+| 04-006Q2 | GitHub Actions CI Quality Gate | Ujang | Preflight 2 | Strongly recommended | Claude Sonnet / GPT-5.1 Codex mini | medium | CI should run lint/test/typecheck/build |
+| 04-006Q3 | Critical Test Foundation | Asep | Preflight 2 | Strongly recommended | Claude Sonnet / GPT-5.1 Codex mini | medium/high | Vitest route/service/security tests, no Playwright dependency yet |
+| 04-006Q4 | Developer Docs & QA Checklist | Rangga | Support | No | GPT-5.1 | low/medium | Docs/checklist only, based on verified commands/logs |
 
 ## Preflight task notes
 
@@ -201,7 +270,7 @@ The following feedback remains valid but should not replace the admin claim 8-it
 PIC: Ujang
 Reviewer: Rangga
 Batch: Core Batch 1
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -227,7 +296,7 @@ Reasoning effort: high
 PIC: Ujang
 Reviewer: Rangga
 Batch: Core Batch 2
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -254,7 +323,7 @@ Reasoning effort: high
 PIC: Ujang
 Reviewer: Rangga
 Batch: Core Batch 2
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -278,7 +347,7 @@ PIC: Ujang
 Reviewer: Rangga
 Gate owner: Owner if SSRF/domain ambiguity appears
 Batch: Core Batch 3
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -308,7 +377,7 @@ PIC: Ujang
 Reviewer: Rangga
 Gate owner: Owner for governance ambiguity
 Batch: Core Batch 3
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -333,7 +402,7 @@ Reasoning effort: high
 PIC: Ujang
 Reviewer: Rangga
 Batch: Cross-cutting Core Batch 1-3
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -375,7 +444,7 @@ Reasoning effort: high
 PIC: Ujang
 Reviewer: Rangga
 Batch: Core Batch 4
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -399,7 +468,7 @@ Reasoning effort: high
 PIC: Ujang
 Reviewer: Rangga
 Batch: Core Batch 5
-Recommended model: GPT-5.1
+Recommended model: GPT-5.1 / Claude Sonnet with high reasoning
 Reasoning effort: high
 
 ### Scope
@@ -462,6 +531,7 @@ Reasoning effort: high
 
 - All 8 owner admin claim items are implemented or explicitly reported blocked with reason.
 - Every item has single PIC execution ownership.
+- TDD-first rule is followed for each feature or behavior change.
 - Token flows are hash-only, expiring, and single-use where relevant.
 - Website check has SSRF/private URL protection and no crawler behavior.
 - Status transitions cannot be controlled arbitrarily by client.
