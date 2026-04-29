@@ -14,12 +14,14 @@ Owner clarified these rules:
 3. Do not send long execution instructions in chat.
 4. Store the actual instructions in BMAD task docs.
 5. Chat instruction to executor should only say to pull latest and work from the BMAD task path.
+6. Do not store model recommendations in the task doc; model selection is controlled by Owner.
 
 Decision:
 
 - Sprint 04 execution PIC: **Ujang**.
 - Asep: **not assigned for this execution batch**.
 - Rangga: BMAD planning/review only, not local executor.
+- Model recommendation: **not stored in this task doc by Owner request**.
 
 ## Purpose
 
@@ -31,8 +33,8 @@ It consolidates:
 - the Owner's TDD-first rule,
 - quality gate expectations,
 - guardrails,
-- recommended model and reasoning effort,
-- single-PIC execution policy.
+- single-PIC execution policy,
+- screenshot before/after requirements for UI changes.
 
 ## Required source docs
 
@@ -54,18 +56,7 @@ One task track has one execution PIC only.
 
 If a future task needs Asep, Owner must open it separately.
 
-## Recommended model and effort
-
-For Ujang:
-
-```text
-Recommended model: Claude Sonnet or GPT-5.1
-Reasoning effort: high
-```
-
-Use high reasoning because this sprint touches auth, email, token, website verification, SSRF/private URL protection, status transitions, admin membership, audit trail, invite service, fake-admin reporting, and legal/reputation risk.
-
-Escalate/stop and ask Owner if:
+## Stop / escalate to Owner if
 
 - a new dependency is needed,
 - Prisma/schema migration is needed beyond existing schema usage,
@@ -142,15 +133,13 @@ Core items:
 7. Implement admin invite service.
 8. Implement fake admin report service.
 
-These items may be implemented in compact batches, but no item may be removed or weakened.
+These items may be implemented in compact batches, but no item may be removed, weakened, or treated as optional without Owner approval.
 
 ## Execution batches
 
 ### Batch 0 — Local quality preflight
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1 Codex mini
-Reasoning effort: medium
 
 Goal:
 
@@ -180,8 +169,6 @@ Acceptance:
 ### Batch 1 — Claim submit + audit foundation
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1
-Reasoning effort: high
 
 Tasks:
 
@@ -214,11 +201,14 @@ Acceptance:
 - UI reads status from DB after submit.
 - Audit helper exists and is used by claim submit.
 
+Screenshot requirement:
+
+- If `/profil/klaim-admin-desa` UI is touched, capture before/after desktop and mobile screenshots.
+- Store screenshots locally only in ignored artifact folder.
+
 ### Batch 2 — Verification artifact generation
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1
-Reasoning effort: high
 
 Tasks:
 
@@ -255,11 +245,14 @@ Acceptance:
 - Website token generation stores hash only and displays raw token once.
 - Audit events exist for generated verification artifacts.
 
+Screenshot requirement:
+
+- If token/email state UI is touched, capture before/after desktop and mobile screenshots.
+- Store screenshots locally only in ignored artifact folder.
+
 ### Batch 3 — Verification execution + status transitions
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1
-Reasoning effort: high
 
 Tasks:
 
@@ -303,11 +296,14 @@ Acceptance:
 - Invalid/private/unsafe paths fail safely.
 - Status transitions are server-enforced.
 
+Screenshot requirement:
+
+- If verification/status UI is touched, capture before/after desktop and mobile screenshots.
+- Store screenshots locally only in ignored artifact folder.
+
 ### Batch 4 — Invite admin service
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1
-Reasoning effort: high
 
 Task:
 
@@ -337,11 +333,14 @@ Acceptance:
 - Invite flow works without granting verified admin automatically.
 - Invite service respects max admin limit and ownership.
 
+Screenshot requirement:
+
+- If invite UI is touched, capture before/after desktop and mobile screenshots.
+- Store screenshots locally only in ignored artifact folder.
+
 ### Batch 5 — Fake admin report service
 
 PIC: Ujang
-Recommended model: Claude Sonnet / GPT-5.1
-Reasoning effort: high
 
 Task:
 
@@ -370,6 +369,11 @@ Acceptance:
 - Fake admin report creates DB record and audit only.
 - No automatic punishment/suspension is triggered.
 
+Screenshot requirement:
+
+- If report UI is touched, capture before/after desktop and mobile screenshots.
+- Store screenshots locally only in ignored artifact folder.
+
 ---
 
 # Deferred / not assigned in this execution batch
@@ -397,8 +401,6 @@ Ujang must report back with:
 ```text
 Task: Sprint 04-006 / Sprint 04-004 Admin Claim 8 Items
 Status: PASS / PARTIAL_PASS / BLOCKED / REWORK
-Model used:
-Reasoning effort:
 Batches completed:
 - Batch 0:
 - Batch 1:
@@ -425,6 +427,8 @@ Security checks:
 - no private exposure:
 - audit events:
 UI evidence if touched:
+- before screenshots:
+- after screenshots:
 - screenshot folder/notes:
 Files changed:
 Commit SHA(s):
