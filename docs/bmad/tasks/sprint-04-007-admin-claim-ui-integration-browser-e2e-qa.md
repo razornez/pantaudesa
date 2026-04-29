@@ -102,6 +102,9 @@ Rules:
 8. Fake Admin Report UI is not needed; use Hubungi Admin instead.
 9. Rate-limit/anti-spam should be minimal and lightweight, without new dependency.
 10. The 10 user-facing admin-claim completeness items should be included in 04-007, but split into 04-007A and 04-007B so the work remains structured.
+11. Full QA must pass before handoff; ESLint must not fail.
+12. UI changes require browser testing and desktop/mobile screenshots or screenshot notes.
+13. Caching/freshness must be checked so claim/admin status is not stale after actions.
 
 ## Engineering standards — mandatory
 
@@ -166,6 +169,28 @@ lib/admin-claim/ui-copy.ts
 
 This is a suggested boundary, not a mandatory file list. If existing project structure already has better names, preserve consistency.
 
+### Caching and freshness — mandatory
+
+Admin claim UI must not show stale status after user actions.
+
+Requirements:
+
+- identify any route/page/component that may be statically cached or use cached data for profile/admin claim state,
+- ensure `/profil/klaim-admin-desa` and relevant profile claim/admin state are fresh after submit, token generation, token check, email verify redirect, invite action, and contact form send,
+- use the project-appropriate Next.js pattern such as dynamic rendering, `router.refresh()`, cache revalidation, or no-store fetch where needed,
+- do not globally disable caching across unrelated public pages just to fix admin claim state,
+- do not cache raw tokens,
+- do not persist raw website token in localStorage/sessionStorage,
+- document in handoff what caching/freshness approach was used.
+
+Caching QA must include:
+
+- submit claim then refresh/revisit page shows updated state,
+- verify/check token then page reflects new status,
+- invite action does not require hard reload to show result if UI is expected to update,
+- stale status is not shown after method switch or regeneration,
+- build/SSR remains safe.
+
 ### Reusable Hubungi Admin component rules
 
 `ContactAdminForm` / Hubungi Admin must be reusable:
@@ -209,7 +234,8 @@ This is a suggested boundary, not a mandatory file list. If existing project str
 - Do not do broad unrelated dead-code cleanup in this task.
 - Do not remove dependencies/libraries without Owner approval.
 - Do not mass-disable ESLint rules.
-- If pre-existing lint debt appears, separate it clearly from new regressions.
+- If pre-existing lint debt appears, it must not be worsened.
+- For this task, final `npm run lint` must pass. Do not hand off with ESLint failure.
 
 ### Security/privacy
 
@@ -367,7 +393,9 @@ Browser flows to test in this batch:
 8. User checks website token and sees success/failure state.
 9. Unsafe/private website URL is rejected or reported safely.
 10. API error state displays cleanly.
-11. Mobile layout remains usable.
+11. Caching/freshness: after submit/token/check actions, refresh/revisit reflects the latest state.
+12. Desktop layout remains usable.
+13. Mobile layout remains usable.
 
 ## Acceptance criteria for 04-007A
 
@@ -384,6 +412,8 @@ Browser flows to test in this batch:
 11. No public verified data is activated.
 12. Relevant TDD/QA evidence exists for changed behavior.
 13. Code follows the Engineering standards section above.
+14. Caching/freshness behavior is verified for changed admin-claim states.
+15. Desktop and mobile UI are tested and screenshot evidence/notes are reported.
 
 ---
 
@@ -582,7 +612,9 @@ Browser flows to test in this batch:
 7. Verified/allowed admin can invite another admin, or blocked state is shown if not eligible.
 8. Invite accept redirect result is shown if reachable.
 9. Hubungi Admin form validates and sends/fails honestly.
-10. Mobile layout remains usable.
+10. Caching/freshness: after resume/regenerate/invite/contact actions, UI does not show stale state.
+11. Desktop layout remains usable.
+12. Mobile layout remains usable.
 
 ## Acceptance criteria for 04-007B
 
@@ -598,10 +630,12 @@ Browser flows to test in this batch:
 10. No new dependency is introduced.
 11. Relevant TDD/QA evidence exists for changed behavior.
 12. Code follows the Engineering standards section above.
+13. Caching/freshness behavior is verified for resume/regenerate/invite/contact states.
+14. Desktop and mobile UI are tested and screenshot evidence/notes are reported.
 
 ---
 
-# Shared quality gate
+# Shared quality gate — must pass
 
 Run after each batch if practical, and always at final handoff:
 
@@ -613,18 +647,33 @@ npx prisma generate
 npm run build
 ```
 
+Hard requirements:
+
+- `npm run lint` must PASS. No ESLint failure is acceptable for handoff.
+- `npm run test` must PASS.
+- `npx tsc --noEmit` must PASS.
+- `npx prisma generate` must PASS.
+- `npm run build` must PASS.
+- New code must not introduce lint warnings/errors, unused imports, unused variables, hook-rule violations, or type errors.
+- Do not mass-disable ESLint rules.
+
 If any command fails:
 
-- do not hide it,
+- status must be `BLOCKED` or `REWORK`, not PASS,
 - report exact command and error,
 - separate pre-existing lint debt from new regressions,
-- do not disable rules massally.
+- do not hide the failure.
 
-# Screenshots / UI evidence
+# Screenshots / UI evidence — desktop and mobile required
 
-Because this task changes UI, screenshots or clear screenshot notes are required.
+Because this task changes UI, desktop and mobile screenshot evidence/notes are mandatory for every changed UI surface.
 
-Capture before/after desktop and mobile screenshots or notes for:
+Required viewport coverage:
+
+- desktop: at least 1366px or 1440px width,
+- mobile: at least one of 360px, 390px, or 414px width.
+
+Capture before/after desktop and mobile screenshots or clear screenshot notes for:
 
 - `/profil/saya` if changed,
 - `/profil/klaim-admin-desa` initial state,
@@ -707,10 +756,13 @@ Do not implement in this task:
 4. No new dependency is introduced.
 5. No public verified data is activated.
 6. No screenshot storage or Supabase bucket is introduced.
-7. Quality gate is reported.
-8. Browser QA notes and local screenshot cleanup status are reported.
-9. TDD/test-first evidence is reported for meaningful changed behavior.
-10. Implementation follows SOLID, separation of concerns, type safety, React/Next.js best practices, and clean-code standards described above.
+7. Full quality gate passes: lint, test, typecheck, prisma generate, and build.
+8. ESLint has no failure at handoff.
+9. Browser QA notes and local screenshot cleanup status are reported.
+10. Desktop and mobile UI evidence/notes are reported for changed UI.
+11. Caching/freshness behavior is verified and reported.
+12. TDD/test-first evidence is reported for meaningful changed behavior.
+13. Implementation follows SOLID, separation of concerns, type safety, React/Next.js best practices, and clean-code standards described above.
 
 # Final handoff report format
 
@@ -726,6 +778,7 @@ Batch 04-007A:
 - website renewal awareness:
 - status badge/profile integration:
 - admin access CTA:
+- caching/freshness A:
 - browser QA A:
 Batch 04-007B:
 - resume current claim flow:
@@ -736,6 +789,7 @@ Batch 04-007B:
 - invite accept result UI:
 - Hubungi Admin reusable form:
 - anti-spam lite:
+- caching/freshness B:
 - browser QA B:
 Engineering standards:
 - TDD/test-first evidence:
@@ -762,16 +816,22 @@ Tests/QA:
 - Hubungi Admin path:
 - test data notes:
 Quality gate:
-- npm run lint:
-- npm run test:
-- npx tsc --noEmit:
-- npx prisma generate:
-- npm run build:
+- npm run lint: PASS/FAIL
+- npm run test: PASS/FAIL
+- npx tsc --noEmit: PASS/FAIL
+- npx prisma generate: PASS/FAIL
+- npm run build: PASS/FAIL
 UI evidence:
-- before screenshots/notes:
-- after screenshots/notes:
+- desktop before screenshots/notes:
+- desktop after screenshots/notes:
+- mobile before screenshots/notes:
+- mobile after screenshots/notes:
 - screenshot folder:
 - local screenshot cleanup after push/handoff: DONE / NOT_DONE / SKIPPED_WITH_REASON
+Caching/freshness:
+- route/page caching checked:
+- router.refresh/revalidation/no-store approach:
+- stale status after actions: YES/NO
 Security/trust checks:
 - no public data verified activation:
 - no private exposure:
