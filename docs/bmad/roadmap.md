@@ -1,6 +1,6 @@
 # PantauDesa BMAD-lite Roadmap
 
-Date: 2026-04-28
+Date: 2026-04-29
 Status: active-roadmap
 Prepared-by: Rangga / BMAD-lite orchestration
 
@@ -35,7 +35,7 @@ Important remaining posture:
 
 ## Phase 2 — Sprint 03 Data Foundation
 
-Status: active
+Status: done / accepted for next Sprint 04 gate
 
 Goal:
 
@@ -45,64 +45,74 @@ Done:
 
 - schema recommendation approved,
 - shared Supabase migration applied,
-- Option A seed implemented and reported QA pass.
+- Option A seed implemented and reported QA pass,
+- schema/data foundation reviewed in Sprint 04-002,
+- public read path moved away from direct mock usage for main desa routes.
 
-Active:
+Remaining posture:
 
-- hybrid DB read + mock flagging.
+- keep budget values clearly demo-framed unless governance changes,
+- no `verified` activation without workflow,
+- no destructive seed reset without approval.
 
-Next immediate focus:
+## Phase 3 — Sprint 04 Quality, Data, and Trust Stabilization
 
-- verify runtime DB connection,
-- confirm seeded Arjasari data appears in `/desa`,
-- keep budget values flagged as demo.
+Status: active / approved for BMAD planning
 
-## Phase 3 — Safe Read Service Layer
+Primary task batch:
 
-Status: planned
+- `docs/bmad/tasks/sprint-04-006-consolidated-quality-data-trust-batch.md`
 
 Goal:
 
-Create stable server-only read functions before broad UI switch.
+Stabilize the technical quality gate and public read-path foundations before continuing high-risk admin claim services.
+
+Execution sequence:
+
+1. Lint & build gate stabilization.
+2. GitHub Actions CI quality gate.
+3. Critical Vitest test foundation.
+4. Public read path scalability.
+5. Trust layer, security, and privacy consistency.
+6. Voice to Desa relation migration plan and gated implementation.
+7. Developer documentation and OSS minimum readiness.
+8. Admin claim verification services batch.
+
+Key decisions:
+
+- Do not treat all feedback as raw execution.
+- Consolidate duplicate feedback into structured tasks.
+- Keep NextAuth upgrade as a deferred risk note, not a Sprint 04 execution task.
+- Defer Playwright until Owner approves new dependency.
+- Defer branch protection until CI is green and stable.
+- Keep `verified` inactive until governance exists.
+
+## Phase 4 — Safe Read Service Layer and Scaling
+
+Status: active inside Sprint 04 batch
+
+Goal:
+
+Move public read paths from full-list oriented behavior into server-driven query and DB-backed aggregate helpers.
 
 Candidate work:
 
-- internal DB read smoke test,
-- seed count verification route/script,
-- data mapping tests,
-- mock fallback strategy,
-- error/log visibility when fallback occurs,
-- route-level QA.
+- server-driven `/desa` search/filter/sort/pagination,
+- DB-backed page metadata,
+- DB-backed filter options,
+- `getHomeStats()` and safe homepage aggregates,
+- caching/ISR strategy after read path is stable.
 
 Boundary:
 
-- no numeric extraction,
+- no hardcoded fallback,
+- no numeric extraction as official fact,
 - no `verified`,
-- no public trust claim.
+- no public trust claim beyond status badge copy.
 
-## Phase 4 — Gradual UI Read Path Switch
+## Phase 5 — Source Review and Trust Workflow
 
-Status: planned / not approved yet
-
-Goal:
-
-Gradually switch low-risk UI surfaces to DB-backed data while retaining demo/missing-data fallbacks.
-
-Possible sequence:
-
-1. `/desa` identity/source list.
-2. `/desa/[id]` identity/source/documents.
-3. homepage stats only after summary strategy exists.
-4. detail budget numbers last, only after numeric governance exists.
-
-Boundary:
-
-- no budget numbers from DB until `AnggaranDesaSummary` has reviewed data or explicit demo framing.
-- no `verified` status.
-
-## Phase 5 — Source Review Workflow
-
-Status: future
+Status: future / gated
 
 Goal:
 
@@ -114,12 +124,14 @@ Candidate work:
 - source status audit,
 - document status review,
 - review notes,
-- data status transition policy.
+- data status transition policy,
+- governance for future `verified` activation.
 
 Boundary:
 
-- still no automatic verification.
-- no public admin panel without auth/role review.
+- still no automatic verification,
+- no public admin panel without auth/role review,
+- no official numeric status without explicit Owner gate.
 
 ## Phase 6 — Numeric APBDes Extraction
 
@@ -163,11 +175,13 @@ Prerequisites:
 
 Story:
 
-- `docs/bmad/stories/sprint-03-003-db-runtime-connection-check.md` (candidate)
+- `docs/bmad/tasks/sprint-04-006-consolidated-quality-data-trust-batch.md`
 
 Purpose:
 
-- diagnose why Ancolmekar is not visible,
-- confirm runtime DB env,
-- confirm `/desa` is in database mode,
-- keep fallback visible if DB unavailable.
+- stabilize lint/build/typecheck/test,
+- introduce CI quality gate,
+- add critical tests,
+- refactor public read path away from unbounded full-list behavior,
+- keep trust/security guardrails clear,
+- defer high-risk admin claim service until quality gates are ready.
