@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { verifyTokenHash, isTokenExpired } from "@/lib/admin-claim/token";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+
+// tokenHash is non-nullable in schema — overwrite with a random burned value
+// so the original token can never be replayed even if someone intercepts it.
+function burnedTokenHash(): string {
+  return createHash("sha256").update(randomBytes(32)).digest("hex");
+}
 
 // Accept invite via magic link — no auth required on GET (magic link click)
 export async function GET(req: NextRequest) {
@@ -81,10 +88,11 @@ export async function GET(req: NextRequest) {
       update: { status: "LIMITED", updatedAt: new Date() },
     });
 
-    // Mark invite accepted + single-use clear
+    // Mark invite accepted — overwrite tokenHash with burned value (non-nullable field).
+    // Using undefined would leave the original token intact; burned hash ensures no replay.
     await db.desaAdminInvite.update({
       where: { id: inviteId },
-      data: { status: "ACCEPTED", acceptedAt: new Date(), tokenHash: undefined },
+      data: { status: "ACCEPTED", acceptedAt: new Date(), tokenHash: burnedTokenHash() },
     });
 
     await writeAuditEvent({
