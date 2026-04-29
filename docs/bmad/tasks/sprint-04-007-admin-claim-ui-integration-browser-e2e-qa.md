@@ -3,13 +3,24 @@
 Date: 2026-04-29
 Status: approved-for-execution
 Prepared-by: Rangga / BMAD-lite orchestration
-Owner gate: Iwan/Owner approved combining Admin Claim Wizard API Wiring and Admin Claim UI Integration so the flow can be tested directly in browser.
+Owner gate: Iwan/Owner approved combining Admin Claim Wizard API Wiring and Admin Claim UI Integration so the flow can be tested directly in browser. Owner also approved adding Invite Admin UI and replacing Fake Admin Report UI with a reusable Hubungi Admin email form.
 
 ## Purpose
 
 Connect the completed Sprint 04-006 admin-claim service layer to the user-facing profile/admin-claim UI and verify the end-to-end user journey in browser.
 
 This task exists because Sprint 04-006 completed the backend/API/service layer, but the UI wizard is not yet wired to the new endpoints.
+
+This task now covers the claim admin UI enough to be browser-testable end-to-end:
+
+1. claim submit UI,
+2. email magic link UI,
+3. website token UI,
+4. status/profile integration,
+5. invite admin UI,
+6. reusable Hubungi Admin email form for reports/support.
+
+Fake Admin Report UI is intentionally taken out. Users who want to report a fake admin should use Hubungi Admin, which sends an email with subject, description, and optional evidence.
 
 ## Ownership
 
@@ -53,6 +64,8 @@ Known state before this task:
 
 - API/service layer exists.
 - UI wizard is not yet fully wired.
+- Invite admin service exists but UI is not wired.
+- Fake admin report API exists, but its UI is intentionally not part of this task.
 - Browser flow cannot be considered complete until this task passes.
 
 ## Existing env usage
@@ -83,6 +96,8 @@ Minimum expectation:
 - API error state,
 - loading/success/error UI,
 - token expired/invalid states where reachable,
+- invite permission and max-admin behavior where reachable,
+- Hubungi Admin form validation and send states,
 - no public data verified activation.
 
 Do not rely only on visual manual testing if a helper or behavior can be covered with Vitest.
@@ -126,6 +141,10 @@ Implement clear user-facing states for:
 - pending review,
 - limited admin,
 - verified admin membership,
+- invite created,
+- invite accepted result if user lands from accept link,
+- Hubungi Admin email sent,
+- Hubungi Admin email failed,
 - generic API failure.
 
 Copy must stay demo-safe and trust-safe.
@@ -168,7 +187,79 @@ If `/profil/saya` has a claim/admin card:
 
 If wiring this card would cause scope creep, document it as follow-up, but `/profil/klaim-admin-desa` must be completed.
 
-## F. Browser E2E QA without adding Playwright
+## F. Invite Admin UI
+
+Add browser-usable UI for the existing invite admin service.
+
+Required behavior:
+
+- available only when current user is allowed to invite, or shown disabled with clear reason,
+- calls `POST /api/admin-claim/invite`,
+- form contains invitee email,
+- validates email before send,
+- displays loading/success/error state,
+- explains max 5 admins per desa,
+- explains invited admin starts as `LIMITED`, not verified admin,
+- handles `403` non-verified admin gracefully,
+- handles max-admin reached gracefully,
+- does not expose private user/contact data,
+- browser QA covers invite created and blocked states where practical.
+
+Accept invite flow:
+
+- `GET /api/admin-claim/accept-invite` already exists.
+- UI should display success/error result if redirected back to `/profil/klaim-admin-desa` with invite query params.
+- Do not create a full invite management dashboard in this task unless it is already trivial.
+
+## G. Reusable Hubungi Admin email form
+
+Replace Fake Admin Report UI with a reusable Hubungi Admin component.
+
+Purpose:
+
+- Give users a safe way to contact PantauDesa/admin/support when they want to report a fake admin or need help.
+- Do not build a Fake Admin Report UI in this task.
+- Use email sending, not automatic moderation/suspension.
+
+Component requirements:
+
+- reusable component, not hardcoded only for claim page,
+- can be embedded in admin claim page and reused later elsewhere,
+- fields:
+  - subject,
+  - description,
+  - evidence/bukti field,
+  - send button,
+- evidence may be a URL/text field; do not implement file upload/storage in this task,
+- validate required fields,
+- show loading/success/error state,
+- send email using existing email setup/env only,
+- do not add new env names,
+- do not add screenshot storage or attachment storage,
+- do not auto-suspend or auto-punish anyone.
+
+Implementation options:
+
+- Add a small API route for contact-admin email if no suitable route exists.
+- Reuse existing Resend setup with `RESEND_API_KEY` and `RESEND_FROM`.
+- If recipient cannot be determined from existing env/config safely, report blocker instead of adding `SUPPORT_EMAIL` or another new env.
+
+Important constraint:
+
+- Owner asked not to create new env names.
+- If sending email requires a recipient env that does not exist, stop and ask Owner instead of inventing `SUPPORT_EMAIL`.
+- A safe fallback can be sending to the existing `RESEND_FROM` address only if that is acceptable and documented in handoff.
+
+Browser QA:
+
+- form renders,
+- required validation works,
+- send success state works,
+- send failure state works,
+- evidence URL/text is included in email body,
+- no private data is exposed.
+
+## H. Browser E2E QA without adding Playwright
 
 Run browser/manual E2E QA directly. Do not add Playwright or any new dependency in this task.
 
@@ -183,11 +274,14 @@ Browser flows to test:
 7. Unsafe/private website URL is rejected or reported safely.
 8. API error state displays cleanly.
 9. Refresh/revisit page shows persisted claim/status correctly where supported.
-10. Mobile layout remains usable.
+10. Verified/allowed admin can invite another admin, or blocked state is shown if not eligible.
+11. Invite accept redirect result is shown if reachable.
+12. Hubungi Admin form validates and sends/fails honestly.
+13. Mobile layout remains usable.
 
 If full email delivery cannot be tested in local/staging, report the exact reason and test the reachable fallback/dev path honestly.
 
-## G. Screenshots / UI evidence
+## I. Screenshots / UI evidence
 
 Because this task changes UI, screenshots are required.
 
@@ -199,6 +293,8 @@ Capture before/after desktop and mobile screenshots or clear screenshot notes fo
 - email method state,
 - website token generated state,
 - website token check result state,
+- invite admin UI state,
+- Hubungi Admin form state,
 - error state if practical.
 
 Store screenshots locally only in ignored artifact folder:
@@ -251,6 +347,10 @@ Do not implement in this task:
 - branch protection,
 - public data `verified` activation,
 - screenshot storage/Supabase bucket,
+- file upload/evidence attachment storage,
+- full invite management dashboard,
+- Fake Admin Report UI,
+- automatic moderation/suspension from reports,
 - new schema/migration unless Owner approves,
 - new dependency,
 - new env var.
@@ -264,8 +364,9 @@ Do not implement in this task:
 - No private email/phone exposure.
 - No admin self-promotion.
 - `User.role = DESA` is not proof of verified desa admin.
-- All important actions must remain audited by service layer.
+- All important admin-claim actions must remain audited by service layer.
 - No fake success if API/email/env fails.
+- Hubungi Admin must not auto-suspend, auto-punish, or create public accusation states.
 
 ## Acceptance criteria
 
@@ -275,14 +376,18 @@ Do not implement in this task:
 4. UI can trigger real website token check endpoint.
 5. UI displays loading/success/error states clearly.
 6. UI displays claim/admin status from real backend state where available.
-7. Browser QA covers happy path, error path, unsafe URL path, and refresh/revisit behavior.
-8. Mobile and desktop UI remain usable.
-9. Screenshots/notes are captured locally, reported, and then cleaned up locally after push/handoff.
-10. No new env names are introduced.
-11. No new dependency is introduced.
-12. No public verified data is activated.
-13. No screenshot storage or Supabase bucket is introduced.
-14. Quality gate is reported.
+7. Invite Admin UI can trigger real invite endpoint or clearly explain why user is not eligible.
+8. Invite accept redirect result is surfaced if reachable.
+9. Reusable Hubungi Admin component exists and can send a contact/report email using existing env/config only.
+10. Fake Admin Report UI is not implemented in this task.
+11. Browser QA covers happy path, error path, unsafe URL path, invite path, Hubungi Admin path, and refresh/revisit behavior.
+12. Mobile and desktop UI remain usable.
+13. Screenshots/notes are captured locally, reported, and then cleaned up locally after push/handoff.
+14. No new env names are introduced.
+15. No new dependency is introduced.
+16. No public verified data is activated.
+17. No screenshot storage or Supabase bucket is introduced.
+18. Quality gate is reported.
 
 ## Final handoff report format
 
@@ -295,6 +400,9 @@ Batches/flows completed:
 - website token generation UI:
 - website token check UI:
 - status panel/profile integration:
+- invite admin UI:
+- invite accept result UI:
+- Hubungi Admin reusable form:
 - browser E2E QA:
 Env used:
 - RESEND_API_KEY:
@@ -307,6 +415,8 @@ Tests/QA:
 - unauthenticated case:
 - API error case:
 - unsafe URL case:
+- invite path:
+- Hubungi Admin path:
 Quality gate:
 - npm run lint:
 - npm run test:
@@ -323,6 +433,8 @@ Security/trust checks:
 - no private exposure:
 - no fake success:
 - SSRF guard still respected:
+- no fake admin report UI:
+- Hubungi Admin sends email only:
 Files changed:
 Commit SHA(s):
 Known risks/blockers:
