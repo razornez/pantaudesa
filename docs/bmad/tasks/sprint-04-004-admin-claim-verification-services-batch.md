@@ -1,6 +1,6 @@
 # Task Sprint 04-004 — Admin Claim Verification Services + Audit + Invite + Fake Report
 
-Status: READY_FOR_UJANG_IMPLEMENTATION_WITH_PROVIDER_CHECK
+Status: READY_FOR_UJANG_IMPLEMENTATION
 Executor: Ujang / Asep
 Prepared-by: Rangga
 Date: 2026-04-29
@@ -14,62 +14,117 @@ Reasoning effort: high
 
 Why:
 
-- This task touches email verification, website token verification, role/status transition, audit trail, invite service, and fake-admin reporting.
+- This task touches email magic link, website token verification, role/status transitions, audit trail, invite service, and fake-admin reporting.
 - A mistake can create fake admin access, expose private data, or create legal/reputation risk.
-- Build/test passing is not enough; security and state-transition review are required.
+- Build/test passing is not enough; security, state-transition, and UI visual checks are required.
 
 Fallback if only Codex mini is available:
 
 ```text
 Model: GPT-5.1 Codex mini
 Reasoning effort: medium/high
-Escalate to GPT-5.1 high if auth, token, email, status transition, or security ambiguity appears.
+Escalate to GPT-5.1 high if auth, token, email, status transition, SSRF, or security ambiguity appears.
 ```
 
 ## Goal
 
 Implement the real service layer behind the guided `Klaim sebagai Admin Desa` flow.
 
-This batch should turn the current UI flow into real DB-backed actions for:
+Owner approved implementing all 8 items in one batch, but the work must be ordered carefully so the result does not become chaotic.
 
-1. real email magic-link request, if email provider/env is available;
-2. real website verification token generation;
-3. real website token check;
-4. submit claim to DB from UI;
-5. update status `PENDING`, `LIMITED`, `VERIFIED` from allowed user actions;
-6. write real audit events for claim actions;
-7. support invite admin service;
-8. support fake admin report service.
+The 8 items are:
 
-## Critical note about email provider
+1. kirim email magic link beneran;
+2. generate token website beneran;
+3. cek token di website desa;
+4. submit claim ke DB dari UI;
+5. update status `PENDING` / `LIMITED` / `VERIFIED` dari action user;
+6. audit event real dari action klaim;
+7. service invite admin;
+8. fake admin report.
 
-Rangga checked repository search and did not find an existing obvious email provider/env such as SMTP/Resend setup.
+## Important provider decision
 
-Therefore Ujang must start with provider check.
+Owner confirmed PantauDesa already uses Resend.com for email login/check.
 
-Required provider/env check:
+For this task, do **not** merge admin claim email into the existing NextAuth `signIn("resend")` flow.
+
+Create a separate email service for admin-claim-related emails because PantauDesa will likely have multiple email services later.
+
+Recommended structure:
 
 ```text
-SUPPORT_EMAIL
-NEXT_PUBLIC_SUPPORT_EMAIL
-EMAIL_FROM
-NEXT_PUBLIC_APP_URL
-EMAIL_PROVIDER or equivalent
-SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS if SMTP is used
-RESEND_API_KEY or equivalent if HTTP email API is used
+src/lib/email/resend-client.ts
+src/lib/email/admin-claim-email.ts
+src/lib/admin-claim/token.ts
+src/lib/admin-claim/audit.ts
+src/lib/admin-claim/audit-events.ts
+src/lib/admin-claim/status.ts
+src/lib/admin-claim/website-token.ts
 ```
 
-If no real email provider is configured:
+Equivalent structure is allowed if it matches current project conventions.
 
-- do not fake-send email;
-- implement the DB/token/audit part safely;
-- return a clear user-facing pending/provider-not-ready message;
-- report `email sending: BLOCKED_PROVIDER_ENV_MISSING`;
-- keep all other services working where safe.
+## Required Resend/env check
 
-If using an HTTP email provider API via `fetch`, do not add dependency.
+Before implementation, check and reuse existing Resend setup/env:
 
-If using SMTP and a new package is needed, stop and request explicit approval before adding a dependency.
+```text
+RESEND_API_KEY
+RESEND_FROM_EMAIL
+EMAIL_FROM
+SUPPORT_EMAIL
+NEXT_PUBLIC_SUPPORT_EMAIL
+NEXT_PUBLIC_APP_URL
+existing Resend provider/helper if any
+existing NextAuth Resend config if useful as reference only
+```
+
+Rules:
+
+- Use Resend as the intended provider.
+- Do not add a new dependency; `resend` already exists in `package.json`.
+- Do not reuse NextAuth magic-link flow directly for admin claim verification.
+- If Resend env is missing in local runtime, report `RESEND_ENV_MISSING`, but do not fake-send email.
+- In production-like flow, never expose raw email magic token in UI.
+- In development-only logs, a test link may be logged only if safe and clearly not shown to users.
+
+## Screenshot / UI evidence rule for this and future UI tasks
+
+Owner asked that UI tasks must be audited visually with screenshots.
+
+For this task:
+
+- If UI is touched, Ujang must capture before/after screenshots or at least before/after screenshot notes.
+- Screenshots should **not** be committed into the repo unless Owner/Iwan explicitly asks.
+- Local screenshot artifacts should go into an ignored/local-only folder such as:
+
+```text
+.artifacts/screenshots/sprint-04-004/
+```
+
+or:
+
+```text
+tmp/screenshots/sprint-04-004/
+```
+
+- If files are currently piling up in local project root, move them to a local artifact folder and add/confirm gitignore coverage.
+- Report screenshot paths/notes in the handoff.
+- Build/test passing is not enough for UI changes.
+
+Future direction:
+
+- Supabase Storage can be used later for persistent visual evidence.
+- Recommended bucket name later:
+
+```text
+qa-screenshots
+```
+
+- Keep bucket private.
+- Store only signed URLs or metadata in DB.
+- Do not implement Supabase screenshot upload in this task unless Owner explicitly opens that storage/artifact task.
 
 ## Existing foundation
 
@@ -91,27 +146,6 @@ Sprint 04-003 added guided UI route:
 
 This task should build on that foundation.
 
-## Workflow split
-
-### Rangga owns
-
-- task file;
-- acceptance criteria;
-- review;
-- sprint status update;
-- post-commit safety/flow review.
-
-### Ujang/Asep owns
-
-- service implementation;
-- API routes/actions;
-- UI wiring to real actions;
-- token hashing;
-- audit writes;
-- local QA;
-- security checks;
-- commit/push.
-
 ## Non-negotiable safety rules
 
 1. Do not allow self-promotion to verified admin without successful official proof.
@@ -123,15 +157,53 @@ This task should build on that foundation.
 7. Do not activate verified status for data values.
 8. Do not allow admin to delete citizen voices.
 9. All claim/invite/report actions must write audit events.
-10. No scraper or numeric APBDes extraction in this task.
+10. Website token checking must not become a general scraper.
+11. No official numeric APBDes extraction.
+12. No new dependency unless explicitly approved.
 
 ---
 
-# A. Claim submit to DB from UI
+# Ordered implementation plan
 
-## Required behavior
+Ujang must implement in this order to avoid tangled code.
 
-From `/profil/klaim-admin-desa`, user can submit a claim for selected desa and selected method.
+## Phase 1 — Shared admin-claim primitives
+
+Create shared helpers first.
+
+Required helpers:
+
+1. audit event constants;
+2. audit write helper;
+3. token generate/hash/verify helper;
+4. status transition helper;
+5. member permission helper;
+6. safe URL/domain helper for website token check;
+7. Resend admin claim email helper.
+
+Suggested files:
+
+```text
+src/lib/admin-claim/audit-events.ts
+src/lib/admin-claim/audit.ts
+src/lib/admin-claim/token.ts
+src/lib/admin-claim/status.ts
+src/lib/admin-claim/permissions.ts
+src/lib/admin-claim/safe-url.ts
+src/lib/email/resend-client.ts
+src/lib/email/admin-claim-email.ts
+```
+
+Acceptance for Phase 1:
+
+- No UI changes required yet.
+- No raw event strings scattered everywhere.
+- Token helper stores/compares hash only.
+- Email helper is admin-claim-specific and does not rely on NextAuth `signIn("resend")`.
+
+## Phase 2 — Submit claim to DB from UI
+
+Implement claim submit from `/profil/klaim-admin-desa`.
 
 Supported methods:
 
@@ -143,155 +215,96 @@ SUPPORT_REVIEW
 
 On submit:
 
+- require authenticated user;
+- validate desa exists;
 - create or update `DesaAdminClaim` for `(userId, desaId)`;
-- status starts as `PENDING` except invite/member states handled separately;
+- status starts as `PENDING`;
 - method is saved;
-- audit event is written.
+- write audit event `CLAIM_STARTED`;
+- prevent noisy duplicate claims.
 
-Suggested API route:
+Suggested endpoint:
 
 ```text
 POST /api/admin-claim/claims
 ```
 
-or equivalent project convention.
-
-Request shape candidate:
-
-```json
-{
-  "desaId": "...",
-  "method": "OFFICIAL_EMAIL"
-}
-```
-
-Response candidate:
-
-```json
-{
-  "ok": true,
-  "claimId": "...",
-  "status": "PENDING",
-  "nextAction": "EMAIL_SENT"
-}
-```
-
-Required audit event:
-
-```text
-CLAIM_STARTED
-```
-
 If existing pending claim exists:
 
-- do not duplicate spam rows;
-- update method if allowed or return existing claim;
-- audit `CLAIM_REUSED` or `CLAIM_METHOD_UPDATED`.
+- return existing claim or safely update method;
+- write `CLAIM_REUSED` or `CLAIM_METHOD_UPDATED`.
 
-## Validation
+## Phase 3 — Real Resend admin-claim email magic link
 
-- must require authenticated user;
-- must validate desa exists;
-- must validate method enum;
-- must prevent duplicate noisy claims;
-- must not allow claim for invalid desa.
+For `OFFICIAL_EMAIL` method:
 
----
+1. Determine official email candidate.
+2. Generate cryptographically random token.
+3. Store token hash and expiry on claim.
+4. Send real email via admin-claim Resend service.
+5. Write audit `EMAIL_VERIFICATION_SENT`.
+6. UI shows success.
 
-# B. Real email magic-link request
+Allowed email sources:
 
-## Required behavior
+- email stored in trusted desa/source metadata;
+- email attached to official source record;
+- future official website contact email.
 
-When user selects `OFFICIAL_EMAIL` and submits:
+Do not send to arbitrary user-entered Gmail/Yahoo/etc.
 
-1. System determines official email candidate.
-2. System creates magic token.
-3. System stores token hash + expiry on `DesaAdminClaim` or separate token helper if implemented.
-4. System sends email if provider/env exists.
-5. System writes audit event.
-6. UI shows clear status.
+Token rules:
 
-## Official email rules
-
-Allowed official email sources:
-
-- email already stored in trusted desa/source metadata;
-- email attached to official source record if available;
-- future: email discovered from official website.
-
-Do not auto-verify personal email typed by user.
-
-If no official email exists:
-
-- return clear message;
-- suggest website token or support fallback;
-- audit event `EMAIL_VERIFICATION_UNAVAILABLE`.
-
-## Token rules
-
-- generate cryptographically random token;
-- store hash only;
 - expiry recommended: 30-60 minutes;
-- include claim id/token in link;
-- link should use `NEXT_PUBLIC_APP_URL` or safe base URL.
+- raw token never stored;
+- token single-use;
+- link uses `NEXT_PUBLIC_APP_URL` or safe app base URL.
 
 Candidate verification route:
-
-```text
-GET /api/admin-claim/verify-email?claimId=...&token=...
-```
-
-or page route:
 
 ```text
 /profil/klaim-admin-desa/verifikasi-email?claimId=...&token=...
 ```
 
-## Verification success behavior
+or API route equivalent.
 
-When valid token clicked:
+On valid email token:
 
 - verify hash;
 - check expiry;
-- mark claim `VERIFIED` if proof is official email;
-- create or update `DesaAdminMember` role/status:
+- reject if already used;
+- set claim `VERIFIED`;
+- create/update `DesaAdminMember`:
   - `role = VERIFIED_ADMIN`
   - `status = VERIFIED`
 - set `verifiedAt`;
 - write audit:
   - `EMAIL_VERIFIED`
-  - `ROLE_GRANTED`
+  - `ROLE_GRANTED`.
 
-If token invalid/expired:
+On invalid/expired token:
 
 - do not verify;
-- audit `EMAIL_FAILED` or `EMAIL_TOKEN_EXPIRED`;
+- write `EMAIL_FAILED` / `EMAIL_TOKEN_EXPIRED`;
 - show safe error.
 
-## Email sending provider
+If Resend env is missing:
 
-If provider available, send real email.
+- do not fake-send;
+- keep claim/token/audit safe if possible;
+- write `EMAIL_PROVIDER_CONFIG_MISSING`;
+- report `RESEND_ENV_MISSING`.
 
-If provider unavailable:
+## Phase 4 — Website token generation
 
-- claim and token may be created only if safe;
-- do not expose raw token in production UI;
-- in development only, log token/link if needed for local QA;
-- report provider blocker.
+For `WEBSITE_TOKEN` method:
 
----
-
-# C. Website token generation
-
-## Required behavior
-
-When user selects `WEBSITE_TOKEN`:
-
-- create claim if needed;
+- create/update claim if needed;
 - generate website verification token;
 - store token hash and expiry;
-- show the raw token to user once in UI;
-- provide placement instructions.
+- show raw token to user once;
+- provide placement instruction;
+- write audit `WEBSITE_TOKEN_CREATED`.
 
 Suggested token format:
 
@@ -299,96 +312,83 @@ Suggested token format:
 pantau-desa-verification=PD-<DESA_SLUG>-<RANDOM>
 ```
 
-Suggested UI instruction:
+Token expiry:
+
+```text
+7 days
+```
+
+Placement instruction:
 
 ```text
 Tempel kode ini di halaman website resmi desa, halaman kontak/profil, footer, meta tag, atau file .well-known/pantaudesa-verification.txt.
 ```
 
-Audit event:
+## Phase 5 — Website token checker
 
-```text
-WEBSITE_TOKEN_CREATED
-```
+Implement real website token check.
 
-Token expiry recommended:
-
-- 7 days for website token.
-
-Do not store raw token.
-
----
-
-# D. Website token checker
-
-## Required behavior
-
-User can click `Cek kode` after placing token on website.
-
-System must:
-
-1. load claim;
-2. validate token exists and not expired;
-3. determine official website URL for selected desa;
-4. fetch website/page safely;
-5. search for token text;
-6. verify if found;
-7. audit result.
-
-Candidate API:
+Candidate endpoint:
 
 ```text
 POST /api/admin-claim/verify-website-token
 ```
 
-Request candidate:
+System must:
 
-```json
-{
-  "claimId": "...",
-  "url": "https://desaabc.desa.id/kontak"
-}
-```
+1. require authenticated user;
+2. load claim for current user;
+3. validate token exists and not expired;
+4. validate submitted URL is allowed official desa website/domain;
+5. fetch one page safely;
+6. search for token text;
+7. verify if found;
+8. audit result.
 
-## Safety rules for fetch
+Safety rules:
 
-- only allow http/https;
-- reject private/internal IPs and localhost;
-- add timeout;
+- allow only `http`/`https`;
+- reject localhost;
+- reject private/internal IPs;
+- reject file/data/javascript schemes;
+- timeout request;
 - limit response size;
 - do not follow infinite redirects;
-- only check allowed official domain if known;
-- do not build general scraper.
-
-If URL domain is not official/allowed:
-
-- return rejected state;
-- audit `WEBSITE_NOT_ACCEPTED_FOR_AUTO_VERIFY`.
+- check only allowed official domain if known;
+- do not crawl site recursively.
 
 If token found:
 
-- mark claim `VERIFIED`;
-- create/update `DesaAdminMember` verified role/status;
-- set verifiedAt;
-- audit:
-  - `WEBSITE_TOKEN_VERIFIED`
-  - `ROLE_GRANTED`.
+- set claim `VERIFIED`;
+- create/update `DesaAdminMember` as `VERIFIED_ADMIN` / `VERIFIED`;
+- set `verifiedAt`;
+- write `WEBSITE_TOKEN_VERIFIED` and `ROLE_GRANTED`.
 
 If token not found:
 
 - keep `PENDING`;
-- audit `WEBSITE_TOKEN_FAILED`;
-- show user-friendly retry message.
+- write `WEBSITE_TOKEN_FAILED`;
+- show friendly retry copy.
 
----
+If URL not allowed:
 
-# E. Status transition policy
+- keep `PENDING`;
+- write `WEBSITE_NOT_ACCEPTED_FOR_AUTO_VERIFY`.
 
-Allowed transitions:
+## Phase 6 — Status transition enforcement
+
+Allowed user-triggered transitions:
 
 ```text
 NONE -> PENDING
-PENDING -> VERIFIED
+PENDING -> VERIFIED via valid official email token
+PENDING -> VERIFIED via valid website token
+INVITE_PENDING -> LIMITED via valid invite token
+```
+
+Allowed future/platform transitions, if helper supports but UI does not expose:
+
+```text
 PENDING -> REJECTED
 PENDING -> LIMITED
 LIMITED -> VERIFIED
@@ -396,71 +396,18 @@ VERIFIED -> SUSPENDED
 SUSPENDED -> VERIFIED
 ```
 
-User-triggered allowed transitions:
-
-- claim submit: `NONE -> PENDING`
-- valid email magic link: `PENDING -> VERIFIED`
-- valid website token: `PENDING -> VERIFIED`
-- support fallback submit/contact: `NONE/PENDING -> PENDING`
-
-Admin/platform-triggered transitions are not required unless simple internal helper exists.
-
 Do not allow:
 
-- user self-promote without valid token;
-- user set arbitrary status;
-- user change another user's claim.
+- client sets arbitrary status;
+- user verifies claim owned by another user;
+- user self-promotes without valid proof;
+- `User.role = DESA` alone means verified admin.
 
----
-
-# F. Audit events
-
-All real actions must write audit events to `AdminClaimAudit`.
-
-Minimum events for this task:
-
-```text
-CLAIM_STARTED
-EMAIL_VERIFICATION_SENT
-EMAIL_VERIFICATION_UNAVAILABLE
-EMAIL_VERIFIED
-EMAIL_FAILED
-EMAIL_TOKEN_EXPIRED
-WEBSITE_TOKEN_CREATED
-WEBSITE_TOKEN_CHECKED
-WEBSITE_TOKEN_VERIFIED
-WEBSITE_TOKEN_FAILED
-WEBSITE_NOT_ACCEPTED_FOR_AUTO_VERIFY
-CONTACT_SUPPORT_CLICKED
-ROLE_GRANTED
-INVITE_CREATED
-INVITE_ACCEPTED
-INVITE_EXPIRED
-INVITE_REVOKED
-FAKE_ADMIN_REPORT_SUBMITTED
-ADMIN_CLAIM_FLAGGED_BY_PUBLIC
-```
-
-Implementation recommendation:
-
-- create shared constants in one file;
-- avoid typo-prone raw strings scattered everywhere.
-
-Candidate file:
-
-```text
-src/lib/admin-claim/audit-events.ts
-```
-
----
-
-# G. Invite admin service
-
-## Required behavior
+## Phase 7 — Invite admin service
 
 Verified desa admin can invite another admin.
 
-MVP rule from Owner:
+Owner MVP rule:
 
 ```text
 max 5 admins per desa
@@ -472,32 +419,24 @@ Invited admin starts as:
 LIMITED
 ```
 
-First verified admin can promote later, but full promotion UI may be separate if too large.
-
-## Minimum service behavior
-
-Create API to create invite:
+Minimum endpoints:
 
 ```text
 POST /api/admin-claim/invites
-```
-
-Validation:
-
-- current user must be `DesaAdminMember` with `role = VERIFIED_ADMIN` and `status = VERIFIED` for that desa;
-- active admin count must be less than or equal to 5 limit before invite;
-- email required;
-- invite token hash stored;
-- expiry set;
-- audit `INVITE_CREATED`.
-
-Accept invite endpoint:
-
-```text
 POST /api/admin-claim/invites/accept
 ```
 
-Behavior:
+Create invite validation:
+
+- current user must be verified admin for that desa;
+- active admin count must be below max 5;
+- email required;
+- token hash stored;
+- expiry set;
+- audit `INVITE_CREATED`;
+- send invite email via separate admin-claim/invite Resend email helper if env exists.
+
+Accept invite behavior:
 
 - validate token;
 - validate expiry;
@@ -507,32 +446,20 @@ Behavior:
 - mark invite `ACCEPTED`;
 - audit `INVITE_ACCEPTED`.
 
-If email provider exists:
+If email send fails:
 
-- send invite email.
+- do not silently pretend success;
+- preserve invite only if safe and status is clear;
+- report send failure.
 
-If provider missing:
+UI scope:
 
-- create invite record;
-- report provider blocker;
-- in development only, expose invite link for local QA.
+- minimal invite UI only if it remains compact and safe;
+- otherwise service first and report UI follow-up.
 
-## UI scope
+## Phase 8 — Fake admin report service
 
-This task may include minimal invite UI only if it remains small and safe:
-
-- a compact admin-only invite form on admin claim/status page;
-- no public exposure.
-
-If UI becomes large, implement service first and report UI follow-up.
-
----
-
-# H. Fake admin report service
-
-## Required behavior
-
-Allow users/public to report suspicious/fake admin claim.
+Implement fake-admin report endpoint.
 
 Candidate endpoint:
 
@@ -540,78 +467,71 @@ Candidate endpoint:
 POST /api/admin-claim/fake-admin-reports
 ```
 
-Request candidate:
+Required fields:
 
-```json
-{
-  "desaId": "...",
-  "reportedUserId": "...",
-  "reason": "Admin ini memakai nama/jabatan yang salah",
-  "description": "...",
-  "evidenceUrl": "...",
-  "reporterEmail": "..."
-}
-```
+- `desaId`
+- `reason`
+
+Optional fields:
+
+- `reportedUserId`
+- `description`
+- `evidenceUrl`
+- `reporterEmail`
 
 Validation:
 
 - reason required;
-- desaId required;
-- evidenceUrl optional but validated if present;
-- reporterEmail optional but validate format if present;
-- rate-limit/throttle if existing infra supports it; if not, note future risk;
-- write `FakeAdminReport`;
-- write `AdminClaimAudit` event:
-  - `FAKE_ADMIN_REPORT_SUBMITTED`
-  - `ADMIN_CLAIM_FLAGGED_BY_PUBLIC` if reported user exists.
+- desaId must exist;
+- evidenceUrl validated if present;
+- reporterEmail validated if present;
+- rate-limit/throttle if existing infra supports it; otherwise report future risk.
 
-UI scope:
+On success:
 
-- add small `Laporkan admin palsu` action where admin identity is shown if current UI has that spot;
-- otherwise create minimal service endpoint and report UI follow-up.
+- create `FakeAdminReport`;
+- write audit `FAKE_ADMIN_REPORT_SUBMITTED`;
+- if reported user exists, write `ADMIN_CLAIM_FLAGGED_BY_PUBLIC`.
 
 Do not auto-suspend admin based only on report.
 
+UI scope:
+
+- add small `Laporkan admin palsu` action only where admin identity is already shown;
+- if not available yet, implement service endpoint and report UI follow-up.
+
 ---
 
-# I. UI wiring
+# UI wiring requirements
 
 Update `/profil/klaim-admin-desa` so it calls real endpoints:
 
 - submit claim;
-- request email magic link if method official email;
+- request Resend magic link for official email method;
 - generate website token;
 - check website token;
 - contact support click audit;
-- show claim status from DB after action.
+- show claim status from DB after actions.
 
-UI copy must be honest:
+UI must remain visually clean from the Sprint 04-003 rework.
 
-If email sent:
+Copy examples:
 
 ```text
 Link verifikasi sudah dikirim ke email resmi desa.
 ```
 
-If email provider missing:
-
 ```text
-Pengajuan sudah tercatat. Pengiriman email belum aktif, gunakan website resmi atau Hubungi Kami sementara ini.
+Pengajuan sudah tercatat, tetapi pengiriman email belum aktif di environment ini.
 ```
-
-If website token created:
 
 ```text
 Kode verifikasi sudah dibuat. Tempel kode ini di website resmi desa, lalu klik Cek kode.
 ```
 
-If token found:
-
 ```text
 Kode ditemukan. Akun kamu sekarang terhubung sebagai Admin Desa Terverifikasi.
 ```
-
-If token not found:
 
 ```text
 Kode belum ditemukan. Pastikan kode sudah ditempel di halaman website resmi desa.
@@ -619,23 +539,24 @@ Kode belum ditemukan. Pastikan kode sudah ditempel di halaman website resmi desa
 
 ---
 
-# J. Out of scope
+# Out of scope
 
 Do not implement:
 
-- full document upload service;
+- document upload service;
 - Supabase Storage bucket setup;
+- screenshot upload to Supabase Storage;
 - AI source review;
 - official numeric APBDes extraction;
-- scraper/crawler beyond website token single-page check;
-- verified status for data values;
+- scraper/crawler beyond single website token page check;
+- verified status for public data values;
 - delete/moderate citizen voices;
 - admin dashboard redesign;
 - new dependency without approval.
 
 ---
 
-# K. QA requirements
+# QA requirements
 
 Run:
 
@@ -654,58 +575,64 @@ Route/API checks:
 - `/api/admin-claim/profile` public: 401
 - `/api/admin-claim/profile` authed: 200
 - claim submit API: authed success / public blocked
-- email request: success if provider exists, provider-blocked if missing
+- email request: success via Resend or `RESEND_ENV_MISSING`
+- email verify: valid / invalid / expired token cases
 - website token generate: success
-- website token check: token found and token not found cases
+- website token check: token found / token not found / invalid URL / private URL
 - invite create: verified admin only
-- invite accept: valid/expired token cases
-- fake admin report: valid report, invalid report
+- invite accept: valid / expired token cases
+- fake admin report: valid / invalid report
 
 Security checks:
 
 - raw token not stored in DB;
 - expired tokens rejected;
 - invalid tokens rejected;
+- single-use tokens enforced where applicable;
 - user cannot verify another user's claim;
 - user cannot invite admin unless verified admin for desa;
 - max 5 admin rule enforced;
 - no private contact exposure;
-- all important actions write audit events.
+- all important actions write audit events;
+- SSRF/private URL protection works for website token checker.
 
-Manual UI checks:
+Manual UI checks if UI touched:
 
 - profile card remains compact;
-- claim wizard still visually clean after wiring actions;
-- mobile 360/390/414 remains usable.
+- claim wizard remains visually clean after wiring actions;
+- mobile 360/390/414 remains usable;
+- screenshots/notes reported.
 
 ---
 
-# L. Acceptance criteria
+# Acceptance criteria
 
-1. User can submit claim to DB from UI.
-2. `DesaAdminClaim` status starts/updates correctly.
-3. Email magic-link request is real if provider/env exists.
-4. Email provider missing is handled honestly and safely.
-5. Email token hash is stored, raw token is not stored.
-6. Valid email token verifies claim and grants `VERIFIED_ADMIN` membership.
-7. Website token can be generated and displayed once.
-8. Website token hash is stored, raw token is not stored.
-9. Website token checker can verify token on allowed official URL.
-10. Website token checker rejects invalid/untrusted/private URLs.
-11. Claim status transitions follow allowed policy.
-12. Audit events are written for claim actions.
-13. Verified admin can create invite if under max 5 admin limit.
-14. Invite accept creates limited admin membership.
-15. Fake admin report creates DB record and audit event.
-16. UI remains clear and mobile-safe.
-17. No data value verified activation.
-18. No broad scraper/crawler.
-19. No numeric extraction.
-20. QA passes or provider blockers are reported clearly.
+1. Separate admin-claim Resend email service exists.
+2. Claim submit from UI creates/updates `DesaAdminClaim`.
+3. Claim submit writes audit event.
+4. Official email magic link sends via Resend when env exists.
+5. Resend env missing is handled honestly and safely.
+6. Email token hash is stored, raw token is not stored.
+7. Valid email token verifies claim and grants verified admin membership.
+8. Website token can be generated and displayed once.
+9. Website token hash is stored, raw token is not stored.
+10. Website token checker verifies token on allowed official URL.
+11. Website token checker rejects invalid/untrusted/private URLs.
+12. Status transitions follow allowed policy.
+13. Audit events are written for claim/email/website/invite/report actions.
+14. Verified admin can create invite if under max 5 admin limit.
+15. Invite accept creates limited admin membership.
+16. Fake admin report creates DB record and audit event.
+17. UI remains clear and mobile-safe.
+18. Screenshot audit/notes are provided if UI was touched.
+19. No data value verified activation.
+20. No broad scraper/crawler.
+21. No numeric extraction.
+22. QA passes or env blockers are reported clearly.
 
 ---
 
-# M. Commit message requirement
+# Commit message requirement
 
 ```text
 feat(admin): add claim verification services and audit flow
@@ -713,9 +640,9 @@ feat(admin): add claim verification services and audit flow
 What changed:
 - ...
 
-Provider check:
-- email provider detected: yes/no
-- email sending: PASS/BLOCKED_PROVIDER_ENV_MISSING
+Provider:
+- Resend service separated from NextAuth: PASS
+- Resend env available: PASS/RESEND_ENV_MISSING
 
 Services:
 - claim submit: PASS
@@ -723,6 +650,7 @@ Services:
 - email token verify: PASS/BLOCKED with reason
 - website token generate: PASS
 - website token check: PASS
+- status transitions: PASS
 - invite create/accept: PASS
 - fake admin report: PASS
 - audit events: PASS
@@ -738,17 +666,24 @@ QA:
 Security checks:
 - token hash only: PASS
 - token expiry: PASS
+- token single-use: PASS
 - user cannot self-promote: PASS
 - user cannot verify another claim: PASS
 - verified admin required for invite: PASS
 - max 5 admin enforced: PASS
+- SSRF/private URL protection: PASS
 - no private contact exposure: PASS
+
+UI evidence if UI touched:
+- screenshots/notes before: PASS/SKIPPED with reason
+- screenshots/notes after: PASS/SKIPPED with reason
 
 Guardrails:
 - no verified data activation
 - no official numeric APBDes extraction
 - no scraper beyond single website token check
 - no document upload service
+- no screenshot storage implementation
 - no AI API
 - no new dependency unless approved
 
@@ -758,17 +693,17 @@ Known risks/blockers:
 
 ---
 
-# N. Report back
+# Report back
 
 ```text
 Task: Sprint 04-004 Admin Claim Verification Services + Audit + Invite + Fake Report
 Status: PASS / PARTIAL_PASS / BLOCKED / REWORK
 Model used:
 Reasoning effort:
-Provider check:
-- email provider/env:
-- support email env:
-- app base URL env:
+Provider:
+- Resend env:
+- from email:
+- app base URL:
 Implemented:
 - claim submit:
 - email magic link request:
@@ -793,11 +728,15 @@ API checks:
 - expired token:
 - website token not found:
 - website token found:
+- private URL rejected:
 Security:
 - token hash only:
+- token single-use:
 - max 5 admin:
 - no self-promotion:
 - no private exposure:
+UI evidence if touched:
+- screenshot folder/notes:
 Files changed:
 Commit SHA(s):
 Known risks/blockers:
@@ -808,11 +747,11 @@ Known risks/blockers:
 # Short handoff
 
 ```text
-Ujang, pull latest main and read docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md fully. Use GPT-5.1 with high reasoning because this touches email, website token verification, roles, audit, invite, and fake-admin report. Start with provider/env check. If email provider is missing, do not fake-send email; implement claim/token/audit safely and report email sending as BLOCKED_PROVIDER_ENV_MISSING. Implement real claim submit, website token generation/check, allowed status transitions, audit events, invite create/accept with max 5 admin rule, and fake admin report service. Keep the existing UI clean, do not add schema/migration unless absolutely required, do not add dependency without approval, do not activate verified data values, do not build crawler/scraper beyond single website token check, do not implement upload or AI. Run QA/security checks and report provider status + commit SHA.
+Ujang, pull latest main and read docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md fully. Use GPT-5.1 with high reasoning. Implement all 8 owner items in the ordered phases: shared primitives, claim submit, separate Resend admin-claim magic-link service, website token generation, website token checker with SSRF/private URL protection, strict status transitions, invite create/accept with max 5 admin rule, and fake admin report service. Do not reuse NextAuth signIn("resend") directly; create a separate admin-claim email service using Resend/env. Keep UI from 04-003 clean. If UI is touched, screenshot/audit desktop and mobile and keep screenshots in local ignored artifacts, not repo. Do not implement document upload, screenshot storage, AI, verified data values, numeric extraction, or scraper beyond single-page website token check. Run QA/security checks and report provider status + commit SHA.
 ```
 
 If Asep takes over:
 
 ```text
-Asep, pull latest main and read docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md fully. Continue only this service/audit scope. Preserve the UI structure from the rework, do not widen scope, and do not fake email sending if provider/env is missing.
+Asep, pull latest main and read docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md fully. Continue only this service/audit scope. Preserve the UI structure from the rework, do not widen scope, do not merge admin claim email into NextAuth, and do not commit bulky screenshots.
 ```
