@@ -9,24 +9,24 @@ Owner gate: Iwan/Owner is still refining scope. Do not instruct Ujang until Owne
 
 Connect the completed Sprint 04-006 admin-claim service layer to the user-facing profile/admin-claim UI and verify the end-to-end user journey in browser.
 
-This task exists because Sprint 04-006 completed the backend/API/service layer, but the UI wizard is not yet wired to the new endpoints.
+Sprint 04-006 completed the backend/API/service layer. Sprint 04-007 focuses on making the claim admin feature usable and testable from the browser.
 
-This task now covers the claim admin UI enough to be browser-testable end-to-end:
+Because the scope is now larger, this task is split into two structured execution batches:
 
-1. claim submit UI,
-2. one-user-one-desa enforcement visibility,
-3. email magic link UI,
-4. website token UI,
-5. website token renewal awareness,
-6. status/profile integration,
-7. invite admin UI,
-8. reusable Hubungi Admin email form for reports/support.
+1. **04-007A — Core Claim Browser Flow**
+2. **04-007B — Completion UX, Invite, Hubungi Admin, and Browser QA**
 
-Fake Admin Report UI is intentionally taken out. Users who want to report a fake admin should use Hubungi Admin, which sends an email with subject, description, and optional evidence.
+This split keeps the work sequential and reviewable without losing the full admin-claim user-facing scope.
+
+## Current status
+
+- Draft only.
+- Do not assign to Ujang yet.
+- Do not execute until Owner explicitly says OK/gas/approve.
 
 ## Ownership
 
-- PIC: Ujang, only after Owner final approval
+- PIC after approval: Ujang
 - Reviewer: Rangga
 - Gate owner: Iwan/Owner for product/security/governance decisions
 - Asep: not assigned unless Owner opens a separate task
@@ -54,13 +54,7 @@ Sprint 04-006 added backend/service endpoints for:
 - `GET /api/admin-claim/accept-invite`
 - `POST /api/admin-claim/report-fake-admin`
 
-Sprint 04-006 also added admin claim helpers for:
-
-- audit events,
-- token generation/hash/expiry,
-- website token checking,
-- status transitions,
-- admin claim email service.
+Sprint 04-006 also added admin claim helpers for audit events, token generation/hash/expiry, website token checking, status transitions, and admin claim email service.
 
 Known state before this task:
 
@@ -107,6 +101,7 @@ Rules:
 7. Public admin list per desa is not needed.
 8. Fake Admin Report UI is not needed; use Hubungi Admin instead.
 9. Rate-limit/anti-spam should be minimal and lightweight, without new dependency.
+10. The 10 user-facing admin-claim completeness items should be included in 04-007, but split into 04-007A and 04-007B so the work remains structured.
 
 ## TDD-first / test-first rule
 
@@ -121,17 +116,42 @@ Minimum expectation:
 - loading/success/error UI,
 - token expired/invalid states where reachable,
 - one-user-one-desa rule,
+- resend/regenerate behavior,
 - invite permission and max-admin behavior where reachable,
 - Hubungi Admin form validation and send states,
 - no public data verified activation.
 
 Do not rely only on visual manual testing if a helper or behavior can be covered with Vitest.
 
-## Scope
+---
 
-## A. Wire `/profil/klaim-admin-desa` to real admin-claim APIs
+# Batch 04-007A — Core Claim Browser Flow
 
-Connect the existing admin claim wizard components to the new service endpoints.
+## Goal
+
+Make the main claim admin flow usable from the browser up to successful claim submission and verification method operation.
+
+This batch must be completed before 04-007B starts.
+
+## Scope A1 — Claim eligibility check before form is active
+
+Required behavior:
+
+- detect whether user is logged in,
+- detect whether user already has an active claim/member,
+- prevent claiming a second desa when user already represents another active desa,
+- validate selected desa before allowing submit,
+- show clear blocked state when user is not eligible.
+
+One-user-one-desa rule:
+
+- user may manage/represent only one desa,
+- active statuses include at least `PENDING`, `LIMITED`, and `VERIFIED`,
+- do not add claim history UI.
+
+If enforcing this requires schema/migration, stop and ask Owner.
+
+## Scope A2 — Wire `/profil/klaim-admin-desa` to real admin-claim APIs
 
 Likely UI/components to inspect:
 
@@ -150,21 +170,7 @@ Required behavior:
 - UI reads and displays real claim/admin status where possible,
 - UI never fakes success when API returns error.
 
-## B. Enforce and explain one-user-one-desa rule
-
-A user may manage/represent only one desa.
-
-Required behavior:
-
-- UI must prevent or clearly block claiming a second desa when the user already has an active claim/member for another desa.
-- API/backend should also enforce this rule if not already enforced.
-- Active statuses include at least `PENDING`, `LIMITED`, and `VERIFIED`.
-- If an active claim/member exists, show which desa is already connected if safe and non-private.
-- Do not add claim history UI.
-
-If enforcing this requires schema/migration, stop and ask Owner.
-
-## C. Integrate UI states
+## Scope A3 — Core UI states
 
 Implement clear user-facing states for:
 
@@ -181,10 +187,6 @@ Implement clear user-facing states for:
 - limited admin,
 - verified admin membership,
 - already managing another desa,
-- invite created,
-- invite accepted result if user lands from accept link,
-- Hubungi Admin email sent,
-- Hubungi Admin email failed,
 - generic API failure.
 
 Copy must stay demo-safe and trust-safe.
@@ -194,7 +196,7 @@ Important wording:
 - `VERIFIED` admin membership must not be written as verified public data.
 - Public village data must not appear verified because a user/admin claim was verified.
 
-## D. Website token UX and 6-month renewal awareness
+## Scope A4 — Website token UX and 6-month renewal awareness
 
 After token generation:
 
@@ -202,14 +204,14 @@ After token generation:
 - show placement instruction clearly,
 - tell user that token should be placed on the official village website,
 - allow user to trigger check token while raw token is still available,
-- handle the case where the raw token is lost after refresh by telling user to regenerate token,
+- handle the case where raw token is lost after refresh by telling user to regenerate token,
 - explain that website verification should be renewed every 6 months.
 
 Do not store raw token in localStorage/sessionStorage unless Owner explicitly approves.
 
-This task should include renewal awareness/copy and any already-available date display. Do not implement cron/scheduler/automatic downgrade if it requires schema/migration or infrastructure not already available.
+This batch includes renewal awareness/copy and any already-available date display. Do not implement cron/scheduler/automatic downgrade if it requires schema/migration or infrastructure not already available.
 
-## E. Email magic link UX
+## Scope A5 — Email magic link UX
 
 Email flow should:
 
@@ -219,18 +221,120 @@ Email flow should:
 - keep user in `PENDING`/review state until verification callback succeeds,
 - display result when `/api/admin-claim/verify-email` redirects back with success/error params if currently supported.
 
-## F. Profile page integration
+## Scope A6 — Profile page integration / admin status badge / admin access CTA
 
 If `/profil/saya` has a claim/admin card:
 
 - update it to reflect real admin claim/member state where available,
 - keep CTA to `/profil/klaim-admin-desa`,
 - avoid duplicate or conflicting CTAs,
+- show admin membership status badge distinct from public data status,
+- add a clear next-step CTA after success, such as entering the Admin Desa area or continuing setup,
 - do not expose private email/phone.
 
-If wiring this card would cause scope creep, document it as follow-up, but `/profil/klaim-admin-desa` must be completed.
+Badge wording should be admin-membership-specific, for example:
 
-## G. Invite Admin UI
+- `Admin pending`,
+- `Admin terbatas`,
+- `Admin terverifikasi`.
+
+Do not use wording that implies public village data is verified.
+
+## Scope A7 — Browser QA for 04-007A
+
+Browser flows to test in this batch:
+
+1. Unauthenticated user attempts to access/submit claim.
+2. Authenticated user opens `/profil/klaim-admin-desa`.
+3. Eligibility state appears before form action.
+4. User submits claim for a valid desa.
+5. User is blocked from claiming a second desa if already active elsewhere.
+6. User selects email verification and triggers magic link.
+7. User selects website token verification and generates token.
+8. User checks website token and sees success/failure state.
+9. Unsafe/private website URL is rejected or reported safely.
+10. API error state displays cleanly.
+11. Mobile layout remains usable.
+
+## Acceptance criteria for 04-007A
+
+1. `/profil/klaim-admin-desa` can submit a real claim from UI.
+2. UI and/or API enforce one-user-one-desa active claim/member rule.
+3. UI can trigger real email magic link endpoint.
+4. UI can trigger real website token generation endpoint.
+5. UI can trigger real website token check endpoint.
+6. UI explains website verification renewal awareness for 6 months.
+7. UI displays loading/success/error states clearly.
+8. UI displays claim/admin status from real backend state where available.
+9. Admin membership badge is visually/copy-wise distinct from public data verification.
+10. Admin access/next-step CTA exists after a successful state where appropriate.
+11. No public verified data is activated.
+
+---
+
+# Batch 04-007B — Completion UX, Invite, Hubungi Admin, and Browser QA
+
+## Goal
+
+Complete the user-facing admin claim experience after the core browser flow works.
+
+This batch adds recovery/resume behavior, invite UI, Hubungi Admin, and fuller browser QA.
+
+## Scope B1 — Current claim loader / resume flow
+
+If user already has a claim/member, the page should resume from current backend state instead of restarting from zero.
+
+Required behavior:
+
+- existing `PENDING` claim displays current status,
+- previously selected method is reflected where possible,
+- already generated email/token state is represented without exposing raw token,
+- if raw website token is lost after refresh, user is told to regenerate,
+- `LIMITED` and `VERIFIED` states show appropriate next step.
+
+No claim history UI is needed because one user can only claim one desa.
+
+## Scope B2 — Resend / regenerate token flow
+
+Support recovery for lost or expired verification attempts:
+
+- resend email magic link,
+- regenerate website token,
+- warn that old token becomes invalid where applicable,
+- display loading/success/error state,
+- avoid unlimited rapid resend/regenerate.
+
+This must remain lightweight and dependency-free.
+
+## Scope B3 — Claim method switch
+
+Allow user to switch between verification methods when appropriate:
+
+- email to website token,
+- website token to email,
+- update method through existing service behavior if supported,
+- preserve audit trail via backend service,
+- show clear copy that previous token/method may no longer be active.
+
+If backend does not safely support switching methods, document as blocker/follow-up instead of forcing unsafe behavior.
+
+## Scope B4 — Claim status timeline sederhana
+
+Add a simple timeline for the active claim only.
+
+Possible states:
+
+- claim created,
+- method selected,
+- email sent / website token generated,
+- verification success/failure,
+- current membership status.
+
+Use existing status/audit data where readily available. If an audit timeline API is required and would be too large, implement a derived/simple timeline from current claim state and document the limitation.
+
+Do not create a full audit viewer. Full audit viewer belongs to internal admin backlog.
+
+## Scope B5 — Invite Admin UI
 
 Add browser-usable UI for the existing invite admin service.
 
@@ -252,9 +356,9 @@ Accept invite flow:
 
 - `GET /api/admin-claim/accept-invite` already exists.
 - UI should display success/error result if redirected back to `/profil/klaim-admin-desa` with invite query params.
-- Do not create a full invite management dashboard in this task unless it is already trivial.
+- Do not create a full invite management dashboard in this task.
 
-## H. Reusable Hubungi Admin email form
+## Scope B6 — Reusable Hubungi Admin email form
 
 Replace Fake Admin Report UI with a reusable Hubungi Admin component.
 
@@ -296,7 +400,7 @@ Browser QA:
 - evidence URL/text is included in email body,
 - no private data is exposed.
 
-## I. Minimal anti-spam / rate-limit posture
+## Scope B7 — Minimal anti-spam / rate-limit posture
 
 Keep rate-limit/anti-spam lightweight and dependency-free.
 
@@ -310,42 +414,86 @@ Minimum options:
 
 Do not add a new rate-limit dependency in this task.
 
-## J. Browser E2E QA without adding Playwright
+## Scope B8 — Browser QA test-data notes
 
-Run browser/manual E2E QA directly. Do not add Playwright or any new dependency in this task.
+Handoff must include non-sensitive QA notes:
 
-Browser flows to test:
+- test account type used,
+- test desa identifier/name,
+- verification method tested,
+- starting status,
+- ending status,
+- email path tested or reason skipped,
+- website token path tested or reason skipped,
+- invite path tested or reason skipped,
+- Hubungi Admin tested or reason skipped.
 
-1. Unauthenticated user attempts to access/submit claim.
-2. Authenticated user opens `/profil/klaim-admin-desa`.
-3. User submits claim for a valid desa.
-4. User is blocked from claiming a second desa if already active elsewhere.
-5. User selects email verification and triggers magic link.
-6. User selects website token verification and generates token.
-7. User checks website token and sees success/failure state.
-8. Unsafe/private website URL is rejected or reported safely.
-9. API error state displays cleanly.
-10. Refresh/revisit page shows persisted claim/status correctly where supported.
-11. Verified/allowed admin can invite another admin, or blocked state is shown if not eligible.
-12. Invite accept redirect result is shown if reachable.
-13. Hubungi Admin form validates and sends/fails honestly.
-14. Mobile layout remains usable.
+Do not commit secrets, raw tokens, private email/phone, or screenshots.
 
-If full email delivery cannot be tested in local/staging, report the exact reason and test the reachable fallback/dev path honestly.
+## Scope B9 — Browser QA for 04-007B
 
-## K. Screenshots / UI evidence
+Browser flows to test in this batch:
 
-Because this task changes UI, screenshots are required.
+1. Refresh/revisit page shows persisted claim/status correctly where supported.
+2. Lost raw token after refresh shows regenerate path.
+3. Email resend works or fails honestly.
+4. Website token regenerate works or fails honestly.
+5. Method switch works safely or is clearly blocked.
+6. Timeline shows current claim progress.
+7. Verified/allowed admin can invite another admin, or blocked state is shown if not eligible.
+8. Invite accept redirect result is shown if reachable.
+9. Hubungi Admin form validates and sends/fails honestly.
+10. Mobile layout remains usable.
 
-Capture before/after desktop and mobile screenshots or clear screenshot notes for:
+## Acceptance criteria for 04-007B
+
+1. Existing/current claim flow resumes from backend state.
+2. Resend/regenerate behavior exists or is explicitly blocked with clear reason.
+3. Method switching works safely or is documented as not supported.
+4. Active claim timeline/simple progress indicator exists.
+5. Invite Admin UI can trigger real invite endpoint or clearly explain why user is not eligible.
+6. Invite accept redirect result is surfaced if reachable.
+7. Reusable Hubungi Admin component exists and can send a contact/report email to `CONTACT_EMAIL`.
+8. Hubungi Admin does not auto-punish, auto-suspend, or create public accusation states.
+9. Browser QA covers invite path, Hubungi Admin path, resume path, and regeneration path.
+10. No new dependency is introduced.
+
+---
+
+# Shared quality gate
+
+Run after each batch if practical, and always at final handoff:
+
+```bash
+npm run lint
+npm run test
+npx tsc --noEmit
+npx prisma generate
+npm run build
+```
+
+If any command fails:
+
+- do not hide it,
+- report exact command and error,
+- separate pre-existing lint debt from new regressions,
+- do not disable rules massally.
+
+# Screenshots / UI evidence
+
+Because this task changes UI, screenshots or clear screenshot notes are required.
+
+Capture before/after desktop and mobile screenshots or notes for:
 
 - `/profil/saya` if changed,
 - `/profil/klaim-admin-desa` initial state,
+- eligibility/blocked state,
 - claim submitted state,
 - email method state,
 - website token generated state,
 - website token check result state,
-- one-user-one-desa blocked state if practical,
+- resume/regenerate state,
+- timeline state,
 - invite admin UI state,
 - Hubungi Admin form state,
 - error state if practical.
@@ -369,26 +517,7 @@ rm -rf .artifacts/screenshots/sprint-04-007 tmp/screenshots/sprint-04-007
 
 Cleanup must happen locally after push/handoff. Do not add screenshot storage or Supabase bucket in this task.
 
-## Quality gate
-
-Run:
-
-```bash
-npm run lint
-npm run test
-npx tsc --noEmit
-npx prisma generate
-npm run build
-```
-
-If any command fails:
-
-- do not hide it,
-- report exact command and error,
-- separate pre-existing lint debt from new regressions,
-- do not disable rules massally.
-
-## Out of scope
+# Out of scope
 
 Do not implement in this task:
 
@@ -415,7 +544,7 @@ Do not implement in this task:
 - new dependency,
 - additional env vars beyond `CONTACT_EMAIL`.
 
-## Guardrails
+# Guardrails
 
 - No public data verified activation.
 - Admin membership verification is not public data verification.
@@ -429,46 +558,42 @@ Do not implement in this task:
 - Hubungi Admin must not auto-suspend, auto-punish, or create public accusation states.
 - Keep anti-spam/rate-limit lightweight and dependency-free.
 
-## Acceptance criteria
+# Final acceptance criteria
 
-1. `/profil/klaim-admin-desa` can submit a real claim from UI.
-2. UI and/or API enforce one-user-one-desa active claim/member rule.
-3. UI can trigger real email magic link endpoint.
-4. UI can trigger real website token generation endpoint.
-5. UI can trigger real website token check endpoint.
-6. UI explains website verification renewal awareness for 6 months.
-7. UI displays loading/success/error states clearly.
-8. UI displays claim/admin status from real backend state where available.
-9. Invite Admin UI can trigger real invite endpoint or clearly explain why user is not eligible.
-10. Invite accept redirect result is surfaced if reachable.
-11. Reusable Hubungi Admin component exists and can send a contact/report email to `CONTACT_EMAIL`.
-12. Fake Admin Report UI is not implemented in this task.
-13. Browser QA covers happy path, error path, unsafe URL path, one-user-one-desa path, invite path, Hubungi Admin path, and refresh/revisit behavior.
-14. Mobile and desktop UI remain usable.
-15. Screenshots/notes are captured locally, reported, and then cleaned up locally after push/handoff.
-16. Only one new env name is introduced: `CONTACT_EMAIL`.
-17. No new dependency is introduced.
-18. No public verified data is activated.
-19. No screenshot storage or Supabase bucket is introduced.
-20. Quality gate is reported.
+1. 04-007A acceptance criteria pass.
+2. 04-007B acceptance criteria pass or any partial item is clearly reported as blocked with reason.
+3. Only one new env name is introduced: `CONTACT_EMAIL`.
+4. No new dependency is introduced.
+5. No public verified data is activated.
+6. No screenshot storage or Supabase bucket is introduced.
+7. Quality gate is reported.
+8. Browser QA notes and local screenshot cleanup status are reported.
 
-## Final handoff report format
+# Final handoff report format
 
 ```text
 Task: Sprint 04-007 Admin Claim UI Integration & Browser E2E QA
 Status: PASS / PARTIAL_PASS / BLOCKED / REWORK
-Batches/flows completed:
+Batch 04-007A:
+- eligibility check:
 - submit claim UI:
-- one-user-one-desa rule:
 - email magic link UI:
 - website token generation UI:
 - website token check UI:
 - website renewal awareness:
-- status panel/profile integration:
+- status badge/profile integration:
+- admin access CTA:
+- browser QA A:
+Batch 04-007B:
+- resume current claim flow:
+- resend/regenerate flow:
+- method switch:
+- claim timeline:
 - invite admin UI:
 - invite accept result UI:
 - Hubungi Admin reusable form:
-- browser E2E QA:
+- anti-spam lite:
+- browser QA B:
 Env used:
 - RESEND_API_KEY:
 - RESEND_FROM:
@@ -482,8 +607,10 @@ Tests/QA:
 - API error case:
 - unsafe URL case:
 - one-user-one-desa case:
+- resume/regenerate path:
 - invite path:
 - Hubungi Admin path:
+- test data notes:
 Quality gate:
 - npm run lint:
 - npm run test:
@@ -508,7 +635,7 @@ Commit SHA(s):
 Known risks/blockers:
 ```
 
-## Chat instruction rule
+# Chat instruction rule
 
 Do not assign this task until Owner says OK/gas/approve.
 
