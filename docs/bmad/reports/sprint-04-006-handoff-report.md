@@ -53,11 +53,10 @@ PIC: Asep (acting as Ujang PIC per sprint-04-006 ownership rule)
 - no new dependency: YES
 - no new env: YES
 
-## UI evidence if touched
+## UI evidence if UI touched
 
-- No UI components were changed in this batch (service layer only)
-- AdminClaimWizard, AdminClaimInstruction, AdminClaimStatusPanel unchanged
-- No before/after screenshots required for this batch
+- screenshots/notes before: SKIPPED — this batch is service layer only; no UI component was modified
+- screenshots/notes after: SKIPPED — AdminClaimWizard, AdminClaimInstruction, AdminClaimStatusPanel are unchanged; wizard UI wiring to new endpoints is a follow-up batch
 
 ## Files changed
 
