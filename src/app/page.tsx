@@ -23,9 +23,8 @@ export default async function HomePage() {
   const trendData = buildTrendData(desaItems);
 
   const topBaik = [...desaItems]
-    .filter((d) => d.status === "baik")
     .sort((a, b) => b.persentaseSerapan - a.persentaseSerapan)
-    .slice(0, 3);
+    .slice(0, 5);
 
   const topRendah = [...desaItems]
     .filter((d) => d.status === "rendah")

@@ -170,8 +170,8 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, t
                 angka mock
               </span>
             </div>
-            <h2 className="text-base font-black text-white drop-shadow">Desa yang Perlu Dilihat Lebih Dulu</h2>
-            <p className="text-[11px] font-semibold text-white/90 drop-shadow">Panduan membaca awal, bukan penilaian akhir.</p>
+            <h2 className="text-base font-black text-white drop-shadow">Mulai Baca dari Desa Ini</h2>
+            <p className="text-[11px] font-semibold text-white/90 drop-shadow">Panduan awal, bukan penilaian akhir.</p>
           </div>
         </div>
         <div className="px-5 pb-0 pt-1">
@@ -208,6 +208,13 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, t
             {topBaik[0] && <PodiumBlock desa={topBaik[0]} rank={1} />}
             {topBaik[2] && <PodiumBlock desa={topBaik[2]} rank={3} />}
           </div>
+          {topBaik.slice(3).length > 0 && (
+            <div className="mt-1 border-t border-slate-50">
+              {topBaik.slice(3).map((desa, index) => (
+                <RankRow key={desa.id} desa={desa} rank={index + 4} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
