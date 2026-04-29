@@ -26,21 +26,21 @@ export default function TransparansiCard({ desa }: { desa: Desa }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       {/* Tab bar — clean, no illustration header */}
-      <div className="flex border-b border-slate-100 bg-slate-50/40">
+      <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/40">
         {tabs.map(t => {
           const Icon = t.icon;
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-3.5 text-xs font-bold border-b-2 transition-all flex-1 justify-center ${
+              className={`flex min-h-[44px] min-w-0 items-center justify-center gap-1 px-2 py-3 text-[11px] font-bold border-b-2 transition-all sm:gap-1.5 sm:px-4 sm:text-xs ${
                 tab === t.id
                   ? "border-indigo-500 text-indigo-600 bg-white"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
               <Icon size={13} />
-              {t.label}
+              <span className="truncate">{t.label}</span>
               {t.badge && (
                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
                   tersediaCount === totalDok ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
@@ -71,7 +71,7 @@ export default function TransparansiCard({ desa }: { desa: Desa }) {
         )}
 
         {/* Perangkat — header teks berwarna, tanpa banner gambar */}
-        {tab === "perangkat" && desa.perangkat && (
+        {tab === "perangkat" && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -82,7 +82,16 @@ export default function TransparansiCard({ desa }: { desa: Desa }) {
                 <p className="text-xs text-slate-400">Siapa yang bertanggung jawab di desa ini?</p>
               </div>
             </div>
-            <PerangkatDesaSection perangkat={desa.perangkat} />
+            {desa.perangkat && desa.perangkat.length > 0 ? (
+              <PerangkatDesaSection perangkat={desa.perangkat} />
+            ) : (
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                <p className="text-sm font-bold text-slate-800">Data perangkat belum tersedia.</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Belum ada data perangkat yang tersimpan untuk desa ini, jadi PantauDesa tidak menampilkan nama dummy di halaman publik.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -110,11 +119,27 @@ export default function TransparansiCard({ desa }: { desa: Desa }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-slate-700 truncate">{dok.nama}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[10px] text-slate-500">
+                      Sumber: {dok.sumber ?? "belum tersedia"}. {dok.terakhirDicekLabel}
+                    </p>
                     <p className="text-[10px] text-slate-400">{dok.jenis} · {dok.tahun}</p>
                   </div>
-                  {dok.tersedia
-                    ? <button className="flex-shrink-0 text-emerald-600 hover:text-emerald-700" title={DOKUMEN.tersedia}><ExternalLink size={13} /></button>
-                    : <span className="flex-shrink-0 text-[10px] text-rose-400 font-medium">{DOKUMEN.belum}</span>
+                  {dok.tersedia && dok.url
+                    ? (
+                      <a
+                        href={dok.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-h-[36px] min-w-[36px] flex-shrink-0 items-center justify-center rounded-lg text-emerald-600 hover:bg-white hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        title={DOKUMEN.tersedia}
+                        aria-label={`Buka dokumen ${dok.nama}`}
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                    )
+                    : dok.tersedia
+                      ? <span className="flex-shrink-0 text-[10px] font-medium text-slate-500">Belum ada tautan</span>
+                      : <span className="flex-shrink-0 text-[10px] text-rose-400 font-medium">{DOKUMEN.belum}</span>
                   }
                 </div>
               ))}

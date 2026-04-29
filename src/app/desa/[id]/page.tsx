@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
@@ -8,8 +7,7 @@ import {
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
 import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
-import { BUDGET_ITEMS, DATA_DISCLAIMER, PENDAPATAN, PENGADUAN } from "@/lib/copy";
-import { ASSETS } from "@/lib/assets";
+import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
 import DetailSectionNav from "@/components/desa/DetailSectionNav";
@@ -19,7 +17,6 @@ import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
 import TransparansiCard from "@/components/desa/TransparansiCard";
 import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
-import TanggungJawabSection from "@/components/desa/TanggungJawabSection";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
 
 import type { Metadata } from "next";
@@ -220,19 +217,23 @@ export default async function DesaDetailPage({ params }: Props) {
         <ResponsibilityGuideCard />
 
         {/* ── 9. TANGGUNG JAWAB — escalation guide ──────────────────────────── */}
-        <TanggungJawabSection desa={desa} />
-
         {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
         <div id="pre-report-checklist">
           <PreReportChecklistCard kabupaten={desa.kabupaten} />
         </div>
+      </section>
+
+      <section id="suara-warga" className="space-y-3">
+        <div className="max-w-2xl">
+          <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
+          <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
+        </div>
 
         {/* ── 11. SUARA WARGA + PAK WASPADA CTA ─────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
         {/* Suara warga preview */}
         <Link
           href={`/desa/${desa.id}/suara`}
-          className="sm:col-span-3 group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           aria-label={`Suara warga untuk ${desa.nama}`}
         >
           <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
@@ -273,31 +274,9 @@ export default async function DesaDetailPage({ params }: Props) {
         </Link>
 
         {/* Pak Waspada CTA — now points to checklist, not direct LAPOR */}
-        <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden flex flex-col justify-between">
-          <div className="p-4 flex-1">
-            <p className="text-sm font-bold text-amber-800 mb-1">{PENGADUAN.title}</p>
-            <p className="text-xs text-amber-600 leading-relaxed mb-4">{PENGADUAN.subtitle}</p>
-            <div className="space-y-2">
-              <a
-                href="#pre-report-checklist"
-                className="flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-2.5 rounded-xl hover:bg-amber-700 transition-colors w-full justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
-              >
-                {PENGADUAN.lapor}
-              </a>
-              <p className="text-[10px] text-center text-amber-600 font-medium">{PENGADUAN.inspektorat(desa.kabupaten)}</p>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Image src={ASSETS.mascotStanding} alt="Pak Waspada" width={80} height={110} className="object-contain object-bottom" />
-          </div>
-        </div>
-      </div>
       </section>
 
       {/* Data note */}
-      <p className="text-[10px] text-slate-400 text-center px-4">
-        {DATA_DISCLAIMER.short}
-      </p>
     </div>
   );
 }

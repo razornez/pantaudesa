@@ -32,6 +32,8 @@ export default function DesaListClient({
 
   const [search, setSearch] = useState(initialSearch);
   const [provinsi, setProvinsi] = useState("");
+  const [kabupaten, setKabupaten] = useState("");
+  const [kecamatan, setKecamatan] = useState("");
   const [status, setStatus] = useState<StatusSerapan>("semua");
   const [sortField, setSortField] = useState<SortField>("nama");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -39,6 +41,22 @@ export default function DesaListClient({
   const [page, setPage] = useState(1);
 
   const PAGE_SIZE = 12;
+
+  const kabupatenList = useMemo<string[]>(
+    () => [...new Set(desa
+      .filter((d) => !provinsi || d.provinsi === provinsi)
+      .map((d) => d.kabupaten))]
+      .sort(),
+    [desa, provinsi]
+  );
+
+  const kecamatanList = useMemo<string[]>(
+    () => [...new Set(desa
+      .filter((d) => (!provinsi || d.provinsi === provinsi) && (!kabupaten || d.kabupaten === kabupaten))
+      .map((d) => d.kecamatan))]
+      .sort(),
+    [desa, provinsi, kabupaten]
+  );
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -68,6 +86,14 @@ export default function DesaListClient({
       result = result.filter((d) => d.provinsi === provinsi);
     }
 
+    if (kabupaten) {
+      result = result.filter((d) => d.kabupaten === kabupaten);
+    }
+
+    if (kecamatan) {
+      result = result.filter((d) => d.kecamatan === kecamatan);
+    }
+
     if (status !== "semua") {
       result = result.filter((d) => d.status === status);
     }
@@ -79,7 +105,7 @@ export default function DesaListClient({
     });
 
     return result;
-  }, [desa, search, provinsi, status, sortField, sortOrder]);
+  }, [desa, search, provinsi, kabupaten, kecamatan, status, sortField, sortOrder]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -145,10 +171,25 @@ export default function DesaListClient({
         search={search}
         onSearch={handleFilterChange(setSearch)}
         provinsi={provinsi}
-        onProvinsi={handleFilterChange(setProvinsi)}
+        onProvinsi={(value) => {
+          setProvinsi(value);
+          setKabupaten("");
+          setKecamatan("");
+          setPage(1);
+        }}
+        kabupaten={kabupaten}
+        onKabupaten={(value) => {
+          setKabupaten(value);
+          setKecamatan("");
+          setPage(1);
+        }}
+        kecamatan={kecamatan}
+        onKecamatan={handleFilterChange(setKecamatan)}
         status={status}
         onStatus={(v) => { setStatus(v); setPage(1); }}
         provinsiList={provinsiList}
+        kabupatenList={kabupatenList}
+        kecamatanList={kecamatanList}
         totalResults={filtered.length}
       />
 

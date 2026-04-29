@@ -118,39 +118,36 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
             </h2>
           </div>
           <p className="max-w-md text-xs leading-relaxed text-slate-500">
-            Ringkasan ini membantu warga tahu apa yang bisa mulai dibaca tanpa
-            menganggapnya sebagai kesimpulan final. {desa.terakhirDiperbaruiLabel}
+            Sumber: {primarySource ?? "belum tersedia"}. {desa.terakhirDiperbaruiLabel}
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {cards.map((card) => {
             const Icon = card.icon;
             const tone = toneClasses[card.tone];
 
             return (
-              <div key={card.title} className={`rounded-2xl border p-4 ${tone.card}`}>
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm ${tone.icon}`}>
+              <details key={card.title} className={`group rounded-2xl border p-3 ${tone.card}`}>
+                <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 rounded-xl">
+                  <div className={`mx-auto flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${tone.icon}`}>
                     <Icon size={17} />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-black text-slate-900">{card.title}</p>
-                      {card.statusKind
-                        ? <DataStatusBadge status={card.statusKind} />
-                        : (
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone.fallbackBadge}`}>
-                            {card.status}
-                          </span>
-                        )}
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                      {card.body}
-                    </p>
+                  <p className="mt-2 text-center text-xs font-black leading-tight text-slate-900">{card.title}</p>
+                  <div className="mt-2 flex justify-center">
+                    {card.statusKind
+                      ? <DataStatusBadge status={card.statusKind} size="xs" />
+                      : (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone.fallbackBadge}`}>
+                          {card.status}
+                        </span>
+                      )}
                   </div>
-                </div>
-              </div>
+                </summary>
+                <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                  {card.body}
+                </p>
+              </details>
             );
           })}
         </div>
@@ -161,18 +158,12 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
           <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-sky-600 shadow-sm">
             <SearchCheck size={18} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-black text-slate-950">Kenapa desa ini perlu dibaca?</p>
-            <div className="mt-3 grid grid-cols-1 gap-2 text-xs leading-relaxed text-slate-600 sm:grid-cols-3">
-              <p className="rounded-2xl bg-white/70 p-3">
-                Ada sumber publik yang bisa membantu warga memahami informasi desa.
-              </p>
-              <p className="rounded-2xl bg-white/70 p-3">
-                Dokumen perlu dibaca sebagai referensi sebelum menyimpulkan angka.
-              </p>
-              <p className="rounded-2xl bg-white/70 p-3">
-                Jika informasi belum lengkap, warga bisa bertanya ke pihak yang tepat.
-              </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+              <span className="rounded-full bg-white/80 px-3 py-1.5">Ada sumber awal</span>
+              <span className="rounded-full bg-white/80 px-3 py-1.5">Dokumen bisa dicek</span>
+              <span className="rounded-full bg-white/80 px-3 py-1.5">Pertanyaan bisa diarahkan</span>
             </div>
           </div>
         </div>

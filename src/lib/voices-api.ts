@@ -3,7 +3,7 @@
  * Komponen UI tidak perlu tahu dari mana data berasal.
  */
 
-import type { CitizenVoice } from "./citizen-voice";
+import type { CitizenVoice, VoiceReply } from "./citizen-voice";
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
@@ -62,4 +62,21 @@ export async function submitHelpful(voiceId: string) {
     throw new Error(data.error ?? "Gagal menandai berguna");
   }
   return res.json() as Promise<{ helpful: number }>;
+}
+
+export async function submitReply(voiceId: string, payload: {
+  text: string;
+  isAnon: boolean;
+}): Promise<VoiceReply> {
+  const res = await fetch(`/api/voices/${voiceId}/replies`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? "Gagal mengirim komentar");
+  }
+  const reply = await res.json();
+  return { ...reply, createdAt: new Date(reply.createdAt) };
 }

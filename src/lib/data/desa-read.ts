@@ -54,8 +54,11 @@ type DocumentRecord = {
   namaDokumen: string;
   jenisDokumen: string;
   status: string;
+  url: string | null;
+  lastCheckedAt: Date | null;
   dataStatus: string;
   updatedAt: Date;
+  source: { sourceName: string; sourceUrl: string | null } | null;
 };
 
 type DesaRecord = {
@@ -165,6 +168,9 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
       realisasi: toNumber(item.realisasi),
       persentase: Math.round(toNumber(item.persentase)),
     }));
+  const sourceNames = record.dataSources
+    .map((source) => source.sourceName)
+    .filter(Boolean);
   const dokumen = record.dokumenPublik
     .sort((a, b) => (b.tahun ?? 0) - (a.tahun ?? 0) || a.namaDokumen.localeCompare(b.namaDokumen))
     .map((doc) => ({
@@ -172,15 +178,15 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
       jenis: DOCUMENT_KIND[doc.jenisDokumen] ?? "Dokumen",
       tahun: doc.tahun ?? tahun,
       tersedia: doc.status === "tersedia" || doc.status === "needs_review",
+      url: doc.url ?? undefined,
+      sumber: doc.source?.sourceName ?? sourceNames[0] ?? undefined,
+      terakhirDicekLabel: formatFreshness(doc.lastCheckedAt ?? doc.updatedAt),
     }));
   const hasNeedsReviewSource = record.dataSources.some(
     (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review"
   );
   const hasSource = record.dataSources.length > 0 || Boolean(record.websiteUrl);
   const identityStatus = hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo";
-  const sourceNames = record.dataSources
-    .map((source) => source.sourceName)
-    .filter(Boolean);
   const freshnessDate = latestDate([
     record.updatedAt,
     latestSummary?.updatedAt,
@@ -285,8 +291,11 @@ async function fetchDesaRecords(): Promise<DesaRecord[]> {
           namaDokumen: true,
           jenisDokumen: true,
           status: true,
+          url: true,
+          lastCheckedAt: true,
           dataStatus: true,
           updatedAt: true,
+          source: { select: { sourceName: true, sourceUrl: true } },
         },
       },
     },
@@ -360,8 +369,11 @@ async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | nul
           namaDokumen: true,
           jenisDokumen: true,
           status: true,
+          url: true,
+          lastCheckedAt: true,
           dataStatus: true,
           updatedAt: true,
+          source: { select: { sourceName: true, sourceUrl: true } },
         },
       },
     },

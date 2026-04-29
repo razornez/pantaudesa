@@ -21,7 +21,7 @@ export default function Footer() {
               {FOOTER.tagline}
             </p>
           </div>
-          <p className="text-xs text-center text-slate-600">{FOOTER.note}</p>
+          <p className="text-xs text-center text-slate-600">Baca angka bersama sumber dan dokumen pendukungnya.</p>
           <p className="text-xs text-slate-600">{FOOTER.copyright(year)}</p>
         </div>
       </div>

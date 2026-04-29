@@ -125,6 +125,9 @@ export interface DokumenPublik {
   jenis: string;
   tahun: number;
   tersedia: boolean;
+  url?: string;
+  sumber?: string;
+  terakhirDicekLabel?: string;
 }
 
 export interface SkorTransparansi {

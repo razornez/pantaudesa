@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, Scale } from "lucide-react";
 import { RESPONSIBILITY_CARD } from "@/lib/copy";
+import { ASSETS } from "@/lib/assets";
 
 export default function ResponsibilityGuideCard() {
   return (
@@ -24,6 +26,9 @@ export default function ResponsibilityGuideCard() {
           <p className="mt-3 text-[10px] text-amber-700/70 leading-relaxed">
             {RESPONSIBILITY_CARD.disclaimer}
           </p>
+        </div>
+        <div className="hidden w-24 flex-shrink-0 self-end sm:block">
+          <Image src={ASSETS.mascotStanding} alt="Pak Waspada" width={96} height={132} className="object-contain" />
         </div>
       </div>
     </section>

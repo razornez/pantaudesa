@@ -32,6 +32,9 @@ export interface VoiceReply {
 export interface CitizenVoice {
   id:              string;
   desaId:          string;
+  desaNama?:       string;
+  desaKabupaten?:  string;
+  desaSlug?:       string;
   category:        VoiceCategory;
   text:            string;
   author:          string;

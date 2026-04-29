@@ -144,7 +144,19 @@ function CompRow({
   const bWins = hasNum && (higher === "up" ? numB > numA : numB < numA);
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-3 border-b border-slate-50 last:border-0">
+    <div className="border-b border-slate-50 py-3 last:border-0">
+      <div className="grid grid-cols-2 gap-2 sm:hidden">
+        <p className="col-span-2 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        <div className={`rounded-xl bg-slate-50 p-2 text-center ${aWins ? "text-emerald-700 font-black" : "text-slate-600"}`}>
+          <p className="text-[10px] font-semibold text-slate-400">Desa 1</p>
+          <span className="text-sm">{valA}</span>
+        </div>
+        <div className={`rounded-xl bg-slate-50 p-2 text-center ${bWins ? "text-emerald-700 font-black" : "text-slate-600"}`}>
+          <p className="text-[10px] font-semibold text-slate-400">Desa 2</p>
+          <span className="text-sm">{valB}</span>
+        </div>
+      </div>
+      <div className="hidden grid-cols-[1fr_auto_1fr] items-center gap-2 sm:grid">
       {/* Nilai A */}
       <div className={`text-right ${aWins ? "text-emerald-700 font-black" : "text-slate-600"}`}>
         <span className="text-sm">{valA}</span>
@@ -160,6 +172,7 @@ function CompRow({
       <div className={`text-left ${bWins ? "text-emerald-700 font-black" : "text-slate-600"}`}>
         <span className="text-sm">{valB}</span>
       </div>
+      </div>
     </div>
   );
 }
@@ -170,14 +183,14 @@ function DesaHeader({ desa, align }: { desa: Desa; align: "left" | "right" }) {
   const isLeft = align === "left";
   return (
     <Link href={`/desa/${desa.id}`} className="group block">
-      <div className={`flex flex-col gap-1 ${isLeft ? "items-start" : "items-end"}`}>
+      <div className={`flex flex-col gap-1 ${isLeft ? "items-start" : "items-start sm:items-end"}`}>
         <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getStatusColor(desa.status)}`}>
           {getStatusLabel(desa.status)}
         </span>
         <p className="text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
           {desa.nama}
         </p>
-        <p className={`text-xs text-slate-400 flex items-center gap-1 ${isLeft ? "" : "flex-row-reverse"}`}>
+        <p className={`text-xs text-slate-400 flex items-center gap-1 ${isLeft ? "" : "sm:flex-row-reverse"}`}>
           <MapPin size={10} /> {desa.kecamatan}
         </p>
         <div className="flex items-center gap-1 mt-1">
@@ -238,15 +251,15 @@ export default function BandingkanPage() {
       </div>
 
       {/* ── Picker ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
         <DesaPicker
           selected={desaA}
           exclude={desaB?.id ?? null}
           onSelect={d => setDesaA(d?.id ? d : null)}
           label="Desa Pertama"
         />
-        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-          <ArrowLeftRight size={15} className="text-slate-400" />
+        <div className="mx-auto flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-100">
+          <ArrowLeftRight size={15} className="rotate-90 text-slate-400 sm:rotate-0" />
         </div>
         <DesaPicker
           selected={desaB}
@@ -296,9 +309,9 @@ export default function BandingkanPage() {
         <div className="space-y-4">
 
           {/* Nama header */}
-          <div className="grid grid-cols-[1fr_32px_1fr] items-start gap-3">
+          <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[1fr_32px_1fr]">
             <DesaHeader desa={desaA} align="left" />
-            <div />
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 sm:bg-transparent">vs</div>
             <DesaHeader desa={desaB} align="right" />
           </div>
 
@@ -385,7 +398,7 @@ export default function BandingkanPage() {
           )}
 
           {/* CTA ke profil masing-masing */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Link
               href={`/desa/${desaA.id}`}
               className="flex items-center justify-center gap-1.5 bg-white border border-indigo-200 text-indigo-700 font-bold text-xs py-2.5 rounded-xl hover:bg-indigo-50 transition-colors"

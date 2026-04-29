@@ -27,10 +27,10 @@ function GlobalVoiceCard({
   return (
     <div className="space-y-1.5">
       <Link
-        href={`/desa/${voice.desaId}`}
+        href={`/desa/${voice.desaSlug ?? voice.desaId}`}
         className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 hover:text-indigo-800"
       >
-        Lihat data desa
+        {voice.desaNama ? `Lihat profil ${voice.desaNama}` : "Lihat profil desa"}
         <ArrowRight size={10} />
       </Link>
       <VoiceCard
@@ -73,7 +73,15 @@ export default function SuaraWargaPage() {
 
   const desaOptions = useMemo(
     () => [...new Set(voices.map((voice) => voice.desaId))]
-      .map((id) => ({ id, nama: `Desa ${id}`, kabupaten: "Dari data suara warga" }))
+      .map((id) => {
+        const voice = voices.find((item) => item.desaId === id);
+        return {
+          id,
+          slug: voice?.desaSlug ?? id,
+          nama: voice?.desaNama ?? "Desa belum tercatat",
+          kabupaten: voice?.desaKabupaten ?? "Wilayah belum tercatat",
+        };
+      })
       .sort((a, b) => a.nama.localeCompare(b.nama)),
     [voices]
   );
@@ -214,7 +222,7 @@ export default function SuaraWargaPage() {
               .map((desa) => (
                 <Link
                   key={desa.id}
-                  href={`/desa/${desa.id}/suara`}
+                  href={`/desa/${desa.slug}/suara`}
                   className="group flex items-center justify-between rounded-xl border border-slate-100 p-3 transition-all hover:border-indigo-200 hover:bg-indigo-50"
                 >
                   <div>

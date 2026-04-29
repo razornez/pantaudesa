@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import {
-  ThumbsUp, ThumbsDown, MessageCircle, ChevronDown, ChevronUp,
+  ThumbsUp, MessageCircle, ChevronDown, ChevronUp,
   Shield, Send, CheckCircle2, Clock, AlertCircle, ImageIcon,
 } from "lucide-react";
 import {
@@ -11,6 +11,7 @@ import {
   VOICE_CATEGORIES, STATUS_CONFIG,
   getAvatarBg, getInitial, relativeTime,
 } from "@/lib/citizen-voice";
+import { submitReply } from "@/lib/voices-api";
 
 // ─── Reply bubble ─────────────────────────────────────────────────────────────
 
@@ -131,30 +132,32 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
   const [showReplies,   setShowReplies]   = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText,     setReplyText]     = useState("");
-  const [replyName,     setReplyName]     = useState("");
   const [localReplies,  setLocalReplies]  = useState<VoiceReply[]>(voice.replies);
+  const [replySaving,   setReplySaving]   = useState(false);
+  const [replyError,    setReplyError]    = useState("");
 
   const officialReply = localReplies.find(r => r.isOfficialDesa);
 
   const handleBenar  = () => onVote?.(voice.id, "BENAR");
   const handleBohong = () => onVote?.(voice.id, "BOHONG");
 
-  const handleReplySubmit = (e: React.FormEvent) => {
+  const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
-    const newReply: VoiceReply = {
-      id:             `r-${Date.now()}`,
-      voiceId:        voice.id,
-      author:         replyName.trim() || "Anonim",
-      isAnon:         !replyName.trim(),
-      isOfficialDesa: false,
-      text:           replyText.trim(),
-      createdAt:      new Date(),
-    };
-    setLocalReplies(prev => [...prev, newReply]);
-    setReplyText(""); setReplyName("");
-    setShowReplyForm(false);
-    setShowReplies(true);
+    const text = replyText.trim();
+    if (!text || replySaving) return;
+    setReplySaving(true);
+    setReplyError("");
+    try {
+      const savedReply = await submitReply(voice.id, { text, isAnon: true });
+      setLocalReplies(prev => [...prev, savedReply]);
+      setReplyText("");
+      setShowReplyForm(false);
+      setShowReplies(true);
+    } catch (error) {
+      setReplyError(error instanceof Error ? error.message : "Komentar belum bisa dikirim.");
+    } finally {
+      setReplySaving(false);
+    }
   };
 
   return (
@@ -275,32 +278,31 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
                 </button>
               ) : (
                 <form onSubmit={handleReplySubmit} className="mt-2 space-y-2">
-                  <input
-                    type="text"
-                    value={replyName}
-                    onChange={e => setReplyName(e.target.value)}
-                    placeholder="Namamu (kosongkan = anonim)"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
-                  />
                   <textarea
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
-                    placeholder="Tulis komentarmu..."
+                    placeholder="Tulis komentar singkat..."
                     rows={2}
                     maxLength={300}
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
                   />
+                  <p className="text-[10px] leading-relaxed text-slate-400">
+                    Komentar tersimpan ke sistem dan ditampilkan sebagai anonim jika kamu belum masuk.
+                  </p>
+                  {replyError && (
+                    <p className="text-[10px] font-semibold text-rose-600">{replyError}</p>
+                  )}
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      disabled={!replyText.trim()}
+                      disabled={!replyText.trim() || replySaving}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-40"
                     >
-                      <Send size={11} /> Kirim
+                      <Send size={11} /> {replySaving ? "Mengirim..." : "Kirim"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setShowReplyForm(false); setReplyText(""); }}
+                      onClick={() => { setShowReplyForm(false); setReplyText(""); setReplyError(""); }}
                       className="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                     >
                       Batal

@@ -17,10 +17,13 @@ function shapeVoice(v: {
     id: string; isAnon: boolean; isOfficialDesa: boolean; text: string; createdAt: Date;
     author: { nama: string | null } | null;
   }[];
-}) {
+}, desa?: { nama: string; kabupaten: string; slug: string }) {
   return {
     id:        v.id,
     desaId:    v.desaId,
+    desaNama:  desa?.nama,
+    desaKabupaten: desa?.kabupaten,
+    desaSlug:  desa?.slug,
     category:  v.category as VoiceCategory,
     text:      v.text,
     author:    v.isAnon ? "Anonim" : (v.author?.nama ?? "Anonim"),
@@ -75,8 +78,21 @@ export async function GET(req: Request) {
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: VOICE_INCLUDE,
     });
+    const desaIds = [...new Set(voices.map((voice) => voice.desaId))];
+    const desaRows = desaIds.length > 0
+      ? await db.desa.findMany({
+        where: { OR: [{ id: { in: desaIds } }, { slug: { in: desaIds } }] },
+        select: { id: true, slug: true, nama: true, kabupaten: true },
+      })
+      : [];
+    const desaMap = new Map<string, { nama: string; kabupaten: string; slug: string }>();
+    desaRows.forEach((desa) => {
+      const value = { nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug };
+      desaMap.set(desa.id, value);
+      desaMap.set(desa.slug, value);
+    });
 
-    return NextResponse.json(voices.map(shapeVoice));
+    return NextResponse.json(voices.map((voice) => shapeVoice(voice, desaMap.get(voice.desaId))));
   } catch (error) {
     return handleApiError(error, "GET /api/voices");
   }

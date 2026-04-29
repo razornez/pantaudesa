@@ -3,8 +3,10 @@ import {
   FileText,
   Globe2,
   Info,
+  Layers3,
   MapPin,
   ShieldCheck,
+  Users2,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
@@ -19,6 +21,12 @@ export default function DesaDetailFirstView({ desa }: Props) {
   const totalDocs = desa.dokumen?.length ?? 0;
   const hasSource = (desa.jumlahSumber ?? 0) > 0 || Boolean(profil?.website);
   const primarySource = desa.sumber?.[0]?.nama ?? profil?.website;
+  const overviewItems = [
+    { label: "Penduduk", value: desa.penduduk > 0 ? `${desa.penduduk.toLocaleString("id-ID")} jiwa` : "Belum tercatat", icon: Users2 },
+    { label: "Sumber", value: `${desa.jumlahSumber ?? 0} sumber`, icon: Globe2 },
+    { label: "Dokumen", value: `${desa.jumlahDokumenPendukung ?? totalDocs} dokumen`, icon: FileText },
+    { label: "Kategori", value: desa.kategori, icon: Layers3 },
+  ];
 
   const quickFacts = [
     {
@@ -44,7 +52,7 @@ export default function DesaDetailFirstView({ desa }: Props) {
 
   return (
     <section className="space-y-4">
-      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/35 to-sky-50 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="p-6 sm:p-7">
             <div className="flex flex-wrap items-center gap-2">
@@ -73,6 +81,21 @@ export default function DesaDetailFirstView({ desa }: Props) {
               </p>
             )}
 
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {overviewItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="rounded-2xl border border-white bg-white/75 px-3 py-2.5 shadow-sm">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      <Icon size={11} aria-hidden />
+                      {item.label}
+                    </div>
+                    <p className="mt-1 truncate text-xs font-black text-slate-800">{item.value}</p>
+                  </div>
+                );
+              })}
+            </div>
+
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#dokumen-desa"
@@ -86,6 +109,9 @@ export default function DesaDetailFirstView({ desa }: Props) {
 
           <div className="border-t border-slate-100 bg-slate-50 p-5 sm:p-6 lg:border-l lg:border-t-0">
             <p className="text-sm font-black text-slate-900">Yang perlu kamu tahu dulu</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Baca sumbernya dulu. Nilai contoh ditandai (mock), dan dokumen asli tetap jadi rujukan utama.
+            </p>
             <div className="mt-3 space-y-3">
               {quickFacts.map((fact) => {
                 const Icon = fact.icon;

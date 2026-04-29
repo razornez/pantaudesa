@@ -421,5 +421,4 @@ export const FILTER = {
 export const FOOTER = {
   tagline:   "Kami hadir untuk menjawab pertanyaan yang selama ini tidak pernah dijawab — tentang uang desamu.",
   copyright: (year: number) => `© ${year} PantauDesa`,
-  note:      DATA_DISCLAIMER.short,
 } as const;

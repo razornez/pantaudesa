@@ -138,15 +138,16 @@ interface Props {
   topBaik:         Desa[];
   topRendah:       Desa[];
   provinsiRanking: ProvinsiRow[];
+  totalDesa:        number;
 }
 
-export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }: Props) {
+export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, totalDesa }: Props) {
   const [view, setView] = useState<View>("terbaik");
 
-  const views: { id: View; label: string; icon: LucideIcon }[] = [
-    { id: "terbaik",  label: "Capaian Tinggi", icon: Trophy },
-    { id: "provinsi", label: "Per Provinsi",   icon: Map },
-    { id: "ditinjau", label: "Perlu Ditinjau", icon: Search },
+  const views: { id: View; label: string; shortLabel: string; icon: LucideIcon }[] = [
+    { id: "terbaik",  label: "Capaian Tinggi", shortLabel: "Tinggi", icon: Trophy },
+    { id: "provinsi", label: "Per Provinsi",   shortLabel: "Provinsi", icon: Map },
+    { id: "ditinjau", label: "Perlu Ditinjau", shortLabel: "Ditinjau", icon: Search },
   ];
 
   return (
@@ -162,33 +163,35 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
             className="object-cover object-center"
             sizes="(max-width: 768px) 100vw, 400px"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/90" />
-          <div className="absolute bottom-2 left-4">
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-900/20 to-slate-950/65" />
+          <div className="absolute bottom-2 left-4 right-4">
             <div className="mb-1">
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 shadow-sm">
                 angka mock
               </span>
             </div>
-            <h2 className="text-base font-black text-slate-900 drop-shadow-sm">Prioritas Cek Transparansi</h2>
-            <p className="text-[10px] text-slate-600 font-medium">Urutan bantu baca, bukan penilaian final</p>
+            <h2 className="text-base font-black text-white drop-shadow">Desa yang Perlu Dilihat Lebih Dulu</h2>
+            <p className="text-[11px] font-semibold text-white/90 drop-shadow">Panduan membaca awal, bukan penilaian akhir.</p>
           </div>
         </div>
         <div className="px-5 pb-0 pt-1">
           {/* View toggle */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-hidden">
             {views.map(v => {
               const Icon = v.icon;
               return (
               <button
                 key={v.id}
                 onClick={() => setView(v.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-t-xl border-b-2 transition-all ${
+                className={`flex min-h-[44px] flex-1 items-center justify-center gap-1 px-2 py-2 text-[11px] font-bold rounded-t-xl border-b-2 transition-all sm:text-xs ${
                   view === v.id
                     ? "border-indigo-500 text-indigo-600 bg-indigo-50/60"
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 }`}
               >
-                <Icon size={13} /> {v.label}
+                <Icon size={13} />
+                <span className="sm:hidden">{v.shortLabel}</span>
+                <span className="hidden sm:inline">{v.label}</span>
               </button>
               );
             })}
@@ -205,12 +208,6 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
             {topBaik[0] && <PodiumBlock desa={topBaik[0]} rank={1} />}
             {topBaik[2] && <PodiumBlock desa={topBaik[2]} rank={3} />}
           </div>
-          {/* Rank 4-5 */}
-          {topBaik.slice(3).length > 0 && (
-            <div className="border-t border-slate-50 mt-2">
-              {topBaik.slice(3).map((d, i) => <RankRow key={d.id} desa={d} rank={i + 4} />)}
-            </div>
-          )}
         </div>
       )}
 
@@ -238,7 +235,7 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking }:
       {/* Footer CTA */}
       <div className="border-t border-slate-50 px-5 py-3">
         <Link href="/desa" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-          Lihat semua {20} desa <ArrowRight size={12} />
+          {totalDesa > 0 ? `Lihat semua ${totalDesa} desa` : "Lihat semua desa"} <ArrowRight size={12} />
         </Link>
       </div>
     </div>

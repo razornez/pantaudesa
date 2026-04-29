@@ -1,7 +1,7 @@
 import {
   Search,
   FileSearch,
-  BadgeCheck,
+  FlaskConical,
   MessageSquare,
   type LucideIcon,
 } from "lucide-react";
@@ -21,7 +21,7 @@ const steps: Step[] = [
   {
     title: "Lihat status data",
     body: "Pahami apakah informasinya masih demo, sumber ditemukan, atau perlu review.",
-    icon: BadgeCheck,
+    icon: FlaskConical,
   },
   {
     title: "Baca sumber/dokumen",
@@ -48,27 +48,25 @@ export default function CitizenJourneySection() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
-            <div
+            <details
               key={step.title}
-              className="relative rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+              className="group relative rounded-2xl border border-slate-100 bg-white p-3 shadow-sm"
             >
               {index < steps.length - 1 && (
-                <div className="absolute left-8 top-full hidden h-3 w-px bg-slate-200 md:left-auto md:right-[-7px] md:top-8 md:block md:h-px md:w-3" />
+                <div className="absolute left-full top-7 hidden h-px w-2 bg-slate-200 sm:block" />
               )}
-              <div className="flex items-start gap-3 md:block">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-                  <Icon size={18} />
+              <summary className="flex cursor-pointer list-none flex-col items-center gap-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 rounded-xl">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 transition-colors group-open:bg-sky-600 group-open:text-white">
+                  <Icon size={19} />
                 </div>
-                <div className="md:mt-4">
-                  <p className="text-sm font-bold text-slate-900">{step.title}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{step.body}</p>
-                </div>
-              </div>
-            </div>
+                <p className="text-xs font-black leading-tight text-slate-900">{step.title}</p>
+              </summary>
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">{step.body}</p>
+            </details>
           );
         })}
       </div>

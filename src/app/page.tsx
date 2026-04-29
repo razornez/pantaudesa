@@ -8,14 +8,10 @@ import SerapanDonut from "@/components/home/SerapanDonut";
 import DesaLeaderboard from "@/components/home/DesaLeaderboard";
 import AlertDiniSection from "@/components/home/AlertDiniSection";
 import CitizenJourneySection from "@/components/home/CitizenJourneySection";
-import DataStatusCardsSection from "@/components/home/DataStatusCardsSection";
-import DataProcessingTrustSection from "@/components/home/DataProcessingTrustSection";
 import DocumentDeskSection from "@/components/home/DocumentDeskSection";
-import PilotAreaStorySection from "@/components/home/PilotAreaStorySection";
-import PondasiTransparansiSection from "@/components/home/PondasiTransparansiSection";
 import { buildSummaryStats, buildTrendData, getDesaListResult } from "@/lib/data/desa-read";
 import type { Desa } from "@/lib/types";
-import { DATA_DISCLAIMER, SECTION } from "@/lib/copy";
+import { SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +25,12 @@ export default async function HomePage() {
   const topBaik = [...desaItems]
     .filter((d) => d.status === "baik")
     .sort((a, b) => b.persentaseSerapan - a.persentaseSerapan)
-    .slice(0, 5);
+    .slice(0, 3);
 
   const topRendah = [...desaItems]
     .filter((d) => d.status === "rendah")
     .sort((a, b) => a.persentaseSerapan - b.persentaseSerapan)
-    .slice(0, 5);
+    .slice(0, 3);
 
   // Provinsi ranking — includes best desa name per province
   const byProvinsi = desaItems.reduce<Record<string, { total: number; count: number; best: Desa }>>((acc, d) => {
@@ -53,7 +49,7 @@ export default async function HomePage() {
       best:  best.nama.replace(/^Desa\s+/, ""),
     }))
     .sort((a, b) => b.avg - a.avg)
-    .slice(0, 7);
+    .slice(0, 3);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -88,26 +84,20 @@ export default async function HomePage() {
             topBaik={topBaik}
             topRendah={topRendah}
             provinsiRanking={provinsiRanking}
+            totalDesa={desaItems.length}
           />
           <AlertDiniSection desa={desaItems} />
         </div>
       </section>
 
       <CitizenJourneySection />
-      <DataStatusCardsSection />
-      <DataProcessingTrustSection />
       <DocumentDeskSection />
-      <PilotAreaStorySection />
-      <PondasiTransparansiSection />
 
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
       <div>
         <h2 className="text-lg font-semibold text-slate-800 mb-1">{SECTION.ringkasanNasional}</h2>
         <p className="text-sm text-slate-500 mb-4">{SECTION.ringkasanNasionalSub}</p>
         <StatsCards stats={summaryStats} />
-        <p className="text-center text-xs text-slate-400 pb-2">
-          {DATA_DISCLAIMER.short}
-        </p>
       </div>
 
       {/* ── Charts + Leaderboard ─────────────────────────────────────────── */}

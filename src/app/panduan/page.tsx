@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   BookOpen, Search, ShieldCheck,
   TrendingUp, ArrowRight, ChevronDown,
-  Megaphone, Users, HelpCircle,
+  Megaphone, Users, HelpCircle, ClipboardCheck, FileSearch, MapPin,
 } from "lucide-react";
 import { AUTHORITY_HIGHLIGHTS, PHILOSOPHY } from "@/lib/copy";
 
@@ -139,6 +139,32 @@ const SECTIONS: Section[] = [
   },
 ];
 
+const METHOD_STEPS = [
+  "Sumber publik ditemukan dan diberi catatan asalnya.",
+  "Dokumen diklasifikasi sebagai APBDes, realisasi, profil, atau bahan pendukung.",
+  "Nilai contoh tetap ditandai (mock), sementara sumber belum otomatis dianggap benar final.",
+  "Review dilakukan sebelum status yang lebih kuat diberikan.",
+  "Warga membaca dokumen asli dan konteks sebelum bertanya atau menyimpulkan.",
+];
+
+const GUIDE_NOTES = [
+  {
+    title: "Cara membaca data tanpa menuduh",
+    body: "PantauDesa membantu warga membaca sumber dan dokumen. Kesimpulan tetap perlu melihat dokumen asli, konteks desa, dan pihak yang berwenang.",
+    icon: FileSearch,
+  },
+  {
+    title: "Metodologi ringkas",
+    body: "Data dirapikan dari sumber publik, dokumen pendukung, status review, dan catatan pembaruan agar warga tahu mana yang bisa mulai dicek.",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Pilot awal Arjasari",
+    body: "Area awal dipakai untuk belajar menata sumber, dokumen, dan status dengan hati-hati sebelum cakupan diperluas.",
+    icon: MapPin,
+  },
+];
+
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
 function FAQAccordion({ items }: { items: FAQItem[] }) {
@@ -220,6 +246,40 @@ export default function PanduanPage() {
       </div>
 
       {/* ── Quick nav ─────────────────────────────────────────────────────── */}
+      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="max-w-2xl">
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Metodologi & batas klaim</p>
+          <h2 className="mt-2 text-xl font-black text-slate-900">Cara membaca data tanpa menuduh</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            PantauDesa merapikan bahan baca warga. Sumber dan dokumen tetap menjadi rujukan utama, sementara nilai yang masih contoh ditandai langsung di dekat angkanya.
+          </p>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {GUIDE_NOTES.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.title} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-emerald-700">
+                  <Icon size={16} />
+                </div>
+                <p className="mt-3 text-sm font-black text-slate-900">{item.title}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{item.body}</p>
+              </div>
+            );
+          })}
+        </div>
+        <ol className="mt-5 grid gap-2 text-sm leading-relaxed text-slate-600">
+          {METHOD_STEPS.map((step, index) => (
+            <li key={step} className="flex gap-3 rounded-2xl bg-emerald-50 px-4 py-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
+                {index + 1}
+              </span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <div className="flex flex-wrap gap-2 justify-center">
         {SECTIONS.map(s => {
           const Icon = s.icon;

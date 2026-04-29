@@ -9,9 +9,15 @@ interface Props {
   onSearch: (v: string) => void;
   provinsi: string;
   onProvinsi: (v: string) => void;
+  kabupaten: string;
+  onKabupaten: (v: string) => void;
+  kecamatan: string;
+  onKecamatan: (v: string) => void;
   status: StatusSerapan;
   onStatus: (v: StatusSerapan) => void;
   provinsiList: string[];
+  kabupatenList: string[];
+  kecamatanList: string[];
   totalResults: number;
 }
 
@@ -25,13 +31,14 @@ const STATUS_OPTIONS: StatusOption[] = [
 ];
 
 export default function SearchFilterBar({
-  search, onSearch, provinsi, onProvinsi, status, onStatus, provinsiList, totalResults,
+  search, onSearch, provinsi, onProvinsi, kabupaten, onKabupaten, kecamatan, onKecamatan,
+  status, onStatus, provinsiList, kabupatenList, kecamatanList, totalResults,
 }: Props) {
-  const hasFilter = search || provinsi || status !== "semua";
+  const hasFilter = search || provinsi || kabupaten || kecamatan || status !== "semua";
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,0.75fr))]">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
           <input
@@ -52,7 +59,7 @@ export default function SearchFilterBar({
             </button>
           )}
         </div>
-        <div className="relative sm:w-64">
+        <div className="relative">
           <SlidersHorizontal size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
           <select
             value={provinsi}
@@ -62,6 +69,28 @@ export default function SearchFilterBar({
           >
             <option value="">{FILTER.allProvinsi}</option>
             {provinsiList.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div className="relative">
+          <select
+            value={kabupaten}
+            onChange={(e) => onKabupaten(e.target.value)}
+            aria-label="Filter kabupaten"
+            className="min-h-[44px] w-full px-3 pr-8 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition appearance-none cursor-pointer"
+          >
+            <option value="">Semua Kabupaten</option>
+            {kabupatenList.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </div>
+        <div className="relative">
+          <select
+            value={kecamatan}
+            onChange={(e) => onKecamatan(e.target.value)}
+            aria-label="Filter kecamatan"
+            className="min-h-[44px] w-full px-3 pr-8 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition appearance-none cursor-pointer"
+          >
+            <option value="">Semua Kecamatan</option>
+            {kecamatanList.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         </div>
       </div>
@@ -87,7 +116,7 @@ export default function SearchFilterBar({
         {hasFilter && (
           <button
             type="button"
-            onClick={() => { onSearch(""); onProvinsi(""); onStatus("semua"); }}
+            onClick={() => { onSearch(""); onProvinsi(""); onKabupaten(""); onKecamatan(""); onStatus("semua"); }}
             className="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 sm:ml-auto"
           >
             <X size={12} aria-hidden /> {FILTER.reset}
