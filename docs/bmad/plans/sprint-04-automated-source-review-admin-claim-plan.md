@@ -36,6 +36,55 @@ However, automation must stay legally and reputationally safe:
 6. Add audit trail for all claim, verification, upload, invite, and clarification actions.
 7. Prepare public source transparency UI: every section should show where data came from and when it was last updated.
 
+## Owner decisions recorded on 2026-04-29
+
+1. Support email must come from environment variable, not hardcoded.
+2. Invite admin desa is capped at maximum 5 admins per desa for the first version.
+3. Invited admins start as limited unless promoted by the first verified desa admin.
+4. Admin document upload is needed; storage choice should prefer a free/low-cost object storage option.
+5. Add public/internal button for reporting fake admin claims.
+6. Keep the UI simple and guided, not a blank form.
+
+## Storage recommendation for admin document uploads
+
+### Preferred MVP option: Supabase Storage
+
+Reason:
+
+- PantauDesa already uses Supabase/PostgreSQL.
+- It reduces integration complexity.
+- Supabase Storage has a free quota of 1 GB on the Free plan according to Supabase documentation.
+- Good enough for MVP if uploads are limited by file size/type.
+
+Recommended MVP limits:
+
+- PDF/JPG/PNG only.
+- Max file size: 5 MB per file.
+- Max files per claim/upload step: 3.
+- Store file metadata and hash in DB.
+- Store private bucket object path, not public permanent URL by default.
+- Use signed URLs for review access.
+
+### Alternative for larger free tier: Cloudflare R2
+
+Reason:
+
+- Cloudflare R2 has a larger monthly free tier: 10 GB-month storage, 1 million Class A operations, 10 million Class B operations, and free egress for Standard storage per Cloudflare docs.
+- Better for future larger document storage.
+- More integration work than Supabase Storage.
+
+Recommended decision:
+
+- Use Supabase Storage for Sprint 04 MVP.
+- Revisit Cloudflare R2 if storage grows or egress/file access becomes a cost concern.
+
+### Not preferred for MVP: AWS S3
+
+Reason:
+
+- Strong and mature, but billing/account setup is heavier for MVP.
+- AWS S3 pricing is pay-as-you-go, and current AWS Free Tier is credit-based for new customers.
+
 ## Key terminology
 
 ### Source status
@@ -153,7 +202,7 @@ For desa that cannot access email/website.
 
 This should not immediately verify them.
 
-User is guided to contact PantauDesa admin email with a clear format.
+User is guided to contact PantauDesa admin email from env with a clear format.
 
 Button:
 
@@ -161,13 +210,23 @@ Button:
 Hubungi Kami
 ```
 
-Suggested mailto target:
+Environment variable:
 
 ```text
-admin@pantaudesa.id
+SUPPORT_EMAIL
 ```
 
-If final admin email is different, update before implementation.
+Fallback environment variable if needed:
+
+```text
+NEXT_PUBLIC_SUPPORT_EMAIL
+```
+
+Implementation note:
+
+- Prefer server-side `SUPPORT_EMAIL` for email operations.
+- Use `NEXT_PUBLIC_SUPPORT_EMAIL` only for public mailto link if necessary.
+- Do not hardcode the final email address in UI.
 
 Suggested subject:
 
@@ -357,7 +416,9 @@ System sends invite link
 ↓
 Invitee signs in and accepts invite
 ↓
-Invitee becomes admin for the same desa, optionally DESA_LIMITED until email/channel checks pass
+Invitee starts as DESA_LIMITED for the same desa
+↓
+First verified desa admin can promote invitee to DESA_VERIFIED_ADMIN if appropriate
 ↓
 Audit trail records inviter, invitee, role, and acceptance
 ```
@@ -365,9 +426,12 @@ Audit trail records inviter, invitee, role, and acceptance
 Rules:
 
 - Only `DESA_VERIFIED_ADMIN` can invite another admin.
-- Invite should be scoped to one desa.
-- Invite should expire.
-- Existing admin remains accountable through audit log.
+- Invite is scoped to one desa.
+- Maximum 5 admins per desa for MVP.
+- Invite expires.
+- Invited admin starts as limited.
+- First verified desa admin can promote limited invitee.
+- Existing verified admin remains accountable through audit log.
 - Platform should be able to revoke role if abuse is reported.
 
 Public display:
@@ -523,6 +587,53 @@ ADMIN_DOCUMENT_UPLOAD_REVERTED
 ADMIN_CLARIFICATION_FLAGGED
 ```
 
+### Negative case 7 — Fake admin report
+
+Owner requested fake admin reporting.
+
+Public/internal button:
+
+```text
+Laporkan admin palsu
+```
+
+Where to show:
+
+- admin profile/badge area,
+- desa admin public badge area,
+- clarification card from admin,
+- admin document upload source note if needed.
+
+Report form should be guided, not blank:
+
+```text
+Apa masalahnya?
+- Saya tidak mengenal admin ini sebagai pihak desa
+- Admin ini memakai nama/jabatan yang salah
+- Dokumen/klarifikasi ini mencurigakan
+- Akun ini mengaku sebagai desa yang salah
+- Lainnya
+
+Ceritakan singkat masalahnya:
+Bukti/link pendukung, jika ada:
+Email pelapor, jika ingin dihubungi:
+```
+
+System behavior:
+
+- create report record,
+- notify platform reviewer/support,
+- attach to admin claim audit trail,
+- do not immediately remove admin without review unless high-risk abuse is detected,
+- optionally mark admin badge as `Sedang ditinjau` for high-risk reports.
+
+Audit event:
+
+```text
+FAKE_ADMIN_REPORT_SUBMITTED
+ADMIN_CLAIM_FLAGGED_BY_PUBLIC
+```
+
 ## Audit trail requirements
 
 Every important step must be recorded.
@@ -570,6 +681,8 @@ DOCUMENT_ADDED_BY_ADMIN
 DOCUMENT_UPDATED_BY_ADMIN
 CLARIFICATION_POSTED_BY_ADMIN
 ADMIN_ACTION_FLAGGED
+FAKE_ADMIN_REPORT_SUBMITTED
+ADMIN_CLAIM_FLAGGED_BY_PUBLIC
 ```
 
 Important:
@@ -626,6 +739,12 @@ or:
 
 ```text
 Klarifikasi dari <Nama Admin> — Admin Desa Terverifikasi
+```
+
+- show report link/button:
+
+```text
+Laporkan admin palsu
 ```
 
 Do not expose admin private email/phone publicly by default.
@@ -696,21 +815,49 @@ Schema change likely required, so must be gated.
 
 Allow verified desa admin to invite additional admins.
 
-### Sprint 04-005 — AI-assisted Source/Document Review
+Rules:
+
+- max 5 admins per desa for MVP,
+- invited admins start limited,
+- first verified desa admin can promote.
+
+### Sprint 04-005 — Admin Document Upload Storage
+
+Use Supabase Storage for MVP unless Iwan/Owner choose Cloudflare R2.
+
+Scope:
+
+- upload proof/supporting documents,
+- store metadata/hash,
+- private bucket + signed access,
+- source note for admin-uploaded documents.
+
+### Sprint 04-006 — Fake Admin Report Flow
+
+Add public/internal `Laporkan admin palsu` flow with audit trail.
+
+### Sprint 04-007 — AI-assisted Source/Document Review
 
 AI maps sources/documents and suggests status/risk flags.
 
 Keep human/admin responsibility boundaries clear.
 
-## Open questions before implementation
+## Resolved questions
 
-1. What is the official PantauDesa support email?
+1. Support email: use environment variable, not hardcoded.
+2. Invite admin limit: max 5 admins per desa for MVP.
+3. Invited admin status: limited first; first verified desa admin can promote.
+4. Admin document upload: needed; prefer Supabase Storage for MVP, consider Cloudflare R2 later.
+5. Fake admin reporting: needed.
+
+## Remaining open questions before implementation
+
+1. Exact environment variable name for support email: `SUPPORT_EMAIL`, `NEXT_PUBLIC_SUPPORT_EMAIL`, or both?
 2. Do we allow personal email if it is listed on official website contact page?
-3. Should the first verified admin be allowed to invite unlimited admins or a capped number?
-4. Should invited admins become fully verified immediately or limited until they pass channel check?
-5. What actions can `DESA_LIMITED` perform?
-6. Does admin document upload require file storage now, or only URL registration first?
-7. Do we need public dispute/report mechanism for fake admin claims?
+3. What actions can `DESA_LIMITED` perform before promotion?
+4. Does admin document upload in Sprint 04 support actual file upload or only proof documents first?
+5. Should fake-admin reports be public, internal only, or both?
+6. What threshold makes an admin badge show `Sedang ditinjau` after reports?
 
 ## Current decision status
 
