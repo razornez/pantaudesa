@@ -245,6 +245,96 @@ const documents = [
   },
 ];
 
+const perangkatNames = [
+  "H. Asep Supriatna, S.H.",
+  "Hj. Nani Rohaeni",
+  "Yudi Hermawan, A.Md.",
+  "Sandi Permana",
+  "Dadang Sutisna, A.Md.",
+  "Tuti Sundari",
+  "Ridwan Fauzi",
+  "Yeni Andriyani",
+  "Ode Mandra",
+  "Rini Wulandari",
+  "Tono Setiawan",
+  "Rika Novitasari",
+  "Sutikno, B.A.",
+  "Sunarti",
+  "Sigit Raharjo",
+  "Tutik Handayani",
+  "Slamet Riyadi",
+  "Wahyuni",
+  "Haryanto",
+  "Sari Dewi",
+  "Teguh Santoso",
+  "Umi Kulsum",
+  "Budi Prasetyo",
+  "Wulan Sari",
+  "H. Zainal Arifin, S.E.",
+  "Endang Suryati",
+  "Eko Wahyudi",
+  "Fitri Handayani",
+  "Sugeng Hariyanto",
+  "Mujiati",
+  "Agus Widodo",
+  "Lina Marlina",
+  "Suparmin",
+  "Nur Cahyati",
+  "Wahyu Pratama",
+  "Desi Ratnasari",
+  "Yohanes Andi, S.P.",
+  "Maria Goretti",
+  "Petrus Kalimantan",
+  "Anastasia Dewi",
+  "Markus Dius",
+  "Kristina Lampe",
+  "Yosef Kura",
+  "Theresia Nyai",
+  "H. Ahmad Fauzi, S.Ag.",
+  "Hj. Maimunah",
+  "Syaiful Bahri",
+  "Nurhayati",
+  "Rohmat Efendi",
+  "Sumiati",
+  "Dani Kurniawan",
+  "Ayu Lestari",
+  "Tgk. Mukhlis Ibrahim",
+  "Cut Nilawati",
+  "Zulkifli Yusuf",
+  "Mariani Putri",
+  "Hotma Nainggolan",
+  "Ria Simatupang",
+  "Togi Nababan",
+  "Lena Sitorus",
+  "H. Muh. Arief, S.Sos.",
+  "Hj. Hasnah Dg. Nai",
+  "Syarifuddin Kadir",
+  "Rahma Dewi",
+  "H. Lalu Mukhtar",
+  "Baiq Ernawati",
+  "Amaq Wirawan",
+  "Inaq Sumiati",
+  "Ridwan Lamadjido",
+  "Nurhafidah",
+  "Moh. Rifai",
+  "Rosmiati",
+  "Elius Wenda",
+  "Ones Kogoya",
+  "Tinus Pagawak",
+  "Yuliana Wetipo",
+  "H. Rusli Effendi, S.H.",
+  "Hj. Rusnita",
+  "Taufik Rahman",
+  "Sri Wahyuni",
+];
+
+const perangkatRoles = [
+  { jabatan: "Kepala Desa", periode: "2021-2027", kontakLabel: "Kanal resmi desa" },
+  { jabatan: "Sekretaris Desa", periode: null, kontakLabel: "Kanal resmi desa" },
+  { jabatan: "Bendahara Desa", periode: null, kontakLabel: null },
+  { jabatan: "Kaur Perencanaan", periode: null, kontakLabel: null },
+];
+
 const demoVillageRecords = [
   { id: "1", nama: "Desa Sukamaju", kecamatan: "Ciawi", kabupaten: "Bogor", provinsi: "Jawa Barat", total: 1250000000, realisasi: 1187500000, persen: 95, status: "baik", penduduk: 3420, kategori: "Infrastruktur" },
   { id: "2", nama: "Desa Harapan Jaya", kecamatan: "Cibinong", kabupaten: "Bogor", provinsi: "Jawa Barat", total: 980000000, realisasi: 784000000, persen: 80, status: "sedang", penduduk: 2890, kategori: "Pendidikan" },
@@ -406,6 +496,47 @@ async function seedDocuments() {
         status: "needs_review",
       },
     });
+  }
+}
+
+function perangkatSeedRows(desa, offset, sourceId) {
+  return perangkatRoles.map((role, index) => {
+    const name = perangkatNames[(offset + index) % perangkatNames.length];
+    return {
+      id: `perangkat-${desa.id}-${index + 1}`,
+      desaId: desa.id,
+      nama: name,
+      jabatan: role.jabatan,
+      periode: role.periode,
+      fotoUrl: null,
+      kontakLabel: role.kontakLabel,
+      dataStatus: "demo",
+      sourceId,
+    };
+  });
+}
+
+async function seedPerangkat() {
+  const perangkatSources = [
+    ...demoVillageRecords.map((desa) => ({
+      desaId: desa.id,
+      rows: perangkatSeedRows(desa, Number(desa.id) * 4, demoSourceId(desa.id)),
+    })),
+    ...desaRecords.map((desa, index) => ({
+      desaId: desa.id,
+      rows: perangkatSeedRows(desa, index * 4, desa.websiteUrl ? `source-desa-${desa.slug}-official-website` : null),
+    })),
+  ];
+
+  for (const item of perangkatSources) {
+    for (const row of item.rows) {
+      const { id, ...data } = row;
+      await prisma.perangkatDesa.upsert({
+        where: { id },
+        update: data,
+        create: { id, ...data },
+      });
+    }
   }
 }
 
@@ -686,9 +817,10 @@ async function main() {
   await seedDataSources();
   await seedDocuments();
   await seedDemoSourcesAndBudgets();
+  await seedPerangkat();
   await seedDemoVoices();
 
-  console.log(`Prepared demo seed records: ${desaRecords.length + demoVillageRecords.length} desa, ${dataSources.length + demoVillageRecords.length} sources, ${documents.length + demoVillageRecords.length * 5} documents, ${demoVillageRecords.length + desaRecords.length} summaries, ${(demoVillageRecords.length + desaRecords.length) * apbdesFields.length} APBDes items, ${voiceExamples.length} voices.`);
+  console.log(`Prepared demo seed records: ${desaRecords.length + demoVillageRecords.length} desa, ${dataSources.length + demoVillageRecords.length} sources, ${documents.length + demoVillageRecords.length * 5} documents, ${demoVillageRecords.length + desaRecords.length} summaries, ${(demoVillageRecords.length + desaRecords.length) * apbdesFields.length} APBDes items, ${(demoVillageRecords.length + desaRecords.length) * perangkatRoles.length} perangkat, ${voiceExamples.length} voices.`);
 }
 
 main()

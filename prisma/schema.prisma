@@ -42,6 +42,10 @@ model User {
   votes      VoiceVote[]
   helpfuls   VoiceHelpful[]
 
+  // Sprint 04 foundations
+  desaAdminClaims  DesaAdminClaim[]
+  desaAdminMembers DesaAdminMember[]
+
   @@map("users")
 }
 
@@ -179,6 +183,10 @@ model Desa {
   updatedAt       DateTime               @updatedAt
 
   dataSources       DataSource[]
+  perangkat         PerangkatDesa[]
+  desaAdminClaims   DesaAdminClaim[]
+  desaAdminMembers  DesaAdminMember[]
+  desaAdminInvites  DesaAdminInvite[]
   anggaranSummaries AnggaranDesaSummary[]
   apbdesItems       APBDesItem[]
   dokumenPublik     DokumenPublik[]
@@ -208,6 +216,7 @@ model DataSource {
   anggaranSummaries AnggaranDesaSummary[]
   apbdesItems       APBDesItem[]
   dokumenPublik     DokumenPublik[]
+  perangkatDesa     PerangkatDesa[]
 
   @@index([desaId])
   @@index([scopeType, scopeName])
@@ -281,6 +290,7 @@ model DokumenPublik {
 
   desa   Desa        @relation(fields: [desaId], references: [id], onDelete: Cascade)
   source DataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  attachments DokumenAttachment[]
 
   @@index([desaId, tahun])
   @@index([jenisDokumen])
@@ -288,6 +298,170 @@ model DokumenPublik {
   @@index([sourceId])
   @@index([dataStatus])
   @@map("dokumen_publik")
+}
+
+model PerangkatDesa {
+  id           String     @id @default(cuid())
+  desaId       String
+  nama         String
+  jabatan      String
+  periode      String?
+  fotoUrl      String?
+  kontakLabel  String?
+  dataStatus   DataStatus @default(demo)
+  sourceId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  desa   Desa        @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  source DataSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([desaId])
+  @@index([dataStatus])
+  @@index([sourceId])
+  @@map("perangkat_desa")
+}
+
+model DesaAdminClaim {
+  id              String           @id @default(cuid())
+  desaId          String
+  userId          String
+  status          DesaAdminStatus  @default(PENDING)
+  method          AdminClaimMethod?
+  officialEmail   String?
+  websiteUrl      String?
+  tokenHash       String?
+  tokenExpiresAt  DateTime?
+  verifiedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  desa Desa @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([desaId])
+  @@index([userId])
+  @@index([status])
+  @@map("desa_admin_claims")
+}
+
+model DesaAdminMember {
+  id           String           @id @default(cuid())
+  desaId       String
+  userId       String
+  role         DesaAdminRole    @default(LIMITED)
+  status       DesaAdminStatus  @default(LIMITED)
+  invitedById  String?
+  verifiedById String?
+  joinedAt     DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  desa Desa @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([desaId, userId])
+  @@index([desaId, status])
+  @@map("desa_admin_members")
+}
+
+model DesaAdminInvite {
+  id          String       @id @default(cuid())
+  desaId      String
+  email       String
+  tokenHash   String
+  invitedById String
+  status      InviteStatus @default(PENDING)
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  desa Desa @relation(fields: [desaId], references: [id], onDelete: Cascade)
+
+  @@index([desaId])
+  @@index([email])
+  @@index([status])
+  @@map("desa_admin_invites")
+}
+
+model AdminClaimAudit {
+  id             String   @id @default(cuid())
+  desaId         String?
+  actorUserId    String?
+  targetUserId   String?
+  claimId        String?
+  eventType      String
+  method         String?
+  previousStatus String?
+  nextStatus     String?
+  evidenceType   String?
+  evidenceUrl    String?
+  evidenceHash   String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([desaId])
+  @@index([actorUserId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("admin_claim_audits")
+}
+
+model FakeAdminReport {
+  id             String       @id @default(cuid())
+  desaId         String
+  reportedUserId String?
+  reporterUserId String?
+  reason         String
+  description    String?      @db.Text
+  evidenceUrl    String?
+  reporterEmail  String?
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([desaId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@map("fake_admin_reports")
+}
+
+model DokumenAttachment {
+  id           String   @id @default(cuid())
+  dokumenId    String
+  uploadedById String?
+  storagePath  String
+  fileName     String
+  fileType     String
+  fileSize     Int
+  fileHash     String?
+  createdAt    DateTime @default(now())
+
+  dokumen DokumenPublik @relation(fields: [dokumenId], references: [id], onDelete: Cascade)
+
+  @@index([dokumenId])
+  @@index([uploadedById])
+  @@map("dokumen_attachments")
+}
+
+model AIReviewResult {
+  id              String   @id @default(cuid())
+  targetType      String
+  targetId        String
+  model           String
+  summary         String?  @db.Text
+  suggestedStatus String?
+  confidence      String?
+  riskFlags       Json?
+  extractedFields Json?
+  rawResult       Json?
+  createdAt       DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@map("ai_review_results")
 }
 
 enum DataStatus {
@@ -360,6 +534,40 @@ enum DocumentType {
   lppd
   profile
   other
+}
+
+enum DesaAdminStatus {
+  PENDING
+  LIMITED
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum AdminClaimMethod {
+  OFFICIAL_EMAIL
+  WEBSITE_TOKEN
+  SUPPORT_REVIEW
+  INVITE
+}
+
+enum DesaAdminRole {
+  LIMITED
+  VERIFIED_ADMIN
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  REJECTED
 }
 
 // ─── NextAuth v5 required tables ──────────────────────────────────────────────

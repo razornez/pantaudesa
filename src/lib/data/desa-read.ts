@@ -61,6 +61,17 @@ type DocumentRecord = {
   source: { sourceName: string; sourceUrl: string | null } | null;
 };
 
+type PerangkatRecord = {
+  nama: string;
+  jabatan: string;
+  periode: string | null;
+  fotoUrl: string | null;
+  kontakLabel: string | null;
+  dataStatus: string;
+  updatedAt: Date;
+  source: { sourceName: string; sourceUrl: string | null } | null;
+};
+
 type DesaRecord = {
   id: string;
   slug: string;
@@ -78,6 +89,7 @@ type DesaRecord = {
   anggaranSummaries: SummaryRecord[];
   apbdesItems: APBDesRecord[];
   dokumenPublik: DocumentRecord[];
+  perangkat?: PerangkatRecord[];
 };
 
 const DOCUMENT_KIND: Record<string, string> = {
@@ -182,6 +194,14 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
       sumber: doc.source?.sourceName ?? sourceNames[0] ?? undefined,
       terakhirDicekLabel: formatFreshness(doc.lastCheckedAt ?? doc.updatedAt),
     }));
+  const perangkat = (record.perangkat ?? [])
+    .sort((a, b) => a.jabatan.localeCompare(b.jabatan) || a.nama.localeCompare(b.nama))
+    .map((item) => ({
+      jabatan: item.jabatan,
+      nama: item.nama,
+      periode: item.periode ?? undefined,
+      kontak: item.kontakLabel ?? undefined,
+    }));
   const hasNeedsReviewSource = record.dataSources.some(
     (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review"
   );
@@ -214,6 +234,7 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     kategori: record.kategori ?? "Demo",
     apbdes,
     dokumen,
+    perangkat,
     skorTransparansi: makeSkorTransparansi(percent, dokumen.length, record.dataSources.length),
     pendapatan: makePendapatan(totalAnggaran),
     sumber: record.dataSources.map((source) => ({
@@ -376,6 +397,19 @@ async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | nul
           source: { select: { sourceName: true, sourceUrl: true } },
         },
       },
+      perangkat: {
+        orderBy: [{ jabatan: "asc" }, { nama: "asc" }],
+        select: {
+          nama: true,
+          jabatan: true,
+          periode: true,
+          fotoUrl: true,
+          kontakLabel: true,
+          dataStatus: true,
+          updatedAt: true,
+          source: { select: { sourceName: true, sourceUrl: true } },
+        },
+      },
     },
   });
 }
@@ -397,7 +431,7 @@ const getCachedDesaItems = unstable_cache(
 
 const getCachedDesaDetailItem = unstable_cache(
   fetchDesaDetailItem,
-  ["pantau-desa-public-detail-v3"],
+  ["pantau-desa-public-detail-v4"],
   { revalidate: 300, tags: ["desa-public"] }
 );
 
