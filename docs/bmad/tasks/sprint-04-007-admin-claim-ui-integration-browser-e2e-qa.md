@@ -103,25 +103,122 @@ Rules:
 9. Rate-limit/anti-spam should be minimal and lightweight, without new dependency.
 10. The 10 user-facing admin-claim completeness items should be included in 04-007, but split into 04-007A and 04-007B so the work remains structured.
 
-## TDD-first / test-first rule
+## Engineering standards — mandatory
 
-Before or during implementation, add/update tests or at least explicit browser QA cases for every changed behavior.
+Developer must not only make the UI work. The implementation must follow clean-code and maintainability standards.
 
-Minimum expectation:
+### TDD-first / test-first
 
-- test/QA happy path,
-- invalid input,
-- unauthenticated access,
-- API error state,
-- loading/success/error UI,
-- token expired/invalid states where reachable,
-- one-user-one-desa rule,
-- resend/regenerate behavior,
-- invite permission and max-admin behavior where reachable,
-- Hubungi Admin form validation and send states,
-- no public data verified activation.
+For every new behavior or changed behavior:
 
-Do not rely only on visual manual testing if a helper or behavior can be covered with Vitest.
+1. Write or update tests first where practical.
+2. If a browser-only behavior cannot be covered by Vitest, write explicit browser QA cases before coding and report them in handoff.
+3. Tests/QA must cover:
+   - happy path,
+   - invalid input,
+   - unauthenticated access,
+   - unauthorized/ownership mismatch,
+   - API error state,
+   - loading/success/error UI,
+   - token expired/invalid states where reachable,
+   - one-user-one-desa rule,
+   - resend/regenerate behavior,
+   - invite permission and max-admin behavior where reachable,
+   - Hubungi Admin validation and send states,
+   - no public data verified activation.
+4. Do not mark a batch PASS if the main changed behavior has neither automated test nor explicit browser QA evidence.
+
+### SOLID / separation of concerns
+
+Implementation must keep responsibilities separated:
+
+- UI components render state and user interactions only.
+- API calling logic should live in a small typed client/helper or clearly isolated hook, not scattered across multiple JSX blocks.
+- State orchestration should be in a focused hook when the wizard state becomes complex.
+- Validation/parsing should be centralized where practical.
+- Status/copy mapping should be centralized so wording does not drift between profile card, wizard, timeline, and status panel.
+- Reusable components must not import page-specific data directly.
+
+Avoid:
+
+- one giant component containing fetch calls, validation, status mapping, timeline logic, and rendering all at once;
+- duplicated fetch/error handling across email, website token, invite, and Hubungi Admin flows;
+- arbitrary string status comparisons spread across components;
+- hidden side effects inside render logic;
+- client-side trust decisions that should belong to server/API.
+
+### Suggested component/hook boundaries
+
+Use existing structure where possible, but keep boundaries close to this shape:
+
+```text
+components/admin-claim/AdminClaimWizard.tsx
+components/admin-claim/AdminClaimStatusPanel.tsx
+components/admin-claim/AdminClaimTimeline.tsx
+components/admin-claim/AdminClaimEligibilityNotice.tsx
+components/admin-claim/AdminClaimVerificationMethod.tsx
+components/admin-claim/AdminInviteForm.tsx
+components/support/ContactAdminForm.tsx
+hooks/use-admin-claim-flow.ts
+lib/admin-claim/client.ts
+lib/admin-claim/ui-copy.ts
+```
+
+This is a suggested boundary, not a mandatory file list. If existing project structure already has better names, preserve consistency.
+
+### Reusable Hubungi Admin component rules
+
+`ContactAdminForm` / Hubungi Admin must be reusable:
+
+- accept props for context/source page where needed,
+- not hardcode only the claim page,
+- not hardcode private recipient in component code,
+- use the approved `CONTACT_EMAIL` server-side only,
+- never expose `CONTACT_EMAIL` as a public requirement unless already safe,
+- support subject, description, evidence/bukti, send state,
+- support validation and user-friendly error messages.
+
+### Type safety
+
+- Avoid `any` unless there is no reasonable alternative and explain why in comments or report.
+- Define request/response types for client calls where practical.
+- Treat API response errors as typed states, not only generic `catch` messages.
+- Do not assume enum/status values without checking existing Prisma/schema types.
+
+### React / Next.js best practices
+
+- Follow React Hooks rules.
+- Avoid unnecessary `useEffect` state synchronization loops.
+- Keep server-only logic out of client components.
+- Do not expose env secrets to client.
+- Do not put raw tokens into localStorage/sessionStorage unless Owner explicitly approves.
+- Prefer small client components for interactive pieces and keep server/page components lean.
+- Preserve SSR/build safety.
+
+### Error handling and UX consistency
+
+- Every API action must have loading, success, and failure UI.
+- Never fake success if API/email/env fails.
+- Error messages should be human-readable but must not leak sensitive details.
+- Keep trust copy consistent: admin verification is not public data verification.
+- Unsafe/private website URL errors must be explained safely without exposing internal checks.
+
+### Clean code and dead code
+
+- Remove unused imports, unused variables, and unused local helper functions introduced by this task.
+- Do not do broad unrelated dead-code cleanup in this task.
+- Do not remove dependencies/libraries without Owner approval.
+- Do not mass-disable ESLint rules.
+- If pre-existing lint debt appears, separate it clearly from new regressions.
+
+### Security/privacy
+
+- Do not expose private email/phone.
+- Do not expose raw tokens after initial generation UI session.
+- Do not log raw token or secrets.
+- Do not put private data in screenshots or committed docs.
+- Do not create public accusation states from Hubungi Admin messages.
+- Keep website token SSRF/private URL guard intact.
 
 ---
 
@@ -151,6 +248,14 @@ One-user-one-desa rule:
 
 If enforcing this requires schema/migration, stop and ask Owner.
 
+TDD/QA minimum:
+
+- unauthenticated user is blocked or redirected safely,
+- user with no active claim can proceed,
+- user with active claim/member for one desa cannot claim a second desa,
+- invalid desa is rejected,
+- blocked state copy is visible in browser.
+
 ## Scope A2 — Wire `/profil/klaim-admin-desa` to real admin-claim APIs
 
 Likely UI/components to inspect:
@@ -169,6 +274,14 @@ Required behavior:
 - check website token calls `POST /api/admin-claim/check-website-token`,
 - UI reads and displays real claim/admin status where possible,
 - UI never fakes success when API returns error.
+
+TDD/QA minimum:
+
+- submit success path,
+- submit API failure path,
+- email token success/failure path,
+- website token generation success/failure path,
+- website token check success/not-found/blocked path where practical.
 
 ## Scope A3 — Core UI states
 
@@ -269,6 +382,8 @@ Browser flows to test in this batch:
 9. Admin membership badge is visually/copy-wise distinct from public data verification.
 10. Admin access/next-step CTA exists after a successful state where appropriate.
 11. No public verified data is activated.
+12. Relevant TDD/QA evidence exists for changed behavior.
+13. Code follows the Engineering standards section above.
 
 ---
 
@@ -305,6 +420,13 @@ Support recovery for lost or expired verification attempts:
 - avoid unlimited rapid resend/regenerate.
 
 This must remain lightweight and dependency-free.
+
+TDD/QA minimum:
+
+- lost raw token state shows regenerate guidance,
+- resend email success/failure state,
+- regenerate website token success/failure state,
+- duplicate rapid submit is prevented or handled safely.
 
 ## Scope B3 — Claim method switch
 
@@ -358,6 +480,14 @@ Accept invite flow:
 - UI should display success/error result if redirected back to `/profil/klaim-admin-desa` with invite query params.
 - Do not create a full invite management dashboard in this task.
 
+TDD/QA minimum:
+
+- invalid email rejected,
+- non-eligible admin blocked/disabled,
+- invite success state,
+- invite API failure state,
+- max-admin error state if reachable.
+
 ## Scope B6 — Reusable Hubungi Admin email form
 
 Replace Fake Admin Report UI with a reusable Hubungi Admin component.
@@ -399,6 +529,15 @@ Browser QA:
 - send failure state works,
 - evidence URL/text is included in email body,
 - no private data is exposed.
+
+TDD/QA minimum:
+
+- required subject/description validation,
+- too-long payload rejected,
+- send success state,
+- send failure state,
+- evidence included in email body or request payload,
+- no auto-suspend or fake report UI path.
 
 ## Scope B7 — Minimal anti-spam / rate-limit posture
 
@@ -457,6 +596,8 @@ Browser flows to test in this batch:
 8. Hubungi Admin does not auto-punish, auto-suspend, or create public accusation states.
 9. Browser QA covers invite path, Hubungi Admin path, resume path, and regeneration path.
 10. No new dependency is introduced.
+11. Relevant TDD/QA evidence exists for changed behavior.
+12. Code follows the Engineering standards section above.
 
 ---
 
@@ -568,6 +709,8 @@ Do not implement in this task:
 6. No screenshot storage or Supabase bucket is introduced.
 7. Quality gate is reported.
 8. Browser QA notes and local screenshot cleanup status are reported.
+9. TDD/test-first evidence is reported for meaningful changed behavior.
+10. Implementation follows SOLID, separation of concerns, type safety, React/Next.js best practices, and clean-code standards described above.
 
 # Final handoff report format
 
@@ -594,6 +737,13 @@ Batch 04-007B:
 - Hubungi Admin reusable form:
 - anti-spam lite:
 - browser QA B:
+Engineering standards:
+- TDD/test-first evidence:
+- SOLID/separation of concerns:
+- typed API client/hooks:
+- reusable components:
+- clean error handling:
+- unused imports/dead code introduced by task removed:
 Env used:
 - RESEND_API_KEY:
 - RESEND_FROM:
