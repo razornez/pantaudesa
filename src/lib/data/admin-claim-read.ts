@@ -520,10 +520,6 @@ function fallbackProfileData(): AdminClaimProfileData {
   };
 }
 
-export function getAdminClaimSupportEmail() {
-  return resolveSupportEmail();
-}
-
 export async function getAdminClaimProfileData(userId: string | null | undefined): Promise<AdminClaimProfileData> {
   if (!db) return fallbackProfileData();
 

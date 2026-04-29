@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 import {
-  getAdminClaimSupportEmail,
   type AdminClaimDataStatus,
   type AdminClaimDesaOption,
   type AdminClaimProfileData,
@@ -34,6 +33,16 @@ const STEP_LABELS: Array<{ step: ClaimStep; label: string }> = [
   { step: 3, label: "Ikuti instruksi" },
   { step: 4, label: "Lihat status" },
 ];
+
+const CLAIM_STATUS_BADGE_TEXT: Record<AdminClaimStateCard["status"], { short: string; full: string }> = {
+  none: { short: "Belum klaim", full: "Belum mengajukan" },
+  pending: { short: "Pending", full: "Menunggu verifikasi" },
+  limited: { short: "Terbatas", full: "Akses terbatas" },
+  verified: { short: "Terverifikasi", full: "Admin Desa Terverifikasi" },
+  rejected: { short: "Belum diterima", full: "Pengajuan belum bisa diterima" },
+  suspended: { short: "Ditinjau", full: "Akses sedang ditinjau" },
+  platform: { short: "Platform", full: "Admin Platform" },
+};
 
 const METHOD_COPY: Record<ClaimMethod, {
   title: string;
@@ -109,9 +118,14 @@ const CLAIM_STATUS_COPY: Record<AdminClaimStateCard["status"], {
 
 function ClaimStatusBadge({ status }: { status: AdminClaimStateCard["status"] }) {
   const copy = CLAIM_STATUS_COPY[status];
+  const label = CLAIM_STATUS_BADGE_TEXT[status];
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${copy.tone}`}>
-      {copy.title}
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${copy.tone}`}
+      title={label.full}
+    >
+      <span className="sm:hidden">{label.short}</span>
+      <span className="hidden sm:inline">{label.full}</span>
     </span>
   );
 }
@@ -136,7 +150,7 @@ function MethodCard({
       onClick={onSelect}
       className={`w-full rounded-2xl border p-4 text-left transition-all ${
         active ? "border-indigo-300 bg-indigo-50 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"
-      }`}
+      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2`}
     >
       <div className="flex items-start gap-3">
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>
@@ -158,7 +172,11 @@ function MethodCard({
   if (method === "SUPPORT_REVIEW") {
     if (supportHref) {
       return (
-        <a href={supportHref} onClick={onSelect} className="block">
+        <a
+          href={supportHref}
+          onClick={onSelect}
+          className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
+        >
           <div className={`w-full rounded-2xl border p-4 text-left transition-all ${active ? "border-indigo-300 bg-indigo-50 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"}`}>
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>
@@ -236,7 +254,7 @@ function DesaOptionCard({
       onClick={onSelect}
       className={`w-full rounded-2xl border p-4 text-left transition-all ${
         selected ? "border-indigo-300 bg-indigo-50 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"
-      }`}
+      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -267,6 +285,7 @@ function DesaOptionCard({
 export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role"> }) {
   const [data, setData] = useState<AdminClaimProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [step, setStep] = useState<ClaimStep>(1);
   const [method, setMethod] = useState<ClaimMethod>("OFFICIAL_EMAIL");
   const [search, setSearch] = useState("");
@@ -282,11 +301,13 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
         }
         const payload = await response.json();
         if (!active) return;
+        setLoadError(false);
         setData(payload);
         setSelectedDesaId(payload.selectedDesaId ?? payload.desaOptions?.[0]?.id ?? null);
       })
       .catch(() => {
         if (!active) return;
+        setLoadError(true);
         setData(null);
       })
       .finally(() => {
@@ -298,7 +319,7 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
     };
   }, []);
 
-  const supportEmail = data?.supportEmail ?? getAdminClaimSupportEmail();
+  const supportEmail = data?.supportEmail ?? getClientSupportEmail();
   const initialSelectedDesaId = data?.selectedDesaId ?? data?.desaOptions?.[0]?.id ?? null;
   const effectiveSelectedDesaId = selectedDesaId ?? initialSelectedDesaId;
   const supportHref = supportEmail ? buildSupportMailto(supportEmail, data?.desaOptions.find((desa) => desa.id === effectiveSelectedDesaId)?.nama ?? "Desa Pilihan") : undefined;
@@ -351,7 +372,7 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
             <button
               type="button"
               onClick={scrollToFlow}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
             >
               Klaim sebagai Admin Desa
               <ArrowRight size={14} />
@@ -359,7 +380,7 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
             {supportHref ? (
               <a
                 href={supportHref}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
               >
                 Hubungi Kami
               </a>
@@ -385,7 +406,7 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
                     step === item.step
                       ? "border-indigo-300 bg-indigo-50 text-indigo-700"
                       : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"
-                  }`}
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2`}
                 >
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black">
                     {item.step}
@@ -415,15 +436,20 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
                     <input
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
+                      aria-label="Cari desa untuk klaim admin"
                       placeholder="Ketik nama desa, kecamatan, atau kabupaten"
                       className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
                     />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 lg:max-h-[32rem] lg:overflow-y-auto lg:pr-1">
                     {loading ? (
                       <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
                         Memuat desa dan status claim...
+                      </div>
+                    ) : loadError ? (
+                      <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                        Data claim admin belum bisa dimuat sekarang. Kamu masih bisa pakai tombol Hubungi Kami sambil kami cek koneksinya.
                       </div>
                     ) : filteredDesa.length > 0 ? (
                       filteredDesa.map((desa) => (
@@ -563,9 +589,15 @@ export default function ProfileAdminAccessCard({ user }: { user: Pick<AuthUser, 
               </div>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {demoStates.map((state) => (
-                <StateCard key={state.key} state={state} />
-              ))}
+              {demoStates.length > 0 ? (
+                demoStates.map((state) => (
+                  <StateCard key={state.key} state={state} />
+                ))
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500 sm:col-span-2">
+                  Contoh status belum termuat. Muat ulang halaman ini atau lanjutkan lewat bantuan support.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -662,4 +694,10 @@ function buildSupportMailto(email: string, desaName: string) {
     ].join("\n"),
   );
   return `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+function getClientSupportEmail() {
+  const publicEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim();
+  if (publicEmail) return publicEmail;
+  return process.env.NODE_ENV === "development" ? "support@pantaudesa.local" : null;
 }
