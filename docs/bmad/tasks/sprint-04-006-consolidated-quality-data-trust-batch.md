@@ -15,6 +15,7 @@ Owner clarified these rules:
 4. Store the actual instructions in BMAD task docs.
 5. Chat instruction to executor should only say to pull latest and work from the BMAD task path.
 6. Do not store model recommendations in the task doc; model selection is controlled by Owner.
+7. Check existing env first and reuse it; do not create duplicate env names.
 
 Decision:
 
@@ -34,7 +35,8 @@ It consolidates:
 - quality gate expectations,
 - guardrails,
 - single-PIC execution policy,
-- screenshot before/after requirements for UI changes.
+- screenshot before/after requirements for UI changes,
+- existing env usage for Resend/admin claim email.
 
 ## Required source docs
 
@@ -56,9 +58,32 @@ One task track has one execution PIC only.
 
 If a future task needs Asep, Owner must open it separately.
 
+## Existing env usage
+
+Use existing env names only for this Sprint 04 task.
+
+Current repo env names for auth/email/base URL:
+
+```text
+AUTH_URL
+RESEND_API_KEY
+RESEND_FROM
+```
+
+Rules:
+
+- Use `RESEND_API_KEY` for Resend client/API key.
+- Use `RESEND_FROM` as the sender email/from header.
+- Use `AUTH_URL` as the app base URL for admin-claim callback/magic link unless Owner later approves a separate base URL env.
+- Do not add `RESEND_FROM_EMAIL`, `EMAIL_FROM`, `SUPPORT_EMAIL`, `NEXT_PUBLIC_SUPPORT_EMAIL`, or `NEXT_PUBLIC_APP_URL` in this task.
+- If existing env is missing/invalid, report it as blocker; do not create duplicate env names or fake success.
+
+Owner confirmed `RESEND_API_KEY`, `RESEND_FROM`, and `AUTH_URL` already exist.
+
 ## Stop / escalate to Owner if
 
 - a new dependency is needed,
+- a new env var is needed,
 - Prisma/schema migration is needed beyond existing schema usage,
 - verified public data status becomes ambiguous,
 - website token checker cannot be made SSRF-safe,
@@ -106,6 +131,7 @@ Do not commit screenshots unless Owner explicitly asks.
 - Website token checker may only perform a safe single-page check with SSRF/private URL protection.
 - No destructive migration or seed reset without Owner approval.
 - No new dependency without Owner approval.
+- No new env var without Owner approval.
 - No read path back to hardcoded fallback.
 - No private email/phone exposed.
 - No admin self-promotion.
@@ -217,13 +243,16 @@ Tasks:
 
 Scope:
 
-- Create dedicated admin-claim email service using Resend.
+- Create dedicated admin-claim email service using existing Resend setup.
+- Use existing `RESEND_API_KEY` and `RESEND_FROM`.
+- Use existing `AUTH_URL` as the app base URL for callback/magic link.
 - Do not reuse NextAuth `signIn("resend")` directly.
+- Do not create new email/base URL env names.
 - Generate cryptographically random email token.
 - Store email token hash only.
 - Token expires and is single-use where relevant.
 - Send magic link only to allowed official email source.
-- Handle missing Resend env as `RESEND_ENV_MISSING`, not fake success.
+- Handle missing/invalid Resend env as `RESEND_ENV_MISSING`, not fake success.
 - Generate website verification token.
 - Store website token hash and expiry.
 - Show website raw token once in UI.
@@ -242,6 +271,8 @@ TDD minimum:
 Acceptance:
 
 - Admin claim email helper is separate from NextAuth login provider.
+- Admin claim email helper reuses `RESEND_API_KEY`, `RESEND_FROM`, and `AUTH_URL`.
+- No new env name is introduced.
 - Website token generation stores hash only and displays raw token once.
 - Audit events exist for generated verification artifacts.
 
@@ -316,6 +347,8 @@ Scope:
 - Invite token stored hash-only and expires.
 - Accept invite creates/updates `DesaAdminMember` as `LIMITED`.
 - Send invite email via dedicated admin-claim/invite email helper if env exists.
+- Reuse existing `RESEND_API_KEY`, `RESEND_FROM`, and `AUTH_URL`.
+- Do not create new email/base URL env names.
 - Write audit events `INVITE_CREATED`, `INVITE_ACCEPTED`.
 
 TDD minimum:
@@ -332,6 +365,7 @@ Acceptance:
 
 - Invite flow works without granting verified admin automatically.
 - Invite service respects max admin limit and ownership.
+- Invite email reuses existing env only.
 
 Screenshot requirement:
 
@@ -408,6 +442,11 @@ Batches completed:
 - Batch 3:
 - Batch 4:
 - Batch 5:
+Env used:
+- RESEND_API_KEY:
+- RESEND_FROM:
+- AUTH_URL:
+- new env introduced: YES/NO
 TDD/tests:
 - tests added/updated:
 - focused tests:
