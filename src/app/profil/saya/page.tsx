@@ -18,6 +18,7 @@ import { VOICE_CATEGORIES, STATUS_CONFIG, relativeTime } from "@/lib/citizen-voi
 import { mockDesa } from "@/lib/mock-data";
 import UserAvatar from "@/components/user/UserAvatar";
 import BadgePill from "@/components/user/BadgePill";
+import ProfileAdminAccessCard from "@/components/profil/ProfileAdminAccessCard";
 
 const desaMap = Object.fromEntries(mockDesa.map(d => [d.id, d.nama]));
 
@@ -532,6 +533,9 @@ export default function SayaProfilePage() {
 
           {/* Ganti PIN */}
           <ChangePinCard onSuccess={() => toast("PIN berhasil diperbarui ✓", "success")} onError={msg => toast(msg, "error")} />
+
+          {/* Admin desa */}
+          <ProfileAdminAccessCard user={user} />
 
           {/* Trust card */}
           {user.role === "WARGA" && (

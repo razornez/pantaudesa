@@ -1,4 +1,5 @@
 import prismaPkg from "../src/generated/prisma/index.js";
+import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -802,6 +803,339 @@ async function seedDemoVoices() {
   });
 }
 
+async function seedAdminClaimDemo() {
+  const demoPinHash = await bcrypt.hash("246810", 10);
+  const now = new Date();
+
+  const demoUsers = [
+    {
+      id: "admin-claim-demo-warga",
+      email: "warga.demo@pantaudesa.local",
+      name: "Warga Demo",
+      username: "warga-demo",
+      nama: "Warga Demo",
+      role: "WARGA",
+    },
+    {
+      id: "admin-claim-demo-pending",
+      email: "pengaju.admin.demo@pantaudesa.local",
+      name: "Pengaju Admin Demo",
+      username: "pengaju-admin-demo",
+      nama: "Pengaju Admin Demo",
+      role: "WARGA",
+    },
+    {
+      id: "admin-claim-demo-limited",
+      email: "admin.desa.limited.demo@pantaudesa.local",
+      name: "Admin Desa Limited",
+      username: "admin-desa-limited-demo",
+      nama: "Admin Desa Limited",
+      role: "DESA",
+    },
+    {
+      id: "admin-claim-demo-verified",
+      email: "admin.desa.verified.demo@pantaudesa.local",
+      name: "Admin Desa Verified",
+      username: "admin-desa-verified-demo",
+      nama: "Admin Desa Verified",
+      role: "DESA",
+    },
+    {
+      id: "admin-claim-demo-rejected",
+      email: "admin.desa.rejected.demo@pantaudesa.local",
+      name: "Admin Desa Rejected",
+      username: "admin-desa-rejected-demo",
+      nama: "Admin Desa Rejected",
+      role: "WARGA",
+    },
+    {
+      id: "admin-claim-demo-suspended",
+      email: "admin.desa.suspended.demo@pantaudesa.local",
+      name: "Admin Desa Suspended",
+      username: "admin-desa-suspended-demo",
+      nama: "Admin Desa Suspended",
+      role: "DESA",
+    },
+    {
+      id: "platform-admin-demo",
+      email: "platform.admin.demo@pantaudesa.local",
+      name: "Platform Admin Demo",
+      username: "platform-admin-demo",
+      nama: "Platform Admin Demo",
+      role: "ADMIN",
+    },
+  ];
+
+  for (const user of demoUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        name: user.name,
+        nama: user.nama,
+        username: user.username,
+        role: user.role,
+        emailVerified: now,
+        pinHash: demoPinHash,
+      },
+      create: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        nama: user.nama,
+        username: user.username,
+        role: user.role,
+        emailVerified: now,
+        pinHash: demoPinHash,
+      },
+    });
+  }
+
+  const claimStates = [
+    {
+      id: "admin-claim-pending-demo",
+      desaId: "4",
+      email: "pengaju.admin.demo@pantaudesa.local",
+      status: "PENDING",
+      method: "OFFICIAL_EMAIL",
+      officialEmail: "pemdes-demo@pantaudesa.local",
+      websiteUrl: "https://sumberrejeki.desa.id",
+      verifiedAt: null,
+      rejectedAt: null,
+      rejectionReason: null,
+    },
+    {
+      id: "admin-claim-verified-demo",
+      desaId: "4",
+      email: "admin.desa.verified.demo@pantaudesa.local",
+      status: "VERIFIED",
+      method: "WEBSITE_TOKEN",
+      officialEmail: "pemdes-demo@pantaudesa.local",
+      websiteUrl: "https://sumberrejeki.desa.id",
+      verifiedAt: now,
+      rejectedAt: null,
+      rejectionReason: null,
+    },
+    {
+      id: "admin-claim-rejected-demo",
+      desaId: "9",
+      email: "admin.desa.rejected.demo@pantaudesa.local",
+      status: "REJECTED",
+      method: "SUPPORT_REVIEW",
+      officialEmail: "kontak-demo@pantaudesa.local",
+      websiteUrl: null,
+      verifiedAt: null,
+      rejectedAt: now,
+      rejectionReason: "Bukti kanal resmi belum cukup untuk demo ini.",
+    },
+  ];
+
+  for (const claim of claimStates) {
+    const user = await prisma.user.findUnique({ where: { email: claim.email }, select: { id: true } });
+    if (!user) continue;
+
+    await prisma.desaAdminClaim.upsert({
+      where: { id: claim.id },
+      update: {
+        desaId: claim.desaId,
+        userId: user.id,
+        status: claim.status,
+        method: claim.method,
+        officialEmail: claim.officialEmail,
+        websiteUrl: claim.websiteUrl,
+        tokenHash: null,
+        tokenExpiresAt: null,
+        verifiedAt: claim.verifiedAt,
+        rejectedAt: claim.rejectedAt,
+        rejectionReason: claim.rejectionReason,
+      },
+      create: {
+        id: claim.id,
+        desaId: claim.desaId,
+        userId: user.id,
+        status: claim.status,
+        method: claim.method,
+        officialEmail: claim.officialEmail,
+        websiteUrl: claim.websiteUrl,
+        tokenHash: null,
+        tokenExpiresAt: null,
+        verifiedAt: claim.verifiedAt,
+        rejectedAt: claim.rejectedAt,
+        rejectionReason: claim.rejectionReason,
+      },
+    });
+  }
+
+  const memberStates = [
+    {
+      id: "admin-member-limited-demo",
+      desaId: "4",
+      email: "admin.desa.limited.demo@pantaudesa.local",
+      role: "LIMITED",
+      status: "LIMITED",
+      invitedById: "platform-admin-demo",
+      verifiedById: null,
+    },
+    {
+      id: "admin-member-verified-demo",
+      desaId: "4",
+      email: "admin.desa.verified.demo@pantaudesa.local",
+      role: "VERIFIED_ADMIN",
+      status: "VERIFIED",
+      invitedById: "platform-admin-demo",
+      verifiedById: "platform-admin-demo",
+    },
+    {
+      id: "admin-member-suspended-demo",
+      desaId: "1",
+      email: "admin.desa.suspended.demo@pantaudesa.local",
+      role: "LIMITED",
+      status: "SUSPENDED",
+      invitedById: "platform-admin-demo",
+      verifiedById: null,
+    },
+  ];
+
+  for (const member of memberStates) {
+    const user = await prisma.user.findUnique({ where: { email: member.email }, select: { id: true } });
+    if (!user) continue;
+
+    await prisma.desaAdminMember.upsert({
+      where: { desaId_userId: { desaId: member.desaId, userId: user.id } },
+      update: {
+        role: member.role,
+        status: member.status,
+        invitedById: member.invitedById,
+        verifiedById: member.verifiedById,
+      },
+      create: {
+        id: member.id,
+        desaId: member.desaId,
+        userId: user.id,
+        role: member.role,
+        status: member.status,
+        invitedById: member.invitedById,
+        verifiedById: member.verifiedById,
+      },
+    });
+  }
+
+  const invitee = await prisma.user.findUnique({
+    where: { email: "admin.desa.limited.demo@pantaudesa.local" },
+    select: { id: true },
+  });
+  if (invitee) {
+    await prisma.desaAdminInvite.upsert({
+      where: { id: "admin-invite-demo-limited" },
+      update: {
+        desaId: "4",
+        email: "admin.desa.limited.demo@pantaudesa.local",
+        tokenHash: "demo-token-hash",
+        invitedById: "platform-admin-demo",
+        status: "PENDING",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        acceptedAt: null,
+      },
+      create: {
+        id: "admin-invite-demo-limited",
+        desaId: "4",
+        email: "admin.desa.limited.demo@pantaudesa.local",
+        tokenHash: "demo-token-hash",
+        invitedById: "platform-admin-demo",
+        status: "PENDING",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        acceptedAt: null,
+      },
+    });
+  }
+
+  const auditRows = [
+    {
+      id: "admin-audit-claim-pending",
+      desaId: "4",
+      actorUserId: "admin-claim-demo-pending",
+      targetUserId: "admin-claim-demo-pending",
+      claimId: "admin-claim-pending-demo",
+      eventType: "CLAIM_STARTED",
+      method: "OFFICIAL_EMAIL",
+      previousStatus: null,
+      nextStatus: "PENDING",
+    },
+    {
+      id: "admin-audit-claim-verified",
+      desaId: "4",
+      actorUserId: "platform-admin-demo",
+      targetUserId: "admin-claim-demo-verified",
+      claimId: "admin-claim-verified-demo",
+      eventType: "CLAIM_VERIFIED",
+      method: "WEBSITE_TOKEN",
+      previousStatus: "PENDING",
+      nextStatus: "VERIFIED",
+    },
+    {
+      id: "admin-audit-member-limited",
+      desaId: "4",
+      actorUserId: "platform-admin-demo",
+      targetUserId: "admin-claim-demo-limited",
+      claimId: null,
+      eventType: "MEMBER_LIMITED",
+      method: "INVITE",
+      previousStatus: null,
+      nextStatus: "LIMITED",
+    },
+    {
+      id: "admin-audit-claim-rejected",
+      desaId: "9",
+      actorUserId: "platform-admin-demo",
+      targetUserId: "admin-claim-demo-rejected",
+      claimId: "admin-claim-rejected-demo",
+      eventType: "CLAIM_REJECTED",
+      method: "SUPPORT_REVIEW",
+      previousStatus: "PENDING",
+      nextStatus: "REJECTED",
+    },
+    {
+      id: "admin-audit-member-suspended",
+      desaId: "1",
+      actorUserId: "platform-admin-demo",
+      targetUserId: "admin-claim-demo-suspended",
+      claimId: null,
+      eventType: "MEMBER_SUSPENDED",
+      method: "INVITE",
+      previousStatus: "LIMITED",
+      nextStatus: "SUSPENDED",
+    },
+  ];
+
+  for (const audit of auditRows) {
+    await prisma.adminClaimAudit.upsert({
+      where: { id: audit.id },
+      update: {
+        desaId: audit.desaId,
+        actorUserId: audit.actorUserId,
+        targetUserId: audit.targetUserId,
+        claimId: audit.claimId,
+        eventType: audit.eventType,
+        method: audit.method,
+        previousStatus: audit.previousStatus,
+        nextStatus: audit.nextStatus,
+        metadata: { demo: true },
+      },
+      create: {
+        id: audit.id,
+        desaId: audit.desaId,
+        actorUserId: audit.actorUserId,
+        targetUserId: audit.targetUserId,
+        claimId: audit.claimId,
+        eventType: audit.eventType,
+        method: audit.method,
+        previousStatus: audit.previousStatus,
+        nextStatus: audit.nextStatus,
+        metadata: { demo: true },
+      },
+    });
+  }
+}
+
 function assertNoVerifiedData() {
   const hasVerified = [...desaRecords, ...dataSources, ...documents].some(
     (record) => record.dataStatus === "verified"
@@ -819,6 +1153,7 @@ async function main() {
   await seedDemoSourcesAndBudgets();
   await seedPerangkat();
   await seedDemoVoices();
+  await seedAdminClaimDemo();
 
   console.log(`Prepared demo seed records: ${desaRecords.length + demoVillageRecords.length} desa, ${dataSources.length + demoVillageRecords.length} sources, ${documents.length + demoVillageRecords.length * 5} documents, ${demoVillageRecords.length + desaRecords.length} summaries, ${(demoVillageRecords.length + desaRecords.length) * apbdesFields.length} APBDes items, ${(demoVillageRecords.length + desaRecords.length) * perangkatRoles.length} perangkat, ${voiceExamples.length} voices.`);
 }
