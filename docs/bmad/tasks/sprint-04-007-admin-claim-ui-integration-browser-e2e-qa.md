@@ -210,6 +210,16 @@ tmp/screenshots/sprint-04-007/
 
 Do not commit screenshots unless Owner explicitly asks.
 
+After code is committed/pushed and the screenshot notes are included in the handoff report, clean up local screenshot artifacts.
+
+Required cleanup command example:
+
+```bash
+rm -rf .artifacts/screenshots/sprint-04-007 tmp/screenshots/sprint-04-007
+```
+
+Cleanup must happen locally after push/handoff. Do not add screenshot storage or Supabase bucket in this task.
+
 ## Quality gate
 
 Run:
@@ -267,11 +277,12 @@ Do not implement in this task:
 6. UI displays claim/admin status from real backend state where available.
 7. Browser QA covers happy path, error path, unsafe URL path, and refresh/revisit behavior.
 8. Mobile and desktop UI remain usable.
-9. Screenshots/notes are captured locally and reported.
+9. Screenshots/notes are captured locally, reported, and then cleaned up locally after push/handoff.
 10. No new env names are introduced.
 11. No new dependency is introduced.
 12. No public verified data is activated.
-13. Quality gate is reported.
+13. No screenshot storage or Supabase bucket is introduced.
+14. Quality gate is reported.
 
 ## Final handoff report format
 
@@ -306,6 +317,7 @@ UI evidence:
 - before screenshots/notes:
 - after screenshots/notes:
 - screenshot folder:
+- local screenshot cleanup after push/handoff: DONE / NOT_DONE / SKIPPED_WITH_REASON
 Security/trust checks:
 - no public data verified activation:
 - no private exposure:
