@@ -11,6 +11,16 @@ Collect internal admin and post-claim Admin Desa features that are related to De
 
 This document is a backlog/task container only. It is not approved for implementation yet.
 
+## Mandatory zero-bug checklist
+
+Any future 04-008 execution subtask must read and satisfy:
+
+```text
+docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md
+```
+
+04-008 features are high-risk because they may touch internal permissions, admin status, uploaded documents, AI-assisted extraction, source status, and public Desa detail. A selected 04-008 execution task must not be marked PASS if unresolved issues exist in unauthorized access, stale state, audit trail, private data exposure, destructive actions, AI overwrite risk, storage privacy, or public data verification confusion.
+
 ## Why separate from Sprint 04-007
 
 Sprint 04-007 should focus on user-facing claim admin UI integration and browser QA.
@@ -365,6 +375,7 @@ Guardrails:
 - No raw sensitive document content in logs/screenshots.
 - No destructive migration without approval.
 - Every upload/extract/review/publish action must be audited.
+- Any 04-008G execution task must satisfy the Admin Desa zero-bug readiness checklist.
 
 Key decisions needed:
 
@@ -402,7 +413,7 @@ The following should not be folded into this internal-admin batch unless Owner s
 1. Finish Sprint 04-007 user-facing claim admin UI integration.
 2. Review real QA/browser feedback from 04-007.
 3. Decide whether the first 04-008 execution item should be review queue, revoke/suspend, audit viewer, support inbox, or Admin Desa document contribution.
-4. Split selected item into a single-PIC execution task with TDD and browser QA.
+4. Split selected item into a single-PIC execution task with TDD, zero-bug readiness, and browser QA.
 
 ## Approval status
 
