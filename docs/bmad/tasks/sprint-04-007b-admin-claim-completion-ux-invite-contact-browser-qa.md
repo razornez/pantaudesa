@@ -1,4 +1,4 @@
-# Sprint 04-007B — Admin Claim Completion UX, Invite, Hubungi Admin, and Browser QA
+# Sprint 04-007B — Admin Claim Completion UX, Invite, Hubungi Admin, Guide/FAQ, and Browser QA
 
 Date: 2026-04-29
 Status: draft-refinement / pending-owner-final-approval
@@ -9,7 +9,7 @@ Owner gate: Iwan/Owner requested Sprint 04-007 be split into 04-007A and 04-007B
 
 Complete the user-facing admin claim experience after the core browser flow in Sprint 04-007A works.
 
-This document covers recovery/resume UX, resend/regenerate behavior, method switch, active claim timeline, Invite Admin UI, reusable Hubungi Admin form, browser QA, caching/freshness, screenshots, and final handoff.
+This document covers recovery/resume UX, resend/regenerate behavior, method switch, active claim timeline, Invite Admin UI, reusable Hubungi Admin form, Admin Desa guide/FAQ, browser QA, caching/freshness, screenshots, and final handoff.
 
 ## Execution dependency
 
@@ -82,6 +82,9 @@ Rules:
 10. Full QA must pass before handoff; ESLint must not fail.
 11. UI changes require browser testing and desktop/mobile screenshots or screenshot notes.
 12. Caching/freshness must be checked so claim/admin status is not stale after actions.
+13. Only `VERIFIED` Admin Desa may invite another admin.
+14. Invited admin starts as `LIMITED` after accepting invite.
+15. Admin Desa needs complete guide and FAQ so rules are clear.
 
 ## Engineering standards — mandatory
 
@@ -93,7 +96,7 @@ For every new behavior or changed behavior:
 
 1. Write or update tests first where practical.
 2. If a browser-only behavior cannot be covered by Vitest, write explicit browser QA cases before coding and report them in handoff.
-3. Tests/QA must cover happy path, invalid input, unauthenticated access, unauthorized/ownership mismatch, API error state, loading/success/error UI, token expired/invalid states where reachable, resend/regenerate behavior, invite permission and max-admin behavior, Hubungi Admin validation and send states, and no public data verified activation.
+3. Tests/QA must cover happy path, invalid input, unauthenticated access, unauthorized/ownership mismatch, API error state, loading/success/error UI, token expired/invalid states where reachable, resend/regenerate behavior, invite permission and max-admin behavior, Hubungi Admin validation and send states, guide/FAQ visibility, and no public data verified activation.
 4. Do not mark 04-007B PASS if the main changed behavior has neither automated test nor explicit browser QA evidence.
 
 ### SOLID / separation of concerns
@@ -104,7 +107,7 @@ Implementation must keep responsibilities separated:
 - API calling logic should live in a small typed client/helper or clearly isolated hook, not scattered across multiple JSX blocks.
 - State orchestration should be in a focused hook when the wizard state becomes complex.
 - Validation/parsing should be centralized where practical.
-- Status/copy mapping should be centralized so wording does not drift between profile card, wizard, timeline, invite UI, Hubungi Admin, and status panel.
+- Status/copy mapping should be centralized so wording does not drift between profile card, wizard, timeline, invite UI, Hubungi Admin, guide/FAQ, and status panel.
 - Reusable components must not import page-specific data directly.
 
 Avoid one giant component, duplicated fetch/error handling across resend/regenerate/invite/Hubungi Admin flows, arbitrary string status comparisons spread across components, hidden side effects inside render logic, and client-side trust decisions that should belong to server/API.
@@ -114,6 +117,8 @@ Suggested boundaries, if consistent with current codebase:
 ```text
 components/admin-claim/AdminClaimTimeline.tsx
 components/admin-claim/AdminInviteForm.tsx
+components/admin-claim/AdminDesaGuide.tsx
+components/admin-claim/AdminDesaFAQ.tsx
 components/support/ContactAdminForm.tsx
 hooks/use-admin-claim-flow.ts
 lib/admin-claim/client.ts
@@ -152,6 +157,7 @@ Caching QA must include:
 - stale status is not shown after method switch or regeneration,
 - invite action does not require hard reload to show result if UI is expected to update,
 - Hubungi Admin send state does not create stale claim state,
+- guide/FAQ does not display stale or contradictory admin rules,
 - build/SSR remains safe.
 
 ### Type safety, React, error handling, clean code, privacy
@@ -237,21 +243,30 @@ Use existing status/audit data where readily available. If an audit timeline API
 
 Do not create a full audit viewer. Full audit viewer belongs to internal admin backlog.
 
-# Scope B5 — Invite Admin UI
+# Scope B5 — Invite Admin UI — VERIFIED admin only
 
 Add browser-usable UI for the existing invite admin service.
 
 Required behavior:
 
-- available only when current user is allowed to invite, or shown disabled with clear reason,
+- only `VERIFIED` Admin Desa may invite another admin,
+- `LIMITED`, `PENDING`, unauthenticated, and non-admin users must not be able to invite,
+- if user is not `VERIFIED`, show disabled state or clear explanation instead of hiding all context,
 - calls `POST /api/admin-claim/invite`,
 - form contains invitee email,
+- invitee email may be any valid email address, not limited to official desa domain,
 - validates email before send,
+- does not allow inviting self,
+- does not allow inviting an email/user already admin for that desa,
+- does not allow invite if invitee user is already managing another desa, where this can be checked safely,
 - displays loading/success/error state,
 - explains max 5 admins per desa,
-- explains invited admin starts as `LIMITED`, not verified admin,
+- enforces max 5 admins server-side,
+- explains invited admin starts as `LIMITED`, not `VERIFIED`,
+- explains inviter/verified admin is responsible for who they invite,
 - handles `403` non-verified admin gracefully,
 - handles max-admin reached gracefully,
+- handles expired/used/invalid invite result gracefully,
 - does not expose private user/contact data,
 - browser QA covers invite created and blocked states where practical.
 
@@ -259,15 +274,23 @@ Accept invite flow:
 
 - `GET /api/admin-claim/accept-invite` already exists.
 - UI should display success/error result if redirected back to `/profil/klaim-admin-desa` with invite query params.
+- If invitee is not logged in, flow should guide login/register before approval where supported.
+- After valid accept/approve, invitee becomes Admin Desa `LIMITED`.
+- Invite token must remain expiry-bound and single-use.
 - Do not create a full invite management dashboard in this task.
 
 TDD/QA minimum:
 
 - invalid email rejected,
 - non-eligible admin blocked/disabled,
+- `LIMITED` admin cannot invite,
+- only `VERIFIED` admin can invite,
+- invite self blocked,
 - invite success state,
 - invite API failure state,
-- max-admin error state if reachable.
+- max-admin error state if reachable,
+- accept invite success creates/reflects `LIMITED`,
+- expired/used invite error state where reachable.
 
 # Scope B6 — Reusable Hubungi Admin email form
 
@@ -316,7 +339,68 @@ TDD/QA minimum:
 - evidence included in email body or request payload,
 - no auto-suspend or fake report UI path.
 
-# Scope B7 — Minimal anti-spam / rate-limit posture
+# Scope B7 — Admin Desa guide and FAQ
+
+Add a complete guide and FAQ for Admin Desa so the rules are clear to users.
+
+Placement options:
+
+- within `/profil/klaim-admin-desa`,
+- as a reusable `AdminDesaGuide` / `AdminDesaFAQ` component,
+- or a linked help section/page if the existing app structure supports it.
+
+The guide must explain at minimum:
+
+1. What Admin Desa is.
+2. The difference between Admin Desa membership verification and public data verification.
+3. One user can only represent/manage one desa.
+4. Verification methods: email magic link and website token.
+5. Website token must be placed on the official desa website.
+6. Website verification should be renewed every 6 months.
+7. What `PENDING`, `LIMITED`, and `VERIFIED` mean.
+8. What a `LIMITED` admin can and cannot do.
+9. What a `VERIFIED` admin can and cannot do.
+10. Only `VERIFIED` Admin Desa can invite another admin.
+11. Invited admin starts as `LIMITED`.
+12. Max 5 admins per desa.
+13. Inviter is responsible for invited admins.
+14. Admin Desa verification does not automatically verify all public desa data.
+15. Public data/source status still follows review/governance workflow.
+16. What to do if email verification fails.
+17. What to do if website token is not found.
+18. What to do if token expires or raw token is lost.
+19. What to do if the user no longer manages the desa.
+20. How to contact admin/support via Hubungi Admin.
+
+FAQ must include at minimum:
+
+- Can I manage more than one desa?
+- Can I invite anyone as admin?
+- Why can only VERIFIED admin invite?
+- What happens after someone accepts an invite?
+- Why is invited admin only LIMITED?
+- Can a LIMITED admin invite others?
+- Why is the admin limit 5 people?
+- Does verified admin mean desa data is verified?
+- Why do I need to renew website verification every 6 months?
+- What if I do not have access to the official email?
+- What if I do not have access to the official website?
+- What if I entered the wrong email invite?
+- What if invite link expired?
+- What if I suspect fake admin activity?
+- How do I contact PantauDesa support?
+
+Guide/FAQ requirements:
+
+- copy must be concise but complete,
+- must not overpromise public data verification,
+- must not expose private contact data,
+- must stay consistent with status badges and invite rules,
+- should be reusable or easy to move later,
+- desktop and mobile layout must remain readable,
+- browser QA must verify guide/FAQ visibility and wording.
+
+# Scope B8 — Minimal anti-spam / rate-limit posture
 
 Keep rate-limit/anti-spam lightweight and dependency-free.
 
@@ -330,7 +414,7 @@ Minimum options:
 
 Do not add a new rate-limit dependency in this task.
 
-# Scope B8 — Browser QA test-data notes
+# Scope B9 — Browser QA test-data notes
 
 Handoff must include non-sensitive QA notes:
 
@@ -342,7 +426,8 @@ Handoff must include non-sensitive QA notes:
 - email path tested or reason skipped,
 - website token path tested or reason skipped,
 - invite path tested or reason skipped,
-- Hubungi Admin tested or reason skipped.
+- Hubungi Admin tested or reason skipped,
+- guide/FAQ checked or reason skipped.
 
 Do not commit secrets, raw tokens, private email/phone, or screenshots.
 
@@ -356,12 +441,15 @@ Browser flows to test:
 4. Website token regenerate works or fails honestly.
 5. Method switch works safely or is clearly blocked.
 6. Timeline shows current claim progress.
-7. Verified/allowed admin can invite another admin, or blocked state is shown if not eligible.
-8. Invite accept redirect result is shown if reachable.
-9. Hubungi Admin form validates and sends/fails honestly.
-10. Caching/freshness: after resume/regenerate/invite/contact actions, UI does not show stale state.
-11. Desktop layout remains usable.
-12. Mobile layout remains usable.
+7. `VERIFIED` admin can invite another admin.
+8. `LIMITED` admin cannot invite another admin and sees clear explanation.
+9. Invite accept redirect result is shown if reachable.
+10. Accepted invitee becomes or is shown as `LIMITED`.
+11. Hubungi Admin form validates and sends/fails honestly.
+12. Guide/FAQ is visible, readable, and consistent with rules.
+13. Caching/freshness: after resume/regenerate/invite/contact actions, UI does not show stale state.
+14. Desktop layout remains usable.
+15. Mobile layout remains usable.
 
 # Quality gate — must pass
 
@@ -400,7 +488,9 @@ Capture before/after desktop and mobile screenshots or clear screenshot notes fo
 - `/profil/klaim-admin-desa` resume/regenerate state,
 - timeline state,
 - invite admin UI state,
+- VERIFIED-only invite disabled/allowed state,
 - Hubungi Admin form state,
+- Admin Desa guide/FAQ state,
 - error state if practical.
 
 Store screenshots locally only in ignored artifact folder:
@@ -457,6 +547,8 @@ Do not implement in 04-007B:
 - No fake success if API/email/env fails.
 - Hubungi Admin must not auto-suspend, auto-punish, or create public accusation states.
 - Keep anti-spam/rate-limit lightweight and dependency-free.
+- Only `VERIFIED` Admin Desa may invite another admin.
+- Accepted invitee must start as `LIMITED` unless Owner later approves a different policy.
 
 # Acceptance criteria for 04-007B
 
@@ -464,32 +556,39 @@ Do not implement in 04-007B:
 2. Resend/regenerate behavior exists or is explicitly blocked with clear reason.
 3. Method switching works safely or is documented as not supported.
 4. Active claim timeline/simple progress indicator exists.
-5. Invite Admin UI can trigger real invite endpoint or clearly explain why user is not eligible.
-6. Invite accept redirect result is surfaced if reachable.
-7. Reusable Hubungi Admin component exists and can send a contact/report email to `CONTACT_EMAIL`.
-8. Hubungi Admin does not auto-punish, auto-suspend, or create public accusation states.
-9. Browser QA covers invite path, Hubungi Admin path, resume path, and regeneration path.
-10. No new dependency is introduced.
-11. Relevant TDD/QA evidence exists for changed behavior.
-12. Code follows the Engineering standards section above.
-13. Caching/freshness behavior is verified for resume/regenerate/invite/contact states.
-14. Desktop and mobile UI are tested and screenshot evidence/notes are reported.
-15. Full quality gate passes.
-16. ESLint has no failure at handoff.
+5. Invite Admin UI allows only `VERIFIED` Admin Desa to invite.
+6. Invite Admin UI blocks `LIMITED`/non-verified admin with a clear explanation.
+7. Invite Admin UI can trigger real invite endpoint for eligible `VERIFIED` admin.
+8. Invite accept redirect result is surfaced if reachable.
+9. Accepted invitee starts as `LIMITED`.
+10. Reusable Hubungi Admin component exists and can send a contact/report email to `CONTACT_EMAIL`.
+11. Hubungi Admin does not auto-punish, auto-suspend, or create public accusation states.
+12. Admin Desa guide and FAQ exist and explain rules clearly.
+13. Browser QA covers invite path, Hubungi Admin path, guide/FAQ path, resume path, and regeneration path.
+14. No new dependency is introduced.
+15. Relevant TDD/QA evidence exists for changed behavior.
+16. Code follows the Engineering standards section above.
+17. Caching/freshness behavior is verified for resume/regenerate/invite/contact states.
+18. Desktop and mobile UI are tested and screenshot evidence/notes are reported.
+19. Full quality gate passes.
+20. ESLint has no failure at handoff.
 
 # 04-007B handoff report format
 
 ```text
-Task: Sprint 04-007B Admin Claim Completion UX, Invite, Hubungi Admin, and Browser QA
+Task: Sprint 04-007B Admin Claim Completion UX, Invite, Hubungi Admin, Guide/FAQ, and Browser QA
 Status: PASS / PARTIAL_PASS / BLOCKED / REWORK
 Scope completed:
 - resume current claim flow:
 - resend/regenerate flow:
 - method switch:
 - claim timeline:
-- invite admin UI:
+- VERIFIED-only invite admin UI:
 - invite accept result UI:
+- accepted invitee starts LIMITED:
 - Hubungi Admin reusable form:
+- Admin Desa guide:
+- Admin Desa FAQ:
 - anti-spam lite:
 - caching/freshness B:
 - browser QA B:
@@ -511,7 +610,9 @@ Tests/QA:
 - browser flows tested:
 - resume/regenerate path:
 - invite path:
+- VERIFIED-only invite gate:
 - Hubungi Admin path:
+- guide/FAQ path:
 - test data notes:
 Quality gate:
 - npm run lint: PASS/FAIL
@@ -538,6 +639,8 @@ Security/trust checks:
 - no fake admin report UI:
 - Hubungi Admin sends email only:
 - lightweight anti-spam only:
+- only VERIFIED admin can invite:
+- invitee starts LIMITED:
 Files changed:
 Commit SHA(s):
 Known risks/blockers:
