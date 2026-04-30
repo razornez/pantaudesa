@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Building2, Car, Wrench, Leaf, Globe2, Landmark,
+  Building2, Car, Wrench, Globe2, Landmark,
   MapPin, Users, Phone, Mail, ExternalLink, Clock,
   ShoppingBag, ChevronDown, ChevronUp, TrendingUp,
   Stethoscope, GraduationCap, Dumbbell, BookOpen, Store,

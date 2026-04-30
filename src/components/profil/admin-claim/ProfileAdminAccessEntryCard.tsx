@@ -16,7 +16,7 @@ export default function ProfileAdminAccessEntryCard({
 }: {
   user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role">;
 }) {
-  const { data, loading, loadError, supportHref, isDemoAccount } = useAdminClaimProfile();
+  const { data, loading, loadError, isDemoAccount } = useAdminClaimProfile();
   const currentState = data?.currentState;
   const currentTone = currentState ? getCurrentStatusTone(currentState.status) : null;
 
@@ -81,20 +81,13 @@ export default function ProfileAdminAccessEntryCard({
           Klaim sebagai Admin Desa
           <ArrowRight size={14} />
         </Link>
-        {supportHref ? (
-          <a
-            href={supportHref}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
-          >
-            <LifeBuoy size={14} />
-            Hubungi Kami
-          </a>
-        ) : (
-          <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-400">
-            <LifeBuoy size={14} />
-            Hubungi Kami
-          </span>
-        )}
+        <Link
+          href="/profil/klaim-admin-desa#hubungi-admin"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
+        >
+          <LifeBuoy size={14} />
+          Hubungi Admin
+        </Link>
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-500">

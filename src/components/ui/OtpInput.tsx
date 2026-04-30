@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const LEN = 6;
 
@@ -16,11 +16,12 @@ export default function OtpInput({ onComplete, disabled, error, reset }: Props) 
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   const prevReset = useRef(reset);
-  if (reset !== prevReset.current) {
+  useEffect(() => {
+    if (reset === prevReset.current) return;
     prevReset.current = reset;
     setDigits(Array(LEN).fill(""));
     refs.current[0]?.focus();
-  }
+  }, [reset]);
 
   const handleChange = (i: number, val: string) => {
     const v = val.replace(/\D/g, "").slice(-1);

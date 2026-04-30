@@ -1,6 +1,7 @@
 import { MapPin, Search } from "lucide-react";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 import type { AdminClaimDesaOption } from "@/lib/data/admin-claim-read";
+import type { AdminClaimEligibility } from "@/lib/admin-claim/eligibility";
 
 export default function AdminClaimDesaPicker({
   loading,
@@ -12,6 +13,7 @@ export default function AdminClaimDesaPicker({
   selectedDesaId,
   onSelect,
   selectedDesa,
+  eligibility,
   onContinue,
 }: {
   loading: boolean;
@@ -23,6 +25,7 @@ export default function AdminClaimDesaPicker({
   selectedDesaId: string | null;
   onSelect: (desaId: string) => void;
   selectedDesa: AdminClaimDesaOption | null;
+  eligibility: AdminClaimEligibility;
   onContinue: () => void;
 }) {
   const visibleDesa = filteredDesa.slice(0, visibleCount);
@@ -118,11 +121,17 @@ export default function AdminClaimDesaPicker({
               Email resmi: {selectedDesa.officialEmailLabel}
             </span>
           </div>
+          {!eligibility.canStartNewClaim ? (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs leading-relaxed text-amber-800">
+              {eligibility.message}
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={onContinue}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
+              disabled={!eligibility.canStartNewClaim}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Lanjut ke cara verifikasi
             </button>

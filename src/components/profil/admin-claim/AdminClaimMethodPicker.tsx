@@ -1,4 +1,4 @@
-import { Globe2, LifeBuoy, Mail } from "lucide-react";
+import { Globe2, Mail } from "lucide-react";
 import type { ClaimMethod } from "@/components/profil/admin-claim/adminClaimCopy";
 import { METHOD_COPY } from "@/components/profil/admin-claim/adminClaimCopy";
 import type { AdminClaimDesaOption } from "@/lib/data/admin-claim-read";
@@ -6,7 +6,6 @@ import type { AdminClaimDesaOption } from "@/lib/data/admin-claim-read";
 const METHOD_ICON = {
   OFFICIAL_EMAIL: Mail,
   WEBSITE_TOKEN: Globe2,
-  SUPPORT_REVIEW: LifeBuoy,
 } as const;
 
 export default function AdminClaimMethodPicker({

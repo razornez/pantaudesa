@@ -8,15 +8,16 @@ import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 
 const MAX_ADMINS_PER_DESA = 5;
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const inviterId = session.user.id;
+    const inviterEmail = session.user.email.toLowerCase();
 
     if (!db) {
       return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
@@ -29,15 +30,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const { desaId, email } = body;
+    const desaId = body.desaId?.trim();
+    const email = body.email?.trim().toLowerCase();
     if (!desaId || !email) {
       return NextResponse.json({ error: "desaId and email are required" }, { status: 400 });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
+    if (email === inviterEmail) {
+      return NextResponse.json({ error: "Kamu tidak bisa mengundang email akunmu sendiri." }, { status: 400 });
+    }
 
-    // Verify inviter is a VERIFIED_ADMIN for this desa
     const inviterMember = await db.desaAdminMember.findFirst({
       where: { desaId, userId: inviterId, role: "VERIFIED_ADMIN", status: "VERIFIED" },
       select: { id: true },
@@ -46,7 +50,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only verified desa admins can invite" }, { status: 403 });
     }
 
-    // Enforce max 5 admins per desa
     const currentCount = await db.desaAdminMember.count({
       where: { desaId, status: { in: ["LIMITED", "VERIFIED"] } },
     });
@@ -61,7 +64,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Desa not found" }, { status: 404 });
     }
 
-    // Generate invite token — hash only
+    const existingUser = await db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        desaAdminMembers: {
+          where: { status: { in: ["LIMITED", "VERIFIED"] } },
+          select: { desaId: true, desa: { select: { nama: true } } },
+          take: 1,
+        },
+      },
+    });
+
+    if (existingUser) {
+      const existingMemberSameDesa = await db.desaAdminMember.findFirst({
+        where: { desaId, userId: existingUser.id, status: { in: ["LIMITED", "VERIFIED"] } },
+        select: { id: true },
+      });
+      if (existingMemberSameDesa) {
+        return NextResponse.json({ error: "Email ini sudah tercatat sebagai admin desa tersebut." }, { status: 409 });
+      }
+
+      const activeElsewhere = existingUser.desaAdminMembers[0];
+      if (activeElsewhere && activeElsewhere.desaId !== desaId) {
+        return NextResponse.json({
+          error: `Email ini sudah mengelola ${activeElsewhere.desa.nama}. Satu akun hanya boleh mengelola satu desa.`,
+        }, { status: 409 });
+      }
+    }
+
+    const duplicatePendingInvite = await db.desaAdminInvite.findFirst({
+      where: { desaId, email, status: "PENDING" },
+      select: { id: true, expiresAt: true },
+    });
+    if (duplicatePendingInvite && duplicatePendingInvite.expiresAt > new Date()) {
+      return NextResponse.json({ error: "Undangan aktif untuk email ini masih berlaku." }, { status: 409 });
+    }
+
     const rawToken = generateRawToken();
     const tokenHash = hashToken(rawToken);
     const expiresAt = tokenExpiresAt(INVITE_TTL_MS);

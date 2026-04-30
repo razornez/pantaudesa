@@ -1,20 +1,28 @@
 import Link from "next/link";
-import { ArrowLeft, LifeBuoy, RefreshCcw } from "lucide-react";
+import { ArrowLeft, RefreshCcw } from "lucide-react";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 import ClaimStatusBadge from "@/components/profil/admin-claim/ClaimStatusBadge";
 import { getCurrentStatusTone } from "@/components/profil/admin-claim/adminClaimCopy";
-import type { AdminClaimStateCard } from "@/lib/data/admin-claim-read";
+import type {
+  AdminClaimActiveClaim,
+  AdminClaimActiveMember,
+  AdminClaimStateCard,
+} from "@/lib/data/admin-claim-read";
 
 export default function AdminClaimStatusPanel({
   currentState,
+  currentClaim,
+  currentMember,
   showDemoLabel,
-  supportHref,
+  selectedDesaName,
   onBack,
   onRestart,
 }: {
   currentState: AdminClaimStateCard | null;
+  currentClaim: AdminClaimActiveClaim | null;
+  currentMember: AdminClaimActiveMember | null;
   showDemoLabel: boolean;
-  supportHref?: string;
+  selectedDesaName: string | null;
   onBack: () => void;
   onRestart: () => void;
 }) {
@@ -65,6 +73,16 @@ export default function AdminClaimStatusPanel({
           <div className="mt-4 rounded-2xl bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Catatan</p>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">{currentState.note}</p>
+            {currentClaim?.status === "PENDING" ? (
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Klaim aktif: {currentClaim.desaName}. Lanjutkan verifikasi dari langkah instruksi jika email belum masuk atau token website belum dicek.
+              </p>
+            ) : null}
+            {currentMember?.status === "VERIFIED" ? (
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Hanya status admin desa yang terverifikasi. Data publik desa tetap mengikuti workflow review tersendiri.
+              </p>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -90,15 +108,12 @@ export default function AdminClaimStatusPanel({
           <RefreshCcw size={14} />
           Ubah pilihan desa
         </button>
-        {supportHref ? (
-          <a
-            href={supportHref}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
-          >
-            <LifeBuoy size={14} />
-            Hubungi Kami
-          </a>
-        ) : null}
+        <Link
+          href="#hubungi-admin"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
+        >
+          Hubungi Admin
+        </Link>
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -106,6 +121,11 @@ export default function AdminClaimStatusPanel({
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
           Kamu bisa kembali ke profil untuk mengecek identitas akun atau status akses yang ringkas.
         </p>
+        {currentState?.status === "verified" && selectedDesaName ? (
+          <p className="mt-2 text-xs leading-relaxed text-emerald-700">
+            Status untuk {selectedDesaName} sudah siap dipakai untuk alur admin desa lanjutan, termasuk undang admin bila kamu berstatus VERIFIED.
+          </p>
+        ) : null}
         <Link
           href="/profil/saya"
           className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"

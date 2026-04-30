@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   CheckCircle2, XCircle, Clock, FileText, LogOut,
-  Eye, Filter, BarChart3, Users, ChevronDown, ChevronUp,
+  Eye, Filter, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { MOCK_UPLOADS, UploadedDoc, DocStatus } from "@/lib/auth-mock";

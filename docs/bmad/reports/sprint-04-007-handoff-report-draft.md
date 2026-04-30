@@ -1,90 +1,109 @@
 # Sprint 04-007 Handoff Report (DRAFT)
 
 Date: 2026-04-30
-Branch: sprint-04-007-claude-codex-trial
-Status: REWORK (owner review requested)
-Prepared-by: Claude/Codex trial
+Branch: codex/implement-sprint-04-007-tasks-and-draft-pr
+Status: REWORK (authenticated browser QA follow-up required)
+Prepared-by: Codex
 
 ## Scope execution order
 
-1. `docs/bmad/tasks/sprint-04-007a-admin-claim-core-browser-flow.md` — reviewed and mapped to current implementation.
-2. `docs/bmad/tasks/sprint-04-007b-admin-claim-completion-ux-invite-contact-browser-qa.md` — reviewed and mapped to current implementation.
-3. `docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md` — applied as gate for this draft handoff.
+1. `docs/bmad/tasks/sprint-04-007a-admin-claim-core-browser-flow.md`
+2. `docs/bmad/tasks/sprint-04-007b-admin-claim-completion-ux-invite-contact-browser-qa.md`
+3. `docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md`
 
 ## Summary
 
-Current `/profil/klaim-admin-desa` flow is now partially wired to real claim APIs (submit, email token, website token, website token check) but 04-007A/04-007B scope is not yet complete end-to-end.
+Sprint 04-007A and 04-007B are now substantially implemented in the admin-claim flow:
+- one-user-one-desa enforcement is active in submit and invite/accept paths,
+- `/profil/klaim-admin-desa` reads callback query params server-side and resumes from profile state,
+- resend/regenerate/timeline/invite/contact-admin/guide UX is wired,
+- repo-level lint blockers have been cleaned up,
+- required build gates now pass locally.
 
-This draft handoff is intentionally marked **REWORK** so owner/reviewer can validate gap list before full implementation and QA close.
+This draft remains **REWORK** because authenticated browser QA evidence is still incomplete for the full 04-007A/04-007B matrix. The anonymous `/profil/saya` blank-shell issue has been fixed, and both `/profil/saya` plus `/profil/klaim-admin-desa` now land cleanly in the login experience for anonymous sessions.
 
 ## A. 04-007A (Core Browser Flow) status
 
 ### A1 Eligibility check before form active
-- UI login redirect exists (`/profil/klaim-admin-desa` -> `/login`).
-- Full one-user-one-desa eligibility blocking in wizard entry state still needs explicit end-to-end proof and browser evidence.
+- PASS: user claim eligibility is computed from existing active claim/member state.
+- PASS: submit route blocks claiming another desa when user already manages or is actively claiming a different desa.
+- PASS: picker/instruction UI surfaces blocked state before continuing.
 
 ### A2 Real API wiring
-- Backend endpoints exist (`submit`, `generate-email-token`, `generate-website-token`, `check-website-token`, profile).
-- Instruction step now executes core API actions from browser UI; however, orchestration still needs hardening (resume/resend/cooldown/switch/timeline/invite/contact).
+- PASS: browser flow uses real endpoints for submit, email token, website token, token check, invite, and contact-admin.
+- PASS: orchestration moved into reusable client helper + hook layer.
 
 ### A3 Core UI states
-- Basic method/status copy exists.
-- Required exhaustive loading/success/error state matrix from 04-007A is not fully represented in UI yet.
+- PASS: wizard now shows eligibility, success/error notices, resend/regenerate actions, missing token-after-refresh warning, and callback result banners.
+- PASS: profile refresh is triggered after core actions so `/profil/klaim-admin-desa` reflects backend state.
 
 ### A4 Website token UX + 6-month renewal awareness
-- Services for website token exist.
-- Session-only raw token handling and explicit regenerate-after-refresh UX are not yet completed in wizard state machine.
+- PASS: website token flow supports generate, regenerate, verify, and explicit 6-month renewal copy.
+- PASS: raw token loss after refresh is handled with regenerate guidance.
 
 ## B. 04-007B (Completion UX + Invite + Contact + QA) status
 
 ### B1 Resume loader
-- Profile hook exists, but full resume flow from current backend claim state to actionable continuation is still incomplete.
+- PASS: wizard resumes from profile-backed `currentClaim` and `currentMember`.
 
 ### B2 Resend/regenerate
-- API surface exists but dedicated resend/regenerate UX, cooldown handling, and complete error states still need finalization.
+- PASS: email resend and website token regenerate are available in instruction step.
 
 ### B3 Method switch
-- Not fully implemented as safe method-switch UX in claim wizard.
+- PASS: wizard derives initial method from active claim and allows method selection for new flow.
 
 ### B4 Timeline
-- No completed simple claim timeline component yet.
+- PASS: timeline component added to explain claim progress.
 
 ### B5 Invite admin UX
-- Invite API exists.
-- Verified-only invite UI guardrail and complete browser UX/feedback is still pending.
+- PASS: verified-admin-only invite form is available in claim area.
+- PASS: backend blocks self-invite, duplicate invite, same-desa admin duplicates, cross-desa ownership conflicts, and max-admin overflow.
 
 ### B6 Hubungi Admin reusable form
-- Contact flow with `CONTACT_EMAIL` server-side routing remains pending.
+- PASS: reusable contact form posts to server-side `CONTACT_EMAIL` flow.
 
 ### B7 Guide/FAQ
-- Admin Desa guide + FAQ components/content are pending.
+- PASS: guide and FAQ content added to the admin-claim experience.
 
 ## C. Zero-bug readiness gate result
 
-Checklist result for this draft: **REWORK / NOT PASS**.
+Checklist result for this draft: **REWORK**.
 
-Blocking gate items not yet complete for PASS handoff:
-- `npm run lint` PASS evidence in this iteration,
-- `npm run test` PASS evidence in this iteration,
-- `npx tsc --noEmit` PASS evidence in this iteration,
-- `npx prisma generate` PASS evidence in this iteration,
-- `npm run build` PASS evidence in this iteration,
-- desktop/mobile browser screenshot evidence for changed UI,
-- full 04-007A/04-007B behavior coverage.
+### Command evidence
 
-## D. Reviewer-focused gap list (next action)
+- `npm run lint` -> PASS
+- `npm run test` -> PASS
+- `npx tsc --noEmit` -> PASS
+- `npx prisma generate` -> PASS
+- `npm run build` -> PASS
 
-1. Implement full client orchestration hook for claim submission, method actions, token check, and refresh/freshness update.
-2. Add explicit eligibility/ownership blocked states aligned with one-user-one-desa rule.
-3. Add complete completion UX (resume, resend/regenerate, method switch, timeline).
-4. Add verified-only invite UI and error matrix.
-5. Add reusable Hubungi Admin form (server-side CONTACT_EMAIL, anti-spam lightweight handling).
-6. Add Admin Desa guide/FAQ.
-7. Run mandatory gate commands and collect browser screenshot evidence (desktop + mobile).
-8. Re-run zero-bug checklist and update this report from REWORK to PASS/BLOCKED.
+### Build note
+
+- `npm run build` completed successfully with one existing warning from Turbopack/NFT tracing:
+  - `./next.config.ts Encountered unexpected file in NFT list`
+  - import trace included `src/generated/prisma/index.js`, `src/lib/prisma.ts`, and `src/app/api/voices/[id]/replies/route.ts`
+
+### Browser QA evidence
+
+Artifacts saved in:
+- `.artifacts/screenshots/sprint-04-007a/`
+- `.artifacts/screenshots/sprint-04-007b/`
+
+Observed results:
+- `/profil/klaim-admin-desa` desktop and mobile redirect to `/login` in a fresh anonymous browser session. Login screen renders correctly and remains usable.
+- `/profil/saya` desktop and mobile now also land in the login experience for an anonymous browser session.
+- Screenshot notes for anonymous QA are stored in:
+  - `.artifacts/screenshots/sprint-04-007a/qa-notes.md`
+  - `.artifacts/screenshots/sprint-04-007b/qa-notes.md`
+- Authenticated browser proof for submit, resend/regenerate, invite, contact, and resume states is still missing in this draft.
+
+## D. Reviewer-focused follow-up
+
+1. Run authenticated browser QA for submit, blocked second-desa, resend/regenerate, invite, contact-admin, and guide/FAQ states.
+2. Capture authenticated screenshots/notes for the required 04-007A and 04-007B states.
+3. Add broader automated tests for invite/contact flows if this branch is being promoted beyond owner review.
 
 ## E. Draft PR notes
 
-- This report is a **draft review artifact** only.
-- No merge to `main` requested.
-- Continue iteration on `sprint-04-007-claude-codex-trial` after owner/reviewer feedback.
+- This report reflects the current local implementation status, not a merge request to `main`.
+- Admin-claim scope is materially closer to PASS, but the browser QA finding above should be closed before calling zero-bug readiness complete.

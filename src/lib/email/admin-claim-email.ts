@@ -122,3 +122,52 @@ export async function sendAdminInviteEmail({
     return { ok: false, error: msg, code: "RESEND_SEND_FAILED" };
   }
 }
+
+export async function sendContactAdminEmail({
+  subject,
+  description,
+  evidence,
+  requesterEmail,
+  sourcePage,
+}: {
+  subject: string;
+  description: string;
+  evidence?: string;
+  requesterEmail?: string | null;
+  sourcePage?: string | null;
+}): Promise<AdminClaimEmailResult> {
+  if (!isResendConfigured() || !process.env.CONTACT_EMAIL) {
+    return { ok: false, error: "Contact admin env missing", code: "RESEND_ENV_MISSING" };
+  }
+
+  const from = process.env.RESEND_FROM!;
+
+  try {
+    const result = await resend.emails.send({
+      from,
+      to: process.env.CONTACT_EMAIL,
+      replyTo: requesterEmail ?? undefined,
+      subject: `[Hubungi Admin] ${subject}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2 style="color:#0f172a;">Pesan Hubungi Admin</h2>
+          <p><strong>Subjek:</strong> ${subject}</p>
+          <p><strong>Pengirim:</strong> ${requesterEmail ?? "anonim / tidak tersedia"}</p>
+          <p><strong>Halaman sumber:</strong> ${sourcePage ?? "-"}</p>
+          <p><strong>Deskripsi:</strong></p>
+          <div style="white-space:pre-wrap;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">${description}</div>
+          <p style="margin-top:16px;"><strong>Bukti / catatan tambahan:</strong> ${evidence || "-"}</p>
+        </div>
+      `,
+    });
+
+    if (result.error) {
+      return { ok: false, error: result.error.message, code: "RESEND_SEND_FAILED" };
+    }
+
+    return { ok: true, messageId: result.data?.id ?? "sent" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg, code: "RESEND_SEND_FAILED" };
+  }
+}

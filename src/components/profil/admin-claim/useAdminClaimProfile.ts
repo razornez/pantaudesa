@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AdminClaimProfileData } from "@/lib/data/admin-claim-read";
 import {
-  buildSupportMailto,
-  getClientSupportEmail,
   getSelectedDesa,
   isDemoSession,
 } from "@/components/profil/admin-claim/adminClaimCopy";
@@ -20,7 +18,7 @@ export function useAdminClaimProfile() {
 
   async function refresh() {
     setLoading(true);
-    return fetch("/api/admin-claim/profile")
+    return fetch("/api/admin-claim/profile", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`admin claim profile load failed: ${response.status}`);
@@ -38,24 +36,18 @@ export function useAdminClaimProfile() {
         setLoading(false);
       });
   }
-
-  const supportEmail = data?.supportEmail ?? getClientSupportEmail();
   const defaultDesaId = data?.selectedDesaId ?? data?.desaOptions?.[0]?.id ?? null;
   const defaultDesa = useMemo(
     () => getSelectedDesa(data?.desaOptions ?? [], defaultDesaId),
     [data?.desaOptions, defaultDesaId],
   );
-  const supportHref = supportEmail && defaultDesa
-    ? buildSupportMailto(supportEmail, defaultDesa.nama)
-    : undefined;
 
   return {
     data,
     loading,
     loadError,
-    supportEmail,
-    supportHref,
     defaultDesaId,
+    defaultDesa,
     isDemoAccount: isDemoSession(data),
     refresh,
   };
