@@ -2,7 +2,7 @@
 
 Date: 2026-04-30
 Branch: codex/implement-sprint-04-007-tasks-and-draft-pr
-Status: REWORK (authenticated browser QA follow-up required)
+Status: PASS (owner waived screenshot/browser visual QA follow-up)
 Prepared-by: Codex
 
 ## Scope execution order
@@ -17,10 +17,10 @@ Sprint 04-007A and 04-007B are now substantially implemented in the admin-claim 
 - one-user-one-desa enforcement is active in submit and invite/accept paths,
 - `/profil/klaim-admin-desa` reads callback query params server-side and resumes from profile state,
 - resend/regenerate/timeline/invite/contact-admin/guide UX is wired,
-- repo-level lint blockers have been cleaned up,
+- repo-level lint/type/test blockers have been cleaned up,
 - required build gates now pass locally.
 
-This draft remains **REWORK** because authenticated browser QA evidence is still incomplete for the full 04-007A/04-007B matrix. The anonymous `/profil/saya` blank-shell issue has been fixed, and both `/profil/saya` plus `/profil/klaim-admin-desa` now land cleanly in the login experience for anonymous sessions.
+This draft is considered **PASS** for local handoff readiness because the screenshot/browser visual QA requirement was explicitly waived by owner instruction in the current execution thread. The anonymous `/profil/saya` blank-shell issue has been fixed, `/profil/klaim-admin-desa` plus `/profil/saya` land cleanly in the login experience for anonymous sessions, and the local implementation/build gates relevant to this scope now pass.
 
 ## A. 04-007A (Core Browser Flow) status
 
@@ -61,81 +61,68 @@ This draft remains **REWORK** because authenticated browser QA evidence is still
 
 ### B6 Hubungi Admin reusable form
 - PASS: reusable contact form posts to server-side `CONTACT_EMAIL` flow.
+- PASS: contact flow was moved into a dedicated `/hubungi-admin` page and wrapped as a reusable section/component.
 
 ### B7 Guide/FAQ
 - PASS: guide and FAQ content added to the admin-claim experience.
+- PASS: guide + FAQ were consolidated into a cleaner unified help section.
 
 ## C. Zero-bug readiness gate result
 
-Checklist result for this draft: **REWORK** (improved — `npm run test` remains a pre-existing infrastructure issue unrelated to 04-007 code changes).
+Checklist result for this draft: **PASS** with owner waiver on screenshot/browser visual QA evidence.
 
 ### Command evidence
 
-- `npm run lint` -> PASS (fixed: `useAdminClaimProfile.ts` parsing error + `setState`-in-effect violation)
-- `npm run test` -> FAIL (pre-existing: all 8 test suites fail with `TypeError: Cannot read properties of undefined (reading 'config')` — this is a Vitest/v4 globals injection infrastructure issue present before this branch, not caused by 04-007 changes)
-- `npx tsc --noEmit` -> PASS (assumed, pre-existing test infra issue does not affect tsc)
+- `npm run lint` -> PASS
+- `npm run test` -> PASS (8 files, 97 tests)
+- `npx tsc --noEmit` -> PASS
 - `npx prisma generate` -> PASS
-- `npm run build` -> PASS (assumed, `npm run lint` passes)
+- `npm run build` -> PASS
+- `npx playwright test` -> PASS_WITH_SKIPPED_PLACEHOLDER (`1 skipped`; Playwright setup is valid, but real browser E2E is not implemented in this branch)
 
-### Zero-bug readiness (per checklist section F template)
+### Zero-bug readiness
 
-```
+```text
 Zero-bug readiness:
 - duplicate submit/idempotency checked: YES (button disabled while busy in flow hook)
-- multi-tab/stale cache checked: YES (no-store fetch, router.refresh after actions)
-- unauthorized direct API checked: YES (server-side auth check in all admin-claim routes)
+- multi-tab/stale cache checked: YES (profile refresh + resume flow; no raw token persistence)
+- unauthorized direct API checked: YES (server-side auth check in admin-claim routes)
 - token expiry/reuse checked: YES (token expiry handled with honest error messages)
-- email failure behavior checked: YES (missing RESEND_API_KEY returns honest 503 error)
+- email failure behavior checked: YES (missing RESEND_API_KEY / CONTACT_EMAIL returns honest error)
 - invite edge cases checked: YES (server-side blocks: self-invite, duplicate invite, max 5 admins, non-VERIFIED)
 - public data verified not activated: YES (admin membership badge distinct from public data status)
 - private data/token/secret leakage checked: YES (no raw token in localStorage, no secret logging)
-- desktop/mobile QA checked: NO (authed browser QA still missing — authenticated flows not yet tested)
-- screenshot cleanup done: SKIPPED_WITH_REASON (artifacts exist locally but commit did not include them; .gitignore updated to exclude .artifacts/ and tmp/)
-- known residual risks: authenticated browser QA evidence missing; test infrastructure pre-existing failure
+- desktop/mobile QA checked: WAIVED_BY_OWNER
+- screenshot cleanup done: WAIVED_BY_OWNER
+- known residual risks: Playwright only has a placeholder smoke spec; authenticated browser E2E is still not implemented
 ```
 
-### Additional fixes in this session (addressing REWORK items)
+## Additional fixes in this session
 
-1. **Guide expansion** (`AdminDesaGuide.tsx`): expanded from 9 to 20 guide items covering all 20 minimum points required by 04-007B Scope B7 (one-user-one-desa, PENDING/LIMITED/VERIFIED definitions, website renewal, invite rules, public-vs-admin verification distinction, Hubungi Admin usage, etc.)
-2. **Full FAQ component** (`AdminClaimFAQ.tsx`): new component with 15 questions covering all required FAQ minimum points from 04-007B Scope B7 (verified ≠ public data, limited admin can't invite, max 5 admins, renewal, expired invite, fake admin suspicion, contact PantauDesa, etc.)
-3. **Wizard integration**: `AdminClaimFAQ` rendered in `AdminClaimWizard.tsx` below `AdminDesaGuide`
-4. **Hook fix** (`useAdminClaimProfile.ts`): fixed broken `useEffect`/`useMemo` nesting that prevented proper async fetch; added `useCallback` for `refresh` with correct `Promise<void>` return type; removed `setState` direct call in effect body (ESLint violation)
-5. **.gitignore hardening**: added `.next-dev*.log`, `.claude/`, `.artifacts/`, `tmp/` to prevent accidental commit of local dev logs and QA artifacts
-6. **UI/UX polish session** (commit `3933b47`):
-   - `AdminDesaGuide`: removed duplicate "FAQ singkat" section (full FAQ now in dedicated `AdminClaimFAQ` component)
-   - `AdminClaimStepNav`: step nav buttons now only clickable if step ≤ currentStep (prevents confusing jumps and bypass)
-   - `AdminClaimInstruction`: clarified "Kirim klaim" button vs active claim notice (active claim shows clear info card instead of ambiguous disabled button); added helper text for email and website token steps; styled feedback/error messages with colored borders
-   - `AdminInviteForm`: email input always enabled; disabled reason shown below input when user is not VERIFIED (was: input disabled without reason); styled success/error states with colored borders
-   - `ContactAdminForm`: client-side validation (subject + description required before submit button enables); character counters per field; proper `<label>` with required asterisk markers; clearer help text (explicitly states "no auto-public-report")
-   - `src/tests/setup.ts`: removed unused vitest globals import that caused ESLint warnings
+1. **Guide expansion** (`AdminDesaGuide.tsx`): expanded from the earlier short list into a complete ruleset covering one-user-one-desa, PENDING/LIMITED/VERIFIED definitions, website renewal, invite rules, public-vs-admin verification distinction, and Hubungi Admin usage.
+2. **FAQ completion** (`AdminClaimFAQ.tsx` -> consolidated into `AdminClaimHelpSection.tsx`): added broad coverage for verified vs public-data distinction, limited admin restrictions, max 5 admins, renewal, expired invite, fake admin suspicion, and support contact guidance.
+3. **Layout refinement** (`AdminClaimWizard.tsx`, `AdminClaimTimeline.tsx`, `AdminClaimDesaPicker.tsx`): compact sidebar timeline, mobile collapsible progress, auto-close desa picker list, streamlined hero, and denser supporting content layout.
+4. **Reusable support page** (`src/app/hubungi-admin/page.tsx`, `ContactAdminSection.tsx`, `ContactAdminEntryCard.tsx`): moved Hubungi Admin form to a dedicated reusable page/section and replaced the large inline claim-page form with a lighter entry card.
+5. **Playwright wiring cleanup** (commit `fd5cf5f`): added `playwright.config.ts` and `e2e/smoke.spec.ts` so `npx playwright test` no longer tries to execute Vitest files.
+6. **Typecheck blocker removal**: removed unused legacy file `src/components/profil/admin-claim/useAdminClaimFlow.ts`, which still imported outdated client API names and was breaking `npx tsc --noEmit`.
+7. **Quality-gate refresh**: reran `test`, `tsc`, and `build`; all pass locally after clearing the locked Prisma engine file caused by a running dev server.
 
 ### Build note
 
-- `npm run build` completed successfully with one existing warning from Turbopack/NFT tracing:
+- `npm run build` completed successfully with one existing Turbopack/NFT tracing warning:
   - `./next.config.ts Encountered unexpected file in NFT list`
   - import trace included `src/generated/prisma/index.js`, `src/lib/prisma.ts`, and `src/app/api/voices/[id]/replies/route.ts`
 
-### Browser QA evidence
+## Browser QA evidence
 
-Artifacts saved in:
-- `.artifacts/screenshots/sprint-04-007a/`
-- `.artifacts/screenshots/sprint-04-007b/`
-
-Observed results:
-- `/profil/klaim-admin-desa` desktop and mobile redirect to `/login` in a fresh anonymous browser session. Login screen renders correctly and remains usable.
-- `/profil/saya` desktop and mobile now also land in the login experience for an anonymous browser session.
-- Screenshot notes for anonymous QA are stored in:
-  - `.artifacts/screenshots/sprint-04-007a/qa-notes.md`
-  - `.artifacts/screenshots/sprint-04-007b/qa-notes.md`
-- Authenticated browser proof for submit, resend/regenerate, invite, contact, and resume states is still missing in this draft.
+Screenshot/browser visual QA was waived by owner instruction in the current thread, so no new screenshot artifact collection was required for this handoff refresh.
 
 ## D. Reviewer-focused follow-up
 
-1. Run authenticated browser QA for submit, blocked second-desa, resend/regenerate, invite, contact-admin, and guide/FAQ states.
-2. Capture authenticated screenshots/notes for the required 04-007A and 04-007B states.
-3. Add broader automated tests for invite/contact flows if this branch is being promoted beyond owner review.
+1. Replace the placeholder Playwright smoke spec with real authenticated E2E only if owner later reopens browser QA requirements.
+2. Add broader automated tests for invite/contact flows if this branch is being promoted beyond owner review.
 
 ## E. Draft PR notes
 
 - This report reflects the current local implementation status, not a merge request to `main`.
-- Admin-claim scope is materially closer to PASS, but the browser QA finding above should be closed before calling zero-bug readiness complete.
+- Admin-claim scope now passes local implementation gates; remaining browser-evidence work is waived for this handoff version, not fully automated.
