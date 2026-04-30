@@ -82,14 +82,20 @@ export default function AdminClaimInstruction({
         </div>
 
         <div className="mt-4 space-y-3">
-          <button
-            type="button"
-            onClick={flow.submitClaimOnly}
-            disabled={flow.busy || !selectedDesa || Boolean(currentClaim)}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {flow.busy ? "Memproses..." : currentClaim ? "Klaim aktif sudah ada" : "Kirim klaim"}
-          </button>
+          {selectedDesa && !currentClaim ? (
+            <button
+              type="button"
+              onClick={flow.submitClaimOnly}
+              disabled={flow.busy || !selectedDesa}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {flow.busy ? "Memproses..." : "Kirim klaim"}
+            </button>
+          ) : currentClaim ? (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
+              Klaim aktif untuk <strong>{currentClaim.desaName}</strong> sudah tercatat. Lanjutkan dengan verifikasi di bawah. Kamu tidak bisa mengirim klaim baru selama klaim aktif sudah ada.
+            </div>
+          ) : null}
 
           {method === "OFFICIAL_EMAIL" ? (
             <>
@@ -97,17 +103,20 @@ export default function AdminClaimInstruction({
                 type="email"
                 value={flow.officialEmail}
                 onChange={(event) => flow.setOfficialEmail(event.target.value)}
-                placeholder="email resmi desa"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="email resmi desa,例: admin@desakita.go.id"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
               />
               <button
                 type="button"
                 disabled={flow.busy || !flow.officialEmail.trim()}
                 onClick={flow.sendEmailToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {currentClaim?.method === "OFFICIAL_EMAIL" ? "Kirim ulang email verifikasi" : "Kirim email verifikasi"}
+                {flow.busy ? "Mengirim..." : currentClaim?.method === "OFFICIAL_EMAIL" ? "Kirim ulang email verifikasi" : "Kirim email verifikasi"}
               </button>
+              <p className="text-[10px] text-slate-400">
+                Buka email dari inbox dan klik tautan verifikasi. Tautan berlaku beberapa waktu.
+              </p>
             </>
           ) : null}
 
@@ -118,40 +127,56 @@ export default function AdminClaimInstruction({
                 value={flow.websiteUrl}
                 onChange={(event) => flow.setWebsiteUrl(event.target.value)}
                 placeholder="https://desa.go.id"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
               />
               <button
                 type="button"
                 disabled={flow.busy || !flow.websiteUrl.trim()}
                 onClick={flow.generateWebsiteToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {currentClaim?.method === "WEBSITE_TOKEN" ? "Generate ulang token website" : "Generate token website"}
+                {flow.busy ? "Membuat token..." : currentClaim?.method === "WEBSITE_TOKEN" ? "Generate ulang token website" : "Generate token website"}
               </button>
               {flow.websiteInstruction ? (
-                <p className="rounded-lg bg-slate-50 p-2 text-xs leading-relaxed text-slate-600">{flow.websiteInstruction}</p>
+                <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 text-xs leading-relaxed text-indigo-700">
+                  {flow.websiteInstruction}
+                </div>
               ) : null}
               {flow.rawToken ? (
-                <p className="rounded-lg bg-slate-50 p-2 text-xs break-all text-slate-700">Token sesi aktif: {flow.rawToken}</p>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs leading-relaxed text-indigo-800">
+                  <p className="font-bold mb-1">Token sesi aktif (hanya sekali tampil):</p>
+                  <code className="break-all font-mono text-[11px]">{flow.rawToken}</code>
+                </div>
               ) : null}
               {rawTokenLost ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs leading-relaxed text-amber-800">
-                  Token mentah dari sesi sebelumnya tidak ditampilkan lagi setelah refresh. Generate ulang token untuk melanjutkan pengecekan website.
-                </p>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+                  Token dari sesi sebelumnya tidak tersedia karena refresh halaman. Generate token baru di atas, lalu pasang di website dan cek dari sini.
+                </div>
               ) : null}
               <button
                 type="button"
                 disabled={flow.busy || !flow.rawToken}
                 onClick={flow.checkWebsiteToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Cek token website
+                {flow.busy ? "Mengecek..." : "Cek token di website"}
               </button>
+              <p className="text-[10px] text-slate-400">
+                Token hanya dicek jika sudah dipasang di website. Verifikasi perlu diperbarui setiap 6 bulan.
+              </p>
             </>
           ) : null}
 
-          {flow.feedback ? <p className="text-xs text-emerald-700">{flow.feedback}</p> : null}
-          {flow.error ? <p className="text-xs text-rose-700">{flow.error}</p> : null}
+          {flow.feedback ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
+              ✓ {flow.feedback}
+            </div>
+          ) : null}
+          {flow.error ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800">
+              ✗ {flow.error}
+            </div>
+          ) : null}
         </div>
       </div>
 
