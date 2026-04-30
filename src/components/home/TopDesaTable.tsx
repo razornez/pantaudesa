@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Desa } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { formatRupiah, getStatusColor, getSerapanColor } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 
 interface Props {

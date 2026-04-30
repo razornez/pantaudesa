@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 import { FILTER, HERO } from "@/lib/copy";
 

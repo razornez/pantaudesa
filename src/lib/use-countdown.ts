@@ -4,11 +4,18 @@ export function useCountdown(targetDate: Date | null): number {
   const [secs, setSecs] = useState(0);
 
   useEffect(() => {
-    if (!targetDate) { setSecs(0); return; }
+    if (!targetDate) {
+      const resetId = setTimeout(() => setSecs(0), 0);
+      return () => clearTimeout(resetId);
+    }
+
     const tick = () => setSecs(Math.max(0, Math.ceil((targetDate.getTime() - Date.now()) / 1000)));
-    tick();
+    const firstTickId = setTimeout(tick, 0);
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(firstTickId);
+      clearInterval(id);
+    };
   }, [targetDate]);
 
   return secs;

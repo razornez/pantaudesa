@@ -193,11 +193,11 @@ export default function DokumenPage() {
     if (!loading && (!user || user.role !== "DESA")) router.push("/login");
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (user) setDocs(MOCK_UPLOADS.filter(d => d.desaId === user.desaId));
-  }, [user]);
-
   if (loading || !user) return null;
+
+  const visibleDocs = docs.length > 0
+    ? docs
+    : MOCK_UPLOADS.filter(d => d.desaId === user.desaId);
 
   const handleSuccess = (doc: UploadedDoc) => {
     setDocs(prev => [doc, ...prev]);
@@ -239,7 +239,7 @@ export default function DokumenPage() {
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-800">Riwayat Unggahan</h2>
-              <span className="text-xs text-slate-400">{docs.length} dokumen</span>
+              <span className="text-xs text-slate-400">{visibleDocs.length} dokumen</span>
             </div>
 
             {/* Success toast */}
@@ -253,7 +253,7 @@ export default function DokumenPage() {
               </div>
             )}
 
-            {docs.length === 0 ? (
+            {visibleDocs.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
                   <FileText size={24} className="text-slate-400" />
@@ -263,7 +263,7 @@ export default function DokumenPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {docs.map(doc => {
+                {visibleDocs.map(doc => {
                   const cfg  = STATUS_CFG[doc.status];
                   const Icon = cfg.icon;
                   return (

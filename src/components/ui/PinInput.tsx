@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   length?:    number;
@@ -14,13 +14,13 @@ export default function PinInput({ length = 6, onComplete, disabled, error, rese
   const [digits, setDigits] = useState<string[]>(Array(length).fill(""));
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Reset when `reset` prop increments
   const prevReset = useRef(reset);
-  if (reset !== prevReset.current) {
+  useEffect(() => {
+    if (reset === prevReset.current) return;
     prevReset.current = reset;
     setDigits(Array(length).fill(""));
     refs.current[0]?.focus();
-  }
+  }, [length, reset]);
 
   const handleChange = (i: number, val: string) => {
     const v = val.replace(/\D/g, "").slice(-1);

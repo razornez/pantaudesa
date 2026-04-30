@@ -35,7 +35,7 @@ function BadgeImage({ level, warna }: { level: number; warna: string }) {
   );
 }
 
-export default function DesaBadgeCard({ badge, nama, compact = false }: Props) {
+export default function DesaBadgeCard({ badge, compact = false }: Props) {
   const styles = BADGE_STYLES[badge.warna];
 
   if (compact) {

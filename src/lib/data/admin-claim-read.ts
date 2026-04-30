@@ -1,4 +1,9 @@
 import { db } from "@/lib/db";
+import {
+  getAdminClaimEligibility,
+  isActiveAdminStatus,
+  type AdminClaimEligibility,
+} from "@/lib/admin-claim/eligibility";
 
 export type AdminClaimDataStatus = "demo" | "source-found" | "needs-review";
 export type AdminClaimStatus =
@@ -39,9 +44,32 @@ export interface AdminClaimStateCard {
   isDemo: boolean;
 }
 
+export interface AdminClaimActiveClaim {
+  id: string;
+  desaId: string;
+  desaName: string;
+  status: string;
+  method: AdminClaimMethod | null;
+  officialEmail: string | null;
+  websiteUrl: string | null;
+  tokenExpiresAt: string | null;
+  hasActiveToken: boolean;
+  verifiedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+}
+
+export interface AdminClaimActiveMember {
+  id: string;
+  desaId: string;
+  desaName: string;
+  status: string;
+  role: string;
+  joinedAt: string;
+}
+
 export interface AdminClaimProfileData {
   source: "database" | "fallback";
-  supportEmail: string | null;
   currentUser: {
     id: string;
     nama: string;
@@ -51,6 +79,9 @@ export interface AdminClaimProfileData {
   } | null;
   selectedDesaId: string | null;
   currentState: AdminClaimStateCard;
+  currentClaim: AdminClaimActiveClaim | null;
+  currentMember: AdminClaimActiveMember | null;
+  eligibility: AdminClaimEligibility;
   desaOptions: AdminClaimDesaOption[];
   demoStates: AdminClaimStateCard[];
 }
@@ -77,6 +108,8 @@ type ClaimRow = {
   method: string | null;
   officialEmail: string | null;
   websiteUrl: string | null;
+  tokenHash: string | null;
+  tokenExpiresAt: Date | null;
   verifiedAt: Date | null;
   rejectedAt: Date | null;
   rejectionReason: string | null;
@@ -277,12 +310,6 @@ const FALLBACK_DEMO_STATES: AdminClaimStateCard[] = [
     isDemo: true,
   },
 ];
-
-function resolveSupportEmail() {
-  const publicEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim();
-  if (publicEmail) return publicEmail;
-  return process.env.NODE_ENV === "development" ? "support@pantaudesa.local" : null;
-}
 
 function getDataStatusKind(desa: DesaRow): AdminClaimDataStatus {
   const hasReviewFlag = desa.dataSources.some((source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review");
@@ -511,10 +538,12 @@ function buildCurrentCard(
 function fallbackProfileData(): AdminClaimProfileData {
   return {
     source: "fallback",
-    supportEmail: resolveSupportEmail(),
     currentUser: null,
     selectedDesaId: FALLBACK_DESA_OPTIONS[1]?.id ?? FALLBACK_DESA_OPTIONS[0]?.id ?? null,
     currentState: FALLBACK_DEMO_STATES[0],
+    currentClaim: null,
+    currentMember: null,
+    eligibility: getAdminClaimEligibility({}),
     desaOptions: FALLBACK_DESA_OPTIONS,
     demoStates: FALLBACK_DEMO_STATES,
   };
@@ -564,6 +593,8 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
                   method: true,
                   officialEmail: true,
                   websiteUrl: true,
+                  tokenHash: true,
+                  tokenExpiresAt: true,
                   verifiedAt: true,
                   rejectedAt: true,
                   rejectionReason: true,
@@ -655,6 +686,8 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
               method: true,
               officialEmail: true,
               websiteUrl: true,
+              tokenHash: true,
+              tokenExpiresAt: true,
               verifiedAt: true,
               rejectedAt: true,
               rejectionReason: true,
@@ -740,6 +773,8 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
           method: true,
           officialEmail: true,
           websiteUrl: true,
+          tokenHash: true,
+          tokenExpiresAt: true,
           verifiedAt: true,
           rejectedAt: true,
           rejectionReason: true,
@@ -837,6 +872,52 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
       currentMember,
       desaOptions,
     );
+    const selectedDesaId = currentClaim?.desa.id ?? currentMember?.desa.id ?? desaOptions[0]?.id ?? null;
+    const activeClaim = currentClaim && isActiveAdminStatus(currentClaim.status)
+      ? {
+          id: currentClaim.id,
+          desaId: currentClaim.desa.id,
+          desaName: currentClaim.desa.nama,
+          status: currentClaim.status,
+          method: (currentClaim.method as AdminClaimMethod | null) ?? null,
+          officialEmail: currentClaim.officialEmail,
+          websiteUrl: currentClaim.websiteUrl,
+          tokenExpiresAt: currentClaim.tokenExpiresAt?.toISOString() ?? null,
+          hasActiveToken: Boolean(currentClaim.tokenHash && currentClaim.tokenExpiresAt),
+          verifiedAt: currentClaim.verifiedAt?.toISOString() ?? null,
+          rejectedAt: currentClaim.rejectedAt?.toISOString() ?? null,
+          rejectionReason: currentClaim.rejectionReason,
+        }
+      : null;
+    const activeMember = currentMember && isActiveAdminStatus(currentMember.status)
+      ? {
+          id: currentMember.id,
+          desaId: currentMember.desa.id,
+          desaName: currentMember.desa.nama,
+          status: currentMember.status,
+          role: currentMember.role,
+          joinedAt: currentMember.joinedAt.toISOString(),
+        }
+      : null;
+    const eligibility = getAdminClaimEligibility({
+      activeClaim: activeClaim
+        ? {
+            desaId: activeClaim.desaId,
+            desaName: activeClaim.desaName,
+            status: activeClaim.status,
+            source: "claim",
+          }
+        : null,
+      activeMember: activeMember
+        ? {
+            desaId: activeMember.desaId,
+            desaName: activeMember.desaName,
+            status: activeMember.status,
+            source: "member",
+          }
+        : null,
+      targetDesaId: selectedDesaId,
+    });
 
     const claimByEmail = new Map(demoClaims.map((claim) => [claim.user.email, claim]));
     const memberByEmail = new Map(demoMembers.map((member) => [member.user.email, member]));
@@ -922,11 +1003,8 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
       };
     });
 
-    const selectedDesaId = currentClaim?.desa.id ?? currentMember?.desa.id ?? desaOptions[0]?.id ?? null;
-
     return {
       source: "database",
-      supportEmail: resolveSupportEmail(),
       currentUser: currentUser
         ? {
             id: currentUser.id,
@@ -938,6 +1016,9 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
         : null,
       selectedDesaId,
       currentState,
+      currentClaim: activeClaim,
+      currentMember: activeMember,
+      eligibility,
       desaOptions,
       demoStates,
     };

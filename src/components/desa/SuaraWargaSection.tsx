@@ -105,7 +105,12 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
     }
   }, [desaId]);
 
-  useEffect(() => { loadVoices(); }, [loadVoices]);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      void loadVoices();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [loadVoices]);
 
   const displayed = showAll ? voices : voices.slice(0, PREVIEW_COUNT);
 
@@ -180,7 +185,15 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
       setVoices(vs => vs.map(v => v.id === id ? { ...v, votes: updated } : v));
     } catch {
       // Revert optimistic update on error
-      setVotedIds(m => { const n = new Map(m); prev ? n.set(id, prev) : n.delete(id); return n; });
+      setVotedIds(m => {
+        const n = new Map(m);
+        if (prev) {
+          n.set(id, prev);
+        } else {
+          n.delete(id);
+        }
+        return n;
+      });
       setVoices(vs => vs.map(v => {
         if (v.id !== id) return v;
         const votes = { ...v.votes };

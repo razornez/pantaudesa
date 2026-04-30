@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  LayoutDashboard, Upload, FileText, Settings, LogOut,
+  Upload, FileText, Settings, LogOut,
   CheckCircle2, Clock, XCircle, TrendingUp, ArrowRight,
   MapPin, Users, Globe2, Bell, ChevronRight,
 } from "lucide-react";
@@ -13,7 +13,6 @@ import { useAuth } from "@/lib/auth-context";
 import { MOCK_UPLOADS, UploadedDoc } from "@/lib/auth-mock";
 import { mockDesa } from "@/lib/mock-data";
 import { ASSETS } from "@/lib/assets";
-import { formatRupiah } from "@/lib/utils";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 

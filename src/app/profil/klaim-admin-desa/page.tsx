@@ -1,25 +1,32 @@
-"use client";
-
-import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import AdminClaimWizard from "@/components/profil/admin-claim/AdminClaimWizard";
-import { useAuth } from "@/lib/auth-context";
+import { auth } from "@/lib/auth";
+import { getAdminClaimPageNotice } from "@/lib/admin-claim/eligibility";
+import type { UserRole } from "@/lib/auth-context";
 
-export default function KlaimAdminDesaPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [loading, router, user]);
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
-  if (loading || !user) {
-    return null;
+export default async function KlaimAdminDesaPage({ searchParams }: PageProps) {
+  const session = await auth();
+  if (!session?.user?.id || !session.user.email) {
+    redirect("/login");
   }
+
+  const params = await searchParams;
+  const notice = getAdminClaimPageNotice(params);
+  const user = {
+    id: session.user.id,
+    nama: session.user.name ?? session.user.username ?? session.user.email,
+    username: session.user.username ?? "",
+    email: session.user.email,
+    role: session.user.role as UserRole,
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -31,7 +38,7 @@ export default function KlaimAdminDesaPage() {
         Kembali ke profil saya
       </Link>
 
-      <AdminClaimWizard user={user} />
+      <AdminClaimWizard user={user} initialNotice={notice} />
     </div>
   );
 }

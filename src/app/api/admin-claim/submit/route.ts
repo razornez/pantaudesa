@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { ACTIVE_ADMIN_STATUSES } from "@/lib/admin-claim/eligibility";
 
 type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN" | "SUPPORT_REVIEW";
 
@@ -50,13 +51,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Verify desa exists
-    const desa = await db.desa.findUnique({ where: { id: desaId }, select: { id: true, nama: true } });
+    const desa = await db.desa.findUnique({
+      where: { id: desaId },
+      select: { id: true, nama: true },
+    });
     if (!desa) {
       return NextResponse.json({ error: "Desa not found" }, { status: 404 });
     }
 
-    // Upsert claim — prevent noisy duplicates
+    const [activeMember, activeClaim] = await Promise.all([
+      db.desaAdminMember.findFirst({
+        where: { userId, status: { in: [...ACTIVE_ADMIN_STATUSES] } },
+        select: { desaId: true, desa: { select: { nama: true } } },
+      }),
+      db.desaAdminClaim.findFirst({
+        where: { userId, status: { in: [...ACTIVE_ADMIN_STATUSES] } },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, desaId: true, desa: { select: { nama: true } } },
+      }),
+    ]);
+
+    if (activeMember) {
+      return NextResponse.json({
+        error: activeMember.desaId === desaId
+          ? `Akun ini sudah tercatat sebagai admin untuk ${activeMember.desa.nama}.`
+          : `Akun ini sudah mewakili ${activeMember.desa.nama}. Satu akun hanya boleh mengelola satu desa.`,
+      }, { status: 409 });
+    }
+
+    if (activeClaim && activeClaim.desaId !== desaId) {
+      return NextResponse.json({
+        error: `Kamu masih punya klaim aktif untuk ${activeClaim.desa.nama}. Selesaikan klaim itu dulu sebelum memilih desa lain.`,
+      }, { status: 409 });
+    }
+
     const existing = await db.desaAdminClaim.findFirst({
       where: { userId, desaId },
       select: { id: true, status: true, method: true },
@@ -66,7 +94,6 @@ export async function POST(req: NextRequest) {
     let eventType: typeof AUDIT_EVENT[keyof typeof AUDIT_EVENT];
 
     if (existing) {
-      // Reuse/update existing claim
       claim = await db.desaAdminClaim.update({
         where: { id: existing.id },
         data: {

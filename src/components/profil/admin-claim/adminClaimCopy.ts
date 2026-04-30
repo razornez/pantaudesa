@@ -1,12 +1,14 @@
 import type {
+  AdminClaimActiveClaim,
   AdminClaimDataStatus,
   AdminClaimDesaOption,
   AdminClaimProfileData,
   AdminClaimStateCard,
 } from "@/lib/data/admin-claim-read";
+import type { AdminClaimPageNotice } from "@/lib/admin-claim/eligibility";
 
 export type ClaimStep = 1 | 2 | 3 | 4;
-export type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN" | "SUPPORT_REVIEW";
+export type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN";
 
 export const CLAIM_STEP_LABELS: Array<{ step: ClaimStep; label: string }> = [
   { step: 1, label: "Pilih desa" },
@@ -78,51 +80,17 @@ export const METHOD_COPY: Record<ClaimMethod, {
     title: "Email resmi",
     body: "Pilih ini jika kamu punya akses ke email resmi desa atau email yang tercantum di sumber resmi.",
     cta: "Pakai email resmi",
-    instruction: "Tahap ini akan memakai email resmi desa. Fitur pengiriman tautan akan diaktifkan pada batch berikutnya.",
-    note: "Belum mengirim email otomatis.",
+    instruction: "Masukkan email resmi desa lalu kirim tautan verifikasi. Buka tautan dari inbox untuk melanjutkan verifikasi.",
+    note: "Jika tautan kedaluwarsa atau tidak masuk, kamu bisa kirim ulang.",
   },
   WEBSITE_TOKEN: {
     title: "Website resmi",
     body: "Pilih ini jika kamu bisa menaruh kode verifikasi di website resmi desa.",
     cta: "Pakai website resmi",
-    instruction: "Tahap ini akan menyiapkan kode unik untuk dipasang di website resmi desa. Pemeriksaan otomatis belum diaktifkan.",
-    note: "Belum memeriksa website otomatis.",
-  },
-  SUPPORT_REVIEW: {
-    title: "Hubungi Kami",
-    body: "Pilih ini jika kamu belum bisa memakai email atau website resmi desa.",
-    cta: "Minta bantuan admin",
-    instruction: "Kami siapkan format bantuan agar admin PantauDesa bisa mengecek kendalamu lewat jalur support.",
-    note: "Email bantuan terbuka hanya saat kamu klik tombol kirim.",
+    instruction: "Generate token website, pasang token di website resmi desa, lalu cek token dari halaman ini.",
+    note: "Token mentah hanya tampil di sesi aktif dan tidak disimpan di browser.",
   },
 };
-
-export function buildSupportMailto(email: string, desaName: string) {
-  const subject = encodeURIComponent(`Kendala Verifikasi Admin Desa - ${desaName}`);
-  const body = encodeURIComponent(
-    [
-      "Nama lengkap:",
-      "Jabatan:",
-      `Nama desa: ${desaName}`,
-      "Kecamatan:",
-      "Kabupaten:",
-      "Provinsi:",
-      "Website resmi desa, jika ada:",
-      "Email resmi desa, jika ada:",
-      "Nomor kontak resmi yang tercantum di website, jika ada:",
-      "Kendala yang dialami:",
-      "Bukti pendukung/link dokumen, jika ada:",
-    ].join("\n"),
-  );
-
-  return `mailto:${email}?subject=${subject}&body=${body}`;
-}
-
-export function getClientSupportEmail() {
-  const publicEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim();
-  if (publicEmail) return publicEmail;
-  return process.env.NODE_ENV === "development" ? "support@pantaudesa.local" : null;
-}
 
 export function isDemoSession(data: AdminClaimProfileData | null) {
   const email = data?.currentUser?.email?.toLowerCase() ?? "";
@@ -142,4 +110,25 @@ export function getCurrentStatusTone(status: AdminClaimStateCard["status"]) {
 
 export function getCurrentDataStatus(data: AdminClaimProfileData | null): AdminClaimDataStatus {
   return data?.currentState?.dataStatus ?? "demo";
+}
+
+export function getStepForCurrentFlow(claim: AdminClaimActiveClaim | null, status: AdminClaimStateCard["status"]): ClaimStep {
+  if (claim?.status === "PENDING") return 3;
+  if (status === "limited" || status === "verified" || status === "rejected" || status === "suspended") return 4;
+  return 1;
+}
+
+export function getInitialMethod(claim: AdminClaimActiveClaim | null): ClaimMethod {
+  return claim?.method === "WEBSITE_TOKEN" ? "WEBSITE_TOKEN" : "OFFICIAL_EMAIL";
+}
+
+export function getNoticeToneStyles(tone: NonNullable<AdminClaimPageNotice>["tone"]) {
+  switch (tone) {
+    case "success":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "error":
+      return "border-rose-200 bg-rose-50 text-rose-800";
+    default:
+      return "border-sky-200 bg-sky-50 text-sky-800";
+  }
 }
