@@ -31,9 +31,10 @@ Read in this order after Owner approval:
 1. `docs/bmad/tasks/sprint-04-007-admin-claim-ui-integration-browser-e2e-qa.md` — index/overview
 2. `docs/bmad/tasks/sprint-04-007a-admin-claim-core-browser-flow.md` — execute first
 3. `docs/bmad/tasks/sprint-04-007b-admin-claim-completion-ux-invite-contact-browser-qa.md` — execute after 04-007A
-4. `docs/bmad/tasks/sprint-04-006-consolidated-quality-data-trust-batch.md`
-5. `docs/bmad/reports/sprint-04-006-handoff-report.md`
-6. `docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md`
+4. `docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md` — mandatory zero-bug readiness checklist
+5. `docs/bmad/tasks/sprint-04-006-consolidated-quality-data-trust-batch.md`
+6. `docs/bmad/reports/sprint-04-006-handoff-report.md`
+7. `docs/bmad/tasks/sprint-04-004-admin-claim-verification-services-batch.md`
 
 ## Ownership
 
@@ -85,6 +86,7 @@ Rules:
 13. Only `VERIFIED` Admin Desa may invite another admin.
 14. Invited admin starts as `LIMITED` after accepting invite.
 15. Admin Desa needs complete guide and FAQ so rules are clear.
+16. Zero-bug readiness checklist is mandatory and must be reported in handoff.
 
 ## Engineering standards — mandatory
 
@@ -96,7 +98,7 @@ For every new behavior or changed behavior:
 
 1. Write or update tests first where practical.
 2. If a browser-only behavior cannot be covered by Vitest, write explicit browser QA cases before coding and report them in handoff.
-3. Tests/QA must cover happy path, invalid input, unauthenticated access, unauthorized/ownership mismatch, API error state, loading/success/error UI, token expired/invalid states where reachable, resend/regenerate behavior, invite permission and max-admin behavior, Hubungi Admin validation and send states, guide/FAQ visibility, and no public data verified activation.
+3. Tests/QA must cover happy path, invalid input, unauthenticated access, unauthorized/ownership mismatch, API error state, loading/success/error UI, token expired/invalid states where reachable, resend/regenerate behavior, invite permission and max-admin behavior, Hubungi Admin validation and send states, guide/FAQ visibility, zero-bug readiness checklist, and no public data verified activation.
 4. Do not mark 04-007B PASS if the main changed behavior has neither automated test nor explicit browser QA evidence.
 
 ### SOLID / separation of concerns
@@ -450,6 +452,7 @@ Browser flows to test:
 13. Caching/freshness: after resume/regenerate/invite/contact actions, UI does not show stale state.
 14. Desktop layout remains usable.
 15. Mobile layout remains usable.
+16. Zero-bug readiness checklist is completed for 04-007B-relevant items.
 
 # Quality gate — must pass
 
@@ -572,6 +575,7 @@ Do not implement in 04-007B:
 18. Desktop and mobile UI are tested and screenshot evidence/notes are reported.
 19. Full quality gate passes.
 20. ESLint has no failure at handoff.
+21. Zero-bug readiness checklist is completed and reported.
 
 # 04-007B handoff report format
 
@@ -631,6 +635,18 @@ Caching/freshness:
 - route/page caching checked:
 - router.refresh/revalidation/no-store approach:
 - stale status after actions: YES/NO
+Zero-bug readiness:
+- duplicate submit/idempotency checked:
+- multi-tab/stale cache checked:
+- unauthorized direct API checked:
+- token expiry/reuse checked:
+- email failure behavior checked:
+- invite edge cases checked:
+- public data verified not activated:
+- private data/token/secret leakage checked:
+- desktop/mobile QA checked:
+- screenshot cleanup done:
+- known residual risks:
 Security/trust checks:
 - no public data verified activation:
 - no private exposure:
