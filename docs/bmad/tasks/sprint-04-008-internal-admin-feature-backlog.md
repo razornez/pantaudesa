@@ -256,13 +256,44 @@ Potential scope:
 - Add audit event for document upload, access/download if required, extraction, review, publish, and delete/archive actions.
 - Add QA cases for bucket privacy, signed URL access, unauthorized access rejection, and cleanup behavior.
 
+Approved env storage location:
+
+- Supabase Storage credentials/config must be stored in environment variables only.
+- Do not hardcode Supabase URL, anon key, service role key, bucket name, signed URL lifetime, or upload limits in source code.
+- Do not expose service role credentials to client-side code.
+- Do not commit real credentials in `.env.example`, docs, tests, screenshots, or handoff reports.
+
+Required env vars to add for 04-008G execution:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL="https://<project-ref>.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="<public-anon-key>"
+SUPABASE_SERVICE_ROLE_KEY="<server-only-service-role-key>"
+SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS="admin-desa-documents"
+SUPABASE_STORAGE_SIGNED_URL_TTL_SECONDS="900"
+ADMIN_DESA_DOCUMENT_MAX_FILE_SIZE_MB="10"
+ADMIN_DESA_DOCUMENT_ALLOWED_MIME_TYPES="application/pdf,image/jpeg,image/png,image/webp"
+ADMIN_DESA_DOCUMENT_MAX_FILES_PER_UPLOAD="5"
+```
+
+Env rules:
+
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are public client-safe values, but still should not be misused for privileged document access.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only and must never be imported or referenced in client components.
+- Upload, signed URL creation, deletion, and privileged reads must happen server-side.
+- `SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS` allows bucket name changes without code change.
+- `SUPABASE_STORAGE_SIGNED_URL_TTL_SECONDS` controls temporary access window; default suggestion is 900 seconds / 15 minutes.
+- `ADMIN_DESA_DOCUMENT_ALLOWED_MIME_TYPES`, `ADMIN_DESA_DOCUMENT_MAX_FILE_SIZE_MB`, and `ADMIN_DESA_DOCUMENT_MAX_FILES_PER_UPLOAD` make validation configurable.
+- If project already has equivalent Supabase env names when this task is executed, reuse existing names and update this BMAD item before implementation; do not create duplicate env names.
+
 Owner/operator setup checklist:
 
 - Create/confirm Supabase project storage bucket.
 - Confirm bucket privacy mode.
-- Confirm service role key is only used server-side if needed.
-- Confirm env names needed for Supabase Storage already exist or request approval before adding new env.
+- Add the env vars listed above to local/staging/production as needed.
+- Confirm service role key is only used server-side.
 - Confirm storage billing/limits are acceptable.
+- Confirm `.env.example` uses placeholders only, never real values.
 
 ### 04-008G.1 — Document upload by Admin Desa
 
