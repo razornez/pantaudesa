@@ -1,8 +1,8 @@
-# Sprint 04-007 Handoff Report (DRAFT)
+# Sprint 04-007 Handoff Report
 
 Date: 2026-04-30
 Branch: codex/implement-sprint-04-007-tasks-and-draft-pr
-Status: PASS (owner waived screenshot/browser visual QA follow-up)
+Status: DONE (owner waived screenshot/browser visual QA follow-up)
 Prepared-by: Codex
 
 ## Scope execution order
@@ -13,14 +13,14 @@ Prepared-by: Codex
 
 ## Summary
 
-Sprint 04-007A and 04-007B are now substantially implemented in the admin-claim flow:
+Sprint 04-007A and 04-007B are now implemented in the admin-claim flow:
 - one-user-one-desa enforcement is active in submit and invite/accept paths,
 - `/profil/klaim-admin-desa` reads callback query params server-side and resumes from profile state,
 - resend/regenerate/timeline/invite/contact-admin/guide UX is wired,
 - repo-level lint/type/test blockers have been cleaned up,
-- required build gates now pass locally.
+- required local build gates pass.
 
-This draft is considered **PASS** for local handoff readiness because the screenshot/browser visual QA requirement was explicitly waived by owner instruction in the current execution thread. The anonymous `/profil/saya` blank-shell issue has been fixed, `/profil/klaim-admin-desa` plus `/profil/saya` land cleanly in the login experience for anonymous sessions, and the local implementation/build gates relevant to this scope now pass.
+This handoff is considered **DONE** for local handoff readiness because the screenshot/browser visual QA requirement was explicitly waived by owner instruction in the current execution thread. The anonymous `/profil/saya` blank-shell issue has been fixed, `/profil/klaim-admin-desa` plus `/profil/saya` land cleanly in the login experience for anonymous sessions, and the local implementation/build gates relevant to this scope now pass.
 
 ## A. 04-007A (Core Browser Flow) status
 
@@ -69,7 +69,7 @@ This draft is considered **PASS** for local handoff readiness because the screen
 
 ## C. Zero-bug readiness gate result
 
-Checklist result for this draft: **PASS** with owner waiver on screenshot/browser visual QA evidence.
+Checklist result for this handoff: **DONE/PASS** with owner waiver on screenshot/browser visual QA evidence.
 
 ### Command evidence
 
@@ -122,7 +122,7 @@ Screenshot/browser visual QA was waived by owner instruction in the current thre
 1. Replace the placeholder Playwright smoke spec with real authenticated E2E only if owner later reopens browser QA requirements.
 2. Add broader automated tests for invite/contact flows if this branch is being promoted beyond owner review.
 
-## E. Draft PR notes
+## E. PR notes
 
-- This report reflects the current local implementation status, not a merge request to `main`.
+- This report reflects the current branch status for PR to `main`.
 - Admin-claim scope now passes local implementation gates; remaining browser-evidence work is waived for this handoff version, not fully automated.
