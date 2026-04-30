@@ -45,3 +45,11 @@ next-env.d.ts
 
 # stray nested folder
 /pantaudesa/
+
+# local dev logs and tooling caches
+.next-dev*.log
+.claude/
+
+# local-only QA artefacts (screenshots/notes)
+.artifacts/
+tmp/

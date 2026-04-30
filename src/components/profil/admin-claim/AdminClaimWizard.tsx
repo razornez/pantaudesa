@@ -22,6 +22,7 @@ import {
 import AdminClaimTimeline from "@/components/profil/admin-claim/AdminClaimTimeline";
 import AdminInviteForm from "@/components/profil/admin-claim/AdminInviteForm";
 import AdminDesaGuide from "@/components/profil/admin-claim/AdminDesaGuide";
+import AdminClaimFAQ from "@/components/profil/admin-claim/AdminClaimFAQ";
 import { useAdminClaimProfile } from "@/components/profil/admin-claim/useAdminClaimProfile";
 import { useAdminClaimFlow } from "@/hooks/use-admin-claim-flow";
 import type { AuthUser } from "@/lib/auth-context";
@@ -199,6 +200,8 @@ export default function AdminClaimWizard({
       />
 
       <AdminDesaGuide />
+
+      <AdminClaimFAQ />
     </section>
   );
 }
