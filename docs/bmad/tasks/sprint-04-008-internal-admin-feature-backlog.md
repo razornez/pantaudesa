@@ -23,6 +23,7 @@ Internal admin and Admin Desa post-claim features are separated because they may
 - moderation decisions,
 - audit viewer,
 - document upload/storage,
+- Supabase Storage bucket and access-policy setup,
 - AI extraction/review pipeline,
 - data mapping to public Desa detail,
 - source status/dataStatus governance,
@@ -50,6 +51,7 @@ Internal admin and Admin Desa post-claim features are separated because they may
 - All internal admin and Admin Desa data-contribution actions must have audit trail.
 - Internal admin UI must not be public-accessible.
 - Uploaded documents must not be publicly exposed by default.
+- Supabase Storage buckets for uploaded documents must be private by default.
 
 ---
 
@@ -235,13 +237,40 @@ This item is related to Admin Desa, but it is post-claim data contribution, not 
 
 Potential scope:
 
+### 04-008G.0 — Supabase Storage setup for Admin Desa documents
+
+- Set up a dedicated Supabase Storage bucket for Admin Desa uploaded documents.
+- Bucket must be private by default, not public.
+- Suggested bucket name: `admin-desa-documents` or equivalent project-consistent name.
+- Define folder/path convention before upload implementation, for example:
+  - `desa/{desaId}/documents/{documentId}/{safeFileName}`
+  - or `admin-desa/{desaId}/{yyyy}/{mm}/{documentId}-{safeFileName}`
+- Access must be controlled server-side; do not expose service-role keys to the client.
+- Use signed URLs for temporary internal/reviewer access if needed.
+- Define max URL lifetime for signed URLs.
+- Define allowed file types before enabling upload, such as PDF and common image formats only if approved.
+- Define max file size and per-desa upload limits.
+- Define retention/deletion policy for rejected, obsolete, or superseded documents.
+- Define whether original files can be deleted after extraction or must be retained for audit/source traceability.
+- Store storage object path/key in DB, not a public URL.
+- Add audit event for document upload, access/download if required, extraction, review, publish, and delete/archive actions.
+- Add QA cases for bucket privacy, signed URL access, unauthorized access rejection, and cleanup behavior.
+
+Owner/operator setup checklist:
+
+- Create/confirm Supabase project storage bucket.
+- Confirm bucket privacy mode.
+- Confirm service role key is only used server-side if needed.
+- Confirm env names needed for Supabase Storage already exist or request approval before adding new env.
+- Confirm storage billing/limits are acceptable.
+
 ### 04-008G.1 — Document upload by Admin Desa
 
 - Admin Desa can upload or submit document evidence for their own desa only.
 - Validate admin membership and desa ownership.
 - Validate file type, file size, and file count.
-- Store document in a private/non-public location by default.
-- Link document to desa, uploader user, admin membership, source type, and created timestamp.
+- Store document in Supabase Storage private bucket by default.
+- Link document to desa, uploader user, admin membership, storage object path, source type, and created timestamp.
 - Initial document status should be something like `UPLOADED`, `NEEDS_REVIEW`, or equivalent existing status.
 - Write audit event for upload.
 
@@ -295,6 +324,9 @@ Potential scope:
 Guardrails:
 
 - No file upload/storage implementation without storage/privacy design approval.
+- Supabase Storage bucket must be private by default.
+- No public bucket for Admin Desa documents unless Owner explicitly approves.
+- No service role key or storage secret exposed client-side.
 - No AI extraction dependency/provider without Owner approval.
 - No public data overwrite without review.
 - No public `verified` data activation without governance.
@@ -308,7 +340,11 @@ Key decisions needed:
 - Which Admin Desa status can upload documents: `LIMITED`, `VERIFIED`, or both?
 - Which role can approve AI-mapped changes?
 - Should review be done by internal admin only, Admin Desa only, or two-step approval?
-- Where are uploaded documents stored?
+- What Supabase Storage bucket name should be used?
+- What storage folder/path convention should be used?
+- What signed URL lifetime should be allowed?
+- What retention/deletion policy should apply to uploaded documents?
+- What env names already exist for Supabase Storage access?
 - What file types and max size are allowed?
 - Which AI provider/model is allowed?
 - Should AI extraction run immediately, manually, or queued?
