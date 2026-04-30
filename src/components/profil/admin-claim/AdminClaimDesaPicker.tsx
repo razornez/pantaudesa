@@ -1,4 +1,5 @@
-import { MapPin, Search } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, MapPin, Search } from "lucide-react";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 import type { AdminClaimDesaOption } from "@/lib/data/admin-claim-read";
 import type { AdminClaimEligibility } from "@/lib/admin-claim/eligibility";
@@ -29,6 +30,12 @@ export default function AdminClaimDesaPicker({
   onContinue: () => void;
 }) {
   const visibleDesa = filteredDesa.slice(0, visibleCount);
+  const [isListOpen, setIsListOpen] = useState(true);
+
+  const handleSelect = (desaId: string) => {
+    onSelect(desaId);
+    setIsListOpen(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -43,12 +50,36 @@ export default function AdminClaimDesaPicker({
         <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
+          onChange={(event) => {
+            onSearchChange(event.target.value);
+            setIsListOpen(true);
+          }}
+          onFocus={() => setIsListOpen(true)}
           aria-label="Cari desa untuk klaim admin"
           placeholder="Ketik nama desa, kecamatan, atau kabupaten"
           className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
         />
       </div>
+
+      {selectedDesa ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pilihan saat ini</p>
+            <p className="truncate text-sm font-bold text-slate-900">{selectedDesa.nama}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsListOpen((current) => !current)}
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
+          >
+            {isListOpen ? "Tutup daftar" : "Ganti desa"}
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${isListOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         {loading ? (
@@ -59,7 +90,7 @@ export default function AdminClaimDesaPicker({
           <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm leading-relaxed text-rose-700">
             Data akses admin belum bisa dimuat sekarang. Kamu tetap bisa lanjut dengan tombol Hubungi Kami.
           </div>
-        ) : visibleDesa.length > 0 ? (
+        ) : !isListOpen && selectedDesa ? null : visibleDesa.length > 0 ? (
           <>
             {visibleDesa.map((desa) => {
               const selected = desa.id === selectedDesaId;
@@ -68,7 +99,7 @@ export default function AdminClaimDesaPicker({
                 <button
                   key={desa.id}
                   type="button"
-                  onClick={() => onSelect(desa.id)}
+                  onClick={() => handleSelect(desa.id)}
                   className={`w-full rounded-2xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 ${
                     selected
                       ? "border-indigo-300 bg-indigo-50 shadow-sm"

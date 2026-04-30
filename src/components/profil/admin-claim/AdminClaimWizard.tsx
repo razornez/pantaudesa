@@ -21,12 +21,11 @@ import {
 } from "@/components/profil/admin-claim/adminClaimCopy";
 import AdminClaimTimeline from "@/components/profil/admin-claim/AdminClaimTimeline";
 import AdminInviteForm from "@/components/profil/admin-claim/AdminInviteForm";
-import AdminDesaGuide from "@/components/profil/admin-claim/AdminDesaGuide";
-import AdminClaimFAQ from "@/components/profil/admin-claim/AdminClaimFAQ";
+import AdminClaimHelpSection from "@/components/profil/admin-claim/AdminClaimHelpSection";
 import { useAdminClaimProfile } from "@/components/profil/admin-claim/useAdminClaimProfile";
 import { useAdminClaimFlow } from "@/hooks/use-admin-claim-flow";
 import type { AuthUser } from "@/lib/auth-context";
-import ContactAdminForm from "@/components/support/ContactAdminForm";
+import ContactAdminEntryCard from "@/components/support/ContactAdminEntryCard";
 
 export default function AdminClaimWizard({
   user,
@@ -54,8 +53,9 @@ export default function AdminClaimWizard({
     if (!term) return desaOptions;
 
     return desaOptions.filter((desa) =>
-      [desa.nama, desa.kecamatan, desa.kabupaten, desa.provinsi]
-        .some((value) => value.toLowerCase().includes(term)),
+      [desa.nama, desa.kecamatan, desa.kabupaten, desa.provinsi].some((value) =>
+        value.toLowerCase().includes(term),
+      ),
     );
   }, [desaOptions, search]);
   const eligibility = getAdminClaimEligibility({
@@ -89,9 +89,16 @@ export default function AdminClaimWizard({
   const inviteDisabledReason = canInvite
     ? ""
     : "Undangan admin hanya bisa dikirim oleh Admin Desa VERIFIED.";
+  const progressSummary = data?.currentMember?.status === "VERIFIED"
+    ? "Admin desa sudah VERIFIED."
+    : data?.currentMember?.status === "LIMITED"
+    ? "Akun sudah LIMITED, lanjutkan sampai VERIFIED."
+    : data?.currentClaim
+    ? "Klaim aktif sedang diproses."
+    : "Belum ada klaim aktif.";
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 lg:space-y-6">
       <AdminClaimNotice notice={initialNotice} />
 
       <div className="rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-violet-50/30 to-sky-50 p-5 shadow-sm sm:p-6">
@@ -112,15 +119,6 @@ export default function AdminClaimWizard({
           Pilih desa, lanjutkan verifikasi, lalu pantau status klaimmu. Verifikasi admin desa tidak otomatis membuat data publik desa menjadi terverifikasi.
         </p>
 
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Link
-            href="#hubungi-admin"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
-          >
-            <LifeBuoy size={14} />
-            Hubungi Admin
-          </Link>
-        </div>
       </div>
 
       <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
@@ -130,84 +128,105 @@ export default function AdminClaimWizard({
           onSelect={setStepOverride}
         />
 
-        <div className="mt-6">
-          {step === 1 ? (
-            <AdminClaimDesaPicker
-              loading={loading}
-              loadError={loadError}
-              search={search}
-              onSearchChange={setSearch}
-              filteredDesa={filteredDesa}
-              visibleCount={6}
-              selectedDesaId={selectedDesaId}
-              onSelect={setChosenDesaId}
-              selectedDesa={selectedDesa}
-              eligibility={eligibility}
-              onContinue={() => setStepOverride(2)}
+        <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 lg:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900">Lihat progress klaim</p>
+              <p className="mt-1 text-xs text-slate-500">{progressSummary}</p>
+            </div>
+            <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+              Langkah {step}/4
+            </span>
+          </summary>
+          <div className="px-3 pb-3">
+            <AdminClaimTimeline
+              compact
+              claim={data?.currentClaim ?? null}
+              member={data?.currentMember ?? null}
             />
-          ) : null}
+          </div>
+        </details>
 
-          {step === 2 ? (
-            <AdminClaimMethodPicker
-              selectedDesa={selectedDesa}
-              method={method}
-              onSelectMethod={setMethodOverride}
-              onBack={() => setStepOverride(1)}
-              onContinue={() => setStepOverride(3)}
-            />
-          ) : null}
+        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="min-w-0">
+            {step === 1 ? (
+              <AdminClaimDesaPicker
+                loading={loading}
+                loadError={loadError}
+                search={search}
+                onSearchChange={setSearch}
+                filteredDesa={filteredDesa}
+                visibleCount={6}
+                selectedDesaId={selectedDesaId}
+                onSelect={setChosenDesaId}
+                selectedDesa={selectedDesa}
+                eligibility={eligibility}
+                onContinue={() => setStepOverride(2)}
+              />
+            ) : null}
 
-          {step === 3 ? (
-            <AdminClaimInstruction
-              method={method}
-              selectedDesa={selectedDesa}
-              currentClaim={data?.currentClaim ?? null}
-              eligibility={eligibility}
-              flow={flow}
-              onBack={() => setStepOverride(2)}
-              onContinue={() => setStepOverride(4)}
-            />
-          ) : null}
+            {step === 2 ? (
+              <AdminClaimMethodPicker
+                selectedDesa={selectedDesa}
+                method={method}
+                onSelectMethod={setMethodOverride}
+                onBack={() => setStepOverride(1)}
+                onContinue={() => setStepOverride(3)}
+              />
+            ) : null}
 
-          {step === 4 ? (
-            <AdminClaimStatusPanel
-              currentState={data?.currentState ?? null}
-              currentClaim={data?.currentClaim ?? null}
-              currentMember={data?.currentMember ?? null}
-              showDemoLabel={isDemoAccount}
-              selectedDesaName={selectedDesa?.nama ?? defaultDesa?.nama ?? null}
-              onBack={() => setStepOverride(3)}
-              onRestart={() => setStepOverride(1)}
-            />
-          ) : null}
+            {step === 3 ? (
+              <AdminClaimInstruction
+                method={method}
+                selectedDesa={selectedDesa}
+                currentClaim={data?.currentClaim ?? null}
+                eligibility={eligibility}
+                flow={flow}
+                onBack={() => setStepOverride(2)}
+                onContinue={() => setStepOverride(4)}
+              />
+            ) : null}
+
+            {step === 4 ? (
+              <AdminClaimStatusPanel
+                currentState={data?.currentState ?? null}
+                currentClaim={data?.currentClaim ?? null}
+                currentMember={data?.currentMember ?? null}
+                showDemoLabel={isDemoAccount}
+                selectedDesaName={selectedDesa?.nama ?? defaultDesa?.nama ?? null}
+                onBack={() => setStepOverride(3)}
+                onRestart={() => setStepOverride(1)}
+              />
+            ) : null}
+          </div>
+
+          <div className="hidden lg:block lg:self-start">
+            <div className="lg:sticky lg:top-6">
+              <AdminClaimTimeline
+                compact
+                claim={data?.currentClaim ?? null}
+                member={data?.currentMember ?? null}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-5">
-          <AdminInviteForm
-            canInvite={canInvite}
-            disabledReason={inviteDisabledReason}
-            invite={flow.invite}
-            onEmailChange={(value) => flow.setInvite((state) => ({ ...state, email: value, error: null, success: null }))}
-            onSubmit={flow.sendInvite}
-          />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <AdminInviteForm
+          canInvite={canInvite}
+          disabledReason={inviteDisabledReason}
+          invite={flow.invite}
+          onEmailChange={(value) =>
+            flow.setInvite((state) => ({ ...state, email: value, error: null, success: null }))
+          }
+          onSubmit={flow.sendInvite}
+        />
 
-          <ContactAdminForm
-            state={flow.contact}
-            onChange={(field, value) => flow.setContact((state) => ({ ...state, [field]: value, error: null, success: null }))}
-            onSubmit={flow.sendContact}
-          />
-
-          <AdminDesaGuide />
-
-          <AdminClaimFAQ />
-        </div>
-
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <AdminClaimTimeline claim={data?.currentClaim ?? null} member={data?.currentMember ?? null} />
-        </div>
+        <ContactAdminEntryCard />
       </div>
+
+      <AdminClaimHelpSection />
     </section>
   );
 }

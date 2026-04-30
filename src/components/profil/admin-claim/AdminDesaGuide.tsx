@@ -25,7 +25,7 @@ export default function AdminDesaGuide() {
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <p className="text-sm font-black text-slate-900">Panduan Admin Desa</p>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {guideItems.map((item) => (
           <div key={item} className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
             {item}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { AdminClaimActiveClaim, AdminClaimProfileData } from "@/lib/data/admin-claim-read";
+import type { ContactAdminFormState } from "@/components/support/contact-admin-types";
 import {
   checkAdminClaimWebsiteToken,
   contactAdmin,
@@ -15,15 +16,6 @@ import type { ClaimMethod } from "@/components/profil/admin-claim/adminClaimCopy
 
 export interface InviteState {
   email: string;
-  loading: boolean;
-  success: string | null;
-  error: string | null;
-}
-
-export interface ContactAdminState {
-  subject: string;
-  description: string;
-  evidence: string;
   loading: boolean;
   success: string | null;
   error: string | null;
@@ -43,8 +35,8 @@ export interface AdminClaimFlowState {
   busy: boolean;
   invite: InviteState;
   setInvite: Dispatch<SetStateAction<InviteState>>;
-  contact: ContactAdminState;
-  setContact: Dispatch<SetStateAction<ContactAdminState>>;
+  contact: ContactAdminFormState;
+  setContact: Dispatch<SetStateAction<ContactAdminFormState>>;
   submitClaimOnly: () => Promise<void>;
   sendEmailToken: () => Promise<void>;
   generateWebsiteToken: () => Promise<void>;
@@ -79,7 +71,7 @@ export function useAdminClaimFlow({
     success: null,
     error: null,
   });
-  const [contact, setContact] = useState<ContactAdminState>({
+  const [contact, setContact] = useState<ContactAdminFormState>({
     subject: "",
     description: "",
     evidence: "",

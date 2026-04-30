@@ -1,4 +1,4 @@
-import type { ContactAdminState } from "@/hooks/use-admin-claim-flow";
+import type { ContactAdminFormState } from "@/components/support/contact-admin-types";
 
 const MAX_SUBJECT = 160;
 const MAX_DESC    = 2000;
@@ -9,7 +9,7 @@ export default function ContactAdminForm({
   onChange,
   onSubmit,
 }: {
-  state: ContactAdminState;
+  state: ContactAdminFormState;
   onChange: (field: "subject" | "description" | "evidence", value: string) => void;
   onSubmit: () => void;
 }) {

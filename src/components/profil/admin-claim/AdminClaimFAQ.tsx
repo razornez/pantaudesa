@@ -65,14 +65,14 @@ export default function AdminClaimFAQ() {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <p className="text-sm font-black text-slate-900">Pertanyaan Umum (FAQ)</p>
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 space-y-2">
         {faqs.map((faq, i) => (
           <details key={i} className="group rounded-xl border border-slate-100 bg-slate-50">
-            <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-xs font-bold text-slate-900 list-none">
+            <summary className="flex list-none cursor-pointer items-center justify-between px-3 py-2.5 text-xs font-bold text-slate-900">
               {faq.q}
-              <span className="ml-2 text-slate-400 transition-transform group-open:rotate-180">▼</span>
+              <span className="ml-2 text-slate-400 transition-transform group-open:rotate-180">v</span>
             </summary>
-            <div className="border-t border-slate-100 px-3 pb-2 pt-1 text-xs leading-relaxed text-slate-600">
+            <div className="border-t border-slate-100 px-3 pb-3 pt-2 text-xs leading-relaxed text-slate-600">
               {faq.a}
             </div>
           </details>
