@@ -1,6 +1,6 @@
 # PantauDesa
 
-PantauDesa adalah platform transparansi anggaran desa yang membantu warga mencari, memahami, dan mengawasi penggunaan uang desa.
+PantauDesa adalah platform transparansi anggaran desa yang membantu warga mencari, memahami, dan mengawasi penggunaan uang desa
 
 > Cari desamu. Lihat anggarannya. Awasi penggunaannya.
 
