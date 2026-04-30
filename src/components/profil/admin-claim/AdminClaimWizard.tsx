@@ -183,25 +183,31 @@ export default function AdminClaimWizard({
         </div>
       </div>
 
-      <AdminClaimTimeline claim={data?.currentClaim ?? null} member={data?.currentMember ?? null} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-5">
+          <AdminInviteForm
+            canInvite={canInvite}
+            disabledReason={inviteDisabledReason}
+            invite={flow.invite}
+            onEmailChange={(value) => flow.setInvite((state) => ({ ...state, email: value, error: null, success: null }))}
+            onSubmit={flow.sendInvite}
+          />
 
-      <AdminInviteForm
-        canInvite={canInvite}
-        disabledReason={inviteDisabledReason}
-        invite={flow.invite}
-        onEmailChange={(value) => flow.setInvite((state) => ({ ...state, email: value, error: null, success: null }))}
-        onSubmit={flow.sendInvite}
-      />
+          <ContactAdminForm
+            state={flow.contact}
+            onChange={(field, value) => flow.setContact((state) => ({ ...state, [field]: value, error: null, success: null }))}
+            onSubmit={flow.sendContact}
+          />
 
-      <ContactAdminForm
-        state={flow.contact}
-        onChange={(field, value) => flow.setContact((state) => ({ ...state, [field]: value, error: null, success: null }))}
-        onSubmit={flow.sendContact}
-      />
+          <AdminDesaGuide />
 
-      <AdminDesaGuide />
+          <AdminClaimFAQ />
+        </div>
 
-      <AdminClaimFAQ />
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <AdminClaimTimeline claim={data?.currentClaim ?? null} member={data?.currentMember ?? null} />
+        </div>
+      </div>
     </section>
   );
 }

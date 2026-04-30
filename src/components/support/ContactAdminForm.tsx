@@ -29,7 +29,7 @@ export default function ContactAdminForm({
             type="text"
             value={state.subject}
             onChange={(e) => onChange("subject", e.target.value.slice(0, MAX_SUBJECT))}
-            placeholder="例: Tidak bisa akses dokumendesa"
+            placeholder="Tidak bisa akses dokumendesa"
             disabled={state.loading}
             maxLength={MAX_SUBJECT}
             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
