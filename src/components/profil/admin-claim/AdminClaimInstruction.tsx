@@ -6,6 +6,7 @@ import {
   METHOD_COPY,
   type ClaimMethod,
 } from "@/components/profil/admin-claim/adminClaimCopy";
+import { useAdminClaimFlow } from "@/components/profil/admin-claim/useAdminClaimFlow";
 import type { AdminClaimDesaOption } from "@/lib/data/admin-claim-read";
 
 export default function AdminClaimInstruction({
@@ -23,39 +24,28 @@ export default function AdminClaimInstruction({
   onContinue: () => void;
   onClaimRefresh: () => Promise<void>;
 }) {
-  const [claimId, setClaimId] = useState<string | null>(null);
   const [officialEmail, setOfficialEmail] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState(selectedDesa?.websiteUrl ?? "");
-  const [rawToken, setRawToken] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const {
+    claimId,
+    rawToken,
+    feedback,
+    error,
+    busy,
+    createClaim,
+    sendEmailToken,
+    regenWebsiteToken,
+    verifyWebsiteToken,
+  } = useAdminClaimFlow(onClaimRefresh);
 
   const copy = METHOD_COPY[method];
   const supportHref = supportEmail && selectedDesa
     ? buildSupportMailto(supportEmail, selectedDesa.nama)
     : undefined;
 
-  async function submitClaim() {
+  async function submitClaimAction() {
     if (!selectedDesa) return;
-    setBusy(true);
-    setError(null);
-    setFeedback(null);
-    const response = await fetch("/api/admin-claim/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ desaId: selectedDesa.id, method, officialEmail, websiteUrl }),
-    });
-    const payload = await response.json() as { claimId?: string; error?: string };
-    if (!response.ok || !payload.claimId) {
-      setError(payload.error ?? "Gagal mengirim klaim.");
-      setBusy(false);
-      return;
-    }
-    setClaimId(payload.claimId);
-    setFeedback("Klaim berhasil dibuat. Lanjutkan verifikasi sesuai metode.");
-    setBusy(false);
-    await onClaimRefresh();
+    await createClaim({ desaId: selectedDesa.id, method, officialEmail, websiteUrl });
   }
 
   return (
@@ -146,7 +136,7 @@ export default function AdminClaimInstruction({
           <div className="mt-4 space-y-3">
             <button
               type="button"
-              onClick={submitClaim}
+              onClick={submitClaimAction}
               disabled={busy || !selectedDesa}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -165,23 +155,7 @@ export default function AdminClaimInstruction({
                 <button
                   type="button"
                   disabled={busy || !claimId || !officialEmail.trim()}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    const response = await fetch("/api/admin-claim/generate-email-token", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ claimId, officialEmail }),
-                    });
-                    const payload = await response.json() as { message?: string; error?: string };
-                    if (!response.ok) {
-                      setError(payload.error ?? payload.message ?? "Gagal mengirim email verifikasi.");
-                    } else {
-                      setFeedback("Email verifikasi berhasil dikirim.");
-                    }
-                    setBusy(false);
-                    await onClaimRefresh();
-                  }}
+                  onClick={() => sendEmailToken(officialEmail)}
                   className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >Kirim email verifikasi</button>
               </>
@@ -199,48 +173,14 @@ export default function AdminClaimInstruction({
                 <button
                   type="button"
                   disabled={busy || !claimId || !websiteUrl.trim()}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    const response = await fetch("/api/admin-claim/generate-website-token", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ claimId, websiteUrl }),
-                    });
-                    const payload = await response.json() as { rawToken?: string; error?: string };
-                    if (!response.ok || !payload.rawToken) {
-                      setError(payload.error ?? "Gagal generate token website.");
-                    } else {
-                      setRawToken(payload.rawToken);
-                      setFeedback("Token berhasil dibuat. Pasang token di website resmi desa lalu klik cek token.");
-                    }
-                    setBusy(false);
-                  }}
+                  onClick={() => regenWebsiteToken(websiteUrl)}
                   className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >Generate token website</button>
                 {rawToken ? <p className="rounded-lg bg-slate-50 p-2 text-xs break-all">Token sesi aktif: {rawToken}</p> : null}
                 <button
                   type="button"
                   disabled={busy || !claimId || !rawToken}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    const response = await fetch("/api/admin-claim/check-website-token", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ claimId, rawToken }),
-                    });
-                    const payload = await response.json() as { found?: boolean; reason?: string; error?: string };
-                    if (!response.ok) {
-                      setError(payload.error ?? "Gagal memeriksa token website.");
-                    } else if (!payload.found) {
-                      setError(`Token belum ditemukan (${payload.reason ?? "unknown"}).`);
-                    } else {
-                      setFeedback("Token ditemukan. Status akan diperbarui.");
-                    }
-                    setBusy(false);
-                    await onClaimRefresh();
-                  }}
+                  onClick={verifyWebsiteToken}
                   className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >Cek token website</button>
               </>
