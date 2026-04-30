@@ -99,8 +99,15 @@ Zero-bug readiness:
 1. **Guide expansion** (`AdminDesaGuide.tsx`): expanded from 9 to 20 guide items covering all 20 minimum points required by 04-007B Scope B7 (one-user-one-desa, PENDING/LIMITED/VERIFIED definitions, website renewal, invite rules, public-vs-admin verification distinction, Hubungi Admin usage, etc.)
 2. **Full FAQ component** (`AdminClaimFAQ.tsx`): new component with 15 questions covering all required FAQ minimum points from 04-007B Scope B7 (verified ≠ public data, limited admin can't invite, max 5 admins, renewal, expired invite, fake admin suspicion, contact PantauDesa, etc.)
 3. **Wizard integration**: `AdminClaimFAQ` rendered in `AdminClaimWizard.tsx` below `AdminDesaGuide`
-4. **Hook fix** (`useAdminClaimProfile.ts`): fixed broken `useEffect`/`useMemo` nesting that prevented proper async fetch; added `useCallback` for `refresh` with correct `Promise<void>` return type
+4. **Hook fix** (`useAdminClaimProfile.ts`): fixed broken `useEffect`/`useMemo` nesting that prevented proper async fetch; added `useCallback` for `refresh` with correct `Promise<void>` return type; removed `setState` direct call in effect body (ESLint violation)
 5. **.gitignore hardening**: added `.next-dev*.log`, `.claude/`, `.artifacts/`, `tmp/` to prevent accidental commit of local dev logs and QA artifacts
+6. **UI/UX polish session** (commit `3933b47`):
+   - `AdminDesaGuide`: removed duplicate "FAQ singkat" section (full FAQ now in dedicated `AdminClaimFAQ` component)
+   - `AdminClaimStepNav`: step nav buttons now only clickable if step ≤ currentStep (prevents confusing jumps and bypass)
+   - `AdminClaimInstruction`: clarified "Kirim klaim" button vs active claim notice (active claim shows clear info card instead of ambiguous disabled button); added helper text for email and website token steps; styled feedback/error messages with colored borders
+   - `AdminInviteForm`: email input always enabled; disabled reason shown below input when user is not VERIFIED (was: input disabled without reason); styled success/error states with colored borders
+   - `ContactAdminForm`: client-side validation (subject + description required before submit button enables); character counters per field; proper `<label>` with required asterisk markers; clearer help text (explicitly states "no auto-public-report")
+   - `src/tests/setup.ts`: removed unused vitest globals import that caused ESLint warnings
 
 ### Build note
 
