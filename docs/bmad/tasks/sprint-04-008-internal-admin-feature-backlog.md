@@ -7,7 +7,7 @@ Owner gate: Iwan/Owner requested collecting all internal-admin and post-claim Ad
 
 ## Purpose
 
-Collect internal admin and post-claim Admin Desa features that are related to Desa Admin verification, review, moderation, audit, document contribution, AI-assisted data review, and data governance, but are intentionally not part of Sprint 04-007.
+Collect internal admin and post-claim Admin Desa features that are related to Desa Admin verification, review, moderation, audit, document contribution, AI-assisted extraction, source traceability, and data governance, but are intentionally not part of Sprint 04-007.
 
 This document is a backlog/task container only. It is not approved for implementation yet.
 
@@ -19,7 +19,7 @@ Any future 04-008 execution subtask must read and satisfy:
 docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md
 ```
 
-04-008 features are high-risk because they may touch internal permissions, admin status, uploaded documents, AI-assisted extraction, source status, and public Desa detail. A selected 04-008 execution task must not be marked PASS if unresolved issues exist in unauthorized access, stale state, audit trail, private data exposure, destructive actions, AI overwrite risk, storage privacy, or public data verification confusion.
+04-008 features are high-risk because they may touch internal permissions, admin status, uploaded documents, AI-assisted extraction, source status, and public Desa detail. A selected 04-008 execution task must not be marked PASS if unresolved issues exist in unauthorized access, stale state, audit trail, private data exposure, destructive actions, AI overwrite risk, storage privacy, or public data ownership confusion.
 
 ## Why separate from Sprint 04-007
 
@@ -34,9 +34,9 @@ Internal admin and Admin Desa post-claim features are separated because they may
 - audit viewer,
 - document upload/storage,
 - Supabase Storage bucket and access-policy setup,
-- AI extraction/review pipeline,
+- AI extraction pipeline,
 - data mapping to public Desa detail,
-- source status/dataStatus governance,
+- source traceability/dataStatus governance,
 - more sensitive data access,
 - possible schema/API adjustments,
 - stronger QA and access control.
@@ -50,9 +50,12 @@ Internal admin and Admin Desa post-claim features are separated because they may
 
 ## Global guardrails
 
-- No public data verified activation without governance.
-- Admin membership verification is not public data verification.
-- No AI result may directly overwrite public Desa data without review.
+- Admin membership verification is not the same as public data verification.
+- Admin Desa `VERIFIED` may publish/update data for their own desa directly, with audit trail and source traceability.
+- Admin Desa `LIMITED` may prepare drafts/supporting documents but must not publish public data.
+- No AI result may directly overwrite public Desa data without explicit Admin Desa action.
+- No internal admin review layer should be required before a `VERIFIED` Admin Desa publishes their own village data, unless Owner later approves a special dispute/safety workflow.
+- Do not create a manual feature to change source status into `verified`; if source/data changes, the admin should upload/update the supporting document/source instead.
 - No automatic punishment/suspension based only on reports.
 - No private email/phone exposure.
 - No destructive migration without approval.
@@ -65,27 +68,156 @@ Internal admin and Admin Desa post-claim features are separated because they may
 
 ---
 
+# Admin Desa role access model
+
+This role model is the current Owner-approved direction for future 04-008 planning. It should stay simple and avoid confusing users.
+
+## PENDING
+
+Meaning:
+
+- claim has been created,
+- user is not yet an active Admin Desa,
+- user is still waiting for email/website verification or invite acceptance.
+
+Allowed:
+
+- view claim status,
+- continue verification flow,
+- use Hubungi Admin/support.
+
+Not allowed:
+
+- access full Admin Desa dashboard,
+- publish data,
+- invite admin,
+- upload official source documents as active admin.
+
+## LIMITED Admin Desa
+
+Meaning:
+
+- user is an active Admin Desa with restricted access,
+- user is not fully verified yet,
+- user can prepare data/supporting evidence but cannot publish public village data.
+
+Allowed:
+
+- access Admin Desa dashboard,
+- view own admin status,
+- read guide/FAQ,
+- use Hubungi Admin/support,
+- continue verification toward `VERIFIED`,
+- generate/check website token for verification,
+- edit/save draft data desa,
+- upload supporting documents/source documents for their own desa,
+- upload/update documents if source changes.
+
+Not allowed:
+
+- publish/update public Desa data,
+- invite another admin,
+- revoke/suspend another admin,
+- change another admin role/status,
+- remove another admin,
+- manually mark source/data as verified,
+- access internal PantauDesa admin panel,
+- perform destructive actions such as deleting a desa or bulk deleting public data.
+
+UI copy direction:
+
+```text
+Kamu sudah menjadi Admin Desa LIMITED. Kamu bisa melengkapi draft data dan dokumen pendukung, tetapi belum bisa publish data atau mengundang admin lain. Selesaikan verifikasi website untuk menjadi VERIFIED.
+```
+
+## VERIFIED Admin Desa
+
+Meaning:
+
+- user is a fully verified Admin Desa for their own desa,
+- user can manage and publish data for their own desa,
+- user must renew verification periodically.
+
+Allowed:
+
+- all LIMITED capabilities,
+- publish/update public Desa data directly for their own desa,
+- upload/update supporting documents/source documents,
+- invite another admin by email,
+- manage invite flow within max-admin rules,
+- perform 6-month website verification renewal.
+
+Not allowed for MVP:
+
+- revoke/suspend another admin,
+- change another admin role/status,
+- remove another admin,
+- manually mark source/data as verified,
+- access internal PantauDesa admin panel,
+- view private user/admin data outside their own desa context,
+- perform destructive actions such as deleting a desa or bulk deleting public data.
+
+UI copy direction:
+
+```text
+Kamu adalah Admin Desa VERIFIED. Kamu bisa publish data desa dan mengundang admin lain. Status VERIFIED perlu diperbarui setiap 6 bulan melalui verifikasi website.
+```
+
+## Renewal rule
+
+- Renewal applies only to `VERIFIED` Admin Desa.
+- Renewal is based on website verification.
+- If a `VERIFIED` admin does not renew, future implementation may downgrade them to `LIMITED` after a grace period.
+- `LIMITED` admins do not need renewal because they are not fully verified yet.
+
+## Source/status rule
+
+- Do not create a manual action such as `Mark source as verified`.
+- If data/source changes, Admin Desa should upload or update the supporting document/source.
+- Source traceability should be based on uploaded/current documents, timestamps, uploader, and audit logs.
+- Admin Desa `VERIFIED` can publish data directly, but every publish must be auditable.
+
+## Sensitive actions examples
+
+Sensitive actions that should not be given to `LIMITED` or `VERIFIED` Admin Desa in MVP:
+
+- revoke admin,
+- suspend admin,
+- promote `LIMITED` admin to `VERIFIED`,
+- downgrade `VERIFIED` admin to `LIMITED`,
+- remove another admin from a desa,
+- delete a desa,
+- bulk delete public data,
+- delete source documents without retention policy,
+- view internal audit/private user data outside own desa context,
+- access internal PantauDesa admin panel.
+
+These actions should remain internal-admin/backlog-only until Owner approves a separate workflow.
+
+---
+
 # Backlog items
 
 ## 04-008A — Internal Admin Review Queue
 
 Goal:
 
-Create an internal-only queue for reviewing admin claim cases that cannot be fully resolved through email or website verification.
+Create an internal-only queue for claim cases or escalations that cannot be resolved through email/website verification or standard support.
 
 Potential scope:
 
-- list pending/support-review claims,
+- list pending/support-review claims or escalations,
 - view user/desa/method/evidence summary,
 - view audit timeline,
-- approve as `LIMITED` or `VERIFIED` depending on policy,
+- approve/downgrade/suspend only if Owner approves the policy,
 - reject with reason,
 - request more info,
 - write audit event for every decision.
 
 Out of scope until approved:
 
-- public verified data activation,
+- public data ownership override,
+- mandatory internal review before `VERIFIED` Admin Desa publishes their own data,
 - automatic approval,
 - bulk actions,
 - AI decisioning.
@@ -93,14 +225,14 @@ Out of scope until approved:
 Key decisions needed:
 
 - Which internal role can access the queue?
-- Can internal admin grant `VERIFIED`, or only `LIMITED`?
-- What evidence is required for approval?
+- Can internal admin grant `VERIFIED`, or only handle escalation/support cases?
+- What evidence is required for approval/escalation?
 
 ## 04-008B — Revoke / Suspend Admin Membership
 
 Goal:
 
-Allow internal admin to safely suspend, revoke, or downgrade desa admin membership.
+Allow internal admin to safely suspend, revoke, or downgrade desa admin membership in a future governed workflow.
 
 Potential scope:
 
@@ -110,25 +242,27 @@ Potential scope:
 - reason required,
 - audit event required,
 - notify affected user if email flow exists,
-- prevent user from self-revoking others unless authorized.
+- prevent user from self-revoking others unless Owner later approves a separate verified-admin governance flow.
 
 Guardrails:
 
 - no auto-suspend from report alone,
 - no hidden destructive action,
-- every action must be auditable.
+- every action must be auditable,
+- Admin Desa `VERIFIED` should not be allowed to revoke/suspend other admins in MVP.
 
 Key decisions needed:
 
 - Who can suspend/revoke?
 - Should suspended users be able to appeal/contact admin?
 - What happens to pending invites from suspended admin?
+- Should a future primary-admin concept exist?
 
 ## 04-008C — Invite Management Dashboard
 
 Goal:
 
-Provide internal or verified-admin visibility into invite status without overloading Sprint 04-007.
+Provide visibility into invite status without overloading Sprint 04-007.
 
 Potential scope:
 
@@ -145,7 +279,9 @@ Out of scope until approved:
 
 - role hierarchy beyond current model,
 - bulk invite,
-- invite analytics.
+- invite analytics,
+- auto-promote invitee to `VERIFIED`,
+- auto-remove admin to fit max 5.
 
 Key decisions needed:
 
@@ -157,7 +293,7 @@ Key decisions needed:
 
 Goal:
 
-Expose audit events in an internal-safe viewer so review/moderation decisions can be traced.
+Expose audit events in an internal-safe viewer so support/moderation decisions can be traced.
 
 Potential scope:
 
@@ -173,7 +309,8 @@ Guardrails:
 - no raw tokens,
 - no private contact exposure,
 - no public access,
-- no editable audit events.
+- no editable audit events,
+- audit viewer must not become a tool to manually rewrite public data/source status.
 
 Key decisions needed:
 
@@ -190,13 +327,15 @@ Implement the 6-month website verification renewal policy beyond UI copy.
 Owner decision already captured:
 
 - website verification should be renewed every 6 months,
+- renewal applies to `VERIFIED` Admin Desa only,
 - if not renewed, admin status should eventually return to `LIMITED` or similar.
 
 Potential scope:
 
 - store/derive `verificationExpiresAt`,
 - show internal list of admin verifications near expiry,
-- manual renewal trigger,
+- show renewal notice to `VERIFIED` Admin Desa,
+- manual renewal trigger through website token,
 - automatic downgrade if scheduler exists later,
 - audit renewal/downgrade events,
 - notify admin before expiry if email notification is approved.
@@ -205,13 +344,15 @@ Out of scope until approved:
 
 - cron/scheduler if infrastructure is not ready,
 - schema migration without approval,
-- auto-downgrade without review of edge cases.
+- auto-downgrade without review of edge cases,
+- renewal requirement for `LIMITED` admins.
 
 Key decisions needed:
 
 - Is renewal based on `verifiedAt + 6 months`?
 - Should downgrade be automatic or internal-review triggered?
 - Should email reminders be sent before expiry?
+- Is there a grace period before downgrade?
 
 ## 04-008F — Internal Admin Support Inbox / Contact Handling
 
@@ -237,11 +378,11 @@ Key decisions needed:
 - Who receives/handles contact messages?
 - Is there a privacy retention policy?
 
-## 04-008G — Admin Desa Document Contribution & AI-Assisted Data Review
+## 04-008G — Admin Desa Document Contribution & AI-Assisted Data Extraction
 
 Goal:
 
-Allow verified/eligible Admin Desa to contribute official village documents, use AI to assist extraction/mapping, then route proposed data changes through review before updating Desa detail and source/data status.
+Allow eligible Admin Desa to upload/update official village documents, optionally use AI to assist extraction/mapping, then let `VERIFIED` Admin Desa publish data for their own desa directly with audit trail and source traceability.
 
 This item is related to Admin Desa, but it is post-claim data contribution, not claim verification. It must not be folded into Sprint 04-007.
 
@@ -256,14 +397,14 @@ Potential scope:
   - `desa/{desaId}/documents/{documentId}/{safeFileName}`
   - or `admin-desa/{desaId}/{yyyy}/{mm}/{documentId}-{safeFileName}`
 - Access must be controlled server-side; do not expose service-role keys to the client.
-- Use signed URLs for temporary internal/reviewer access if needed.
+- Use signed URLs for temporary admin/reviewer access if needed.
 - Define max URL lifetime for signed URLs.
 - Define allowed file types before enabling upload, such as PDF and common image formats only if approved.
 - Define max file size and per-desa upload limits.
-- Define retention/deletion policy for rejected, obsolete, or superseded documents.
+- Define retention/deletion policy for obsolete or superseded documents.
 - Define whether original files can be deleted after extraction or must be retained for audit/source traceability.
 - Store storage object path/key in DB, not a public URL.
-- Add audit event for document upload, access/download if required, extraction, review, publish, and delete/archive actions.
+- Add audit event for document upload, access/download if required, extraction, publish, and delete/archive actions.
 - Add QA cases for bucket privacy, signed URL access, unauthorized access rejection, and cleanup behavior.
 
 Approved env storage location:
@@ -312,43 +453,48 @@ Owner/operator setup checklist:
 - Validate file type, file size, and file count.
 - Store document in Supabase Storage private bucket by default.
 - Link document to desa, uploader user, admin membership, storage object path, source type, and created timestamp.
-- Initial document status should be something like `UPLOADED`, `NEEDS_REVIEW`, or equivalent existing status.
+- Initial document status should be something like `UPLOADED`, `SOURCE_FOUND`, or equivalent existing status.
 - Write audit event for upload.
+
+Access by role:
+
+- `LIMITED` can upload supporting/source documents and save draft data.
+- `VERIFIED` can upload/update supporting/source documents and publish data changes.
 
 ### 04-008G.2 — AI-assisted document extraction
 
 - AI may read uploaded document and propose extracted fields.
-- AI output must be saved as draft/candidate data, not final public data.
+- AI output must be saved as draft/candidate data, not automatically published.
 - Include confidence score or review flags where practical.
-- Mark uncertain fields as needs review.
+- Mark uncertain fields clearly in UI.
 - Preserve raw extracted text/summary only if privacy-safe.
 - Write audit event for extraction.
-- AI result must never directly mark public data as verified.
+- AI result must never directly publish public data without explicit Admin Desa action.
 
 ### 04-008G.3 — Mapping candidate data to Desa detail
 
 - Map extracted/candidate data to existing Desa detail fields where applicable.
 - Candidate mappings may include profile desa, alamat/kontak, perangkat desa, dokumen sumber, source metadata, and summary/ringkasan.
 - Show before/after diff for every field that would change.
-- Support approve/reject per field if feasible; otherwise approve/reject per section with clear limitation.
+- `LIMITED` can save candidate mapping as draft only.
+- `VERIFIED` can publish approved-by-self changes directly for their own desa.
 - No silent overwrite of existing public data.
 
-### 04-008G.4 — Review and approval workflow
+### 04-008G.4 — Admin Desa publish workflow
 
-- Reviewer must explicitly review candidate mappings before public data update.
-- Define who can review: verified Admin Desa, internal admin, or both.
-- Reject/approve decisions require audit event.
-- Rejected items should preserve reason.
-- Approved changes should be traceable to source document and reviewer.
-- If review policy is ambiguous, stop and ask Owner.
+- `VERIFIED` Admin Desa can explicitly publish/update public Desa detail for their own desa.
+- Internal admin review must not be required before a `VERIFIED` Admin Desa publishes their own data.
+- Every publish action must show confirmation and write audit event.
+- Published changes should be traceable to source document, uploader, timestamp, and publisher.
+- `LIMITED` Admin Desa cannot publish; they can only draft/upload evidence.
+- If publish policy is ambiguous, stop and ask Owner.
 
-### 04-008G.5 — Publish/update Desa detail and source/data status
+### 04-008G.5 — Publish/update Desa detail and source traceability
 
-- After review approval, update Desa detail fields safely.
-- Update source status and data status consistently.
-- Possible statuses to consider: `demo`, `source-found`, `needs-review`, `verified`, or existing project equivalents.
-- Do not enable `verified` public data status unless governance workflow is approved.
-- Keep source metadata tied to the uploaded document.
+- After explicit `VERIFIED` admin publish, update Desa detail fields safely.
+- Keep source metadata tied to the uploaded/current document.
+- Do not create manual `mark source as verified` action.
+- If source changes, user should upload/update the supporting document.
 - Write audit event for every published field/section.
 - Consider version history or rollback candidate before public overwrite.
 
@@ -356,8 +502,10 @@ Owner/operator setup checklist:
 
 - Admin Desa sees upload form only for desa they manage.
 - Upload form has loading/success/error states.
-- AI extraction state is visible: pending, extracted, failed, needs review.
-- Review UI shows candidate mapping and before/after diff.
+- AI extraction state is visible: pending, extracted, failed, needs attention.
+- Mapping UI shows candidate mapping and before/after diff.
+- `LIMITED` UI clearly says draft/upload only and no publish.
+- `VERIFIED` UI clearly says publish is allowed and will be audited.
 - Publish/update UI shows clear confirmation and result.
 - Desktop and mobile screenshots/notes required if UI is touched.
 - Full quality gate required: lint, test, typecheck, Prisma generate, build.
@@ -369,19 +517,19 @@ Guardrails:
 - No public bucket for Admin Desa documents unless Owner explicitly approves.
 - No service role key or storage secret exposed client-side.
 - No AI extraction dependency/provider without Owner approval.
-- No public data overwrite without review.
-- No public `verified` data activation without governance.
+- No AI auto-publish without explicit Admin Desa action.
+- No mandatory internal admin review before `VERIFIED` Admin Desa publishes their own data.
+- No manual source `verified` status button.
 - No private documents exposed publicly.
 - No raw sensitive document content in logs/screenshots.
 - No destructive migration without approval.
-- Every upload/extract/review/publish action must be audited.
+- Every upload/extract/publish action must be audited.
 - Any 04-008G execution task must satisfy the Admin Desa zero-bug readiness checklist.
 
 Key decisions needed:
 
-- Which Admin Desa status can upload documents: `LIMITED`, `VERIFIED`, or both?
-- Which role can approve AI-mapped changes?
-- Should review be done by internal admin only, Admin Desa only, or two-step approval?
+- Which draft features should `LIMITED` get first?
+- What fields can `VERIFIED` publish directly in MVP?
 - What Supabase Storage bucket name should be used?
 - What storage folder/path convention should be used?
 - What signed URL lifetime should be allowed?
@@ -391,7 +539,7 @@ Key decisions needed:
 - Which AI provider/model is allowed?
 - Should AI extraction run immediately, manually, or queued?
 - What fields in Desa detail are allowed to be updated from documents?
-- How should `dataStatus` and source status transition after review?
+- How should source traceability be displayed after publish?
 - Is version history/rollback required before publishing?
 
 ---
@@ -401,18 +549,19 @@ Key decisions needed:
 The following should not be folded into this internal-admin batch unless Owner separately approves:
 
 - public admin list per desa,
-- public verified data activation,
 - numeric APBDes extraction,
 - screenshot storage,
 - Playwright setup,
 - Data Desa `/desa` server query refactor,
-- Voice-to-Desa relation migration.
+- Voice-to-Desa relation migration,
+- manual `mark source as verified` feature,
+- admin desa revoke/suspend permissions for MVP.
 
 ## Recommended future sequencing
 
 1. Finish Sprint 04-007 user-facing claim admin UI integration.
 2. Review real QA/browser feedback from 04-007.
-3. Decide whether the first 04-008 execution item should be review queue, revoke/suspend, audit viewer, support inbox, or Admin Desa document contribution.
+3. Decide whether the first 04-008 execution item should be review queue, revoke/suspend, audit viewer, support inbox, renewal, or Admin Desa document contribution/publish.
 4. Split selected item into a single-PIC execution task with TDD, zero-bug readiness, and browser QA.
 
 ## Approval status
