@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ArrowUpRight, CopyCheck, LifeBuoy } from "lucide-react";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 import {
@@ -13,17 +14,49 @@ export default function AdminClaimInstruction({
   supportEmail,
   onBack,
   onContinue,
+  onClaimRefresh,
 }: {
   method: ClaimMethod;
   selectedDesa: AdminClaimDesaOption | null;
   supportEmail: string | null;
   onBack: () => void;
   onContinue: () => void;
+  onClaimRefresh: () => Promise<void>;
 }) {
+  const [claimId, setClaimId] = useState<string | null>(null);
+  const [officialEmail, setOfficialEmail] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState(selectedDesa?.websiteUrl ?? "");
+  const [rawToken, setRawToken] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
   const copy = METHOD_COPY[method];
   const supportHref = supportEmail && selectedDesa
     ? buildSupportMailto(supportEmail, selectedDesa.nama)
     : undefined;
+
+  async function submitClaim() {
+    if (!selectedDesa) return;
+    setBusy(true);
+    setError(null);
+    setFeedback(null);
+    const response = await fetch("/api/admin-claim/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ desaId: selectedDesa.id, method, officialEmail, websiteUrl }),
+    });
+    const payload = await response.json() as { claimId?: string; error?: string };
+    if (!response.ok || !payload.claimId) {
+      setError(payload.error ?? "Gagal mengirim klaim.");
+      setBusy(false);
+      return;
+    }
+    setClaimId(payload.claimId);
+    setFeedback("Klaim berhasil dibuat. Lanjutkan verifikasi sesuai metode.");
+    setBusy(false);
+    await onClaimRefresh();
+  }
 
   return (
     <div className="space-y-4">
@@ -108,6 +141,113 @@ export default function AdminClaimInstruction({
               <p className="text-sm font-black text-slate-900">{copy.cta}</p>
               <p className="mt-1 text-xs leading-relaxed text-slate-500">{copy.note}</p>
             </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <button
+              type="button"
+              onClick={submitClaim}
+              disabled={busy || !selectedDesa}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Memproses..." : "Kirim klaim"}
+            </button>
+
+            {method === "OFFICIAL_EMAIL" ? (
+              <>
+                <input
+                  type="email"
+                  value={officialEmail}
+                  onChange={(event) => setOfficialEmail(event.target.value)}
+                  placeholder="email resmi desa"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !claimId || !officialEmail.trim()}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    const response = await fetch("/api/admin-claim/generate-email-token", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ claimId, officialEmail }),
+                    });
+                    const payload = await response.json() as { message?: string; error?: string };
+                    if (!response.ok) {
+                      setError(payload.error ?? payload.message ?? "Gagal mengirim email verifikasi.");
+                    } else {
+                      setFeedback("Email verifikasi berhasil dikirim.");
+                    }
+                    setBusy(false);
+                    await onClaimRefresh();
+                  }}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >Kirim email verifikasi</button>
+              </>
+            ) : null}
+
+            {method === "WEBSITE_TOKEN" ? (
+              <>
+                <input
+                  type="url"
+                  value={websiteUrl}
+                  onChange={(event) => setWebsiteUrl(event.target.value)}
+                  placeholder="https://desa.go.id"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !claimId || !websiteUrl.trim()}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    const response = await fetch("/api/admin-claim/generate-website-token", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ claimId, websiteUrl }),
+                    });
+                    const payload = await response.json() as { rawToken?: string; error?: string };
+                    if (!response.ok || !payload.rawToken) {
+                      setError(payload.error ?? "Gagal generate token website.");
+                    } else {
+                      setRawToken(payload.rawToken);
+                      setFeedback("Token berhasil dibuat. Pasang token di website resmi desa lalu klik cek token.");
+                    }
+                    setBusy(false);
+                  }}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >Generate token website</button>
+                {rawToken ? <p className="rounded-lg bg-slate-50 p-2 text-xs break-all">Token sesi aktif: {rawToken}</p> : null}
+                <button
+                  type="button"
+                  disabled={busy || !claimId || !rawToken}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    const response = await fetch("/api/admin-claim/check-website-token", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ claimId, rawToken }),
+                    });
+                    const payload = await response.json() as { found?: boolean; reason?: string; error?: string };
+                    if (!response.ok) {
+                      setError(payload.error ?? "Gagal memeriksa token website.");
+                    } else if (!payload.found) {
+                      setError(`Token belum ditemukan (${payload.reason ?? "unknown"}).`);
+                    } else {
+                      setFeedback("Token ditemukan. Status akan diperbarui.");
+                    }
+                    setBusy(false);
+                    await onClaimRefresh();
+                  }}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >Cek token website</button>
+              </>
+            ) : null}
+
+            {feedback ? <p className="text-xs text-emerald-700">{feedback}</p> : null}
+            {error ? <p className="text-xs text-rose-700">{error}</p> : null}
           </div>
         </div>
       )}

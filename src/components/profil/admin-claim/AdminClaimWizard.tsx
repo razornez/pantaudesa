@@ -22,7 +22,7 @@ export default function AdminClaimWizard({
 }: {
   user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role">;
 }) {
-  const { data, loading, loadError, supportEmail, supportHref, defaultDesaId, isDemoAccount } = useAdminClaimProfile();
+  const { data, loading, loadError, supportEmail, supportHref, defaultDesaId, isDemoAccount, refresh } = useAdminClaimProfile();
   const [step, setStep] = useState<ClaimStep>(1);
   const [method, setMethod] = useState<ClaimMethod>("OFFICIAL_EMAIL");
   const [search, setSearch] = useState("");
@@ -119,6 +119,7 @@ export default function AdminClaimWizard({
               method={method}
               selectedDesa={selectedDesa}
               supportEmail={supportEmail}
+              onClaimRefresh={refresh}
               onBack={() => setStep(2)}
               onContinue={() => setStep(4)}
             />
