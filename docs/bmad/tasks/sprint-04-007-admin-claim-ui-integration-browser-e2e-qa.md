@@ -22,6 +22,16 @@ The work is intentionally split into two task documents:
 
 Developer must read both documents first, then execute them in order.
 
+## Mandatory zero-bug checklist
+
+Because Admin Desa features may be tested by many real users, developer must also read and satisfy:
+
+```text
+docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md
+```
+
+This checklist is mandatory for both 04-007A and 04-007B. A task must not be marked PASS if the zero-bug checklist exposes unresolved issues in idempotency, stale cache, token handling, unauthorized direct API access, email failures, invite edge cases, private data leakage, or public data verification confusion.
+
 ## Execution order
 
 ### First: 04-007A — Admin Claim Core Browser Flow
@@ -77,6 +87,7 @@ Both 04-007A and 04-007B must follow:
 - typed API client/hooks where practical,
 - reusable component boundaries,
 - React/Next.js best practices,
+- zero-bug readiness checklist,
 - no stale cache after user actions,
 - no public data verified activation,
 - no raw token leakage,
@@ -183,4 +194,5 @@ When assigning after approval, keep chat instruction short:
 Ujang, pull latest main lalu baca dan kerjakan berurutan:
 1. docs/bmad/tasks/sprint-04-007a-admin-claim-core-browser-flow.md
 2. docs/bmad/tasks/sprint-04-007b-admin-claim-completion-ux-invite-contact-browser-qa.md
+3. docs/bmad/checklists/admin-desa-zero-bug-readiness-checklist.md
 ```
