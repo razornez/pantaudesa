@@ -3,11 +3,11 @@
 Date: 2026-04-29
 Status: backlog / not-approved-for-execution
 Prepared-by: Rangga / BMAD-lite orchestration
-Owner gate: Iwan/Owner requested collecting all internal-admin related features into a separate future batch.
+Owner gate: Iwan/Owner requested collecting all internal-admin and post-claim Admin Desa governance features into a separate future batch.
 
 ## Purpose
 
-Collect internal admin features that are related to Desa Admin verification, review, moderation, audit, and governance, but are intentionally not part of Sprint 04-007.
+Collect internal admin and post-claim Admin Desa features that are related to Desa Admin verification, review, moderation, audit, document contribution, AI-assisted data review, and data governance, but are intentionally not part of Sprint 04-007.
 
 This document is a backlog/task container only. It is not approved for implementation yet.
 
@@ -15,13 +15,17 @@ This document is a backlog/task container only. It is not approved for implement
 
 Sprint 04-007 should focus on user-facing claim admin UI integration and browser QA.
 
-Internal admin features are separated because they may require:
+Internal admin and Admin Desa post-claim features are separated because they may require:
 
 - internal-only roles/permissions,
 - review queue design,
 - status governance,
 - moderation decisions,
 - audit viewer,
+- document upload/storage,
+- AI extraction/review pipeline,
+- data mapping to public Desa detail,
+- source status/dataStatus governance,
 - more sensitive data access,
 - possible schema/API adjustments,
 - stronger QA and access control.
@@ -37,13 +41,15 @@ Internal admin features are separated because they may require:
 
 - No public data verified activation without governance.
 - Admin membership verification is not public data verification.
+- No AI result may directly overwrite public Desa data without review.
 - No automatic punishment/suspension based only on reports.
 - No private email/phone exposure.
 - No destructive migration without approval.
 - No new dependency without approval.
 - No new env without approval.
-- All internal admin actions must have audit trail.
+- All internal admin and Admin Desa data-contribution actions must have audit trail.
 - Internal admin UI must not be public-accessible.
+- Uploaded documents must not be publicly exposed by default.
 
 ---
 
@@ -219,6 +225,97 @@ Key decisions needed:
 - Who receives/handles contact messages?
 - Is there a privacy retention policy?
 
+## 04-008G — Admin Desa Document Contribution & AI-Assisted Data Review
+
+Goal:
+
+Allow verified/eligible Admin Desa to contribute official village documents, use AI to assist extraction/mapping, then route proposed data changes through review before updating Desa detail and source/data status.
+
+This item is related to Admin Desa, but it is post-claim data contribution, not claim verification. It must not be folded into Sprint 04-007.
+
+Potential scope:
+
+### 04-008G.1 — Document upload by Admin Desa
+
+- Admin Desa can upload or submit document evidence for their own desa only.
+- Validate admin membership and desa ownership.
+- Validate file type, file size, and file count.
+- Store document in a private/non-public location by default.
+- Link document to desa, uploader user, admin membership, source type, and created timestamp.
+- Initial document status should be something like `UPLOADED`, `NEEDS_REVIEW`, or equivalent existing status.
+- Write audit event for upload.
+
+### 04-008G.2 — AI-assisted document extraction
+
+- AI may read uploaded document and propose extracted fields.
+- AI output must be saved as draft/candidate data, not final public data.
+- Include confidence score or review flags where practical.
+- Mark uncertain fields as needs review.
+- Preserve raw extracted text/summary only if privacy-safe.
+- Write audit event for extraction.
+- AI result must never directly mark public data as verified.
+
+### 04-008G.3 — Mapping candidate data to Desa detail
+
+- Map extracted/candidate data to existing Desa detail fields where applicable.
+- Candidate mappings may include profile desa, alamat/kontak, perangkat desa, dokumen sumber, source metadata, and summary/ringkasan.
+- Show before/after diff for every field that would change.
+- Support approve/reject per field if feasible; otherwise approve/reject per section with clear limitation.
+- No silent overwrite of existing public data.
+
+### 04-008G.4 — Review and approval workflow
+
+- Reviewer must explicitly review candidate mappings before public data update.
+- Define who can review: verified Admin Desa, internal admin, or both.
+- Reject/approve decisions require audit event.
+- Rejected items should preserve reason.
+- Approved changes should be traceable to source document and reviewer.
+- If review policy is ambiguous, stop and ask Owner.
+
+### 04-008G.5 — Publish/update Desa detail and source/data status
+
+- After review approval, update Desa detail fields safely.
+- Update source status and data status consistently.
+- Possible statuses to consider: `demo`, `source-found`, `needs-review`, `verified`, or existing project equivalents.
+- Do not enable `verified` public data status unless governance workflow is approved.
+- Keep source metadata tied to the uploaded document.
+- Write audit event for every published field/section.
+- Consider version history or rollback candidate before public overwrite.
+
+### 04-008G.6 — UI and browser QA
+
+- Admin Desa sees upload form only for desa they manage.
+- Upload form has loading/success/error states.
+- AI extraction state is visible: pending, extracted, failed, needs review.
+- Review UI shows candidate mapping and before/after diff.
+- Publish/update UI shows clear confirmation and result.
+- Desktop and mobile screenshots/notes required if UI is touched.
+- Full quality gate required: lint, test, typecheck, Prisma generate, build.
+
+Guardrails:
+
+- No file upload/storage implementation without storage/privacy design approval.
+- No AI extraction dependency/provider without Owner approval.
+- No public data overwrite without review.
+- No public `verified` data activation without governance.
+- No private documents exposed publicly.
+- No raw sensitive document content in logs/screenshots.
+- No destructive migration without approval.
+- Every upload/extract/review/publish action must be audited.
+
+Key decisions needed:
+
+- Which Admin Desa status can upload documents: `LIMITED`, `VERIFIED`, or both?
+- Which role can approve AI-mapped changes?
+- Should review be done by internal admin only, Admin Desa only, or two-step approval?
+- Where are uploaded documents stored?
+- What file types and max size are allowed?
+- Which AI provider/model is allowed?
+- Should AI extraction run immediately, manually, or queued?
+- What fields in Desa detail are allowed to be updated from documents?
+- How should `dataStatus` and source status transition after review?
+- Is version history/rollback required before publishing?
+
 ---
 
 # Items intentionally excluded
@@ -237,11 +334,11 @@ The following should not be folded into this internal-admin batch unless Owner s
 
 1. Finish Sprint 04-007 user-facing claim admin UI integration.
 2. Review real QA/browser feedback from 04-007.
-3. Decide whether the first internal admin need is review queue, revoke/suspend, or audit viewer.
+3. Decide whether the first 04-008 execution item should be review queue, revoke/suspend, audit viewer, support inbox, or Admin Desa document contribution.
 4. Split selected item into a single-PIC execution task with TDD and browser QA.
 
 ## Approval status
 
 Not approved for execution.
 
-Do not instruct Ujang/Asep until Owner explicitly approves one selected internal-admin subtask.
+Do not instruct Ujang/Asep until Owner explicitly approves one selected 04-008 subtask.
