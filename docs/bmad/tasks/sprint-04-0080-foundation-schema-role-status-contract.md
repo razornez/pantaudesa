@@ -31,6 +31,29 @@ This document should be read before any 04-008 implementation task.
 11. Rejection should use reason category/template plus free-text reason/instructions.
 12. Storage setup for document upload must be done in 04-008.
 13. Claim approval and Admin Desa membership verification should be separate state changes: claim becomes `APPROVED`; membership becomes `VERIFIED`.
+14. Owner allows developer discretion for final Prisma enum names, internal admin route, notification schema, AI provider/model, and exact MVP source field mapping as long as the business contract in this BMAD is preserved.
+15. Storage bucket/env setup may be implemented by developer through local/cloud instructions or migration/setup script if the platform supports it, but Owner must still provide/confirm real cloud credentials and secrets. Real secrets must never be committed.
+
+## Developer discretion boundaries
+
+Owner gave flexibility for the following details:
+
+- final Prisma enum names,
+- exact internal admin route,
+- exact notification schema,
+- exact AI provider/model,
+- exact MVP source fields to map.
+
+This flexibility does not allow changing the core business rules:
+
+- claim status and membership status must stay conceptually separated,
+- token/OTP success must go to review, not direct `VERIFIED`,
+- one active Admin Desa membership per user,
+- one active `VERIFIED` per desa,
+- no hard delete for membership history,
+- internal admin action audit is required,
+- storage must be private by default,
+- user-facing states must remain clear.
 
 ## Status model contract
 
@@ -310,6 +333,40 @@ Required baseline:
 - audit event for upload/preview/access where practical.
 
 Use existing or approved env names; do not create duplicate env vars if equivalent already exists.
+
+### Storage provisioning decision
+
+Storage can be prepared in either of these ways:
+
+1. Owner manually creates/confirms the Supabase Storage bucket in Supabase dashboard, then provides env values.
+2. Developer creates a safe local/cloud setup instruction or script to create the bucket/policies if Supabase tooling and project access support it.
+
+Requirements either way:
+
+- bucket must be private by default,
+- real credentials/secrets must be stored only in env/config, not committed,
+- service role key must never be used in client code,
+- setup instructions must be documented,
+- local/staging/production setup must be explicit,
+- if equivalent Supabase env vars already exist, reuse them and do not create duplicate env names.
+
+Owner/operator may still need to do these actions:
+
+- create/confirm Supabase project,
+- create/confirm private storage bucket,
+- copy anon key/service-role key into local/cloud env,
+- configure production env in hosting provider,
+- confirm storage billing/limits.
+
+Developer may do these actions if access/tooling allows:
+
+- write bucket setup instructions,
+- add storage client/server helper,
+- add server-side upload route,
+- add signed URL preview route,
+- add validation for 10 MB max file size and MIME types,
+- add QA seed placeholders for document records,
+- document required env vars in `.env.example` with placeholders only.
 
 ## AI mapping MVP scope
 
