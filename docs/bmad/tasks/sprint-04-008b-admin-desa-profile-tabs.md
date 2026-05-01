@@ -30,25 +30,29 @@ This is a planning/backlog document only. Do not assign developer execution unti
 6. `VERIFIED` admin may delete/revoke `LIMITED` admins only.
 7. `VERIFIED` admin must not delete/revoke another `VERIFIED` admin because only one `VERIFIED` should exist per desa.
 8. Dokumen upload is not `IN_REVIEW` as a claim status. Upload has its own simple document status flow.
-9. Document status should be simple: `PROCESSING`, `PUBLISHED`, `FAILED`.
-10. After upload succeeds, document status becomes `PROCESSING`.
-11. If internal admin approves and AI mapping succeeds, document status becomes `PUBLISHED`.
-12. If processing/mapping/publish fails, document status becomes `FAILED` with a clear failure reason.
-13. Internal admin later reviews uploaded documents, uses AI mapping, then publishes/updates data according to approved internal workflow.
-14. Suara tab should show published comments/voices related to that desa.
-15. Notifikasi tab should show activity notifications such as comments on the desa, replies to admin comments, likes, votes, and similar events.
-16. User profile photo should show a small admin badge at the bottom-right when the user is Admin Desa `VERIFIED` or `LIMITED`.
-17. Clicking the admin badge should show a small popover explaining admin status and permissions.
+9. Admin Desa `LIMITED` may upload documents, but the upload must be helped/approved by Admin Desa `VERIFIED` before it enters internal processing.
+10. Admin Desa `VERIFIED` may upload documents directly into document `PROCESSING`.
+11. Document status should be simple: `PROCESSING`, `PUBLISHED`, `FAILED`.
+12. For `LIMITED` upload, approval by `VERIFIED` is a pre-processing gate, not final publish.
+13. After a `LIMITED` upload is approved by `VERIFIED`, the document status becomes `PROCESSING` and is still checked by internal admin.
+14. If internal admin approves and AI mapping succeeds, document status becomes `PUBLISHED`.
+15. If processing/mapping/publish fails, document status becomes `FAILED` with a clear failure reason.
+16. Internal admin later reviews uploaded documents, uses AI mapping, then publishes/updates data according to approved internal workflow.
+17. Suara tab should show published comments/voices related to that desa.
+18. Notifikasi tab should show activity notifications such as comments on the desa, replies to admin comments, likes, votes, and similar events.
+19. User profile photo should show a small admin badge at the bottom-right when the user is Admin Desa `VERIFIED` or `LIMITED`.
+20. Clicking the admin badge should show a small popover explaining admin status and permissions.
+21. Flow steps, sensitive actions, status changes, approval gates, and blocked states must include clear explanatory copy so users do not feel confused.
 
 ## Access rule
 
-These profile tabs are available only to Admin Desa `VERIFIED` unless Owner later approves limited read-only access for `LIMITED` invitees.
+These profile tabs are available only to Admin Desa `VERIFIED` unless Owner later approves limited read-only/upload access for `LIMITED` invitees.
 
 Default rule:
 
 ```text
 PENDING / IN_REVIEW / REJECTED: no Admin Desa profile tabs
-LIMITED: no publish/admin-management tabs by default
+LIMITED: limited document upload only if approved by VERIFIED before processing; no publish/admin-management tabs by default
 VERIFIED: profile tabs enabled
 ```
 
@@ -74,6 +78,7 @@ Popover content for `VERIFIED`:
 - desa represented,
 - can publish/update data desa,
 - can invite admin,
+- can approve `LIMITED` document uploads into processing,
 - must renew verification every 6 months,
 - cannot access internal PantauDesa admin tools.
 
@@ -83,6 +88,7 @@ Popover content for `LIMITED`:
 - source: invited by Admin Desa VERIFIED,
 - cannot publish data,
 - cannot invite admin,
+- can upload documents only as contribution that must be approved by Admin Desa VERIFIED before internal processing,
 - can follow verification flow if needed.
 
 UX requirements:
@@ -161,6 +167,7 @@ Purpose:
 
 - Show list of documents related to the desa.
 - Let Admin Desa upload documents/source files for that desa.
+- Let Admin Desa `VERIFIED` approve `LIMITED` uploads into internal processing.
 - Uploaded documents become source material for internal admin/AI processing.
 
 Required content:
@@ -172,6 +179,7 @@ Required content:
 - uploader,
 - uploadedAt,
 - document type/source category if available,
+- pending approval marker for `LIMITED` uploads before processing,
 - processing/published/failed state.
 
 Important status rule:
@@ -182,15 +190,20 @@ Important status rule:
   - `PROCESSING`
   - `PUBLISHED`
   - `FAILED`
-- After upload succeeds, status becomes `PROCESSING`.
+- For `LIMITED` uploads, use a lightweight pre-processing state/flag such as `WAITING_VERIFIED_APPROVAL` or equivalent before it becomes `PROCESSING`.
+- `WAITING_VERIFIED_APPROVAL` is not a claim status and must be explained as document approval by Admin Desa `VERIFIED`.
+- After `VERIFIED` admin approves a `LIMITED` upload, status becomes `PROCESSING`.
+- After `VERIFIED` admin uploads directly, status becomes `PROCESSING`.
 - If internal admin approves document and AI mapping succeeds, status becomes `PUBLISHED`.
 - If upload processing, review, mapping, or publish fails, status becomes `FAILED` and must show a clear reason.
 - Do not confuse document status with Admin Desa claim status.
 
-Future internal admin flow:
+Future document flow:
 
 ```text
-Admin Desa uploads document
+LIMITED uploads document
+→ document waits for VERIFIED approval
+→ VERIFIED admin approves document for processing
 → document status PROCESSING
 → internal admin opens document review
 → AI mapping/extraction assists mapping
@@ -199,12 +212,31 @@ Admin Desa uploads document
 → if failed/rejected: FAILED with reason
 ```
 
+```text
+VERIFIED uploads document
+→ document status PROCESSING
+→ internal admin opens document review
+→ AI mapping/extraction assists mapping
+→ internal admin validates mapping
+→ if approved and mapping succeeds: PUBLISHED
+→ if failed/rejected: FAILED with reason
+```
+
+User-facing explanation requirements:
+
+- For `LIMITED`: explain that upload is a contribution and must be approved by Admin Desa `VERIFIED` before PantauDesa processes it.
+- For `VERIFIED`: explain that uploaded documents go to processing and will be checked/mapped before being published.
+- For `PROCESSING`: explain that PantauDesa/internal admin is checking the document and mapping data.
+- For `PUBLISHED`: explain that document data has been approved/mapped and published.
+- For `FAILED`: show a safe, clear reason and what the user can fix or re-upload.
+- For sensitive actions like approve document, revoke admin, invite admin, or failed reason, provide extra helper text or confirmation copy.
+
 Guardrails:
 
 - If upload requires file storage, use approved Supabase Storage design from 04-008G.
 - Do not expose private documents publicly by default.
 - Do not auto-publish AI extraction.
-- Keep audit trail for upload, processing, mapping, publish, and failed reason.
+- Keep audit trail for upload, `VERIFIED` approval, processing, mapping, publish, and failed reason.
 - Failure reason must be user-safe and not leak internal/sensitive details.
 
 ### 4. Suara
@@ -243,6 +275,8 @@ Notification types to consider:
 - like on admin comment,
 - vote/engagement event,
 - invite accepted,
+- `LIMITED` document waiting for `VERIFIED` approval,
+- document approved into processing,
 - document processing finished,
 - document publish/update result,
 - document failed with reason,
@@ -280,10 +314,12 @@ Notifikasi
 
 - Do not show unavailable actions to non-eligible roles unless disabled with a clear reason.
 - `VERIFIED` admin should understand what each tab is for.
+- `LIMITED` admin should understand that upload is only a contribution and must be approved by `VERIFIED` before processing.
 - Keep claim verification flow separate from post-verification management tabs.
 - Keep Invite Admin separate from claim form.
 - Keep document upload status separate from claim status.
 - Show document failure reasons clearly and safely.
+- Explain every sensitive or multi-step flow with helper text, status descriptions, confirmation copy, or info popovers.
 - Badge/popover should make admin status understandable without opening a separate page.
 - Avoid making the page feel like a heavy dashboard.
 
@@ -294,7 +330,10 @@ Future implementation must test at minimum:
 - non-admin user cannot see Admin Desa tabs,
 - `PENDING`/`IN_REVIEW`/`REJECTED` user cannot see Admin Desa tabs,
 - `LIMITED` access follows final policy,
+- `LIMITED` can upload document only into waiting-for-verified-approval state,
+- `LIMITED` cannot approve document into processing,
 - `VERIFIED` can see all approved tabs,
+- `VERIFIED` can approve `LIMITED` document upload into `PROCESSING`,
 - only one `VERIFIED` admin exists per desa,
 - List Admin shows correct admins for the desa only,
 - Invite Admin opens modal/page and creates invite where allowed,
@@ -303,7 +342,8 @@ Future implementation must test at minimum:
 - revoke/delete `VERIFIED` is blocked,
 - revoke/delete requires confirmation and audit,
 - Dokumen tab lists only documents for the admin's desa,
-- upload success moves document to `PROCESSING`,
+- `VERIFIED` upload success moves document to `PROCESSING`,
+- approved `LIMITED` upload moves document to `PROCESSING`,
 - approved/mapped document becomes `PUBLISHED`,
 - failed document becomes `FAILED` with clear reason,
 - upload/document status is distinct from claim `IN_REVIEW`,
@@ -329,9 +369,9 @@ Future implementation must test at minimum:
 ## Open decisions before execution
 
 - Where exactly should these tabs live in the current route structure?
-- Should `LIMITED` have any read-only tabs, or none for MVP?
+- Should `LIMITED` get only Dokumen upload access, or also read-only profile/list access?
 - Is revoke/delete for `LIMITED` a hard delete, membership revoke, or status change?
-- What is the exact document status enum?
+- What is the exact document pre-processing status name for `LIMITED` uploads?
 - Does document upload require Supabase Storage implementation first?
 - Is Notifikasi backed by an existing notification model, or does it need a new schema?
 - Which suara/comment model counts as published and visible to Admin Desa?
