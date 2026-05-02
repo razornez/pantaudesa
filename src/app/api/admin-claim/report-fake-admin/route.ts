@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     // If a specific user was reported and has an active claim, write secondary audit
     if (reportedUserId) {
       const affectedClaim = await db.desaAdminClaim.findFirst({
-        where: { desaId, userId: reportedUserId, status: { in: ["PENDING", "LIMITED", "VERIFIED"] } },
+        where: { desaId, userId: reportedUserId, status: { in: ["PENDING", "IN_REVIEW"] } },
         select: { id: true },
       });
       if (affectedClaim) {

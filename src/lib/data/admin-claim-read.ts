@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import {
   getAdminClaimEligibility,
-  isActiveAdminStatus,
+  isActiveClaimStatus,
+  isActiveMemberStatus,
   type AdminClaimEligibility,
 } from "@/lib/admin-claim/eligibility";
 
@@ -443,7 +444,7 @@ function buildCurrentCard(
     };
   }
 
-  if (member?.status === "SUSPENDED" || claim?.status === "SUSPENDED") {
+  if (member?.status === "REVOKED" || member?.status === "EXPIRED") {
     const detail = statusCopy("suspended");
     const desa = member?.desa ?? claim?.desa ?? null;
     return {
@@ -462,7 +463,7 @@ function buildCurrentCard(
     };
   }
 
-  if (claim?.status === "PENDING") {
+  if (claim?.status === "PENDING" || claim?.status === "IN_REVIEW") {
     const detail = statusCopy("pending");
     return {
       key: "current-pending",
@@ -478,6 +479,11 @@ function buildCurrentCard(
       sourceLabel: getSourceLabel(claim.desa),
       isDemo: false,
     };
+  }
+
+  if (claim?.status === "APPROVED") {
+    // APPROVED claim → membership should be VERIFIED; handled above via member check
+    // Fallthrough to none if somehow member hasn't been created yet
   }
 
   if (claim?.status === "REJECTED") {
@@ -873,7 +879,7 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
       desaOptions,
     );
     const selectedDesaId = currentClaim?.desa.id ?? currentMember?.desa.id ?? desaOptions[0]?.id ?? null;
-    const activeClaim = currentClaim && isActiveAdminStatus(currentClaim.status)
+    const activeClaim = currentClaim && isActiveClaimStatus(currentClaim.status)
       ? {
           id: currentClaim.id,
           desaId: currentClaim.desa.id,
@@ -889,7 +895,7 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
           rejectionReason: currentClaim.rejectionReason,
         }
       : null;
-    const activeMember = currentMember && isActiveAdminStatus(currentMember.status)
+    const activeMember = currentMember && isActiveMemberStatus(currentMember.status)
       ? {
           id: currentMember.id,
           desaId: currentMember.desa.id,

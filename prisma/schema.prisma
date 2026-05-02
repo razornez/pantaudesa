@@ -46,6 +46,10 @@ model User {
   desaAdminClaims  DesaAdminClaim[]
   desaAdminMembers DesaAdminMember[]
 
+  // Sprint 04-008 additions
+  adminNotifications AdminDesaNotification[]
+  adminDocuments     AdminDesaDocument[]
+
   @@map("users")
 }
 
@@ -162,6 +166,7 @@ enum Role {
   WARGA
   DESA
   ADMIN
+  INTERNAL_ADMIN
 }
 
 // ─── Sprint 03 Data Foundation ────────────────────────────────────────────────
@@ -190,6 +195,7 @@ model Desa {
   anggaranSummaries AnggaranDesaSummary[]
   apbdesItems       APBDesItem[]
   dokumenPublik     DokumenPublik[]
+  adminDocuments    AdminDesaDocument[]
 
   @@index([kecamatan, kabupaten, provinsi])
   @@index([dataStatus])
@@ -322,21 +328,49 @@ model PerangkatDesa {
   @@map("perangkat_desa")
 }
 
+// ─── Admin Desa Claim ─────────────────────────────────────────────────────────
+
 model DesaAdminClaim {
-  id              String           @id @default(cuid())
+  id              String            @id @default(cuid())
   desaId          String
   userId          String
-  status          DesaAdminStatus  @default(PENDING)
+  status          ClaimStatus       @default(PENDING)
   method          AdminClaimMethod?
   officialEmail   String?
   websiteUrl      String?
   tokenHash       String?
   tokenExpiresAt  DateTime?
   verifiedAt      DateTime?
+
+  // OTP tracking (for email OTP verification flow)
+  otpFailedAttempts Int       @default(0)
+  otpResendCount    Int       @default(0)
+  otpFrozenUntil    DateTime?
+  otpLastSentAt     DateTime?
+  otpExpiresAt      DateTime?
+
+  // Rejection (structured: set by internal admin on REJECTED)
+  rejectCategory    ReasonCategory? @map("review_rejected_category")
+  rejectReason      String?         @db.Text @map("review_rejected_reason")
+  rejectInstructions String?        @db.Text @map("review_rejected_instructions")
+  reapplyAllowedAt  DateTime?
+
+  // Legacy rejection fields (kept for backward compat during transition)
   rejectedAt      DateTime?
-  rejectionReason String?          @db.Text
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  rejectionReason String?   @db.Text
+
+  // Fraud / cooldown
+  fraudCooldownUntil DateTime?
+
+  // Support review path
+  supportSubmittedAt DateTime?
+
+  // Renewal tracking (used after claim APPROVED / member VERIFIED)
+  renewalDueAt        DateTime?
+  renewalReviewStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   desa Desa @relation(fields: [desaId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -347,16 +381,23 @@ model DesaAdminClaim {
   @@map("desa_admin_claims")
 }
 
+// ─── Admin Desa Membership ────────────────────────────────────────────────────
+
 model DesaAdminMember {
-  id           String           @id @default(cuid())
-  desaId       String
-  userId       String
-  role         DesaAdminRole    @default(LIMITED)
-  status       DesaAdminStatus  @default(LIMITED)
-  invitedById  String?
-  verifiedById String?
-  joinedAt     DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id            String        @id @default(cuid())
+  desaId        String
+  userId        String
+  role          DesaAdminRole @default(LIMITED_ADMIN)
+  status        MemberStatus  @default(LIMITED)
+  invitedById   String?
+  verifiedById  String?
+  joinedAt      DateTime      @default(now())
+  invitedAt     DateTime?
+  acceptedAt    DateTime?
+  revokedAt     DateTime?
+  revokedReason String?       @db.Text
+  renewalDueAt  DateTime?
+  updatedAt     DateTime      @updatedAt
 
   desa Desa @relation(fields: [desaId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -385,23 +426,93 @@ model DesaAdminInvite {
   @@map("desa_admin_invites")
 }
 
+// ─── Admin Desa Documents (Sprint 04-008) ────────────────────────────────────
+
+model AdminDesaDocument {
+  id              String               @id @default(cuid())
+  desaId          String
+  uploadedById    String?
+  title           String
+  category        String
+  storageKey      String               // Supabase Storage object path
+  fileName        String
+  fileType        String
+  fileSize        Int
+  status          DocumentUploadStatus @default(WAITING_VERIFIED_APPROVAL)
+  approvedById    String?              // userId of VERIFIED admin who approved
+  approvedAt      DateTime?
+  rejectedReason  String?              @db.Text
+  publishedAt     DateTime?
+  failedReason    String?              @db.Text
+  aiMappingStatus String?              // null | PENDING | DONE | FAILED
+  aiMappingResult Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  desa       Desa  @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([desaId])
+  @@index([status])
+  @@index([uploadedById])
+  @@map("admin_desa_documents")
+}
+
+// ─── Admin Desa Notifications (Sprint 04-008) ─────────────────────────────────
+
+model AdminDesaNotification {
+  id        String    @id @default(cuid())
+  userId    String
+  desaId    String?
+  type      String
+  channel   String    @default("in_app")
+  title     String
+  body      String    @db.Text
+  metadata  Json?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([desaId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("admin_desa_notifications")
+}
+
+// ─── Internal Admin Audit Log ─────────────────────────────────────────────────
+
 model AdminClaimAudit {
-  id             String   @id @default(cuid())
-  desaId         String?
-  actorUserId    String?
-  targetUserId   String?
-  claimId        String?
-  eventType      String
-  method         String?
-  previousStatus String?
-  nextStatus     String?
-  evidenceType   String?
-  evidenceUrl    String?
-  evidenceHash   String?
-  ipAddress      String?
-  userAgent      String?
-  metadata       Json?
-  createdAt      DateTime @default(now())
+  id                      String   @id @default(cuid())
+  desaId                  String?
+  actorUserId             String?
+  actorRole               String?
+  actorDisplayNameSnapshot String?
+  targetUserId            String?
+  entityType              String?
+  entityId                String?
+  claimId                 String?
+  eventType               String
+  method                  String?
+  previousStatus          String?
+  nextStatus              String?
+  evidenceType            String?
+  evidenceUrl             String?
+  evidenceHash            String?
+  ipAddress               String?
+  userAgent               String?
+  location                String?
+  reasonCategory          String?
+  reasonText              String?
+  beforeSnapshotJson      Json?
+  afterSnapshotJson       Json?
+  metadata                Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([desaId])
   @@index([actorUserId])
@@ -463,6 +574,8 @@ model AIReviewResult {
   @@index([targetType, targetId])
   @@map("ai_review_results")
 }
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum DataStatus {
   demo
@@ -536,12 +649,39 @@ enum DocumentType {
   other
 }
 
-enum DesaAdminStatus {
-  PENDING
-  LIMITED
-  VERIFIED
-  REJECTED
-  SUSPENDED
+// Claim lifecycle — state of the Admin Desa claim application
+enum ClaimStatus {
+  PENDING    // claim submitted, awaiting verification signal
+  IN_REVIEW  // verification signal received, awaiting internal admin review
+  REJECTED   // internal admin rejected with reason + instructions
+  APPROVED   // internal admin approved — triggers membership VERIFIED
+}
+
+// Membership lifecycle — active access state of Admin Desa member
+enum MemberStatus {
+  LIMITED  // invite-only or verification-in-progress, restricted access
+  VERIFIED // fully verified, one per desa
+  REVOKED  // access removed, history preserved (no hard delete)
+  EXPIRED  // verified access expired (e.g. renewal not completed)
+}
+
+enum ReasonCategory {
+  WEBSITE_NOT_OFFICIAL
+  WEBSITE_MISMATCH
+  TOKEN_NOT_VALID
+  EMAIL_NOT_CONVINCING
+  DOCUMENT_NOT_SUFFICIENT
+  SOURCE_CONFLICT
+  SUSPICIOUS_ACTIVITY
+  RENEWAL_FAILED
+  OTHER
+}
+
+enum DocumentUploadStatus {
+  WAITING_VERIFIED_APPROVAL // uploaded by LIMITED, waiting for VERIFIED approval
+  PROCESSING                // in internal admin review / AI mapping queue
+  PUBLISHED                 // approved, mapped, published
+  FAILED                    // rejected with user-safe reason
 }
 
 enum AdminClaimMethod {
@@ -552,7 +692,7 @@ enum AdminClaimMethod {
 }
 
 enum DesaAdminRole {
-  LIMITED
+  LIMITED_ADMIN
   VERIFIED_ADMIN
 }
 

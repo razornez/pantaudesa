@@ -5,7 +5,7 @@ import { handleApiError } from "@/lib/api-error";
 import { verifyTokenHash, isTokenExpired } from "@/lib/admin-claim/token";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { ACTIVE_ADMIN_STATUSES } from "@/lib/admin-claim/eligibility";
+import { ACTIVE_CLAIM_STATUSES, ACTIVE_MEMBER_STATUSES } from "@/lib/admin-claim/eligibility";
 
 function burnedTokenHash(): string {
   return createHash("sha256").update(randomBytes(32)).digest("hex");
@@ -62,12 +62,12 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         desaAdminMembers: {
-          where: { status: { in: ["LIMITED", "VERIFIED"] } },
+          where: { status: { in: [...ACTIVE_MEMBER_STATUSES] } },
           select: { desaId: true },
           take: 1,
         },
         desaAdminClaims: {
-          where: { status: { in: [...ACTIVE_ADMIN_STATUSES] } },
+          where: { status: { in: [...ACTIVE_CLAIM_STATUSES] } },
           select: { desaId: true },
           take: 1,
         },
@@ -90,21 +90,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/profil/klaim-admin-desa?error=invalid_invite", req.url));
     }
 
+    const now = new Date();
     await db.desaAdminMember.upsert({
       where: { desaId_userId: { desaId: invite.desaId, userId: user.id } },
       create: {
         desaId: invite.desaId,
         userId: user.id,
-        role: "LIMITED",
+        role: "LIMITED_ADMIN",
         status: "LIMITED",
         invitedById: invite.invitedById,
+        invitedAt: now,
+        acceptedAt: now,
       },
-      update: { status: "LIMITED", updatedAt: new Date() },
+      update: { status: "LIMITED", acceptedAt: now, updatedAt: now },
     });
 
     await db.desaAdminInvite.update({
       where: { id: inviteId },
-      data: { status: "ACCEPTED", acceptedAt: new Date(), tokenHash: burnedTokenHash() },
+      data: { status: "ACCEPTED", acceptedAt: now, tokenHash: burnedTokenHash() },
     });
 
     await writeAuditEvent({

@@ -1,6 +1,17 @@
-export const ACTIVE_ADMIN_STATUSES = ["PENDING", "LIMITED", "VERIFIED"] as const;
+import type { ClaimStatus, MemberStatus } from "./status";
 
-export type ActiveAdminStatus = (typeof ACTIVE_ADMIN_STATUSES)[number];
+// Active claim statuses — claim is still in progress (not yet resolved)
+export const ACTIVE_CLAIM_STATUSES = ["PENDING", "IN_REVIEW"] as const satisfies ClaimStatus[];
+
+// Active member statuses — user has active Admin Desa access
+export const ACTIVE_MEMBER_STATUSES = ["LIMITED", "VERIFIED"] as const satisfies MemberStatus[];
+
+export type ActiveClaimStatus = (typeof ACTIVE_CLAIM_STATUSES)[number];
+export type ActiveMemberStatus = (typeof ACTIVE_MEMBER_STATUSES)[number];
+
+// Legacy alias used by routes that check both claim + member in one array.
+// Routes should migrate to ACTIVE_CLAIM_STATUSES / ACTIVE_MEMBER_STATUSES individually.
+export const ACTIVE_ADMIN_STATUSES = [...ACTIVE_CLAIM_STATUSES, ...ACTIVE_MEMBER_STATUSES] as const;
 
 export interface ActiveAdminRelation {
   desaId: string;
@@ -21,8 +32,12 @@ export interface AdminClaimEligibility {
   message: string | null;
 }
 
-export function isActiveAdminStatus(status: string | null | undefined): status is ActiveAdminStatus {
-  return ACTIVE_ADMIN_STATUSES.includes(status as ActiveAdminStatus);
+export function isActiveClaimStatus(status: string | null | undefined): status is ActiveClaimStatus {
+  return ACTIVE_CLAIM_STATUSES.includes(status as ActiveClaimStatus);
+}
+
+export function isActiveMemberStatus(status: string | null | undefined): status is ActiveMemberStatus {
+  return ACTIVE_MEMBER_STATUSES.includes(status as ActiveMemberStatus);
 }
 
 export function getAdminClaimEligibility({

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { ACTIVE_ADMIN_STATUSES } from "@/lib/admin-claim/eligibility";
+import { ACTIVE_CLAIM_STATUSES, ACTIVE_MEMBER_STATUSES } from "@/lib/admin-claim/eligibility";
 
 type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN" | "SUPPORT_REVIEW";
 
@@ -59,13 +59,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Desa not found" }, { status: 404 });
     }
 
+    // One-user-one-desa: check active membership first, then active claims
     const [activeMember, activeClaim] = await Promise.all([
       db.desaAdminMember.findFirst({
-        where: { userId, status: { in: [...ACTIVE_ADMIN_STATUSES] } },
+        where: { userId, status: { in: [...ACTIVE_MEMBER_STATUSES] } },
         select: { desaId: true, desa: { select: { nama: true } } },
       }),
       db.desaAdminClaim.findFirst({
-        where: { userId, status: { in: [...ACTIVE_ADMIN_STATUSES] } },
+        where: { userId, status: { in: [...ACTIVE_CLAIM_STATUSES] } },
         orderBy: { updatedAt: "desc" },
         select: { id: true, desaId: true, desa: { select: { nama: true } } },
       }),

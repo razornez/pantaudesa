@@ -95,11 +95,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, found: false, reason: result.reason });
     }
 
-    // Token found on website — PENDING → LIMITED
+    // Token found on website — PENDING → IN_REVIEW, member upserted as LIMITED
     await db.desaAdminClaim.update({
       where: { id: claimId },
       data: {
-        status: "LIMITED",
+        status: "IN_REVIEW",
         tokenHash: null,      // single-use: clear after successful verification
         tokenExpiresAt: null,
         verifiedAt: new Date(),
@@ -108,8 +108,15 @@ export async function POST(req: NextRequest) {
 
     await db.desaAdminMember.upsert({
       where: { desaId_userId: { desaId: claim.desaId, userId: claim.userId } },
-      create: { desaId: claim.desaId, userId: claim.userId, role: "LIMITED", status: "LIMITED" },
-      update: { status: "LIMITED", updatedAt: new Date() },
+      create: {
+        desaId: claim.desaId,
+        userId: claim.userId,
+        role: "LIMITED_ADMIN",
+        status: "LIMITED",
+        invitedAt: new Date(),
+        acceptedAt: new Date(),
+      },
+      update: { status: "LIMITED", acceptedAt: new Date(), updatedAt: new Date() },
     });
 
     await writeAuditEvent({
@@ -119,11 +126,11 @@ export async function POST(req: NextRequest) {
       claimId,
       method: "WEBSITE_TOKEN",
       previousStatus: claim.status,
-      nextStatus: "LIMITED",
+      nextStatus: "IN_REVIEW",
       evidenceUrl: claim.websiteUrl,
     });
 
-    return NextResponse.json({ ok: true, found: true, newStatus: "LIMITED" });
+    return NextResponse.json({ ok: true, found: true, newStatus: "IN_REVIEW" });
   } catch (err) {
     return handleApiError(err, "POST /api/admin-claim/check-website-token");
   }

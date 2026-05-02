@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
-import { assertTransitionAllowed, type ClaimStatus } from "@/lib/admin-claim/status";
+import { assertClaimTransitionAllowed, type ClaimStatus } from "@/lib/admin-claim/status";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 
 const STATUS_TO_EVENT: Record<ClaimStatus, typeof AUDIT_EVENT[keyof typeof AUDIT_EVENT]> = {
-  LIMITED:   AUDIT_EVENT.STATUS_TO_LIMITED,
-  VERIFIED:  AUDIT_EVENT.STATUS_TO_VERIFIED,
+  IN_REVIEW: AUDIT_EVENT.STATUS_TO_IN_REVIEW,
+  APPROVED:  AUDIT_EVENT.STATUS_TO_APPROVED,
   REJECTED:  AUDIT_EVENT.STATUS_TO_REJECTED,
-  SUSPENDED: AUDIT_EVENT.STATUS_TO_SUSPENDED,
-  PENDING:   AUDIT_EVENT.CLAIM_STARTED,
+  PENDING:   AUDIT_EVENT.STATUS_TO_PENDING,
 };
 
 export async function POST(req: NextRequest) {
@@ -55,7 +54,7 @@ export async function POST(req: NextRequest) {
     const currentStatus = claim.status as ClaimStatus;
 
     try {
-      assertTransitionAllowed(currentStatus, nextStatus);
+      assertClaimTransitionAllowed(currentStatus, nextStatus);
     } catch {
       return NextResponse.json({
         error: `Transition ${currentStatus} → ${nextStatus} is not allowed`,
@@ -66,22 +65,31 @@ export async function POST(req: NextRequest) {
       where: { id: claimId },
       data: {
         status: nextStatus,
-        ...(nextStatus === "VERIFIED" ? { verifiedAt: new Date() } : {}),
-        ...(nextStatus === "REJECTED" ? { rejectedAt: new Date(), rejectionReason: reason ?? null } : {}),
+        ...(nextStatus === "APPROVED" ? { verifiedAt: new Date() } : {}),
+        ...(nextStatus === "REJECTED" ? {
+          rejectedAt: new Date(),
+          rejectionReason: reason ?? null,
+        } : {}),
       },
     });
 
-    // Keep DesaAdminMember in sync
-    if (nextStatus === "VERIFIED") {
+    // When claim is APPROVED, upsert membership to VERIFIED
+    if (nextStatus === "APPROVED") {
       await db.desaAdminMember.upsert({
         where: { desaId_userId: { desaId: claim.desaId, userId: claim.userId } },
-        create: { desaId: claim.desaId, userId: claim.userId, role: "VERIFIED_ADMIN", status: "VERIFIED", verifiedById: userId },
-        update: { role: "VERIFIED_ADMIN", status: "VERIFIED", verifiedById: userId, updatedAt: new Date() },
-      });
-    } else if (nextStatus === "SUSPENDED") {
-      await db.desaAdminMember.updateMany({
-        where: { desaId: claim.desaId, userId: claim.userId },
-        data: { status: "SUSPENDED", updatedAt: new Date() },
+        create: {
+          desaId: claim.desaId,
+          userId: claim.userId,
+          role: "VERIFIED_ADMIN",
+          status: "VERIFIED",
+          verifiedById: userId,
+        },
+        update: {
+          role: "VERIFIED_ADMIN",
+          status: "VERIFIED",
+          verifiedById: userId,
+          updatedAt: new Date(),
+        },
       });
     }
 

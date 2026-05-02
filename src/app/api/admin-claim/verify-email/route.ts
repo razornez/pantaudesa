@@ -59,28 +59,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/profil/klaim-admin-desa?error=invalid_token", req.url));
     }
 
-    // Transition: PENDING → LIMITED on email verification
+    // Transition: PENDING → IN_REVIEW on email verification success
+    // Member is upserted as LIMITED (restricted access while claim awaits internal review)
     await db.desaAdminClaim.update({
       where: { id: claimId },
       data: {
-        status: "LIMITED",
+        status: "IN_REVIEW",
         tokenHash: null,      // single-use: clear token after use
         tokenExpiresAt: null,
         verifiedAt: new Date(),
       },
     });
 
-    // Upsert DesaAdminMember as LIMITED
+    // Upsert DesaAdminMember as LIMITED — claim status is separate from membership status
     await db.desaAdminMember.upsert({
       where: { desaId_userId: { desaId: claim.desaId, userId: claim.userId } },
       create: {
         desaId: claim.desaId,
         userId: claim.userId,
-        role: "LIMITED",
+        role: "LIMITED_ADMIN",
         status: "LIMITED",
+        invitedAt: new Date(),
+        acceptedAt: new Date(),
       },
       update: {
         status: "LIMITED",
+        acceptedAt: new Date(),
         updatedAt: new Date(),
       },
     });
@@ -92,7 +96,7 @@ export async function GET(req: NextRequest) {
       claimId,
       method: "OFFICIAL_EMAIL",
       previousStatus: claim.status,
-      nextStatus: "LIMITED",
+      nextStatus: "IN_REVIEW",
     });
 
     return NextResponse.redirect(new URL("/profil/klaim-admin-desa?verified=email", req.url));

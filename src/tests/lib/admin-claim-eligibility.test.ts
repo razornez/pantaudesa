@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   getAdminClaimEligibility,
   getAdminClaimPageNotice,
-  isActiveAdminStatus,
+  isActiveClaimStatus,
+  isActiveMemberStatus,
 } from "@/lib/admin-claim/eligibility";
 
 describe("admin claim eligibility", () => {
@@ -47,11 +48,18 @@ describe("admin claim eligibility", () => {
     expect(result.message).toContain("Lanjutkan verifikasi");
   });
 
-  it("recognizes active statuses only", () => {
-    expect(isActiveAdminStatus("PENDING")).toBe(true);
-    expect(isActiveAdminStatus("LIMITED")).toBe(true);
-    expect(isActiveAdminStatus("VERIFIED")).toBe(true);
-    expect(isActiveAdminStatus("REJECTED")).toBe(false);
+  it("recognizes active claim statuses", () => {
+    expect(isActiveClaimStatus("PENDING")).toBe(true);
+    expect(isActiveClaimStatus("IN_REVIEW")).toBe(true);
+    expect(isActiveClaimStatus("APPROVED")).toBe(false);
+    expect(isActiveClaimStatus("REJECTED")).toBe(false);
+  });
+
+  it("recognizes active member statuses", () => {
+    expect(isActiveMemberStatus("LIMITED")).toBe(true);
+    expect(isActiveMemberStatus("VERIFIED")).toBe(true);
+    expect(isActiveMemberStatus("REVOKED")).toBe(false);
+    expect(isActiveMemberStatus("EXPIRED")).toBe(false);
   });
 });
 
