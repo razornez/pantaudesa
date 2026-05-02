@@ -40,9 +40,7 @@ export function unauthorizedInternalAdmin(): NextResponse {
 // Usage in route handlers:
 //   const adminSession = await requireInternalAdminSession(req);
 //   if (adminSession instanceof NextResponse) return adminSession;
-export async function requireInternalAdminSession(
-  req?: Request,
-): Promise<InternalAdminSession | NextResponse> {
+export async function requireInternalAdminSession(): Promise<InternalAdminSession | NextResponse> {
   const session = await auth();
   if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

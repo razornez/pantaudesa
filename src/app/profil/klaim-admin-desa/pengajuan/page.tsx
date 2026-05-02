@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
@@ -54,12 +55,12 @@ export default async function PengajuanAdminDesaPage() {
         {!activeClaim ? (
           <div className="bg-white border border-slate-200 rounded-xl px-5 py-6 text-center text-sm text-slate-500">
             <p>Kamu belum memiliki klaim Admin Desa aktif.</p>
-            <a
+            <Link
               href="/profil/klaim-admin-desa"
               className="mt-3 inline-block text-indigo-600 font-medium hover:underline"
             >
               Mulai pengajuan klaim Admin Desa →
-            </a>
+            </Link>
           </div>
         ) : (
           <ClaimSupportForm
@@ -75,9 +76,9 @@ export default async function PengajuanAdminDesaPage() {
 
         <p className="text-xs text-slate-400 text-center">
           Formulir ini berbeda dari{" "}
-          <a href="/hubungi-admin" className="underline">
+          <Link href="/hubungi-admin" className="underline">
             Hubungi Admin umum
-          </a>
+          </Link>
           . Dikhususkan untuk pengajuan klaim Admin Desa dengan konteks desa dan klaim
           yang sudah tercatat.
         </p>

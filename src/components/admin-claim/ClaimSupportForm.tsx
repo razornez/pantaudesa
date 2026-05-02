@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface Props {
   claimId: string;
@@ -70,12 +71,12 @@ export default function ClaimSupportForm({
       <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-6 space-y-2">
         <p className="font-semibold text-green-800">Pengajuan terkirim</p>
         <p className="text-sm text-green-700">{result.message}</p>
-        <a
+        <Link
           href="/profil/klaim-admin-desa"
           className="mt-2 inline-block text-sm text-indigo-600 font-medium hover:underline"
         >
           Kembali ke status klaim →
-        </a>
+        </Link>
       </div>
     );
   }
