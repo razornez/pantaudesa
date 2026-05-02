@@ -4,6 +4,7 @@ import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { addRenewalPeriod } from "@/lib/admin-claim/renewal";
 
 export async function POST(
   req: NextRequest,
@@ -84,12 +85,15 @@ export async function POST(
       }
 
       const now = new Date();
+      const renewalDueAt = addRenewalPeriod(now);
 
       await tx.desaAdminClaim.update({
         where: { id: claimId },
         data: {
           status: "APPROVED",
           verifiedAt: now,
+          renewalDueAt,
+          renewalReviewStatus: null,
           rejectCategory: null,
           rejectReason: null,
           rejectInstructions: null,
@@ -108,6 +112,7 @@ export async function POST(
           verifiedById: adminSession.userId,
           invitedAt: now,
           acceptedAt: now,
+          renewalDueAt,
         },
         update: {
           role: "VERIFIED_ADMIN",
@@ -115,6 +120,7 @@ export async function POST(
           verifiedById: adminSession.userId,
           revokedAt: null,
           revokedReason: null,
+          renewalDueAt,
           updatedAt: now,
         },
       });
