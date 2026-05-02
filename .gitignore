@@ -53,3 +53,9 @@ next-env.d.ts
 # local-only QA artefacts (screenshots/notes)
 .artifacts/
 tmp/
+
+# playwright/vitest local test artefacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

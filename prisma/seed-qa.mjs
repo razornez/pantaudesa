@@ -209,7 +209,7 @@ const QA_USERS = [
 
 // ─── QA Claims ────────────────────────────────────────────────────────────────
 
-function buildQaClaims(now) {
+function buildQaClaims() {
   return [
     {
       id: "qa-claim-pending",
@@ -789,8 +789,7 @@ async function seedQaUsers(pinHash) {
 
 async function seedQaClaims() {
   console.log("Seeding QA claims...");
-  const now = new Date();
-  const claims = buildQaClaims(now);
+  const claims = buildQaClaims();
   for (const claim of claims) {
     await prisma.desaAdminClaim.upsert({
       where: { id: claim.id },

@@ -7,6 +7,8 @@ import { checkWebsiteForToken } from "@/lib/admin-claim/website-token";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 
+// Website token check — on success: claim → IN_REVIEW only.
+// No AdminDesaMember is created here. LIMITED membership only comes from invite by a VERIFIED admin.
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -62,7 +64,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, found: false, reason: "token_expired" });
     }
 
-    // Verify rawToken matches stored hash (prevents token substitution)
     if (!verifyTokenHash(rawToken, claim.tokenHash)) {
       return NextResponse.json({ ok: false, found: false, reason: "token_mismatch" });
     }
@@ -95,28 +96,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, found: false, reason: result.reason });
     }
 
-    // Token found on website — PENDING → IN_REVIEW, member upserted as LIMITED
+    // Token found → PENDING/IN_REVIEW claim → IN_REVIEW. No member created.
     await db.desaAdminClaim.update({
       where: { id: claimId },
       data: {
         status: "IN_REVIEW",
-        tokenHash: null,      // single-use: clear after successful verification
+        tokenHash: null,
         tokenExpiresAt: null,
         verifiedAt: new Date(),
       },
-    });
-
-    await db.desaAdminMember.upsert({
-      where: { desaId_userId: { desaId: claim.desaId, userId: claim.userId } },
-      create: {
-        desaId: claim.desaId,
-        userId: claim.userId,
-        role: "LIMITED_ADMIN",
-        status: "LIMITED",
-        invitedAt: new Date(),
-        acceptedAt: new Date(),
-      },
-      update: { status: "LIMITED", acceptedAt: new Date(), updatedAt: new Date() },
     });
 
     await writeAuditEvent({

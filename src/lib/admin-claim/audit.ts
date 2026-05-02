@@ -5,16 +5,23 @@ export interface AuditPayload {
   eventType: AuditEventType;
   desaId?: string;
   actorUserId?: string;
+  actorRole?: string;
+  actorDisplayNameSnapshot?: string;
   targetUserId?: string;
+  entityType?: string;
+  entityId?: string;
   claimId?: string;
   method?: string;
   previousStatus?: string;
   nextStatus?: string;
+  reasonCategory?: string;
+  reasonText?: string;
   evidenceType?: string;
   evidenceUrl?: string;
   evidenceHash?: string;
   ipAddress?: string;
   userAgent?: string;
+  location?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -26,20 +33,27 @@ export async function writeAuditEvent(payload: AuditPayload): Promise<void> {
   try {
     await db.adminClaimAudit.create({
       data: {
-        eventType:      payload.eventType,
-        desaId:         payload.desaId,
-        actorUserId:    payload.actorUserId,
-        targetUserId:   payload.targetUserId,
-        claimId:        payload.claimId,
-        method:         payload.method,
-        previousStatus: payload.previousStatus,
-        nextStatus:     payload.nextStatus,
-        evidenceType:   payload.evidenceType,
-        evidenceUrl:    payload.evidenceUrl,
-        evidenceHash:   payload.evidenceHash,
-        ipAddress:      payload.ipAddress,
-        userAgent:      payload.userAgent,
-        metadata:       payload.metadata ? JSON.parse(JSON.stringify(payload.metadata)) : undefined,
+        eventType:                payload.eventType,
+        desaId:                   payload.desaId,
+        actorUserId:              payload.actorUserId,
+        actorRole:                payload.actorRole,
+        actorDisplayNameSnapshot: payload.actorDisplayNameSnapshot,
+        targetUserId:             payload.targetUserId,
+        entityType:               payload.entityType,
+        entityId:                 payload.entityId,
+        claimId:                  payload.claimId,
+        method:                   payload.method,
+        previousStatus:           payload.previousStatus,
+        nextStatus:               payload.nextStatus,
+        reasonCategory:           payload.reasonCategory,
+        reasonText:               payload.reasonText,
+        evidenceType:             payload.evidenceType,
+        evidenceUrl:              payload.evidenceUrl,
+        evidenceHash:             payload.evidenceHash,
+        ipAddress:                payload.ipAddress,
+        userAgent:                payload.userAgent,
+        location:                 payload.location,
+        metadata: payload.metadata ? JSON.parse(JSON.stringify(payload.metadata)) : undefined,
       },
     });
   } catch (err) {
