@@ -123,6 +123,59 @@ export async function sendAdminInviteEmail({
   }
 }
 
+export async function sendDesaEmailOtp({
+  toEmail,
+  desaName,
+  otpCode,
+  expiresMinutes = 15,
+}: {
+  toEmail: string;
+  desaName: string;
+  otpCode: string;
+  expiresMinutes?: number;
+}): Promise<AdminClaimEmailResult> {
+  if (!isResendConfigured()) {
+    return { ok: false, error: "Resend env missing", code: "RESEND_ENV_MISSING" };
+  }
+
+  const from = process.env.RESEND_FROM!;
+
+  try {
+    const result = await resend.emails.send({
+      from,
+      to: toEmail,
+      subject: `Kode OTP verifikasi Admin Desa: ${desaName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+          <h2 style="color:#3730a3;">Kode Verifikasi Email Admin Desa</h2>
+          <p>Kamu meminta verifikasi email untuk klaim Admin Desa <strong>${desaName}</strong>.</p>
+          <p>Masukkan kode berikut pada form verifikasi:</p>
+          <div style="background:#f1f5f9;border-radius:8px;padding:20px 32px;text-align:center;margin:20px 0;">
+            <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1e1b4b;">${otpCode}</span>
+          </div>
+          <p style="color:#64748b;font-size:13px;">
+            Kode berlaku selama <strong>${expiresMinutes} menit</strong>.
+            Konfirmasi email hanya membawa klaim ke tahap review — bukan langsung VERIFIED.
+          </p>
+          <p style="color:#64748b;font-size:13px;">
+            Jika kamu tidak meminta kode ini, abaikan email ini.
+          </p>
+          <p style="color:#94a3b8;font-size:12px;">PantauDesa — transparansi anggaran desa</p>
+        </div>
+      `,
+    });
+
+    if (result.error) {
+      return { ok: false, error: result.error.message, code: "RESEND_SEND_FAILED" };
+    }
+
+    return { ok: true, messageId: result.data?.id ?? "sent" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg, code: "RESEND_SEND_FAILED" };
+  }
+}
+
 export async function sendContactAdminEmail({
   subject,
   description,

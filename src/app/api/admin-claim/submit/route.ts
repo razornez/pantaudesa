@@ -45,8 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid method" }, { status: 400 });
     }
     if (method === "OFFICIAL_EMAIL" && officialEmail) {
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(officialEmail);
-      if (!emailOk) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(officialEmail)) {
         return NextResponse.json({ error: "Invalid officialEmail format" }, { status: 400 });
       }
     }
@@ -59,7 +58,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Desa not found" }, { status: 404 });
     }
 
-    // One-user-one-desa: check active membership first, then active claims
+    // Block if desa already has a VERIFIED admin — direct to support path instead
+    const existingVerified = await db.desaAdminMember.findFirst({
+      where: { desaId, status: "VERIFIED" },
+      select: { id: true },
+    });
+    if (existingVerified) {
+      return NextResponse.json({
+        error: `Desa ini sudah memiliki Admin Desa VERIFIED. Jika kamu ingin mengajukan pergantian atau pengkinian admin, hubungi admin PantauDesa melalui formulir Pengajuan Admin Desa dan sertakan bukti yang kuat.`,
+        code: "DESA_ALREADY_HAS_VERIFIED",
+      }, { status: 409 });
+    }
+
+    // One-user-one-desa: check active membership then active claims
     const [activeMember, activeClaim] = await Promise.all([
       db.desaAdminMember.findFirst({
         where: { userId, status: { in: [...ACTIVE_MEMBER_STATUSES] } },
@@ -86,15 +97,44 @@ export async function POST(req: NextRequest) {
       }, { status: 409 });
     }
 
+    // Check if user has a REJECTED claim with an active cooldown (server-side enforcement)
+    const rejectedClaim = await db.desaAdminClaim.findFirst({
+      where: { userId, desaId, status: "REJECTED" },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, fraudCooldownUntil: true, reapplyAllowedAt: true },
+    });
+
+    if (rejectedClaim) {
+      const now = new Date();
+      if (rejectedClaim.fraudCooldownUntil && rejectedClaim.fraudCooldownUntil > now) {
+        const cooldownDate = rejectedClaim.fraudCooldownUntil.toISOString();
+        return NextResponse.json({
+          error: `Klaim belum bisa diajukan ulang karena terdapat indikasi risiko pada proses verifikasi sebelumnya. Kamu bisa mengajukan ulang setelah ${cooldownDate}. Jika merasa ini keliru, hubungi admin PantauDesa.`,
+          code: "FRAUD_COOLDOWN_ACTIVE",
+          reapplyAllowedAt: cooldownDate,
+        }, { status: 429 });
+      }
+      if (rejectedClaim.reapplyAllowedAt && rejectedClaim.reapplyAllowedAt > now) {
+        const reapplyDate = rejectedClaim.reapplyAllowedAt.toISOString();
+        return NextResponse.json({
+          error: `Kamu belum bisa mengajukan ulang. Pengajuan ulang bisa dilakukan setelah ${reapplyDate}.`,
+          code: "REAPPLY_COOLDOWN_ACTIVE",
+          reapplyAllowedAt: reapplyDate,
+        }, { status: 429 });
+      }
+    }
+
     const existing = await db.desaAdminClaim.findFirst({
       where: { userId, desaId },
+      orderBy: { updatedAt: "desc" },
       select: { id: true, status: true, method: true },
     });
 
     let claim;
     let eventType: typeof AUDIT_EVENT[keyof typeof AUDIT_EVENT];
 
-    if (existing) {
+    if (existing && (existing.status === "PENDING" || existing.status === "IN_REVIEW")) {
+      // Update existing active claim
       claim = await db.desaAdminClaim.update({
         where: { id: existing.id },
         data: {
@@ -107,6 +147,7 @@ export async function POST(req: NextRequest) {
       });
       eventType = existing.method !== method ? AUDIT_EVENT.CLAIM_METHOD_UPDATED : AUDIT_EVENT.CLAIM_REUSED;
     } else {
+      // Create new claim (either no existing or previous was REJECTED/APPROVED)
       claim = await db.desaAdminClaim.create({
         data: {
           userId,

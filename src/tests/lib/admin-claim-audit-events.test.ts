@@ -27,6 +27,14 @@ describe("audit event constants", () => {
     expect(AUDIT_EVENT.WEBSITE_CHECK_BLOCKED).toBeDefined();
   });
 
+  it("all required events exist for email OTP flow", () => {
+    expect(AUDIT_EVENT.OTP_SENT).toBeDefined();
+    expect(AUDIT_EVENT.OTP_RESEND_BLOCKED).toBeDefined();
+    expect(AUDIT_EVENT.OTP_INVALID).toBeDefined();
+    expect(AUDIT_EVENT.OTP_VERIFY_FROZEN).toBeDefined();
+    expect(AUDIT_EVENT.OTP_CONFIRMED).toBeDefined();
+  });
+
   it("all required events exist for new claim status transitions", () => {
     expect(AUDIT_EVENT.STATUS_TO_IN_REVIEW).toBeDefined();
     expect(AUDIT_EVENT.STATUS_TO_APPROVED).toBeDefined();

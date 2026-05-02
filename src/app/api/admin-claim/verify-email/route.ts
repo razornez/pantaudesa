@@ -5,7 +5,9 @@ import { verifyTokenHash, isTokenExpired } from "@/lib/admin-claim/token";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 
-// Email token verification callback — no auth required (magic link)
+// Magic-link email verification callback — no auth required.
+// On success: claim → IN_REVIEW only. No AdminDesaMember is created here.
+// LIMITED membership only comes from invite by a VERIFIED admin.
 export async function GET(req: NextRequest) {
   try {
     if (!db) {
@@ -59,33 +61,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/profil/klaim-admin-desa?error=invalid_token", req.url));
     }
 
-    // Transition: PENDING → IN_REVIEW on email verification success
-    // Member is upserted as LIMITED (restricted access while claim awaits internal review)
+    // Transition: PENDING → IN_REVIEW. No member record created — LIMITED only comes from invite.
     await db.desaAdminClaim.update({
       where: { id: claimId },
       data: {
         status: "IN_REVIEW",
-        tokenHash: null,      // single-use: clear token after use
+        tokenHash: null,
         tokenExpiresAt: null,
         verifiedAt: new Date(),
-      },
-    });
-
-    // Upsert DesaAdminMember as LIMITED — claim status is separate from membership status
-    await db.desaAdminMember.upsert({
-      where: { desaId_userId: { desaId: claim.desaId, userId: claim.userId } },
-      create: {
-        desaId: claim.desaId,
-        userId: claim.userId,
-        role: "LIMITED_ADMIN",
-        status: "LIMITED",
-        invitedAt: new Date(),
-        acceptedAt: new Date(),
-      },
-      update: {
-        status: "LIMITED",
-        acceptedAt: new Date(),
-        updatedAt: new Date(),
       },
     });
 

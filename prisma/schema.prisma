@@ -343,6 +343,7 @@ model DesaAdminClaim {
   verifiedAt      DateTime?
 
   // OTP tracking (for email OTP verification flow)
+  otpHash           String?   // SHA-256 hash of the 6-digit OTP; never store plaintext
   otpFailedAttempts Int       @default(0)
   otpResendCount    Int       @default(0)
   otpFrozenUntil    DateTime?
