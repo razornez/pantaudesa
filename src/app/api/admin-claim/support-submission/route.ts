@@ -138,13 +138,19 @@ export async function POST(req: NextRequest) {
       userAgent: req.headers.get("user-agent") ?? undefined,
     });
 
+    const isRejected = claim.status === "REJECTED";
+    const message = isRejected
+      ? "Bukti tambahan kamu berhasil dikirim. Status klaim tetap REJECTED sampai admin PantauDesa meninjau ulang bukti ini. Hasil peninjauan akan dikirimkan via email."
+      : "Bukti pengajuan Admin Desa berhasil dikirim. Klaim kamu masuk tahap review internal. Admin PantauDesa akan memeriksa bukti dan memberikan keputusan atau instruksi lanjutan.";
+
     return NextResponse.json({
       ok: true,
       claimId,
       newStatus,
+      previousStatus: claim.status,
       supportSubmittedAt: now.toISOString(),
       emailSent: emailResult.ok,
-      message: "Bukti pengajuan Admin Desa berhasil dikirim. Klaim kamu masuk tahap review internal. Admin PantauDesa akan memeriksa bukti dan memberikan keputusan atau instruksi lanjutan.",
+      message,
     });
   } catch (err) {
     return handleApiError(err, "POST /api/admin-claim/support-submission");

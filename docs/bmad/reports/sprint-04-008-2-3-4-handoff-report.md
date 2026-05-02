@@ -1,9 +1,27 @@
 # Sprint 04-008.2 / 04-008.3 / 04-008.4 — Handoff Report
 
-Date: 2026-05-02
+Date: 2026-05-02 (initial) / 2026-05-02 (rework)
 Branch: `feat/sprint-04-008-2-3-4`
-Status: PASS
+Status: PASS (rework applied — see Rework section)
 Prepared-by: Asep (AI Dev)
+
+---
+
+## Rework summary (2026-05-02)
+
+Owner reviewed initial commits and requested 6 blockers be fixed before merge.
+All resolved on the same branch.
+
+| # | Blocker | Resolution | Commit |
+|---|---------|------------|--------|
+| 1 | Vercel deployment failing | Untracked `test-results/.last-run.json`, fixed `.gitignore`, cleaned all lint warnings (was: 2 pre-existing warnings in AdminClaimWizard.tsx). Local build now compiles with only 1 informational Turbopack NFT warning (Prisma generated client traces — non-fatal, common to Next 16 + Prisma). | `(rework commit)` |
+| 2 | `test-results/.last-run.json` committed | Removed via `git rm --cached`; added `/test-results/`, `/playwright-report/`, `/blob-report/`, `/playwright/.cache/` to `.gitignore`. | `(rework commit)` |
+| 3 | Approve route missing active-membership-elsewhere guard | Added Guard 2 in `approve/route.ts`: rejects with 409 `USER_ACTIVE_IN_OTHER_DESA` and copy `User ini sudah terdaftar sebagai Admin Desa di {desaName}. Revoke/remove akses tersebut dulu sebelum bisa diverifikasi di desa lain.` | `(rework commit)` |
+| 4 | Approve flow not transactional (race risk on double-submit) | Wrapped both guards (existing-VERIFIED check, active-elsewhere check) plus claim update + member upsert in `db.$transaction`. Audit events run after commit (best-effort, never block flow). Returns 404/422/409 responses cleanly via discriminated union from the transaction body. | `(rework commit)` |
+| 5 | OTP resend policy off-by-one | Changed `>=` to `>` in both `send-email-otp` and `verify-email-otp`. Policy is now: **allow `OTP_RESEND_MAX` (3) sends, freeze on the 4th attempt**; **allow `OTP_WRONG_MAX` (5) wrong attempts, freeze on the 6th attempt**. Also fixed the freeze-expiry-reset bug: when `otpFrozenUntil <= now`, the counter is treated as 0 so the user gets a fresh allowance after the freeze elapses. Added 16 new tests in `admin-claim-otp.test.ts` to lock in the constants and the counter semantics. | `(rework commit)` |
+| 6 | Support submission UX unclear for REJECTED claims | `ClaimSupportForm.tsx`: added explicit red banner `"Mengirim keberatan/bukti tambahan tidak otomatis mengubah status menjadi VERIFIED. Klaim akan tetap REJECTED sampai admin PantauDesa meninjau ulang ... Hasil peninjauan akan dikirimkan via email"`. Success state for REJECTED claims clarifies status remains REJECTED. API response now returns REJECTED-specific message. `ClaimReviewQueue.tsx`: REJECTED claims with `supportSubmittedAt` show an amber-bordered "Bukti tambahan masuk (perlu review ulang)" indicator with timestamp, distinct from the indigo indicator on PENDING/IN_REVIEW. | `(rework commit)` |
+
+---
 
 ---
 
@@ -182,34 +200,77 @@ Run `npm run seed:qa` before testing. Key entities:
 
 ---
 
-## Quality gate results
+## Quality gate results (post-rework, 2026-05-02)
 
 | Check | Result |
 |-------|--------|
-| `npm run lint` | ✓ 0 errors (2 pre-existing warnings in AdminClaimWizard.tsx — not our files) |
-| `npm run test` | ✓ 110/110 pass |
+| `npm run lint` | ✓ 0 errors, 0 warnings (cleaned `Link`/`LifeBuoy` unused imports in `AdminClaimWizard.tsx`) |
+| `npm run test` | ✓ 126/126 pass (added 16 OTP policy tests in `admin-claim-otp.test.ts`) |
 | `npx tsc --noEmit` | ✓ Clean |
-| `npx prisma generate` | ✓ Applied (Windows file-lock on retry — DLL already current from migration deployment) |
-| `npm run build` | ✓ Pass — all new routes appear in route manifest as dynamic (ƒ) |
+| `npx prisma generate` | ✓ Runs as part of `npm run build` (`prisma generate && next build`); standalone retry hits Windows file-lock when dev server is up — kill node processes first |
+| `npm run build` | ✓ Pass — 1 informational Turbopack NFT warning about Prisma client tracing (non-fatal, see Vercel section) |
 
-Build output confirms:
+Build output confirms all new routes:
 ```
 ƒ /internal-admin
 ƒ /internal-admin/claims
 ƒ /profil/klaim-admin-desa/pengajuan
 ```
 
+## Vercel status
+
+**Locally green.** Without Vercel log access here, the only build-output warning is:
+
+```
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+
+Import trace:
+  App Route:
+    ./next.config.ts
+    ./src/generated/prisma/index.js
+    ./src/lib/prisma.ts
+    ./src/app/api/voices/route.ts
+```
+
+This is a known Next 16 + Turbopack + Prisma generated-client interaction — Prisma's
+`src/generated/prisma/index.js` does dynamic requires for engine binaries, which
+Turbopack's NFT (Node File Trace) flags as "the whole project was traced
+unintentionally". It is **non-fatal** and the build still completes. Same warning
+appears on `main` before this branch.
+
+If Vercel is still failing after this push, the most likely root causes are
+environment-side (not code-side):
+
+1. **Missing build-time env vars** — `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`,
+   `AUTH_URL`, `RESEND_API_KEY`, `RESEND_FROM`, `CONTACT_EMAIL`. Verify Project →
+   Settings → Environment Variables for `Production` and `Preview`.
+2. **Sentry build-time auth token** — `@sentry/nextjs` is in deps but no
+   `SENTRY_AUTH_TOKEN` env / no `instrumentation.ts` file means source-map upload
+   may warn but should not fail. If this is the failure, add `SENTRY_AUTH_TOKEN`
+   or remove `@sentry/nextjs` from deps until config is finalized.
+3. **Prisma binary target** — `schema.prisma` already includes `rhel-openssl-3.0.x`
+   for Vercel; verified.
+4. **Old `test-results/.last-run.json` checked in** — fixed in this rework.
+
+The next push should trigger a fresh Vercel build. If it still fails, attach the
+Vercel build logs and we'll diagnose precisely.
+
 ---
 
-## Known risks
+## Known risks (post-rework)
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| Magic-link email path (`generate-email-token` + `verify-email`) and OTP path are now parallel — UI doesn't yet guide users to choose one | Low | OTP routes are backend-only for now; UI integration is 04-008.6 scope |
-| Internal admin shared account (per BMAD owner decision) reduces per-person accountability | Medium | Accepted for MVP per 04-008e governance doc; logged in handoff |
-| `sendContactAdminEmail` for support submission requires `CONTACT_EMAIL` env; if not set, returns error but doesn't block DB operation | Low | Audit event always written; email is best-effort notification |
-| `prisma generate` fails on Windows if dev server holds DLL lock | Low | Close dev server before running `npm run build` or kill node processes |
-| `ClaimReviewQueue` pagination uses `window.location.href` for URL building (SSR-safe in client component, but breaks if rendered server-side) | Low | Component is `"use client"` so window is always available |
+| Magic-link email path (`generate-email-token` + `verify-email`) and OTP path coexist — UI doesn't yet guide users to one | Low | OTP routes are backend-only for now; UI integration deferred to 04-008.6 |
+| Internal admin shared account (per BMAD owner decision) reduces per-person accountability | Medium | Accepted for MVP per `04-008e` governance doc; every action still records `actorRole=INTERNAL_ADMIN` + IP/userAgent |
+| `sendContactAdminEmail` for support submission requires `CONTACT_EMAIL` env; if not set, audit event still written, DB still updated, only email notification fails | Low | Honest error code returned; audit is source of truth for review queue |
+| `prisma generate` fails on Windows if dev server holds DLL lock | Low | `npm run build` script kills no processes; if it fails locally, run `Get-Process node \| Stop-Process` then retry |
+| Turbopack NFT warning about Prisma client traces the whole project | Low | Non-fatal informational warning, present on `main` before this branch; tracked upstream |
+| Approve-route transaction holds Postgres row locks during the two SELECTs + UPDATE/UPSERT — under heavy concurrent admin actions on the same desa, contention is possible | Low | Acceptable for MVP (single shared internal-admin account, low expected concurrency); transaction is short and bounded |
+| OTP counter reset semantics: when `otpFrozenUntil` elapses, the counter is treated as 0 on the next attempt. A patient attacker could re-enter the freeze window forever (3 sends, freeze 20 min, repeat) — but this still rate-limits to ~9 sends/hour | Low | Acceptable for MVP per BMAD policy; fraud cooldown is a separate, stricter mechanism set by internal admin |
+| Vercel build status not directly observable from this environment | Low | Local quality gate fully green; if Vercel still red, env vars or Sentry config are the most likely cause (see Vercel section above) |
 
 ---
 

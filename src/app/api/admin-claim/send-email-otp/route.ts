@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    // Check if currently frozen
+    // Step 1 — currently frozen window?
     if (isOtpFrozen(claim.otpFrozenUntil)) {
       await writeAuditEvent({
         eventType: AUDIT_EVENT.OTP_RESEND_BLOCKED,
@@ -83,13 +83,13 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // Determine new resend count (reset if freeze window expired)
-    const newResendCount = claim.otpResendCount + 1;
-    const willFreeze = newResendCount >= OTP_RESEND_MAX;
-    const newFrozenUntil = willFreeze ? freezeUntil(now.getTime()) : null;
+    // Step 2 — freeze window has elapsed → reset counter so the user gets a fresh allowance
+    const baseResendCount = claim.otpFrozenUntil && claim.otpFrozenUntil <= now ? 0 : claim.otpResendCount;
+    const newResendCount = baseResendCount + 1;
 
-    // If already at max before incrementing, freeze (edge: count was already OTP_RESEND_MAX-1)
-    if (willFreeze) {
+    // Policy: allow OTP_RESEND_MAX sends; the (MAX+1)-th attempt triggers freeze and is NOT sent.
+    if (newResendCount > OTP_RESEND_MAX) {
+      const newFrozenUntil = freezeUntil(now.getTime());
       await db.desaAdminClaim.update({
         where: { id: claimId },
         data: {
@@ -104,17 +104,17 @@ export async function POST(req: NextRequest) {
         actorUserId: userId,
         claimId,
         method: "OFFICIAL_EMAIL",
-        metadata: { resendCount: newResendCount, frozenUntil: newFrozenUntil?.toISOString() },
+        metadata: { resendCount: newResendCount, frozenUntil: newFrozenUntil.toISOString() },
       });
       return NextResponse.json({
         ok: false,
         code: "OTP_RESEND_LIMIT",
-        frozenUntil: newFrozenUntil!.toISOString(),
-        message: `Pengiriman ulang kode OTP terlalu sering. Kamu bisa meminta kode baru setelah ${newFrozenUntil!.toISOString()}.`,
+        frozenUntil: newFrozenUntil.toISOString(),
+        message: `Pengiriman ulang kode OTP terlalu sering. Kamu bisa meminta kode baru setelah ${newFrozenUntil.toISOString()}.`,
       }, { status: 429 });
     }
 
-    // Generate OTP — store only hash, never plaintext
+    // Step 3 — generate and send OTP. Store only the SHA-256 hash; never log plaintext.
     const plainOtp = generateOtp();
     const otp_hash = hashOtp(plainOtp);
     const expiresAt = otpExpiresAt(now.getTime());
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         otpExpiresAt: expiresAt,
         otpLastSentAt: now,
         otpResendCount: newResendCount,
-        otpFrozenUntil: null,
+        otpFrozenUntil: null, // freeze cleared because user is within allowed budget
         method: "OFFICIAL_EMAIL",
       },
     });
@@ -175,6 +175,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       expiresAt: expiresAt.toISOString(),
       resendCount: newResendCount,
+      remainingResends: OTP_RESEND_MAX - newResendCount,
     });
   } catch (err) {
     return handleApiError(err, "POST /api/admin-claim/send-email-otp");

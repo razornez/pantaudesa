@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
     if (!claimId || !code) {
       return NextResponse.json({ error: "claimId and code are required" }, { status: 400 });
     }
-    // Sanitize: only digits allowed
     if (!/^\d{6}$/.test(code)) {
       return NextResponse.json({ error: "OTP code must be exactly 6 digits" }, { status: 400 });
     }
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    // Frozen check
+    // Step 1 — currently frozen window?
     if (isOtpFrozen(claim.otpFrozenUntil)) {
       await writeAuditEvent({
         eventType: AUDIT_EVENT.OTP_VERIFY_FROZEN,
@@ -85,7 +84,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No OTP has been sent for this claim" }, { status: 400 });
     }
 
-    // Expiry check
     if (isOtpExpired(claim.otpExpiresAt)) {
       await writeAuditEvent({
         eventType: AUDIT_EVENT.OTP_VERIFY_FROZEN,
@@ -101,8 +99,13 @@ export async function POST(req: NextRequest) {
     const correct = verifyOtp(code, claim.otpHash);
 
     if (!correct) {
-      const newFailedAttempts = claim.otpFailedAttempts + 1;
-      const willFreeze = newFailedAttempts >= OTP_WRONG_MAX;
+      // Step 2 — if a previous freeze just elapsed, reset wrong-attempt counter for fairness
+      const baseFailedAttempts =
+        claim.otpFrozenUntil && claim.otpFrozenUntil <= now ? 0 : claim.otpFailedAttempts;
+      const newFailedAttempts = baseFailedAttempts + 1;
+
+      // Policy: allow OTP_WRONG_MAX wrong attempts; the (MAX+1)-th attempt triggers freeze.
+      const willFreeze = newFailedAttempts > OTP_WRONG_MAX;
       const newFrozenUntil = willFreeze ? freezeUntil(now.getTime()) : null;
 
       await db.desaAdminClaim.update({
@@ -138,12 +141,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: false,
         code: "OTP_WRONG",
-        remainingAttempts: OTP_WRONG_MAX - newFailedAttempts,
+        remainingAttempts: Math.max(0, OTP_WRONG_MAX - newFailedAttempts),
         message: "Kode OTP salah. Periksa kembali kode yang dikirim ke email desa.",
       }, { status: 422 });
     }
 
-    // OTP correct — PENDING → IN_REVIEW. Clear OTP hash (single-use). No member created.
+    // OTP correct — PENDING → IN_REVIEW. Clear OTP state. No member created (LIMITED only via invite).
     await db.desaAdminClaim.update({
       where: { id: claimId },
       data: {

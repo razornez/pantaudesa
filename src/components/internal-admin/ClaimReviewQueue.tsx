@@ -245,7 +245,18 @@ function ClaimCard({ claim, onAction }: { claim: ClaimRow; onAction: () => void 
             </p>
           )}
           {claim.supportSubmittedAt && (
-            <p className="text-indigo-700 text-xs">📝 Bukti pengajuan diterima</p>
+            <div className={`mt-1 rounded-md px-2 py-1 text-xs ${
+              claim.status === "REJECTED"
+                ? "bg-amber-50 border border-amber-200 text-amber-800"
+                : "bg-indigo-50 border border-indigo-200 text-indigo-800"
+            }`}>
+              <p className="font-medium">
+                📝 {claim.status === "REJECTED" ? "Bukti tambahan masuk (perlu review ulang)" : "Bukti pengajuan diterima"}
+              </p>
+              <p className="text-[11px] opacity-80">
+                {new Date(claim.supportSubmittedAt).toLocaleString("id-ID")}
+              </p>
+            </div>
           )}
           {claim.verifiedAt && (
             <p className="text-xs text-slate-400">Diverifikasi: {new Date(claim.verifiedAt).toLocaleString("id-ID")}</p>

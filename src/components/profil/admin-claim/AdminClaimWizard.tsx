@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { LifeBuoy, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import AdminClaimDesaPicker from "@/components/profil/admin-claim/AdminClaimDesaPicker";
 import AdminClaimInstruction from "@/components/profil/admin-claim/AdminClaimInstruction";
 import AdminClaimMethodPicker from "@/components/profil/admin-claim/AdminClaimMethodPicker";

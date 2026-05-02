@@ -66,11 +66,21 @@ export default function ClaimSupportForm({
     }
   }
 
+  const isRejected = claimStatus === "REJECTED";
+
   if (result?.ok) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-6 space-y-2">
-        <p className="font-semibold text-green-800">Pengajuan terkirim</p>
+        <p className="font-semibold text-green-800">
+          {isRejected ? "Keberatan terkirim" : "Pengajuan terkirim"}
+        </p>
         <p className="text-sm text-green-700">{result.message}</p>
+        {isRejected && (
+          <p className="text-xs text-green-700">
+            Status klaim kamu tetap <strong>REJECTED</strong> sampai admin PantauDesa
+            meninjau ulang bukti yang kamu kirim. Update akan dikirimkan via email.
+          </p>
+        )}
         <Link
           href="/profil/klaim-admin-desa"
           className="mt-2 inline-block text-sm text-indigo-600 font-medium hover:underline"
@@ -97,15 +107,33 @@ export default function ClaimSupportForm({
         </span>
       </div>
 
+      {/* Explicit notice for REJECTED claims: submission does NOT auto-restore access */}
+      {isRejected && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 space-y-1">
+          <p className="font-medium">Klaim kamu saat ini berstatus REJECTED</p>
+          <p className="text-red-700">
+            Mengirim keberatan/bukti tambahan <strong>tidak otomatis mengubah status menjadi VERIFIED</strong>.
+            Klaim akan tetap REJECTED sampai admin PantauDesa meninjau ulang bukti yang kamu kirim.
+            Hasil peninjauan akan dikirimkan via email ke akun kamu.
+          </p>
+        </div>
+      )}
+
       {alreadySubmitted && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-          <p className="font-medium">Pengajuan sudah dikirim sebelumnya</p>
+          <p className="font-medium">
+            {isRejected ? "Keberatan/bukti sudah pernah dikirim" : "Pengajuan sudah dikirim sebelumnya"}
+          </p>
           {alreadySubmittedAt && (
             <p className="text-blue-600 text-xs mt-0.5">
               Dikirim: {new Date(alreadySubmittedAt).toLocaleString("id-ID")}
             </p>
           )}
-          <p className="mt-1">Kamu dapat mengirim pengajuan tambahan dengan bukti terbaru.</p>
+          <p className="mt-1">
+            {isRejected
+              ? "Kamu dapat mengirim bukti tambahan jika ada informasi baru."
+              : "Kamu dapat mengirim pengajuan tambahan dengan bukti terbaru."}
+          </p>
         </div>
       )}
 
