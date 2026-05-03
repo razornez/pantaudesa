@@ -6,6 +6,7 @@ import { verifyTokenHash, isTokenExpired } from "@/lib/admin-claim/token";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { ACTIVE_CLAIM_STATUSES, ACTIVE_MEMBER_STATUSES } from "@/lib/admin-claim/eligibility";
+import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 function burnedTokenHash(): string {
   return createHash("sha256").update(randomBytes(32)).digest("hex");
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         status: true,
         expiresAt: true,
         invitedById: true,
+        desa: { select: { nama: true } },
       },
     });
 
@@ -118,6 +120,18 @@ export async function GET(req: NextRequest) {
       nextStatus: "LIMITED",
       metadata: { inviteId, email: invite.email },
     });
+
+    // Notify the inviter that their invite was accepted.
+    if (invite.invitedById) {
+      await createNotification({
+        userId: invite.invitedById,
+        type: NOTIF_TYPE.INVITE_ACCEPTED,
+        title: "Undangan Admin Desa diterima",
+        body: `${invite.email} telah menerima undanganmu dan bergabung sebagai Admin LIMITED di ${invite.desa?.nama ?? "desa kamu"}.`,
+        desaId: invite.desaId,
+        metadata: { inviteId, email: invite.email },
+      });
+    }
 
     return NextResponse.redirect(new URL("/profil/klaim-admin-desa?invite=accepted", req.url));
   } catch (err) {
