@@ -8,7 +8,7 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useSession, signOut } from "next-auth/react";
 
-export type UserRole = "WARGA" | "DESA" | "ADMIN";
+export type UserRole = "WARGA" | "DESA" | "ADMIN" | "INTERNAL_ADMIN";
 
 export interface AuthUser {
   id:           string;

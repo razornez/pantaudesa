@@ -196,10 +196,18 @@ function UploadForm({
       const res = await fetch("/api/admin-claim/documents/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal mengunggah.");
+        // Server-side failures (storage, validation, auth) — never show success.
+        const detail = data.detail ? ` (${data.detail})` : "";
+        setError(`${data.error ?? "Gagal mengunggah."}${detail}`);
         return;
       }
-      setSuccess(data.message ?? "Dokumen berhasil diunggah.");
+      // Only declare success when the server confirms documents were persisted.
+      const persisted = Array.isArray(data.documents) ? data.documents.length : 0;
+      if (persisted === 0) {
+        setError("Server tidak mengembalikan konfirmasi dokumen tersimpan. Coba refresh halaman dan periksa daftar dokumen.");
+        return;
+      }
+      setSuccess(`${data.message ?? "Dokumen berhasil diunggah."} (${persisted} dokumen tercatat di database)`);
       reset();
       onUploaded();
     } catch {
@@ -271,8 +279,16 @@ function UploadForm({
         </span>
       </label>
 
-      {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-      {success && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{success}</p>}
+      {error && (
+        <div role="alert" className="text-sm text-rose-900 bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2.5 leading-snug">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div role="status" className="text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5 leading-snug">
+          {success}
+        </div>
+      )}
 
       <button type="submit" disabled={loading || !storageConfigured}
         className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -338,13 +354,20 @@ export default function AdminDesaDokumenClient(props: Props) {
       </header>
 
       {actionMsg && (
-        <div className={`rounded-lg px-3 py-2 text-sm flex items-center gap-2 ${
-          actionMsg.kind === "ok"
-            ? "bg-green-50 border border-green-200 text-green-800"
-            : "bg-red-50 border border-red-200 text-red-800"
-        }`}>
-          {actionMsg.kind === "ok" ? <Check size={14} /> : <X size={14} />}
-          <span>{actionMsg.text}</span>
+        <div
+          role={actionMsg.kind === "error" ? "alert" : "status"}
+          className={`rounded-2xl px-4 py-3 text-sm flex items-start gap-3 shadow-sm ${
+            actionMsg.kind === "ok"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-900"
+              : "bg-rose-50 border border-rose-200 text-rose-900"
+          }`}
+        >
+          <span className={`mt-0.5 inline-flex w-5 h-5 rounded-full items-center justify-center flex-shrink-0 ${
+            actionMsg.kind === "ok" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+          }`}>
+            {actionMsg.kind === "ok" ? <Check size={12} aria-hidden /> : <X size={12} aria-hidden />}
+          </span>
+          <span className="leading-snug">{actionMsg.text}</span>
         </div>
       )}
 

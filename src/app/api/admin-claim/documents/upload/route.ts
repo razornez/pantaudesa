@@ -132,11 +132,30 @@ export async function POST(req: NextRequest) {
         await uploadDocumentBuffer(storageKey, buffer, file.type);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        // Safe server-side log: no env values, just enough to debug.
+        console.error("[upload] Supabase upload failed", {
+          storageKey,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          desaId: member.desaId,
+          message: msg,
+        });
+        // If this is a config error, return the proper code so the UI can show
+        // the "storage tidak terkonfigurasi" message instead of a generic failure.
+        const code = msg.includes("not set") || msg.includes("not configured")
+          ? "STORAGE_NOT_CONFIGURED"
+          : "UPLOAD_FAILED";
+        const status = code === "STORAGE_NOT_CONFIGURED" ? 503 : 502;
+        const userMsg = code === "STORAGE_NOT_CONFIGURED"
+          ? "Storage tidak terkonfigurasi. Hubungi admin PantauDesa."
+          : `Gagal mengunggah file "${file.name}" ke storage. Pastikan konfigurasi storage sudah aktif atau hubungi admin PantauDesa.`;
         return NextResponse.json({
-          error: `Gagal mengunggah file "${file.name}": ${msg}`,
-          code: "UPLOAD_FAILED",
+          error: userMsg,
+          detail: msg,
+          code,
           uploadedSoFar: uploaded.length,
-        }, { status: 502 });
+        }, { status });
       }
 
       const doc = await db.adminDesaDocument.create({
