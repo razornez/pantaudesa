@@ -105,39 +105,42 @@ export default function AdminDesaNotifikasiClient({
           <button
             onClick={markAllRead}
             disabled={isPending}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            className="t-spring inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-3 py-1.5 rounded-xl disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
-            <CheckCheck size={13} /> Tandai semua dibaca
+            <CheckCheck size={13} aria-hidden /> Tandai semua dibaca
           </button>
         )}
       </div>
 
       {error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+        <div role="alert" className="rounded-2xl px-4 py-3 text-sm pill-danger">{error}</div>
       )}
 
       {notifications.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
-          <BellOff size={28} className="mx-auto text-slate-300 mb-2" />
+        <div className="lux-card p-12 text-center space-y-3">
+          <BellOff size={28} className="mx-auto text-slate-300" aria-hidden />
           <p className="text-sm text-slate-500">Belum ada notifikasi.</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {notifications.map((n) => (
             <li
               key={n.id}
-              className={`bg-white border rounded-2xl px-4 py-3.5 space-y-1 transition-colors ${
-                n.isRead ? "border-slate-200" : "border-indigo-200 bg-indigo-50/40"
+              className={`t-spring rounded-2xl px-5 py-4 space-y-1.5 ${
+                n.isRead
+                  ? "bg-white shadow-lux-1 ring-hair"
+                  : "shadow-lux-1"
               }`}
+              style={!n.isRead ? { background: "linear-gradient(180deg, #F5F6FF 0%, #FFFFFF 100%)", boxShadow: "inset 0 0 0 1px rgba(79, 70, 229, 0.18), 0 1px 1px rgba(15,23,42,.03), 0 2px 4px rgba(15,23,42,.04), 0 8px 20px -8px rgba(15,23,42,.06)" } : undefined}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
                   <span className="text-base leading-none mt-0.5 shrink-0">{typeIcon(n.type)}</span>
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold leading-snug ${n.isRead ? "text-slate-800" : "text-indigo-900"}`}>
                       {n.title}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5 num">
                       {new Date(n.createdAt).toLocaleDateString("id-ID", {
                         day: "numeric", month: "long", year: "numeric",
                       })}
@@ -148,14 +151,14 @@ export default function AdminDesaNotifikasiClient({
                   <button
                     onClick={() => markOneRead(n.id)}
                     disabled={isPending}
-                    className="shrink-0 text-[11px] font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+                    className="t-spring shrink-0 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100 px-2.5 py-1 rounded-lg disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     aria-label="Tandai dibaca"
                   >
                     Baca
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed pl-6">{n.body}</p>
+              <p className="text-xs text-slate-600 leading-relaxed pl-7">{n.body}</p>
             </li>
           ))}
         </ul>

@@ -1,8 +1,55 @@
 @import "tailwindcss";
 
+/* ───────────────────────────────────────────────────────────────────────────
+   PantauDesa Design System v2 · Quiet Luxury
+   Source: design-system/{colors-v2,spacing-v2,components-v2}.html (owner-provided)
+   Scope: Sprint 04-008 surfaces (admin-desa, internal-admin, profile, alerts).
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces & ink */
+  --bg-canvas:     #FAFAF7;   /* warm canvas, replaces flat slate-50 */
+  --bg-card:       #FFFFFF;
+  --ink-1:         #0B1220;   /* body text · 16.8:1 on canvas */
+  --ink-2:         #334155;
+  --ink-3:         #64748B;
+  --ink-4:         #94A3B8;
+  --hair:          rgba(15, 23, 42, 0.06);   /* hairline border */
+
+  /* Brand */
+  --indigo-50:     #F5F6FF;
+  --indigo-100:    #E0E4FF;
+  --indigo-500:    #6366F1;
+  --indigo-600:    #4F46E5;
+  --indigo-900:    #312E81;
+  --indigo-950:    #1E1B4B;   /* primary CTA */
+
+  /* Accent */
+  --emerald-50:    #ECFDF5;
+  --emerald-500:   #10B981;
+  --emerald-700:   #047857;
+  --emerald-900:   #064E3B;
+
+  --amber-50:      #FFFBEB;
+  --amber-400:     #FBBF24;
+  --amber-700:     #B45309;
+  --amber-900:     #92400E;
+
+  --rose-50:       #FFF1F2;
+  --rose-500:      #F43F5E;
+  --rose-700:      #BE123C;
+  --rose-900:      #9F1239;
+}
+
+/* Body — warm canvas with two ambient radial glows */
 body {
-  background: #F8FAFC;
-  color: #0F172A;
+  background:
+    radial-gradient(1100px 600px at 85% -10%, rgba(79, 70, 229, 0.05), transparent 60%),
+    radial-gradient(800px 500px at -10% 110%, rgba(4, 120, 87, 0.04), transparent 60%),
+    var(--bg-canvas);
+  color: var(--ink-1);
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Inter", sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  letter-spacing: -0.005em;
 }
 
 * {
@@ -107,4 +154,147 @@ summary {
   .brush-highlight::before {
     animation: none !important;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Quiet Luxury · utility classes
+   Use these instead of single `shadow-md`/`border` so the look stays consistent.
+   Tailwind v4 uses raw CSS extensions, so these are plain class selectors.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Layered shadows (3 stops: contact, diffusion, ambient) */
+.shadow-lux-1 {
+  box-shadow:
+    0 1px 1px rgba(15, 23, 42, 0.03),
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 20px -8px rgba(15, 23, 42, 0.06);
+}
+.shadow-lux-2 {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 10px -2px rgba(15, 23, 42, 0.06),
+    0 16px 36px -12px rgba(15, 23, 42, 0.10);
+}
+.shadow-lux-hover {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 20px -6px rgba(15, 23, 42, 0.08),
+    0 24px 48px -16px rgba(15, 23, 42, 0.14);
+}
+
+/* Hairline border — replaces hard 1px borders */
+.ring-hair {
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+/* Card — canonical 04-008 surface */
+.lux-card {
+  background: var(--bg-card);
+  border-radius: 1.5rem; /* 24px · 3xl */
+  box-shadow:
+    inset 0 0 0 1px var(--hair),
+    0 1px 1px rgba(15, 23, 42, 0.03),
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 20px -8px rgba(15, 23, 42, 0.06);
+}
+
+/* Glass — for sticky navbar / overlays */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 0 rgba(15, 23, 42, 0.04),
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 12px 32px -12px rgba(15, 23, 42, 0.10);
+}
+
+/* Spring motion — owner specifies 480ms cubic-bezier(.2,.9,.25,1.18) for "kertas yang naik dan turun" */
+.t-spring {
+  transition:
+    transform 0.48s cubic-bezier(0.2, 0.9, 0.25, 1.18),
+    box-shadow 0.48s cubic-bezier(0.2, 0.9, 0.25, 1.18),
+    background-color 0.3s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+}
+
+/* Eyebrow / section title labels — 11–12px wide-tracked uppercase */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Status pills — muted bg, ink text, hairline ring */
+.pill-ok {
+  background: var(--emerald-50);
+  color: var(--emerald-900);
+  box-shadow: inset 0 0 0 1px rgba(5, 95, 70, 0.12);
+}
+.pill-warn {
+  background: var(--amber-50);
+  color: var(--amber-900);
+  box-shadow: inset 0 0 0 1px rgba(146, 64, 14, 0.15);
+}
+.pill-danger {
+  background: var(--rose-50);
+  color: var(--rose-900);
+  box-shadow: inset 0 0 0 1px rgba(159, 18, 57, 0.15);
+}
+.pill-info {
+  background: var(--indigo-50);
+  color: var(--indigo-900);
+  box-shadow: inset 0 0 0 1px rgba(55, 48, 163, 0.12);
+}
+
+/* Tabular numerics — used everywhere we display amounts/counts */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+/* Display headlines — slight negative tracking, ss01 stylistic set */
+.display {
+  font-feature-settings: "ss01";
+  letter-spacing: -0.025em;
+}
+
+/* Status card surfaces — muted gradient + hairline ring */
+.lux-status-good {
+  background: linear-gradient(180deg, #F7FCF9 0%, #FFFFFF 70%);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.lux-status-warn {
+  background: linear-gradient(180deg, #FFFDF5 0%, #FFFFFF 70%);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.lux-status-danger {
+  background: linear-gradient(180deg, #FEF7F7 0%, #FFFFFF 70%);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+/* Progress bar — track + gradient fill (no shimmer; loading states already use shimmer skeletons) */
+.progress-track {
+  height: 8px;
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.04);
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }

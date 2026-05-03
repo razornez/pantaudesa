@@ -15,7 +15,7 @@ export default function AlertDiniSection({ desa }: Props) {
   const perluDitinjau = desa
     .filter((d) => d.persentaseSerapan < 50)
     .sort((a, b) => a.persentaseSerapan - b.persentaseSerapan)
-    .slice(0, 4);
+    .slice(0, 3);
 
   if (perluDitinjau.length === 0) return null;
 
@@ -58,7 +58,7 @@ export default function AlertDiniSection({ desa }: Props) {
           </div>
           <DataStatusBadge status="needs-review" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {perluDitinjau.map((d, i) => (
             <Link
               key={d.id}
@@ -76,7 +76,7 @@ export default function AlertDiniSection({ desa }: Props) {
                       aria-hidden
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-slate-900 leading-tight group-hover:text-amber-800 transition-colors">
+                      <p className="text-xs font-black text-slate-900 leading-tight group-hover:text-amber-800 transition-colors">
                         {d.nama}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{d.kabupaten}, {d.provinsi}</p>
@@ -89,7 +89,7 @@ export default function AlertDiniSection({ desa }: Props) {
 
                 <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/80 p-2.5">
                   <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Perlu dicek</span>
+                    <span className="text-[10px] font-bold tracking-wide text-amber-700">Perlu dicek</span>
                     <span className="text-sm font-black text-amber-800">{d.persentaseSerapan}%</span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -101,7 +101,7 @@ export default function AlertDiniSection({ desa }: Props) {
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-600">Buka sumber dan konteks</span>
+                  <span className="text-[11px] font-semibold text-slate-600">Buka sumber</span>
                   <ArrowRight size={13} className="text-amber-500 transition-all group-hover:translate-x-1 group-hover:text-amber-700" aria-hidden />
                 </div>
               </div>

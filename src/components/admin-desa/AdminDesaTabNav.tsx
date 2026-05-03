@@ -10,25 +10,29 @@ export default function AdminDesaTabNav({ tabs }: { tabs: AdminDesaTab[] }) {
   return (
     <nav
       aria-label="Admin Desa tabs"
-      className="border-t border-slate-100 overflow-x-auto"
+      className="overflow-x-auto"
+      style={{ borderTop: "1px solid var(--hair)" }}
     >
-      <div className="max-w-5xl mx-auto px-4 flex items-center gap-1 min-w-max">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center gap-1 min-w-max">
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
           return (
             <Link
               key={tab.key}
               href={tab.href}
-              className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`relative px-4 py-3.5 text-sm font-medium whitespace-nowrap t-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg ${
                 active
-                  ? "text-indigo-700"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "text-[#1E1B4B]"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
               aria-current={active ? "page" : undefined}
             >
               {tab.label}
               {active && (
-                <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-indigo-600" />
+                <span
+                  className="absolute -bottom-px left-3 right-3 h-0.5 rounded-full"
+                  style={{ background: "linear-gradient(90deg, #4F46E5, #1E1B4B)" }}
+                />
               )}
             </Link>
           );

@@ -17,9 +17,9 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  OPEN:        { label: "Terbuka",          cls: "bg-blue-100 text-blue-800" },
-  IN_PROGRESS: { label: "Sedang ditangani", cls: "bg-amber-100 text-amber-800" },
-  RESOLVED:    { label: "Selesai",          cls: "bg-emerald-100 text-emerald-800" },
+  OPEN:        { label: "Terbuka",          cls: "pill-info"   },
+  IN_PROGRESS: { label: "Sedang ditangani", cls: "pill-warn"   },
+  RESOLVED:    { label: "Selesai",          cls: "pill-ok"     },
 };
 
 export default async function AdminDesaSuaraPage() {
@@ -49,25 +49,25 @@ export default async function AdminDesaSuaraPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Suara Warga</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Komentar dan suara warga untuk {ctx.desa.nama}.
-          Mode tampilan saja — Admin Desa tidak melakukan moderasi.
+    <div className="space-y-7">
+      <header className="space-y-1.5">
+        <p className="eyebrow text-[10px]">Tab</p>
+        <h1 className="display text-[28px] sm:text-[32px] font-semibold text-slate-900 tracking-tight leading-tight">Suara Warga</h1>
+        <p className="text-sm text-slate-500 leading-relaxed max-w-xl">
+          Komentar dan suara warga untuk {ctx.desa.nama}. Mode tampilan saja — Admin Desa tidak melakukan moderasi.
         </p>
       </header>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-        <p className="font-medium">Mode tampilan</p>
-        <p className="text-blue-700 text-xs mt-0.5">
+      <div className="rounded-2xl px-4 py-3 text-sm pill-info">
+        <p className="font-semibold">Mode tampilan</p>
+        <p className="text-xs mt-0.5 leading-relaxed opacity-90">
           Tab ini menampilkan suara warga yang sudah dipublikasikan untuk desa kamu.
           Untuk membalas atau berinteraksi, gunakan halaman publik desa.
         </p>
       </div>
 
       {voices.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-500">
+        <div className="lux-card p-10 text-center text-sm text-slate-500">
           Belum ada suara warga untuk desa ini.
         </div>
       ) : (
@@ -79,7 +79,7 @@ export default async function AdminDesaSuaraPage() {
             return (
               <li
                 key={v.id}
-                className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2"
+                className="lux-card t-spring lift hover:shadow-lux-hover p-6 space-y-3"
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-semibold text-slate-700">

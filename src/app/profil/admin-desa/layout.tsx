@@ -29,11 +29,11 @@ export default async function AdminDesaLayout({
   const visibleTabs = getVisibleTabs(ctx.member.status);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header with badge + desa context */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+    <div className="min-h-screen">
+      {/* Header — Quiet Luxury: glass surface, hairline border, generous breathing room */}
+      <header className="bg-white/85 backdrop-blur-md ring-hair">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-7 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <AdminDesaBadge
               status={ctx.member.status}
               role={ctx.member.role}
@@ -45,16 +45,16 @@ export default async function AdminDesaLayout({
               displayName={ctx.user.nama ?? ctx.user.username ?? ctx.user.email}
             />
             <div className="min-w-0">
-              <p className="text-sm text-slate-500">Admin Desa</p>
-              <p className="font-semibold text-slate-900 truncate">{ctx.desa.nama}</p>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="eyebrow text-[10px]">Admin Desa</p>
+              <p className="font-semibold text-slate-900 truncate text-[17px] tracking-tight mt-0.5">{ctx.desa.nama}</p>
+              <p className="text-xs text-slate-500 truncate mt-0.5">
                 {ctx.desa.kecamatan}, {ctx.desa.kabupaten}, {ctx.desa.provinsi}
               </p>
             </div>
           </div>
           <Link
             href="/profil/saya"
-            className="ml-auto text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            className="t-spring ml-auto text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
           >
             ← Kembali ke profil saya
           </Link>
@@ -63,7 +63,7 @@ export default async function AdminDesaLayout({
         <AdminDesaTabNav tabs={visibleTabs} />
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">{children}</main>
     </div>
   );
 }
