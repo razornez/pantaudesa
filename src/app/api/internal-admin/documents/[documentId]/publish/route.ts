@@ -5,6 +5,7 @@ import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { sanitizeMappingFields, AI_MAPPABLE_DESA_FIELDS } from "@/lib/admin-claim/ai-mapping";
+import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/internal-admin/documents/:documentId/publish
 // Internal admin publishes a PROCESSING document. Optional body.fields applies
@@ -29,7 +30,7 @@ export async function POST(
 
     const doc = await db.adminDesaDocument.findUnique({
       where: { id: documentId },
-      select: { id: true, desaId: true, status: true, title: true, aiMappingResult: true },
+      select: { id: true, desaId: true, status: true, title: true, aiMappingResult: true, uploadedById: true },
     });
     if (!doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
     if (doc.status !== "PROCESSING") {
@@ -45,7 +46,8 @@ export async function POST(
       let beforeSnapshot: Record<string, string | number | null> | null = null;
       let afterSnapshot: Record<string, string | number | null> | null = null;
 
-      // Apply field updates to Desa if any field was provided.
+      // Always stamp dataSourceLabel + dataPublishedAt on publish.
+      // Optionally apply field updates to Desa if any field was provided.
       const fieldKeys = Object.keys(requestedFields) as Array<keyof typeof requestedFields>;
       if (fieldKeys.length > 0) {
         const desaBefore = await tx.desa.findUnique({
@@ -71,12 +73,18 @@ export async function POST(
               : String(before);
           afterSnapshot[key as string] = after;
         }
-
-        await tx.desa.update({
-          where: { id: doc.desaId },
-          data: requestedFields as Parameters<typeof tx.desa.update>[0]["data"],
-        });
       }
+
+      await tx.desa.update({
+        where: { id: doc.desaId },
+        data: {
+          ...(fieldKeys.length > 0
+            ? (requestedFields as Parameters<typeof tx.desa.update>[0]["data"])
+            : {}),
+          dataSourceLabel: "Dokumen Admin Desa",
+          dataPublishedAt: now,
+        },
+      });
 
       await tx.adminDesaDocument.update({
         where: { id: documentId },
@@ -114,6 +122,24 @@ export async function POST(
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
     });
+
+    // Notify all active admins of the desa (uploader + verified admins).
+    const activeAdmins = await db.desaAdminMember.findMany({
+      where: { desaId: doc.desaId, status: { in: ["LIMITED", "VERIFIED"] } },
+      select: { userId: true },
+    });
+    const recipientIds = new Set(activeAdmins.map((a) => a.userId));
+    if (doc.uploadedById) recipientIds.add(doc.uploadedById);
+    await createNotifications(
+      Array.from(recipientIds).map((uid) => ({
+        userId: uid,
+        type: NOTIF_TYPE.DOCUMENT_PUBLISHED,
+        title: "Dokumen dipublikasikan",
+        body: `"${doc.title}" telah ditinjau dan dipublikasikan oleh tim PantauDesa. Data desa diperbarui sesuai isi dokumen.`,
+        desaId: doc.desaId,
+        metadata: { documentId },
+      })),
+    );
 
     return NextResponse.json({
       ok: true,

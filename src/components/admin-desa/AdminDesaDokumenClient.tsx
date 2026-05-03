@@ -117,19 +117,21 @@ function DocCard({
 function UploadForm({
   categories,
   maxFileSizeMB,
+  maxFilesPerUpload,
   allowedMimeTypes,
   storageConfigured,
   onUploaded,
 }: {
   categories: ReadonlyArray<{ value: string; label: string }>;
   maxFileSizeMB: number;
+  maxFilesPerUpload: number;
   allowedMimeTypes: string[];
   storageConfigured: boolean;
   onUploaded: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(categories[0]?.value ?? "");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [ack, setAck] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,10 +141,22 @@ function UploadForm({
   function reset() {
     setTitle("");
     setCategory(categories[0]?.value ?? "");
-    setFile(null);
+    setFiles([]);
     setAck(false);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    if (selected.length > maxFilesPerUpload) {
+      setError(`Maksimal ${maxFilesPerUpload} file per unggah.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFiles([]);
+      return;
+    }
+    setError(null);
+    setFiles(selected);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -151,21 +165,23 @@ function UploadForm({
       setError("Storage tidak terkonfigurasi. Hubungi admin PantauDesa.");
       return;
     }
-    if (!file) {
-      setError("Pilih file terlebih dahulu.");
+    if (files.length === 0) {
+      setError("Pilih minimal satu file.");
       return;
     }
     if (!ack) {
       setError("Centang pernyataan tanggung jawab sebelum unggah.");
       return;
     }
-    if (file.size > maxFileSizeMB * 1024 * 1024) {
-      setError(`File melebihi batas ${maxFileSizeMB} MB.`);
-      return;
-    }
-    if (!allowedMimeTypes.includes(file.type)) {
-      setError(`Tipe file tidak diizinkan. Diizinkan: ${allowedMimeTypes.join(", ")}.`);
-      return;
+    for (const file of files) {
+      if (file.size > maxFileSizeMB * 1024 * 1024) {
+        setError(`"${file.name}" melebihi batas ${maxFileSizeMB} MB.`);
+        return;
+      }
+      if (!allowedMimeTypes.includes(file.type)) {
+        setError(`"${file.name}": tipe file tidak diizinkan. Diizinkan: ${allowedMimeTypes.join(", ")}.`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -173,7 +189,7 @@ function UploadForm({
     setSuccess(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      for (const file of files) fd.append("files", file);
       fd.append("title", title);
       fd.append("category", category);
       fd.append("responsibilityAck", "true");
@@ -198,7 +214,7 @@ function UploadForm({
       <div>
         <h2 className="text-sm font-semibold text-slate-900">Unggah Dokumen</h2>
         <p className="text-xs text-slate-500 mt-0.5">
-          Maks {maxFileSizeMB} MB per file. Tipe yang diizinkan: {allowedMimeTypes.join(", ")}.
+          Maks {maxFileSizeMB} MB per file · maks {maxFilesPerUpload} file per unggah. Tipe: {allowedMimeTypes.join(", ")}.
         </p>
       </div>
 
@@ -214,6 +230,9 @@ function UploadForm({
           placeholder="Contoh: APBDes 2026"
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required />
+        {files.length > 1 && (
+          <p className="text-xs text-slate-500 mt-1">Judul akan ditambahkan &quot;(1/{files.length})&quot;, &quot;(2/{files.length})&quot;, dst. untuk setiap file.</p>
+        )}
       </div>
 
       <div>
@@ -228,14 +247,20 @@ function UploadForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">File</label>
-        <input ref={fileInputRef} type="file"
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          File <span className="text-slate-400 font-normal">(pilih hingga {maxFilesPerUpload} file sekaligus)</span>
+        </label>
+        <input ref={fileInputRef} type="file" multiple
           accept={allowedMimeTypes.join(",")}
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={handleFileChange}
           className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:px-3 file:py-1.5 file:font-medium"
           required />
-        {file && (
-          <p className="text-xs text-slate-500 mt-1">{file.name} • {formatBytes(file.size)}</p>
+        {files.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5">
+            {files.map((f, i) => (
+              <li key={i} className="text-xs text-slate-500">{f.name} • {formatBytes(f.size)}</li>
+            ))}
+          </ul>
         )}
       </div>
 
@@ -251,7 +276,7 @@ function UploadForm({
 
       <button type="submit" disabled={loading || !storageConfigured}
         className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed">
-        {loading ? "Mengunggah..." : <><Upload size={14} /> Unggah Dokumen</>}
+        {loading ? "Mengunggah..." : <><Upload size={14} /> Unggah {files.length > 1 ? `${files.length} Dokumen` : "Dokumen"}</>}
       </button>
     </form>
   );
@@ -327,6 +352,7 @@ export default function AdminDesaDokumenClient(props: Props) {
         <UploadForm
           categories={props.categories}
           maxFileSizeMB={props.maxFileSizeMB}
+          maxFilesPerUpload={props.maxFilesPerUpload}
           allowedMimeTypes={props.allowedMimeTypes}
           storageConfigured={props.storageConfigured}
           onUploaded={() => router.refresh()}

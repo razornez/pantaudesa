@@ -176,6 +176,8 @@ export interface Desa {
   jumlahDokumenPendukung?: number;
   terakhirDiperbaruiLabel?: string;
   ringkasanSumber?: string;
+  dataSourceLabel?: string | null;
+  dataPublishedAt?: string | null;   // ISO string; null until internal admin publishes
 }
 
 export interface TrendData {

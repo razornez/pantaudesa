@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/admin-claim/documents/:documentId/approve
 // VERIFIED admin approves a LIMITED-uploaded document:
@@ -88,6 +89,18 @@ export async function POST(
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
     });
+
+    // Notify uploader their document was approved.
+    if (doc.uploadedById) {
+      await createNotification({
+        userId: doc.uploadedById,
+        type: NOTIF_TYPE.DOCUMENT_APPROVED,
+        title: "Dokumen kamu disetujui",
+        body: `"${doc.title}" telah disetujui oleh Admin VERIFIED dan sekarang sedang diproses oleh tim PantauDesa.`,
+        desaId: doc.desaId,
+        metadata: { documentId },
+      });
+    }
 
     return NextResponse.json({
       ok: true,

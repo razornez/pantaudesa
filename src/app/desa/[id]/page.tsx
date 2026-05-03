@@ -97,6 +97,20 @@ export default async function DesaDetailPage({ params }: Props) {
         <DownloadButton desa={desa} />
       </div>
 
+      {/* ── Source indicator — only shown after internal admin publishes data */}
+      {desa.dataPublishedAt && (
+        <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
+          <span>
+            {desa.dataSourceLabel ?? "Sumber terverifikasi"} ·{" "}
+            Terakhir diperbarui{" "}
+            {new Date(desa.dataPublishedAt).toLocaleDateString("id-ID", {
+              day: "numeric", month: "short", year: "numeric",
+            })}
+          </span>
+        </div>
+      )}
+
       {/* ── 1. FIRST VIEW — identity, status, safe framing (DETAIL-HIER-01/06, DETAIL-RISK-01) */}
       <div id="ringkasan">
         <DesaDetailFirstView desa={desa} />

@@ -4,11 +4,12 @@ import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { generateStubMappingDraft } from "@/lib/admin-claim/ai-mapping";
+import { generateManualMappingDraft } from "@/lib/admin-claim/ai-mapping";
 
 // POST /api/internal-admin/documents/:documentId/draft-mapping
-// Internal admin triggers AI mapping draft for a PROCESSING document.
-// Currently returns a stub structure — replace with real provider when picked.
+// Generates an empty manual mapping draft for a PROCESSING document.
+// Internal admin reads the document and fills the fields in the publish modal.
+// AI provider not yet configured — mapping is manual until owner integrates one.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ documentId: string }> },
@@ -30,7 +31,7 @@ export async function POST(
       }, { status: 422 });
     }
 
-    const draft = generateStubMappingDraft();
+    const draft = generateManualMappingDraft();
 
     await db.adminDesaDocument.update({
       where: { id: documentId },

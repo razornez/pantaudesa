@@ -1,9 +1,9 @@
-// AI mapping MVP scope (BMAD 04-008.0):
-// Allowed initial fields:
+// Manual mapping draft scope (BMAD 04-008.0):
+// AI provider NOT yet configured. Internal admin fills mapping fields manually by reading the document.
+// Allowed safe fields only:
 //   - profil desa
 //   - kontak resmi
-//   - perangkat desa
-//   - website/email/sosial resmi
+//   - website/sosial resmi
 //   - alamat/kecamatan/kabupaten metadata
 // Out of scope: APBDes/budget extraction, sensitive demographic, personal/private docs, auto-publish.
 
@@ -20,26 +20,28 @@ export const AI_MAPPABLE_DESA_FIELDS = [
 export type AiMappableDesaField = typeof AI_MAPPABLE_DESA_FIELDS[number];
 
 export interface AiMappingDraft {
-  generatedAt: string;       // ISO timestamp
-  generator: string;         // "stub" until owner picks AI provider
+  generatedAt: string;
+  generator: "manual" | "ai";   // "manual" until AI provider is configured
   fields: Partial<Record<AiMappableDesaField, string | number | null>>;
   notes?: string;
 }
 
 /**
- * Stub draft generator. Returns an empty mapping with admin notes.
- * When an AI provider is configured by the owner, this function should be
- * replaced (or wrapped) by a real provider call. The shape is stable so the
- * UI does not need to change.
+ * Returns an empty manual-mapping draft. The internal admin reads the document
+ * and fills the fields manually in the publish modal.
+ *
+ * When an AI provider is configured (e.g. Claude API), replace this function's
+ * body with the provider call while keeping the AiMappingDraft return shape stable.
  */
-export function generateStubMappingDraft(): AiMappingDraft {
+export function generateManualMappingDraft(): AiMappingDraft {
   return {
     generatedAt: new Date().toISOString(),
-    generator: "stub",
+    generator: "manual",
     fields: {},
     notes:
-      "AI provider belum dikonfigurasi. Edit field di bawah secara manual berdasarkan dokumen. " +
-      "Semua perubahan tetap perlu review internal admin sebelum dipublish.",
+      "AI provider belum dikonfigurasi — lakukan mapping manual. " +
+      "Baca dokumen dan isi field yang relevan di bawah. " +
+      "Semua perubahan harus direview sebelum dipublish.",
   };
 }
 

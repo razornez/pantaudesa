@@ -4,6 +4,7 @@ import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/internal-admin/documents/:documentId/mark-failed
 // Body: { reason: string }
@@ -30,7 +31,7 @@ export async function POST(
 
     const doc = await db.adminDesaDocument.findUnique({
       where: { id: documentId },
-      select: { id: true, desaId: true, status: true, title: true },
+      select: { id: true, desaId: true, status: true, title: true, uploadedById: true },
     });
     if (!doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
     if (doc.status === "PUBLISHED" || doc.status === "FAILED") {
@@ -64,6 +65,18 @@ export async function POST(
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
     });
+
+    // Notify uploader of failure with the reason.
+    if (doc.uploadedById) {
+      await createNotification({
+        userId: doc.uploadedById,
+        type: NOTIF_TYPE.DOCUMENT_FAILED,
+        title: "Dokumen ditandai gagal",
+        body: `"${doc.title}" tidak dapat diproses. Alasan: ${reason}`,
+        desaId: doc.desaId,
+        metadata: { documentId, reason },
+      });
+    }
 
     return NextResponse.json({ ok: true, documentId, newStatus: "FAILED" });
   } catch (err) {

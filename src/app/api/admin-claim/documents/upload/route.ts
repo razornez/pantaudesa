@@ -13,12 +13,14 @@ import {
 import {
   validateUpload,
   isValidCategory,
+  getMaxFilesPerUpload,
 } from "@/lib/storage/upload-validation";
+import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/admin-claim/documents/upload
 // multipart/form-data fields:
-//   file: File (single — multi-file is one POST per file from the client)
-//   title: string
+//   files: File[]     — 1 to MAX_FILES_PER_UPLOAD files (env: ADMIN_DESA_DOCUMENT_MAX_FILES_PER_UPLOAD, default 5)
+//   title: string     — shared title prefix; each file gets " (N/M)" appended when N > 1
 //   category: DocumentCategory
 //   responsibilityAck: "true" — required acknowledgment
 //
@@ -50,20 +52,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
     }
 
-    const file = form.get("file");
     const title = String(form.get("title") ?? "").trim();
     const category = String(form.get("category") ?? "").trim();
     const ack = String(form.get("responsibilityAck") ?? "");
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "file is required" }, { status: 400 });
-    }
-    if (!title) {
-      return NextResponse.json({ error: "title is required" }, { status: 400 });
-    }
-    if (title.length > 200) {
-      return NextResponse.json({ error: "title too long (max 200 chars)" }, { status: 400 });
-    }
+    if (!title) return NextResponse.json({ error: "title is required" }, { status: 400 });
+    if (title.length > 200) return NextResponse.json({ error: "title too long (max 200 chars)" }, { status: 400 });
     if (!category || !isValidCategory(category)) {
       return NextResponse.json({ error: "category is required and must be valid" }, { status: 400 });
     }
@@ -74,9 +68,33 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const validation = validateUpload(file);
-    if (!validation.ok) {
-      return NextResponse.json({ error: validation.message, code: validation.code }, { status: 400 });
+    // Collect all files from `files` field (multi-value) plus legacy single `file` field.
+    const rawFiles = form.getAll("files");
+    const legacyFile = form.get("file");
+    if (legacyFile instanceof File && !rawFiles.includes(legacyFile)) rawFiles.push(legacyFile);
+    const files = rawFiles.filter((f): f is File => f instanceof File);
+
+    if (files.length === 0) {
+      return NextResponse.json({ error: "Minimal satu file wajib dipilih." }, { status: 400 });
+    }
+
+    const maxFiles = getMaxFilesPerUpload();
+    if (files.length > maxFiles) {
+      return NextResponse.json({
+        error: `Maksimal ${maxFiles} file per unggah. Kamu memilih ${files.length} file.`,
+        code: "TOO_MANY_FILES",
+      }, { status: 400 });
+    }
+
+    // Validate each file before touching storage.
+    for (const file of files) {
+      const validation = validateUpload(file);
+      if (!validation.ok) {
+        return NextResponse.json({
+          error: `${file.name}: ${validation.message}`,
+          code: validation.code,
+        }, { status: 400 });
+      }
     }
 
     // Caller must be an active LIMITED or VERIFIED member of some desa.
@@ -99,80 +117,103 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Generate documentId BEFORE upload so storageKey is stable.
-    const documentId = `doc_${randomBytes(12).toString("hex")}`;
-    const storageKey = buildDocumentStoragePath(member.desaId, documentId, file.name);
+    const status = member.status === "VERIFIED" ? "PROCESSING" : "WAITING_VERIFIED_APPROVAL";
+    const multi = files.length > 1;
+    const uploaded: Array<{ id: string; title: string; status: string; createdAt: string }> = [];
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const docTitle = multi ? `${title} (${i + 1}/${files.length})` : title;
+      const documentId = `doc_${randomBytes(12).toString("hex")}`;
+      const storageKey = buildDocumentStoragePath(member.desaId, documentId, file.name);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to Supabase first; only persist the DB row after the file lands.
-    try {
-      await uploadDocumentBuffer(storageKey, buffer, file.type);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return NextResponse.json({
-        error: `Gagal mengunggah file: ${msg}`,
-        code: "UPLOAD_FAILED",
-      }, { status: 502 });
+      try {
+        await uploadDocumentBuffer(storageKey, buffer, file.type);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return NextResponse.json({
+          error: `Gagal mengunggah file "${file.name}": ${msg}`,
+          code: "UPLOAD_FAILED",
+          uploadedSoFar: uploaded.length,
+        }, { status: 502 });
+      }
+
+      const doc = await db.adminDesaDocument.create({
+        data: {
+          id: documentId,
+          desaId: member.desaId,
+          uploadedById: userId,
+          title: docTitle,
+          category,
+          storageKey,
+          fileName: file.name.slice(0, 200),
+          fileType: file.type,
+          fileSize: file.size,
+          status,
+        },
+        select: { id: true, status: true, createdAt: true, title: true },
+      });
+
+      await writeAuditEvent({
+        eventType: AUDIT_EVENT.DOCUMENT_APPROVED_BY_VERIFIED,
+        desaId: member.desaId,
+        actorUserId: userId,
+        actorRole: member.role,
+        entityType: "AdminDesaDocument",
+        entityId: doc.id,
+        nextStatus: status,
+        metadata: {
+          title: docTitle,
+          category,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          desaName: member.desa.nama,
+          action: "uploaded",
+          batchIndex: i + 1,
+          batchTotal: files.length,
+        },
+      });
+
+      uploaded.push({
+        id: doc.id,
+        title: doc.title,
+        status: doc.status,
+        createdAt: doc.createdAt.toISOString(),
+      });
     }
 
-    const status = member.status === "VERIFIED" ? "PROCESSING" : "WAITING_VERIFIED_APPROVAL";
-
-    const doc = await db.adminDesaDocument.create({
-      data: {
-        id: documentId,
-        desaId: member.desaId,
-        uploadedById: userId,
-        title,
-        category,
-        storageKey,
-        fileName: file.name.slice(0, 200),
-        fileType: file.type,
-        fileSize: file.size,
-        status,
-      },
-      select: { id: true, status: true, createdAt: true, title: true, category: true },
-    });
-
-    await writeAuditEvent({
-      eventType: status === "PROCESSING" ? AUDIT_EVENT.INTERNAL_DOCUMENT_REVIEWED : AUDIT_EVENT.DOCUMENT_APPROVED_BY_VERIFIED,
-      desaId: member.desaId,
-      actorUserId: userId,
-      actorRole: member.role,
-      entityType: "AdminDesaDocument",
-      entityId: doc.id,
-      nextStatus: status,
-      metadata: {
-        title,
-        category,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        desaName: member.desa.nama,
-        action: "uploaded",
-      },
-      ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
-      userAgent: req.headers.get("user-agent") ?? undefined,
-    });
+    // Notify VERIFIED admins of this desa when LIMITED uploads (needs their approval).
+    if (status === "WAITING_VERIFIED_APPROVAL" && db) {
+      const verifiedAdmins = await db.desaAdminMember.findMany({
+        where: { desaId: member.desaId, status: "VERIFIED", role: "VERIFIED_ADMIN" },
+        select: { userId: true },
+      });
+      const fileLabel = files.length > 1 ? `${files.length} dokumen baru` : `"${title}"`;
+      await createNotifications(
+        verifiedAdmins.map((a) => ({
+          userId: a.userId,
+          type: NOTIF_TYPE.DOCUMENT_UPLOADED_WAITING,
+          title: "Dokumen baru menunggu persetujuan",
+          body: `${fileLabel} telah diunggah oleh Admin LIMITED dan membutuhkan persetujuan kamu sebelum diproses.`,
+          desaId: member.desaId,
+          metadata: { uploadedById: userId, fileCount: files.length },
+        })),
+      );
+    }
 
     return NextResponse.json({
       ok: true,
-      document: {
-        id: doc.id,
-        title: doc.title,
-        category: doc.category,
-        status: doc.status,
-        createdAt: doc.createdAt.toISOString(),
-      },
+      documents: uploaded,
       message: status === "PROCESSING"
-        ? "Dokumen berhasil diunggah dan masuk ke tahap PROCESSING."
-        : "Dokumen berhasil diunggah dan menunggu persetujuan Admin Desa VERIFIED.",
+        ? `${files.length} dokumen berhasil diunggah dan masuk ke tahap PROCESSING.`
+        : `${files.length} dokumen berhasil diunggah dan menunggu persetujuan Admin Desa VERIFIED.`,
     });
   } catch (err) {
     return handleApiError(err, "POST /api/admin-claim/documents/upload");
   }
 }
 
-// Configure body size guard at the route level — Next 16 default is 4 MB without this.
 export const runtime = "nodejs";
 export const maxDuration = 30;

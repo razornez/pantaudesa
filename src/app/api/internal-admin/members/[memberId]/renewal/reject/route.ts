@@ -5,6 +5,7 @@ import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { sendRenewalExpiredEmail } from "@/lib/email/admin-claim-email";
+import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/internal-admin/members/:memberId/renewal/reject
 // Internal admin rejects renewal → membership transitions to EXPIRED.
@@ -92,6 +93,15 @@ export async function POST(
       },
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
+    });
+
+    await createNotification({
+      userId: member.userId,
+      type: NOTIF_TYPE.RENEWAL_EXPIRED,
+      title: "Masa aktif Admin Desa berakhir",
+      body: `Akses Admin Desamu untuk ${member.desa.nama} telah berakhir.${reason ? ` Alasan: ${reason}` : ""} Hubungi PantauDesa jika ada pertanyaan.`,
+      desaId: member.desaId,
+      metadata: { memberId, reason },
     });
 
     return NextResponse.json({

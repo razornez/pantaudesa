@@ -5,6 +5,7 @@ import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { addRenewalPeriod } from "@/lib/admin-claim/renewal";
+import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/internal-admin/members/:memberId/renewal/approve
 // Internal admin manually approves renewal for a VERIFIED admin → resets renewalDueAt + 6 months.
@@ -72,6 +73,15 @@ export async function POST(
       },
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
+    });
+
+    await createNotification({
+      userId: member.userId,
+      type: NOTIF_TYPE.RENEWAL_REMINDER,
+      title: "Pembaruan masa aktif disetujui",
+      body: `Masa aktifmu sebagai Admin Desa ${member.desa.nama} telah diperpanjang. Masa aktif baru: ${newRenewalDueAt.toLocaleDateString("id-ID")}.`,
+      desaId: member.desaId,
+      metadata: { memberId, newRenewalDueAt: newRenewalDueAt.toISOString() },
     });
 
     return NextResponse.json({

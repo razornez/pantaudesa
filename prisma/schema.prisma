@@ -184,6 +184,8 @@ model Desa {
   kategori        String?
   websiteUrl      String?
   dataStatus      DataStatus             @default(demo)
+  dataSourceLabel String?                // e.g. "Dokumen Admin Desa" or source name
+  dataPublishedAt DateTime?              // when internal admin last published data
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
 

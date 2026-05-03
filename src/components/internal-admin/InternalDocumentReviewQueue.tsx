@@ -120,12 +120,13 @@ function PublishModal({
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Publikasikan dokumen</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Publikasikan dokumen (mapping manual)</h2>
           <p className="text-xs text-slate-500 mt-0.5">{doc.title} — {doc.desa.nama}</p>
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-          AI mapping MVP terbatas pada field aman: profil dasar, kontak, alamat metadata, website. APBDes/data sensitif tidak di-map otomatis. Edit nilai di bawah sebelum publish.
+          <p className="font-semibold">AI provider belum dikonfigurasi — mapping manual.</p>
+          <p className="mt-0.5">Baca dokumen, lalu isi field di bawah secara manual. Field kosong tidak akan mengubah data desa. Terbatas pada field aman: profil, kontak, alamat, website. APBDes/data sensitif tidak di-map.</p>
         </div>
 
         <div className="space-y-2 text-sm">
@@ -316,7 +317,7 @@ function DocCard({
           <>
             <button onClick={runDraftMapping} disabled={busy}
               className="text-xs font-medium text-violet-700 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 disabled:opacity-50">
-              <Sparkles size={12} /> Run AI Draft
+              <Sparkles size={12} /> Buat Draft Manual
             </button>
             <button onClick={() => onPublish(doc)} disabled={busy}
               className="text-xs font-medium text-emerald-700 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 disabled:opacity-50">
