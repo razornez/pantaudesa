@@ -1,6 +1,18 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
+import AdminDesaDokumenClient from "@/components/admin-desa/AdminDesaDokumenClient";
+import {
+  DEFAULT_MAX_FILE_SIZE_MB,
+  DEFAULT_MAX_FILES_PER_UPLOAD,
+  DEFAULT_ALLOWED_MIME_TYPES,
+  DOCUMENT_CATEGORIES,
+  getMaxFileSizeBytes,
+  getMaxFilesPerUpload,
+  getAllowedMimeTypes,
+} from "@/lib/storage/upload-validation";
+import { isStorageConfigured } from "@/lib/storage/supabase-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +22,55 @@ export default async function AdminDesaDokumenPage() {
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Dokumen</h1>
-        <p className="text-sm text-slate-500">
-          Unggah dan pantau status dokumen desa untuk {ctx.desa.nama}.
-        </p>
-      </header>
+  const docs = db
+    ? await db.adminDesaDocument.findMany({
+        where: { desaId: ctx.desa.id },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        take: 100,
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          fileName: true,
+          fileType: true,
+          fileSize: true,
+          status: true,
+          approvedAt: true,
+          publishedAt: true,
+          failedReason: true,
+          rejectedReason: true,
+          createdAt: true,
+          uploadedById: true,
+          uploadedBy: {
+            select: { id: true, nama: true, username: true, email: true },
+          },
+        },
+      })
+    : [];
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-500 text-center">
-        Tab Dokumen akan diisi pada batch 04-008.8 (storage + upload).
-      </div>
-    </div>
+  const serialized = docs.map((d) => ({
+    ...d,
+    createdAt: d.createdAt.toISOString(),
+    approvedAt: d.approvedAt?.toISOString() ?? null,
+    publishedAt: d.publishedAt?.toISOString() ?? null,
+  }));
+
+  const storageOk = isStorageConfigured();
+  const maxBytes = storageOk ? getMaxFileSizeBytes() : DEFAULT_MAX_FILE_SIZE_MB * 1024 * 1024;
+  const maxFiles = storageOk ? getMaxFilesPerUpload() : DEFAULT_MAX_FILES_PER_UPLOAD;
+  const allowedMime = storageOk ? getAllowedMimeTypes() : [...DEFAULT_ALLOWED_MIME_TYPES];
+
+  return (
+    <AdminDesaDokumenClient
+      currentUserId={ctx.user.id}
+      memberStatus={ctx.member.status}
+      memberRole={ctx.member.role}
+      documents={serialized}
+      categories={[...DOCUMENT_CATEGORIES]}
+      maxFileSizeMB={Math.round(maxBytes / (1024 * 1024))}
+      maxFilesPerUpload={maxFiles}
+      allowedMimeTypes={allowedMime}
+      storageConfigured={storageOk}
+    />
   );
 }
