@@ -303,6 +303,8 @@ export default function AdminDesaListAdminClient({
   const router = useRouter();
   const [showInvite, setShowInvite] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<DesaAdminRow | null>(null);
+  // Stable "now" captured at mount to avoid impure Date.now() during render (React 19 purity rule).
+  const [nowMs] = useState(() => Date.now());
 
   const totalActive = roster.verifiedCount + roster.limitedCount;
   const inviteLimitReached = totalActive >= maxAdmins;
@@ -373,7 +375,7 @@ export default function AdminDesaListAdminClient({
           </h2>
           <ul className="space-y-2">
             {roster.pendingInvites.map((inv) => {
-              const expired = new Date(inv.expiresAt).getTime() < Date.now();
+              const expired = new Date(inv.expiresAt).getTime() < nowMs;
               return (
                 <li key={inv.id} className="flex items-center justify-between text-sm py-2 border-b border-slate-100 last:border-0">
                   <div>

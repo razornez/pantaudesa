@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
@@ -6,7 +6,7 @@ import { handleApiError } from "@/lib/api-error";
 // GET /api/admin-claim/documents
 // Lists documents for the current admin's desa.
 // Caller must be active LIMITED or VERIFIED member.
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {

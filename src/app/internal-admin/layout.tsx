@@ -19,6 +19,12 @@ export default async function InternalAdminLayout({
           <a href="/internal-admin/claims" className="hover:text-slate-200 transition-colors">
             Admin Desa Review
           </a>
+          <a href="/internal-admin/documents" className="hover:text-slate-200 transition-colors">
+            Dokumen Desa
+          </a>
+          <a href="/internal-admin/renewals" className="hover:text-slate-200 transition-colors">
+            Renewals
+          </a>
         </div>
       </nav>
       <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
