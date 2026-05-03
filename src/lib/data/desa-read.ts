@@ -84,6 +84,8 @@ type DesaRecord = {
   kategori: string | null;
   websiteUrl: string | null;
   dataStatus: string;
+  dataSourceLabel: string | null;
+  dataPublishedAt: Date | null;
   updatedAt: Date;
   dataSources: SourceRecord[];
   anggaranSummaries: SummaryRecord[];
@@ -250,6 +252,8 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     identityStatus,
     budgetStatus: "demo",
     sourceSummary,
+    dataSourceLabel: record.dataSourceLabel ?? null,
+    dataPublishedAt: record.dataPublishedAt?.toISOString() ?? null,
   };
 }
 
@@ -270,6 +274,8 @@ async function fetchDesaRecords(): Promise<DesaRecord[]> {
       kategori: true,
       websiteUrl: true,
       dataStatus: true,
+      dataSourceLabel: true,
+      dataPublishedAt: true,
       updatedAt: true,
       dataSources: {
         select: {
@@ -345,6 +351,8 @@ async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | nul
       kategori: true,
       websiteUrl: true,
       dataStatus: true,
+      dataSourceLabel: true,
+      dataPublishedAt: true,
       updatedAt: true,
       dataSources: {
         orderBy: { updatedAt: "desc" },

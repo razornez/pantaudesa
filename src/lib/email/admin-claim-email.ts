@@ -176,6 +176,94 @@ export async function sendDesaEmailOtp({
   }
 }
 
+export async function sendRenewalReminderEmail({
+  toEmail,
+  desaName,
+  renewalDueAt,
+  daysRemaining,
+}: {
+  toEmail: string;
+  desaName: string;
+  renewalDueAt: Date;
+  daysRemaining: number;
+}): Promise<AdminClaimEmailResult> {
+  if (!isResendConfigured()) {
+    return { ok: false, error: "Resend env missing", code: "RESEND_ENV_MISSING" };
+  }
+  const from = process.env.RESEND_FROM!;
+  const baseUrl = (process.env.AUTH_URL ?? "").replace(/\/$/, "");
+  const profileUrl = `${baseUrl}/profil/saya`;
+
+  try {
+    const result = await resend.emails.send({
+      from,
+      to: toEmail,
+      subject: `Pengingat perpanjangan Admin Desa: ${desaName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+          <h2 style="color:#3730a3;">Perpanjangan Verifikasi Admin Desa</h2>
+          <p>Verifikasi Admin Desa <strong>${desaName}</strong> akan habis dalam <strong>${daysRemaining} hari</strong>.</p>
+          <p>Tanggal jatuh tempo: <strong>${renewalDueAt.toLocaleDateString("id-ID", { dateStyle: "long" })}</strong></p>
+          <p>Lakukan perpanjangan melalui website token sebelum tanggal tersebut. Sukses verifikasi token tetap perlu review internal sebelum status VERIFIED kamu diperpanjang.</p>
+          <a href="${profileUrl}"
+             style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+            Buka Profil Admin Desa
+          </a>
+          <p style="color:#64748b;font-size:13px;">
+            Jika perpanjangan tidak dilakukan, akses Admin Desa kamu akan dicabut otomatis dan kamu harus mengajukan klaim baru.
+          </p>
+          <p style="color:#94a3b8;font-size:12px;">PantauDesa — transparansi anggaran desa</p>
+        </div>
+      `,
+    });
+    if (result.error) return { ok: false, error: result.error.message, code: "RESEND_SEND_FAILED" };
+    return { ok: true, messageId: result.data?.id ?? "sent" };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err), code: "RESEND_SEND_FAILED" };
+  }
+}
+
+export async function sendRenewalExpiredEmail({
+  toEmail,
+  desaName,
+  reason,
+}: {
+  toEmail: string;
+  desaName: string;
+  reason?: string | null;
+}): Promise<AdminClaimEmailResult> {
+  if (!isResendConfigured()) {
+    return { ok: false, error: "Resend env missing", code: "RESEND_ENV_MISSING" };
+  }
+  const from = process.env.RESEND_FROM!;
+  const baseUrl = (process.env.AUTH_URL ?? "").replace(/\/$/, "");
+  const klaimUrl = `${baseUrl}/profil/klaim-admin-desa`;
+
+  try {
+    const result = await resend.emails.send({
+      from,
+      to: toEmail,
+      subject: `Akses Admin Desa berakhir: ${desaName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+          <h2 style="color:#b91c1c;">Akses Admin Desa Berakhir</h2>
+          <p>Status Admin Desa VERIFIED kamu untuk <strong>${desaName}</strong> berakhir karena verifikasi berkala belum diperbarui${reason ? ` (${reason})` : ""}.</p>
+          <p>Akses admin telah dikembalikan ke user biasa. Jika kamu masih mengelola desa ini, ajukan verifikasi Admin Desa kembali.</p>
+          <a href="${klaimUrl}"
+             style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+            Ajukan Klaim Admin Desa
+          </a>
+          <p style="color:#94a3b8;font-size:12px;">PantauDesa — transparansi anggaran desa</p>
+        </div>
+      `,
+    });
+    if (result.error) return { ok: false, error: result.error.message, code: "RESEND_SEND_FAILED" };
+    return { ok: true, messageId: result.data?.id ?? "sent" };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err), code: "RESEND_SEND_FAILED" };
+  }
+}
+
 export async function sendContactAdminEmail({
   subject,
   description,
