@@ -1,8 +1,12 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
+import { getDesaAdminRoster } from "@/lib/data/desa-admins";
+import AdminDesaListAdminClient from "@/components/admin-desa/AdminDesaListAdminClient";
 
 export const dynamic = "force-dynamic";
+
+const MAX_ADMINS_PER_DESA = 5;
 
 export default async function AdminDesaListAdminPage() {
   const session = await auth();
@@ -10,18 +14,17 @@ export default async function AdminDesaListAdminPage() {
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">List Admin</h1>
-        <p className="text-sm text-slate-500">
-          Daftar Admin Desa untuk {ctx.desa.nama}.
-        </p>
-      </header>
+  const roster = await getDesaAdminRoster(ctx.desa.id);
+  const canManage = ctx.member.status === "VERIFIED" && ctx.member.role === "VERIFIED_ADMIN";
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-500 text-center">
-        Tab List Admin akan diisi pada batch 04-008.7.
-      </div>
-    </div>
+  return (
+    <AdminDesaListAdminClient
+      currentUserId={ctx.user.id}
+      desaId={ctx.desa.id}
+      desaName={ctx.desa.nama}
+      canManage={canManage}
+      roster={roster}
+      maxAdmins={MAX_ADMINS_PER_DESA}
+    />
   );
 }
