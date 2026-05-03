@@ -35,11 +35,11 @@ interface Props {
   storageConfigured: boolean;
 }
 
-const STATUS_PILL: Record<DocStatus, { label: string; cls: string }> = {
-  WAITING_VERIFIED_APPROVAL: { label: "Menunggu Persetujuan VERIFIED", cls: "bg-amber-100 text-amber-800" },
-  PROCESSING:                { label: "Sedang Diproses",               cls: "bg-blue-100 text-blue-800" },
-  PUBLISHED:                 { label: "Dipublikasikan",                cls: "bg-emerald-100 text-emerald-800" },
-  FAILED:                    { label: "Gagal",                         cls: "bg-red-100 text-red-800" },
+const STATUS_PILL: Record<DocStatus, { label: string; cls: string; dot: string }> = {
+  WAITING_VERIFIED_APPROVAL: { label: "Menunggu Persetujuan VERIFIED", cls: "pill-warn",   dot: "#D97706" },
+  PROCESSING:                { label: "Sedang Diproses",               cls: "pill-info",   dot: "#4F46E5" },
+  PUBLISHED:                 { label: "Dipublikasikan",                cls: "pill-ok",     dot: "#10B981" },
+  FAILED:                    { label: "Gagal",                         cls: "pill-danger", dot: "#F43F5E" },
 };
 
 function formatBytes(bytes: number): string {
@@ -65,48 +65,52 @@ function DocCard({
   const uploaderName = doc.uploadedBy?.nama ?? doc.uploadedBy?.username ?? doc.uploadedBy?.email ?? "—";
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
+    <div className="lux-card t-spring lift hover:shadow-lux-hover p-7 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-slate-900 truncate">{doc.title}</p>
-          <p className="text-xs text-slate-500 truncate">{doc.fileName} • {formatBytes(doc.fileSize)}</p>
+          <p className="font-semibold text-slate-900 text-[15px] tracking-tight truncate">{doc.title}</p>
+          <p className="text-xs text-slate-500 truncate mt-0.5 num">{doc.fileName} · {formatBytes(doc.fileSize)}</p>
         </div>
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${status.cls}`}>
+        <span
+          className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 ${status.cls}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: status.dot }} aria-hidden />
           {status.label}
         </span>
       </div>
 
-      <div className="text-xs text-slate-500 space-y-0.5">
+      <div className="text-xs text-slate-500 space-y-1 pt-1">
         <p>Kategori: <span className="text-slate-700">{doc.category}</span></p>
-        <p>Diunggah: {new Date(doc.createdAt).toLocaleDateString("id-ID")} oleh {uploaderName}</p>
-        {doc.approvedAt && <p>Disetujui: {new Date(doc.approvedAt).toLocaleDateString("id-ID")}</p>}
-        {doc.publishedAt && <p>Dipublikasikan: {new Date(doc.publishedAt).toLocaleDateString("id-ID")}</p>}
+        <p>Diunggah: <span className="text-slate-700">{new Date(doc.createdAt).toLocaleDateString("id-ID")}</span> · {uploaderName}</p>
+        {doc.approvedAt && <p>Disetujui: <span className="text-slate-700">{new Date(doc.approvedAt).toLocaleDateString("id-ID")}</span></p>}
+        {doc.publishedAt && <p>Dipublikasikan: <span className="text-slate-700">{new Date(doc.publishedAt).toLocaleDateString("id-ID")}</span></p>}
       </div>
 
       {doc.status === "FAILED" && doc.failedReason && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-800">
-          <p className="font-medium flex items-center gap-1"><AlertTriangle size={12} /> Alasan kegagalan</p>
-          <p className="mt-0.5">{doc.failedReason}</p>
+        <div className="rounded-2xl px-4 py-3 text-xs leading-relaxed pill-danger" role="alert">
+          <p className="font-semibold flex items-center gap-1.5"><AlertTriangle size={12} aria-hidden /> Alasan kegagalan</p>
+          <p className="mt-1">{doc.failedReason}</p>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap gap-2 pt-1" style={{ borderTop: "1px solid var(--hair)", paddingTop: "0.75rem" }}>
         <button
           type="button"
           onClick={() => onPreview(doc.id)}
           disabled={busyId === doc.id}
-          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+          className="t-spring inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 px-3 py-1.5 rounded-xl disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
         >
-          <ExternalLink size={12} /> Buka Preview
+          <ExternalLink size={12} aria-hidden /> Buka Preview
         </button>
         {canApprove && doc.status === "WAITING_VERIFIED_APPROVAL" && (
           <button
             type="button"
             onClick={() => onApprove(doc.id)}
             disabled={busyId === doc.id}
-            className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+            className="t-spring inline-flex items-center gap-1.5 text-xs font-medium text-white px-3.5 py-1.5 rounded-xl shadow-lux-1 hover:shadow-lux-2 hover:-translate-y-0.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            style={{ background: "linear-gradient(180deg, #047857 0%, #065F46 100%)" }}
           >
-            <Check size={12} /> Setujui ke PROCESSING
+            <Check size={12} aria-hidden /> Setujui ke PROCESSING
           </button>
         )}
       </div>
@@ -218,35 +222,37 @@ function UploadForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+    <form onSubmit={handleSubmit} className="lux-card p-7 space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-slate-900">Unggah Dokumen</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Maks {maxFileSizeMB} MB per file · maks {maxFilesPerUpload} file per unggah. Tipe: {allowedMimeTypes.join(", ")}.
+        <p className="eyebrow text-[10px]">Unggah dokumen</p>
+        <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight mt-1">Tambah dokumen ke desa</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Maks <span className="num">{maxFileSizeMB}</span> MB per file · maks <span className="num">{maxFilesPerUpload}</span> file per unggah. Tipe: {allowedMimeTypes.join(", ")}.
         </p>
       </div>
 
       {!storageConfigured && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-          Storage belum terkonfigurasi di environment ini. Unggah akan ditolak server-side.
+        <div className="rounded-2xl px-4 py-3 text-xs leading-relaxed pill-warn" role="status">
+          <p className="font-semibold">Storage belum terkonfigurasi</p>
+          <p className="mt-0.5">Unggah akan ditolak server-side. Hubungi admin PantauDesa untuk mengaktifkan konfigurasi storage.</p>
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Judul dokumen</label>
+        <label className="block text-xs font-semibold text-slate-700 mb-1.5 tracking-wide">Judul dokumen</label>
         <input type="text" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)}
           placeholder="Contoh: APBDes 2026"
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="w-full bg-slate-50 ring-hair rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
           required />
         {files.length > 1 && (
-          <p className="text-xs text-slate-500 mt-1">Judul akan ditambahkan &quot;(1/{files.length})&quot;, &quot;(2/{files.length})&quot;, dst. untuk setiap file.</p>
+          <p className="text-xs text-slate-500 mt-1.5">Judul akan ditambahkan &quot;(1/{files.length})&quot;, &quot;(2/{files.length})&quot;, dst. untuk setiap file.</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+        <label className="block text-xs font-semibold text-slate-700 mb-1.5 tracking-wide">Kategori</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)}
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="w-full bg-slate-50 ring-hair rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
           required>
           {categories.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
@@ -255,44 +261,45 @@ function UploadForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          File <span className="text-slate-400 font-normal">(pilih hingga {maxFilesPerUpload} file sekaligus)</span>
+        <label className="block text-xs font-semibold text-slate-700 mb-1.5 tracking-wide">
+          File <span className="text-slate-400 font-normal normal-case">(pilih hingga {maxFilesPerUpload} file sekaligus)</span>
         </label>
         <input ref={fileInputRef} type="file" multiple
           accept={allowedMimeTypes.join(",")}
           onChange={handleFileChange}
-          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:px-3 file:py-1.5 file:font-medium"
+          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 file:px-4 file:py-2 file:font-semibold file:cursor-pointer"
           required />
         {files.length > 0 && (
-          <ul className="mt-1.5 space-y-0.5">
+          <ul className="mt-2 space-y-1">
             {files.map((f, i) => (
-              <li key={i} className="text-xs text-slate-500">{f.name} • {formatBytes(f.size)}</li>
+              <li key={i} className="text-xs text-slate-500 num">{f.name} · {formatBytes(f.size)}</li>
             ))}
           </ul>
         )}
       </div>
 
-      <label className="flex items-start gap-2 text-sm cursor-pointer">
-        <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5" />
-        <span className="text-slate-700">
+      <label className="flex items-start gap-2.5 text-sm cursor-pointer pt-1">
+        <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5 accent-[#1E1B4B]" />
+        <span className="text-slate-700 leading-relaxed">
           Saya menyatakan dokumen/data yang saya unggah benar dan dapat dipertanggungjawabkan.
         </span>
       </label>
 
       {error && (
-        <div role="alert" className="text-sm text-rose-900 bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2.5 leading-snug">
+        <div role="alert" className="rounded-2xl px-4 py-3 text-sm leading-relaxed pill-danger">
           {error}
         </div>
       )}
       {success && (
-        <div role="status" className="text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5 leading-snug">
+        <div role="status" className="rounded-2xl px-4 py-3 text-sm leading-relaxed pill-ok">
           {success}
         </div>
       )}
 
       <button type="submit" disabled={loading || !storageConfigured}
-        className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed">
-        {loading ? "Mengunggah..." : <><Upload size={14} /> Unggah {files.length > 1 ? `${files.length} Dokumen` : "Dokumen"}</>}
+        className="t-spring w-full inline-flex items-center justify-center gap-2 text-white text-sm font-semibold rounded-2xl px-5 py-3 shadow-lux-2 hover:shadow-lux-hover hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+        style={{ background: loading || !storageConfigured ? "#94A3B8" : "#1E1B4B" }}>
+        {loading ? "Mengunggah..." : <><Upload size={14} aria-hidden /> Unggah {files.length > 1 ? `${files.length} Dokumen` : "Dokumen"}</>}
       </button>
     </form>
   );
@@ -343,12 +350,13 @@ export default function AdminDesaDokumenClient(props: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Dokumen</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+    <div className="space-y-7">
+      <header className="space-y-1.5">
+        <p className="eyebrow text-[10px]">Tab</p>
+        <h1 className="display text-[28px] sm:text-[32px] font-semibold text-slate-900 tracking-tight leading-tight">Dokumen Desa</h1>
+        <p className="text-sm text-slate-500 leading-relaxed max-w-xl">
           {props.memberStatus === "VERIFIED"
-            ? "Unggah dokumen langsung masuk ke tahap PROCESSING."
+            ? "Unggah dokumen langsung masuk ke tahap PROCESSING dan dapat ditinjau tim PantauDesa."
             : "Unggah dokumen kontribusi — perlu persetujuan Admin Desa VERIFIED sebelum diproses."}
         </p>
       </header>
@@ -356,14 +364,12 @@ export default function AdminDesaDokumenClient(props: Props) {
       {actionMsg && (
         <div
           role={actionMsg.kind === "error" ? "alert" : "status"}
-          className={`rounded-2xl px-4 py-3 text-sm flex items-start gap-3 shadow-sm ${
-            actionMsg.kind === "ok"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-900"
-              : "bg-rose-50 border border-rose-200 text-rose-900"
+          className={`rounded-2xl px-4 py-3.5 text-sm flex items-start gap-3 shadow-lux-1 ${
+            actionMsg.kind === "ok" ? "pill-ok" : "pill-danger"
           }`}
         >
           <span className={`mt-0.5 inline-flex w-5 h-5 rounded-full items-center justify-center flex-shrink-0 ${
-            actionMsg.kind === "ok" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+            actionMsg.kind === "ok" ? "bg-emerald-100" : "bg-rose-100"
           }`}>
             {actionMsg.kind === "ok" ? <Check size={12} aria-hidden /> : <X size={12} aria-hidden />}
           </span>
@@ -382,16 +388,22 @@ export default function AdminDesaDokumenClient(props: Props) {
         />
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-          <FileText size={16} /> Dokumen di desa ini
-        </h2>
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="section-title flex items-center gap-2">
+            <FileText size={13} aria-hidden /> Dokumen di desa ini
+          </h2>
+          {props.documents.length > 0 && (
+            <span className="text-xs text-slate-400 num">{props.documents.length} dokumen</span>
+          )}
+        </div>
         {props.documents.length === 0 ? (
-          <p className="text-sm text-slate-500 bg-white border border-slate-200 rounded-2xl p-5 text-center">
-            Belum ada dokumen yang tercatat.
-          </p>
+          <div className="lux-card p-10 text-center space-y-2">
+            <p className="text-sm text-slate-500">Belum ada dokumen yang tercatat untuk desa ini.</p>
+            <p className="text-xs text-slate-400">Mulai dengan menggunakan formulir unggah di atas.</p>
+          </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {props.documents.map((doc) => (
               <DocCard
                 key={doc.id}

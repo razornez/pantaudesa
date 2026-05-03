@@ -77,7 +77,11 @@ export default function Navbar() {
               {NAVBAR_COPY.publicDataNote} &middot;
             </span>
           )}
-          <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-sm min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+          <Link
+            href="/login"
+            className="t-spring inline-flex items-center gap-1.5 text-xs font-semibold text-white px-5 py-2.5 rounded-2xl shadow-lux-2 hover:shadow-lux-hover hover:-translate-y-0.5 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            style={{ background: "#1E1B4B" }}
+          >
             Masuk
           </Link>
         </>
@@ -128,7 +132,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+    <nav className="sticky top-0 z-50 glass" style={{ borderRadius: 0 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
 

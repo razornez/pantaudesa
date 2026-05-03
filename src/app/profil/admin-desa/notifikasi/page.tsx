@@ -39,10 +39,11 @@ export default async function AdminDesaNotifikasiPage() {
   const unreadCount = serialized.filter((n) => !n.isRead).length;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Notifikasi</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+    <div className="space-y-7">
+      <header className="space-y-1.5">
+        <p className="eyebrow text-[10px]">Tab</p>
+        <h1 className="display text-[28px] sm:text-[32px] font-semibold text-slate-900 tracking-tight leading-tight">Notifikasi</h1>
+        <p className="text-sm text-slate-500 leading-relaxed max-w-xl">
           Aktivitas dan pengingat terkait Admin Desa untuk {ctx.desa.nama}.
         </p>
       </header>
