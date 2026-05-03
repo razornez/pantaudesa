@@ -1,7 +1,7 @@
 # Sprint 04-008 (batches 5–12) — Handoff Report
 
 **Branch:** `feat/sprint-04-008-5-to-12`
-**Date:** 2026-05-03
+**Date:** 2026-05-03 (rework applied 2026-05-03)
 **Quality gate:** 140 tests pass · 0 TSC errors · 0 lint errors · production build clean
 
 ---
@@ -14,93 +14,181 @@
 | `6e30ffd` | 04-008.6 | Admin Desa profile shell + badge/popover |
 | `cd00952` | 04-008.7 | List Admin tab + invite/revoke LIMITED |
 | `8050270` | 04-008.8 | Supabase Storage + Admin Desa Dokumen tab upload |
-| `e1388af` | 04-008.9 | Internal admin Dokumen Desa review + AI mapping draft + publish |
+| `e1388af` | 04-008.9 | Internal admin Dokumen Desa review + manual mapping draft + publish |
 | `560f4de` | 04-008.10 | Suara Warga tab (read-only) |
 | `2fb2bc0` | 04-008.11 | Notification system for Admin Desa |
+| `ee73fe5` | 04-008.12 | Initial QA gate + handoff report |
+| `548cbae` | rework | Wire notifications · multi-file upload · manual mapping · source indicator · env cleanup |
 
 ---
 
-## What was built
+## Rework summary (blocker fixes)
 
-### 04-008.5 — Renewal enforcement backend
-- `src/lib/admin-claim/renewal.ts` — `addRenewalPeriod`, `getRenewalState`, `daysUntilRenewal`, `isRenewalOverdue`
-- `src/lib/email/admin-claim-email.ts` — `sendRenewalReminderEmail`, `sendRenewalExpiredEmail`
-- `GET /api/internal-admin/renewals` — list members by renewal state
-- `POST /api/internal-admin/members/[memberId]/renewal/approve` — extend 6 months
-- `POST /api/internal-admin/members/[memberId]/renewal/reject` — expire + email
-- `POST /api/internal-admin/renewals/sweep-expired` — idempotent batch sweep (200-cap)
-- Approve claim route updated to stamp `renewalDueAt`
-- 14 unit tests for renewal logic
+### 1. Notification creation hooks wired
 
-### 04-008.6 — Admin Desa profile shell
-- `src/lib/admin-claim/profile-tabs.ts` — tab registry + capability matrix
-- `src/lib/data/admin-desa-context.ts` — `getAdminDesaContext(userId)`
-- `src/app/profil/admin-desa/layout.tsx` — server guard + header + tab nav
-- `src/components/admin-desa/AdminDesaBadge.tsx` — status dot + accessible popover with renewal warning
+All notification events are **fire-and-forget** — errors are logged but never throw, so no notification failure can break a transaction or HTTP response.
 
-### 04-008.7 — List Admin tab
-- `src/lib/data/desa-admins.ts` — `getDesaAdminRoster(desaId)`
-- `POST /api/admin-claim/revoke-member/[memberId]` — transactional, VERIFIED-only
-- `src/components/admin-desa/AdminDesaListAdminClient.tsx` — invite modal, revoke modal, history, React 19 purity fix
-- `src/app/profil/admin-desa/list-admin/page.tsx`
+| Event | Trigger route | Recipients |
+|-------|--------------|-----------|
+| `DOCUMENT_UPLOADED_WAITING` | upload (LIMITED uploader) | All VERIFIED admins of the desa |
+| `DOCUMENT_APPROVED` | approve (WAITING→PROCESSING) | Uploader |
+| `DOCUMENT_PUBLISHED` | publish (PROCESSING→PUBLISHED) | Uploader + all active desa admins |
+| `DOCUMENT_FAILED` | mark-failed | Uploader (with reason) |
+| `INVITE_ACCEPTED` | accept-invite | Inviter |
+| `RENEWAL_REMINDER` | renewal/approve | Member (extension confirmed) |
+| `RENEWAL_EXPIRED` | renewal/reject | Member (expired with reason) |
 
-### 04-008.8 — Supabase Storage + Dokumen upload
-- `src/lib/storage/supabase-storage.ts` — lazy-init admin client, upload, signed URL, path builder
-- `src/lib/storage/upload-validation.ts` — MIME/size/count validation
-- `POST /api/admin-claim/documents/upload` — multipart, status-aware (LIMITED→WAITING, VERIFIED→PROCESSING)
-- `GET /api/admin-claim/documents` — list for current desa
-- `GET /api/admin-claim/documents/[id]/preview` — signed URL (same-desa OR INTERNAL_ADMIN)
-- `POST /api/admin-claim/documents/[id]/approve` — VERIFIED-only, WAITING→PROCESSING
-- `src/components/admin-desa/AdminDesaDokumenClient.tsx` — upload dialog, list, preview
+Helper: `src/lib/notifications/create-notification.ts` — exports `createNotification` (single) and `createNotifications` (bulk).
 
-### 04-008.9 — Internal admin document review + AI mapping
-- `src/lib/admin-claim/ai-mapping.ts` — `AI_MAPPABLE_DESA_FIELDS` allowlist, stub generator, sanitizer
-- `GET /api/internal-admin/documents` — paginated queue with status/desa filter
-- `POST /api/internal-admin/documents/[id]/draft-mapping` — generates stub AI draft
-- `POST /api/internal-admin/documents/[id]/publish` — apply Desa fields + PROCESSING→PUBLISHED + audit snapshots
-- `POST /api/internal-admin/documents/[id]/mark-failed` — required reason
-- `src/components/internal-admin/InternalDocumentReviewQueue.tsx` — review UI with publish modal + mark-failed modal
-- `src/app/internal-admin/documents/page.tsx`
+### 2. AI mapping status: MANUAL (not AI)
 
-### 04-008.10 — Suara Warga tab
-- `src/app/profil/admin-desa/suara/page.tsx` — read-only voice feed filtered by `ctx.desa.id`, category labels, status pills, engagement counts, link to public page
+- Renamed `generateStubMappingDraft` → `generateManualMappingDraft`, `generator: "manual"`.
+- UI button: "Run AI Draft" → "Buat Draft Manual".
+- Publish modal header: "Publikasikan dokumen (mapping manual)".
+- Warning banner updated: "AI provider belum dikonfigurasi — lakukan mapping manual."
+- To integrate a real AI provider: replace `generateManualMappingDraft()` body in `src/lib/admin-claim/ai-mapping.ts`. The `AiMappingDraft` interface and all callers remain unchanged.
 
-### 04-008.11 — Notification system
-- `GET /api/admin-claim/notifications` — list 50 most-recent in-app notifications
-- `POST /api/admin-claim/notifications/mark-read` — mark all or specific IDs
-- `src/components/admin-desa/AdminDesaNotifikasiClient.tsx` — optimistic mark-read (single + all), unread count
-- `src/app/profil/admin-desa/notifikasi/page.tsx` — server-side fetch, serialized dates as props
+### 3. Multi-file upload (max 5) — real, not misleading
+
+- Upload route: accepts `files[]` FormData field (1–5 files). Legacy single `file` field still supported.
+- Each file validated individually (MIME, size) before any storage write.
+- Titles auto-suffixed `(N/M)` when batch > 1.
+- `ADMIN_DESA_DOCUMENT_MAX_FILES_PER_UPLOAD` env is now actively enforced server-side.
+- UI: `<input type="file" multiple>` with per-file list, live count in button.
+
+### 4. Public source indicator
+
+- Prisma migration `20260503100354`: added `dataSourceLabel TEXT` + `dataPublishedAt TIMESTAMP` (nullable) to `desa` table.
+- Publish route: always stamps `dataSourceLabel = "Dokumen Admin Desa"` + `dataPublishedAt = now()` on every publish — even when no field updates are applied.
+- Public desa detail page: shows an emerald chip `● Dokumen Admin Desa · Terakhir diperbarui {date}` when `dataPublishedAt` is set. Hidden otherwise (no misleading indicator for unverified desas).
+
+### 5. env.example cleanup
+
+Removed S3-style keys that were never read by any code:
+- `SUPABASE_SERVICE_ROLE_KEY_ACCESS_ID` → removed
+- `SUPABASE_SERVICE_ROLE_KEY_SECRET_KEY` → removed
+- `NEXT_PUBLIC_SUPABASE_ENDPOINT` → removed
+- `NEXT_PUBLIC_SUPABASE_REGION` → removed
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → removed
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → removed
+
+Correct key used by `supabase-storage.ts`: `SUPABASE_SERVICE_ROLE_KEY` (service_role key from Supabase dashboard → Settings → API).
+
+---
+
+## Supabase Storage — explicit status
+
+| Item | Status |
+|------|--------|
+| Bucket name | `admin-desa-documents` (configurable via `SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS`) |
+| Bucket access | **PRIVATE** — no public reads. All access via signed URLs only. |
+| RLS policy | None required — service role key bypasses RLS. |
+| Signed URL TTL | 900 seconds (15 min) — configurable via `SUPABASE_STORAGE_SIGNED_URL_TTL_SECONDS`. |
+| Bucket creation | **Owner manual action required** — bucket must be created in Supabase dashboard before first upload. |
+
+### Required env vars (both must be set for storage to work)
+
+| Var | Where to get it | Exposure |
+|-----|----------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL | Public (browser-safe) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → service_role key | **Server-only. Never expose to browser.** |
+
+### Optional env vars (all have safe defaults)
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS` | `admin-desa-documents` | Bucket name |
+| `SUPABASE_STORAGE_SIGNED_URL_TTL_SECONDS` | `900` | Signed URL TTL |
+| `ADMIN_DESA_DOCUMENT_MAX_FILE_SIZE_MB` | `10` | Per-file size cap |
+| `ADMIN_DESA_DOCUMENT_MAX_FILES_PER_UPLOAD` | `5` | Files per upload request |
+| `ADMIN_DESA_DOCUMENT_ALLOWED_MIME_TYPES` | `application/pdf,image/jpeg,image/png,image/webp` | Allowed MIME types |
+
+---
+
+## Error handling — user-facing messages
+
+| Scenario | Code | Message shown |
+|----------|------|--------------|
+| Storage not configured | `STORAGE_NOT_CONFIGURED` | "Storage tidak terkonfigurasi. Hubungi admin PantauDesa." |
+| File too large | `FILE_TOO_LARGE` | "File melebihi batas {N} MB." |
+| MIME not allowed | `MIME_NOT_ALLOWED` | "Tipe file tidak diizinkan. Diizinkan: …" |
+| Too many files | `TOO_MANY_FILES` | "Maksimal {N} file per unggah." |
+| Upload to storage failed | `UPLOAD_FAILED` | "Gagal mengunggah file: {reason}" |
+| Signed URL failed | `STORAGE_OPERATION_FAILED` | "Gagal membuat tautan preview." |
+| Mapping provider inactive | (UI banner) | "AI provider belum dikonfigurasi — lakukan mapping manual." |
+| Publish failed | 422 | "Hanya dokumen PROCESSING yang dapat dipublikasikan." |
+| Document failed | (notif body) | "… tidak dapat diproses. Alasan: {reason}" |
+| Notification failure | (server log only) | Logged to console, never surfaced to user |
 
 ---
 
 ## Architecture decisions
 
-**Lazy-init pattern for external clients** (`src/lib/resend.ts`, `src/lib/storage/supabase-storage.ts`): Proxy deferring construction to first property access prevents Vercel build-time failures when env vars are absent.
+**Lazy-init external clients** (`src/lib/resend.ts`, `src/lib/storage/supabase-storage.ts`): Proxy defers construction to first property access — prevents Vercel build-time failures when env vars absent.
 
-**`db.$transaction` on all mutating admin ops**: revoke-member, renewal-approve, document-publish all wrapped in transactions for race safety.
+**`db.$transaction` on all mutating admin ops**: revoke-member, renewal-approve, document-publish wrapped in transactions.
 
-**AI mapping MVP scope** (`AI_MAPPABLE_DESA_FIELDS`): Only safe Desa profile fields — no APBDes, no sensitive data. Stub generator returns empty draft; interface is stable for future real LLM integration without UI changes.
+**Notification fire-and-forget**: `createNotification`/`createNotifications` catch all errors internally. Notification loss is acceptable; transaction failure is not.
 
-**Notifications are per-user, not per-desa**: `GET /api/admin-claim/notifications` does not gate on active admin membership, so a recently-expired admin can still read their notifications.
+**Manual mapping MVP**: `AI_MAPPABLE_DESA_FIELDS` allowlist (7 safe Desa fields). Stub replaced by `generateManualMappingDraft`. Interface stable — replace implementation when AI provider chosen.
 
-**Renewal sweep** is idempotent, capped at 200 records, and internal-admin gated — safe to run multiple times or via cron.
+**Renewal sweep**: idempotent, capped at 200 records, internal-admin gated.
 
----
-
-## Known limitations / follow-up work
-
-- AI mapping stub always returns empty draft — replace `generateStubMappingDraft()` with real LLM call in a future sprint.
-- No push/email notification creation hooks wired yet — the `AdminDesaNotification` rows must be inserted by existing flows (renewal reminder, document status change, etc.) as follow-on work.
-- Renewal sweep is manual (internal admin button) — a cron job should call `POST /api/internal-admin/renewals/sweep-expired` nightly.
-- Signed URL TTL is 900 s — consider bumping for large PDF review sessions.
+**Notifications are per-user, not per-desa**: `GET /api/admin-claim/notifications` does not gate on active membership, so recently-expired admins can still read theirs.
 
 ---
 
-## Quality gate results
+## Known risks and follow-up
+
+| Item | Risk | Recommended follow-up |
+|------|------|----------------------|
+| Renewal sweep is manual | VERIFIED admins expire silently without nightly sweep | Wire `POST /api/internal-admin/renewals/sweep-expired` to a cron job |
+| AI mapping is manual | Internal admin must read document and type values | Integrate Claude API when owner picks provider; replace `generateManualMappingDraft()` body only |
+| `dataPublishedAt` cache | Desa detail page uses `unstable_cache` (5 min TTL) | Source indicator may lag up to 5 min after publish; acceptable for MVP |
+| Supabase bucket not auto-created | Upload returns 404/403 until bucket is manually created | Add bucket creation to onboarding runbook |
+| Notification emails not wired | In-app only; no email for document events | Add email via Resend in a future sprint for document status changes |
+| Signed URL TTL (900s) | Long review sessions may have URLs expire mid-session | Bump TTL or add a re-fetch button if UX feedback warrants it |
+
+---
+
+## Owner manual actions (local + Vercel)
+
+1. **Create Supabase bucket** `admin-desa-documents` (private) in Supabase dashboard before first upload.
+2. **Set env vars in Vercel** (project settings → Environment variables):
+   - `NEXT_PUBLIC_SUPABASE_URL` (safe for all environments)
+   - `SUPABASE_SERVICE_ROLE_KEY` (**Production + Preview only** — never expose in client)
+3. **Remove old S3-style keys from Vercel** if previously set: `SUPABASE_SERVICE_ROLE_KEY_ACCESS_ID`, `SUPABASE_SERVICE_ROLE_KEY_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_ENDPOINT`, `NEXT_PUBLIC_SUPABASE_REGION`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+4. **Run `npx prisma migrate deploy`** on production DB after merge (migration `20260503100354` adds `dataSourceLabel` + `dataPublishedAt` columns to `desa`).
+
+---
+
+## QA checklist — per role
+
+| Role | Flow | Expected |
+|------|------|---------|
+| LIMITED Admin | Upload 1 PDF | Status = WAITING_VERIFIED_APPROVAL; VERIFIED admin receives in-app notif |
+| LIMITED Admin | Upload 3 files at once | 3 docs created, titled "X (1/3)" etc. |
+| LIMITED Admin | Upload 6 files | Blocked: "Maksimal 5 file per unggah" |
+| VERIFIED Admin | Upload 1 PDF | Status = PROCESSING directly |
+| VERIFIED Admin | Approve LIMITED doc | Doc → PROCESSING; uploader receives in-app notif |
+| VERIFIED Admin | Invite new admin | Invitee receives email; on accept inviter receives in-app notif |
+| Internal Admin | Draft manual mapping | Empty draft with note "AI provider belum dikonfigurasi" |
+| Internal Admin | Publish doc (with fields) | Desa fields updated; dataPublishedAt stamped; all active admins notified |
+| Internal Admin | Mark FAILED | Doc → FAILED; uploader notified with reason |
+| Internal Admin | Renewal approve | Member notified; renewalDueAt extended 6 months |
+| Internal Admin | Renewal reject | Member EXPIRED; email + in-app notif sent |
+| Public | Visit desa with published doc | Emerald chip visible: "Dokumen Admin Desa · Terakhir diperbarui {date}" |
+| Public | Visit desa without published doc | No chip shown |
+| Any Admin | Notifikasi tab | List shows unread first; "Tandai dibaca" + "Tandai semua dibaca" work |
+
+---
+
+## Quality gate results (post-rework)
 
 ```
 Tests:    140 passed (10 files)
 TSC:      0 errors
-ESLint:   0 errors (1 deprecation warning — eslintignore, pre-existing)
+ESLint:   0 errors (1 pre-existing eslintignore deprecation warning)
 Build:    all routes compiled, 0 errors
+Migration: 20260503100354 applied to live DB
 ```
