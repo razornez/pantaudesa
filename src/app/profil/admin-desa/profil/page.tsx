@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +17,20 @@ export default async function AdminDesaProfilePage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900">Status Admin Desa</h1>
-        <p className="text-sm text-slate-500">
-          Detail keanggotaan Admin Desa kamu untuk {ctx.desa.nama}.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-slate-900">Status Admin Desa</h1>
+          <p className="text-sm text-slate-500">
+            Detail keanggotaan Admin Desa kamu untuk {ctx.desa.nama}.
+          </p>
+        </div>
+        {/* Bug #3: link goes to the desa being managed, not the desa list */}
+        <Link
+          href={`/desa/${ctx.desa.slug}`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-3 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+        >
+          Lihat profil publik desa <ExternalLink size={13} />
+        </Link>
       </header>
 
       {/* Status card */}

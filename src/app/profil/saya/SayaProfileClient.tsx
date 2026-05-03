@@ -19,6 +19,7 @@ import { mockDesa } from "@/lib/mock-data";
 import UserAvatar from "@/components/user/UserAvatar";
 import BadgePill from "@/components/user/BadgePill";
 import ProfileAdminAccessCard from "@/components/profil/ProfileAdminAccessCard";
+import InternalAdminAccessCard from "@/components/profil/InternalAdminAccessCard";
 
 const desaMap = Object.fromEntries(mockDesa.map(d => [d.id, d.nama]));
 
@@ -549,6 +550,9 @@ export default function SayaProfilePage() {
 
           {/* Ganti PIN */}
           <ChangePinCard onSuccess={() => toast("PIN berhasil diperbarui ✓", "success")} onError={msg => toast(msg, "error")} />
+
+          {/* Internal admin entry — only renders when role === INTERNAL_ADMIN */}
+          <InternalAdminAccessCard />
 
           {/* Admin desa */}
           <ProfileAdminAccessCard user={user} />
