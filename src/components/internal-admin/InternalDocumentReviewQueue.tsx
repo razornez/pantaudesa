@@ -35,33 +35,33 @@ interface DocRow {
 
 const STATUS_META: Record<DocStatus, { label: string; pill: string; note: string }> = {
   WAITING_VERIFIED_APPROVAL: {
-    label: "Menunggu persetujuan admin utama",
+    label: "Menunggu persetujuan",
     pill: "pill-warn",
-    note: "Dokumen baru tercatat tetapi masih menunggu persetujuan admin desa utama.",
+    note: "Dokumen baru, menunggu persetujuan admin utama.",
   },
   PROCESSING: {
-    label: "Sedang diproses PantauDesa",
+    label: "Sedang diproses",
     pill: "pill-info",
-    note: "Dokumen siap dibaca, dipetakan, dan diputuskan untuk dipublikasikan atau ditolak.",
+    note: "Siap dibaca dan diputuskan untuk dipublikasikan.",
   },
   PUBLISHED: {
-    label: "Sudah dipublikasikan",
+    label: "Sudah tayang",
     pill: "pill-ok",
-    note: "Data hasil dokumen sudah diterapkan ke desa dan terekam di audit.",
+    note: "Data sudah diterapkan ke halaman desa.",
   },
   FAILED: {
     label: "Gagal diproses",
     pill: "pill-danger",
-    note: "Dokumen tidak bisa dipakai dan alasan kegagalannya perlu jelas untuk pengunggah.",
+    note: "Tidak bisa dipakai, perlu alasan jelas untuk pengunggah.",
   },
 };
 
 const STATUS_TABS = [
   { value: "", label: "Semua" },
-  { value: "WAITING_VERIFIED_APPROVAL", label: "Menunggu admin utama" },
-  { value: "PROCESSING", label: "Diproses PantauDesa" },
+  { value: "WAITING_VERIFIED_APPROVAL", label: "Menunggu" },
+  { value: "PROCESSING", label: "Diproses" },
   { value: "PUBLISHED", label: "Sudah tayang" },
-  { value: "FAILED", label: "Gagal diproses" },
+  { value: "FAILED", label: "Gagal" },
 ] as const;
 
 function buildUrl(params: Record<string, string>) {
@@ -71,6 +71,12 @@ function buildUrl(params: Record<string, string>) {
     else url.searchParams.delete(k);
   });
   return url.pathname + url.search;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function PublishModal({
@@ -110,7 +116,7 @@ function PublishModal({
         if (key === "tahunData" || key === "jumlahPenduduk") {
           const numeric = Number(value);
           if (!Number.isFinite(numeric)) {
-            onNotify(`Field ${key} harus berupa angka.`, "error");
+            onNotify(`Field ${key} harus angka.`, "error");
             setLoading(false);
             return;
           }
@@ -130,10 +136,10 @@ function PublishModal({
         onNotify(data.error ?? "Dokumen belum berhasil dipublikasikan.", "error");
         return;
       }
-      onNotify("Dokumen berhasil dipublikasikan dan perubahan desa sudah diterapkan.", "success");
+      onNotify("Dokumen berhasil dipublikasikan.", "success");
       onDone();
     } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
@@ -141,50 +147,50 @@ function PublishModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="lux-panel max-w-lg w-full p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-        <div className="space-y-2">
+      <div className="lux-panel max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">Publikasikan dokumen</p>
-          <h2 className="text-[20px] font-semibold text-slate-900 tracking-tight">{doc.title}</h2>
-          <p className="text-sm text-slate-500 leading-relaxed">{doc.desa.nama}</p>
+          <h2 className="text-[18px] sm:text-[20px] font-semibold text-slate-900 tracking-tight">{doc.title}</h2>
+          <p className="text-xs text-slate-500">{doc.desa.nama}</p>
         </div>
 
-        <div className="notice-card notice-warn text-sm leading-relaxed">
-          Draft ini hanya memetakan field aman seperti profil desa, kontak, alamat, website, dan data ringkas lainnya. Field kosong tidak akan mengubah data publik.
+        <div className="notice-card notice-warn text-xs">
+          Field kosong tidak akan mengubah data publik yang sudah ada.
         </div>
 
-        <div className="space-y-3 text-sm">
+        <div className="space-y-2 text-sm max-h-[40vh] overflow-y-auto pr-1">
           {AI_MAPPABLE_DESA_FIELDS.map((key) => (
             <div key={key}>
-              <label className="field-label">{key}</label>
+              <label className="field-label text-xs">{key}</label>
               <input
                 type="text"
                 value={fields[key]}
                 onChange={(e) => setFields((prev) => ({ ...prev, [key]: e.target.value }))}
-                placeholder="Kosongkan jika tidak ingin mengubah field ini"
-                className="field-lux"
+                placeholder="Kosongkan jika tidak diubah"
+                className="field-lux text-sm"
               />
             </div>
           ))}
 
           <div>
-            <label className="field-label">Catatan publish</label>
+            <label className="field-label text-xs">Catatan</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              rows={3}
+              rows={2}
               maxLength={500}
-              className="textarea-lux"
-              placeholder="Catatan singkat untuk audit internal."
+              className="textarea-lux text-sm"
+              placeholder="Catatan singkat (opsional)."
             />
           </div>
         </div>
 
-        <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1 text-sm">
             Batal
           </button>
-          <button type="button" onClick={handlePublish} disabled={loading} className="btn-lux btn-lux-success flex-1">
-            {loading ? "Mempublikasikan..." : "Publikasikan sekarang"}
+          <button type="button" onClick={handlePublish} disabled={loading} className="btn-lux btn-lux-success flex-1 text-sm">
+            {loading ? "Mempublikasikan..." : "Publikasikan"}
           </button>
         </div>
       </div>
@@ -209,7 +215,7 @@ function MarkFailedModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reason.trim()) {
-      onNotify("Alasan kegagalan wajib diisi agar pengunggah tahu yang perlu dibenahi.", "error");
+      onNotify("Alasan kegagalan wajib diisi.", "error");
       return;
     }
     setLoading(true);
@@ -224,10 +230,10 @@ function MarkFailedModal({
         onNotify(data.error ?? "Dokumen belum berhasil ditandai gagal.", "error");
         return;
       }
-      onNotify("Dokumen ditandai gagal diproses dan alasan sudah tersimpan.", "success");
+      onNotify("Dokumen ditandai gagal.", "success");
       onDone();
     } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
@@ -235,49 +241,43 @@ function MarkFailedModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="lux-panel max-w-md w-full p-5 sm:p-6 space-y-5">
-        <div className="space-y-2">
+      <div className="lux-panel max-w-md w-full p-5 sm:p-6 space-y-4">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">Tandai gagal diproses</p>
-          <h2 className="text-[20px] font-semibold text-slate-900 tracking-tight">{doc.title}</h2>
-          <p className="text-sm text-slate-500 leading-relaxed">{doc.desa.nama}</p>
+          <h2 className="text-[18px] sm:text-[20px] font-semibold text-slate-900 tracking-tight">{doc.title}</h2>
+          <p className="text-xs text-slate-500">{doc.desa.nama}</p>
         </div>
 
-        <div className="notice-card notice-danger text-sm leading-relaxed">
-          Status ini memberi tahu pengunggah bahwa dokumen belum bisa dipakai. Jelaskan alasan dengan bahasa yang membantu mereka memperbaiki unggahan berikutnya.
+        <div className="notice-card notice-danger text-xs">
+          Pengunggah akan lihat alasan ini. Jelaskan dengan jelas apa yang perlu diperbaiki.
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="field-label">Alasan yang terlihat oleh pengunggah</label>
+            <label className="field-label text-xs">Alasan untuk pengunggah</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              rows={4}
+              rows={3}
               maxLength={1000}
-              placeholder="Contoh: dokumen buram, lampiran tidak sesuai, atau informasi belum cukup."
-              className="textarea-lux"
+              placeholder="Contoh: dokumen buram, lampiran tidak sesuai."
+              className="textarea-lux text-sm"
               required
             />
           </div>
 
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1 text-sm">
               Batal
             </button>
-            <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">
-              {loading ? "Menyimpan..." : "Tandai gagal diproses"}
+            <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1 text-sm">
+              {loading ? "Menyimpan..." : "Tandai gagal"}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function DocCard({
@@ -306,10 +306,10 @@ function DocCard({
         onNotify(data.error ?? "Draft mapping belum berhasil dibuat.", "error");
         return;
       }
-      onNotify("Draft mapping berhasil dibuat. Silakan cek dan publikasikan bila sudah sesuai.", "success");
+      onNotify("Draft mapping berhasil dibuat.", "success");
       onRefresh();
     } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setBusy(false);
     }
@@ -326,80 +326,70 @@ function DocCard({
       }
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <article className="lux-card t-spring lift hover:shadow-lux-hover p-5 sm:p-6 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-semibold text-slate-900 text-[16px] tracking-tight leading-snug">{doc.title}</p>
-          <p className="text-sm text-slate-500">{doc.desa.nama} • {doc.desa.kecamatan}, {doc.desa.kabupaten}</p>
+    <article className="lux-card t-spring p-4 sm:p-5 space-y-3">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-900 text-[14px] sm:text-[15px] tracking-tight leading-snug">{doc.title}</p>
+          <p className="text-[11px] sm:text-xs text-slate-500">{doc.desa.nama}</p>
         </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold shrink-0 ${status.pill}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${doc.status === "PUBLISHED" ? "bg-emerald-500" : doc.status === "FAILED" ? "bg-rose-500" : doc.status === "PROCESSING" ? "bg-indigo-500" : "bg-amber-500"}`} aria-hidden />
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${status.pill}`}>
           {status.label}
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 text-sm">
-        <div className="metric-card">
-          <p className="metric-label">File</p>
-          <p className="mt-2 text-slate-900 font-medium">{doc.fileName}</p>
-          <p className="metric-note">{doc.fileType} • {formatBytes(doc.fileSize)}</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Pengunggah</p>
-          <p className="mt-2 text-slate-900 font-medium">{uploaderName}</p>
-          <p className="metric-note">Diunggah {new Date(doc.createdAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}</p>
-        </div>
+      {/* Compact info */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
+        <span>{uploaderName}</span>
+        <span className="text-slate-300">·</span>
+        <span>{doc.fileType} · {formatBytes(doc.fileSize)}</span>
+        <span className="text-slate-300">·</span>
+        <span>{new Date(doc.createdAt).toLocaleDateString("id-ID", { dateStyle: "short" })}</span>
       </div>
 
-      <div className="notice-card notice-info text-sm leading-relaxed">
-        <p className="font-semibold">Catatan status</p>
-        <p className="mt-2 opacity-90">{status.note}</p>
-      </div>
-
-      {doc.aiMappingStatus && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span className="pill-info rounded-full px-3 py-1 font-semibold">Draft mapping: {doc.aiMappingStatus}</span>
-          {doc.publishedAt && <span>Dipublikasikan {new Date(doc.publishedAt).toLocaleDateString("id-ID")}</span>}
-        </div>
-      )}
-
+      {/* Failed reason */}
       {doc.status === "FAILED" && doc.failedReason && (
-        <div className="notice-card notice-danger text-sm leading-relaxed">
-          <p className="font-semibold">Alasan kegagalan</p>
-          <p className="mt-2 opacity-90">{doc.failedReason}</p>
+        <div className="notice-card notice-danger text-xs">
+          <p className="font-semibold">Alasan:</p>
+          <p className="mt-1">{doc.failedReason}</p>
         </div>
       )}
 
-      <div className="surface-divider pt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={openPreview} disabled={busy} className="btn-lux btn-lux-ghost !min-h-[40px] text-xs">
-          <ExternalLink size={13} aria-hidden /> Buka preview
-        </button>
-        {doc.status === "PROCESSING" && (
-          <>
-            <button type="button" onClick={runDraftMapping} disabled={busy} className="btn-lux btn-lux-secondary !min-h-[40px] text-xs">
-              <Sparkles size={13} aria-hidden /> Buat draft mapping
-            </button>
-            <button type="button" onClick={() => onPublish(doc)} disabled={busy} className="btn-lux btn-lux-success !min-h-[40px] text-xs">
-              <Check size={13} aria-hidden /> Publikasikan
-            </button>
-            <button type="button" onClick={() => onMarkFailed(doc)} disabled={busy} className="btn-lux btn-lux-danger !min-h-[40px] text-xs">
-              <AlertTriangle size={13} aria-hidden /> Tandai gagal
-            </button>
-          </>
-        )}
-        {doc.status === "WAITING_VERIFIED_APPROVAL" && (
-          <button type="button" onClick={() => onMarkFailed(doc)} disabled={busy} className="btn-lux btn-lux-danger !min-h-[40px] text-xs">
-            <AlertTriangle size={13} aria-hidden /> Tandai gagal
+      {/* Action buttons */}
+      {doc.status === "PROCESSING" && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={openPreview} disabled={busy} className="btn-lux btn-lux-ghost text-xs">
+            <ExternalLink size={11} aria-hidden /> Preview
           </button>
-        )}
-      </div>
+          <button type="button" onClick={runDraftMapping} disabled={busy} className="btn-lux btn-lux-secondary text-xs">
+            <Sparkles size={11} aria-hidden /> Draft
+          </button>
+          <button type="button" onClick={() => onPublish(doc)} disabled={busy} className="btn-lux btn-lux-success text-xs">
+            <Check size={11} aria-hidden /> Publikasikan
+          </button>
+          <button type="button" onClick={() => onMarkFailed(doc)} disabled={busy} className="btn-lux btn-lux-danger text-xs">
+            <AlertTriangle size={11} aria-hidden /> Gagal
+          </button>
+        </div>
+      )}
+
+      {doc.status === "WAITING_VERIFIED_APPROVAL" && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={openPreview} disabled={busy} className="btn-lux btn-lux-ghost text-xs">
+            <ExternalLink size={11} aria-hidden /> Preview
+          </button>
+          <button type="button" onClick={() => onMarkFailed(doc)} disabled={busy} className="btn-lux btn-lux-danger text-xs">
+            <AlertTriangle size={11} aria-hidden /> Tandai gagal
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -433,66 +423,59 @@ export default function InternalDocumentReviewQueue({
   const refresh = () => router.refresh();
 
   return (
-    <div className="space-y-7" data-testid="internal-documents-queue">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
+    <div className="space-y-5" data-testid="internal-documents-queue">
+      {/* Header */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">Review dokumen desa</p>
-          <h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">
-            Antrean dokumen yang menunggu keputusan
+          <h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">
+            Antrean dokumen
           </h1>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
-            Baca dokumen, cek preview, susun draft mapping bila perlu, lalu putuskan apakah data layak dipublikasikan.
-          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="pill-info rounded-full px-3 py-1 text-[11px] font-semibold">{summary.total} dokumen</span>
-          {summary.processing > 0 && <span className="pill-warn rounded-full px-3 py-1 text-[11px] font-semibold">{summary.processing} diproses</span>}
-          {summary.failed > 0 && <span className="pill-danger rounded-full px-3 py-1 text-[11px] font-semibold">{summary.failed} gagal</span>}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.total} dokumen</span>
+          {summary.processing > 0 && <span className="pill-warn rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.processing} diproses</span>}
+          {summary.failed > 0 && <span className="pill-danger rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.failed} gagal</span>}
         </div>
-      </header>
+      </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="metric-card">
-          <p className="metric-label">Total dokumen</p>
-          <p className="metric-value">{summary.total}</p>
-          <p className="metric-note">dalam filter aktif</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Menunggu admin utama</p>
-          <p className="metric-value">{summary.waiting}</p>
-          <p className="metric-note">belum masuk review internal</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Diproses PantauDesa</p>
-          <p className="metric-value">{summary.processing}</p>
-          <p className="metric-note">siap dipetakan</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Sudah tayang</p>
-          <p className="metric-value">{summary.published}</p>
-          <p className="metric-note">sudah masuk data desa</p>
-        </div>
-      </section>
+      {/* Compact metric row */}
+      <div className="flex flex-wrap gap-2 text-[11px]">
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Menunggu: </span>
+          <span className="font-semibold text-slate-900">{summary.waiting}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Diproses: </span>
+          <span className="font-semibold text-slate-900">{summary.processing}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Sudah tayang: </span>
+          <span className="font-semibold text-slate-900">{summary.published}</span>
+        </span>
+      </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* Filter tabs */}
+      <div className="flex flex-wrap gap-1.5">
         {STATUS_TABS.map((tab) => (
           <a
             key={tab.value}
             href={buildUrl({ status: tab.value })}
-            className={`btn-lux ${statusFilter === tab.value ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[40px] text-xs`}
+            className={`btn-lux ${statusFilter === tab.value ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] sm:!min-h-[40px] text-[11px] sm:text-xs`}
           >
             {tab.label}
           </a>
         ))}
       </div>
 
+      {/* Documents grid */}
       {documents.length === 0 ? (
-        <div className="lux-card p-10 text-center space-y-3">
-          <FileText size={28} className="mx-auto text-slate-300" aria-hidden />
+        <div className="lux-card p-8 text-center space-y-2">
+          <FileText size={24} className="mx-auto text-slate-300" aria-hidden />
           <p className="text-sm text-slate-500">Tidak ada dokumen pada filter ini.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map((doc) => (
             <DocCard
               key={doc.id}
@@ -506,6 +489,7 @@ export default function InternalDocumentReviewQueue({
         </div>
       )}
 
+      {/* Modals */}
       {publishTarget && (
         <PublishModal
           doc={publishTarget}

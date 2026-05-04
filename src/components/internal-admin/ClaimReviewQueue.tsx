@@ -424,28 +424,11 @@ export default function ClaimReviewQueue({
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="metric-card">
-          <p className="metric-label">Klaim aktif</p>
-          <p className="metric-value">{summary.total}</p>
-          <p className="metric-note">terbaca di halaman ini</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Baru dibuat</p>
-          <p className="metric-value">{summary.pending}</p>
-          <p className="metric-note">verifikasi belum lengkap</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Sedang diperiksa</p>
-          <p className="metric-value">{summary.review}</p>
-          <p className="metric-note">siap diputuskan</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Sudah disetujui</p>
-          <p className="metric-value">{summary.approved}</p>
-          <p className="metric-note">audit sudah tercatat</p>
-        </div>
-      </section>
+      <div className="flex flex-wrap gap-2 text-[11px]">
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">Baru: </span><span className="font-semibold text-slate-900">{summary.pending}</span></span>
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">Diperiksa: </span><span className="font-semibold text-slate-900">{summary.review}</span></span>
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">Disetujui: </span><span className="font-semibold text-slate-900">{summary.approved}</span></span>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {STATUS_TABS.map((tab) => (

@@ -60,7 +60,7 @@ function DecisionModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isApprove && !reason.trim()) {
-      onNotify("Alasan penolakan wajib diisi agar pengguna tahu tindak lanjutnya.", "error");
+      onNotify("Alasan penolakan wajib diisi.", "error");
       return;
     }
     setLoading(true);
@@ -76,18 +76,13 @@ function DecisionModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        onNotify(data.error ?? "Aksi perpanjangan belum berhasil diproses.", "error");
+        onNotify(data.error ?? "Aksi belum berhasil diproses.", "error");
         return;
       }
-      onNotify(
-        isApprove
-          ? "Masa aktif admin berhasil diperpanjang dan notifikasi sudah dikirim."
-          : "Akses admin ditandai berakhir. Pengguna akan menerima penjelasan lewat notifikasi.",
-        "success",
-      );
+      onNotify(isApprove ? "Masa aktif berhasil diperpanjang." : "Akses ditandai berakhir.", "success");
       onDone();
     } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
@@ -97,64 +92,56 @@ function DecisionModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="lux-panel max-w-lg w-full p-5 sm:p-6 space-y-5">
-        <div className="space-y-2">
+      <div className="lux-panel max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">{isApprove ? "Setujui perpanjangan" : "Tolak perpanjangan"}</p>
-          <h2 className="text-[20px] font-semibold text-slate-900 tracking-tight">
+          <h2 className="text-[18px] sm:text-[20px] font-semibold text-slate-900 tracking-tight">
             {target.desa.nama}
           </h2>
-          <p className="text-sm text-slate-500 leading-relaxed">
-            {actorName} • {target.user.email}
-          </p>
+          <p className="text-xs text-slate-500">{actorName} · {target.user.email}</p>
         </div>
 
-        <div className={`notice-card ${isApprove ? "notice-ok" : "notice-danger"} text-sm leading-relaxed`}>
-          {isApprove ? (
-            <>
-              Keputusan ini akan memperpanjang masa aktif admin untuk 6 bulan ke depan dan mencatat perubahan ke audit.
-            </>
-          ) : (
-            <>
-              Keputusan ini akan mengakhiri akses admin desa. Riwayat audit tetap tersimpan, tetapi status pengguna berubah menjadi berakhir.
-            </>
-          )}
+        <div className={`notice-card ${isApprove ? "notice-ok" : "notice-danger"} text-xs`}>
+          {isApprove
+            ? "Masa aktif akan diperpanjang 6 bulan."
+            : "Akses admin akan berakhir. Riwayat tetap tersimpan."}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {!isApprove && (
             <>
               <div>
-                <label className="field-label">Alasan penolakan</label>
+                <label className="field-label text-xs">Alasan</label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  rows={4}
-                  placeholder="Jelaskan apa yang belum sesuai dan apa yang perlu dilakukan pengguna."
-                  className="textarea-lux"
+                  rows={3}
+                  placeholder="Jelaskan kenapa ditolak."
+                  className="textarea-lux text-sm"
                   required
                 />
               </div>
 
-              <label className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)] text-sm cursor-pointer">
+              <label className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)] text-xs cursor-pointer">
                 <input
                   type="checkbox"
                   checked={suspicious}
                   onChange={(e) => setSuspicious(e.target.checked)}
-                  className="mt-1 accent-[#1E1B4B]"
+                  className="mt-0.5 accent-[#1E1B4B]"
                 />
                 <span className="text-slate-700 leading-relaxed">
-                  Tandai sebagai perlu perhatian khusus bila ada pola yang meragukan dan butuh pemeriksaan lanjutan.
+                  Perlu pemeriksaan lanjutan bila ada pola mencurigakan.
                 </span>
               </label>
             </>
           )}
 
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1 text-sm">
               Batal
             </button>
-            <button type="submit" disabled={loading} className={`btn-lux ${isApprove ? "btn-lux-success" : "btn-lux-danger"} flex-1`}>
-              {loading ? "Memproses..." : isApprove ? "Setujui perpanjangan" : "Akhiri akses"}
+            <button type="submit" disabled={loading} className={`btn-lux ${isApprove ? "btn-lux-success" : "btn-lux-danger"} flex-1 text-sm`}>
+              {loading ? "Memproses..." : isApprove ? "Setujui" : "Akhiri akses"}
             </button>
           </div>
         </form>
@@ -175,55 +162,49 @@ function RenewalCard({
   const copy = RENEWAL_COPY[item.renewalState];
   const name = item.user.nama ?? item.user.username ?? item.user.email;
 
+  const daysLabel = item.daysUntilRenewal === null
+    ? "—"
+    : item.daysUntilRenewal >= 0
+      ? `${item.daysUntilRenewal} hari`
+      : `Lewat ${Math.abs(item.daysUntilRenewal)} hari`;
+
   return (
-    <article className="lux-card t-spring lift hover:shadow-lux-hover p-5 sm:p-6 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <p className="font-semibold text-slate-900 text-[16px] tracking-tight leading-snug">{item.desa.nama}</p>
-          <p className="text-sm text-slate-500">{item.desa.kecamatan}, {item.desa.kabupaten}</p>
+    <article className="lux-card t-spring p-4 sm:p-5 space-y-3">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-900 text-[14px] sm:text-[15px] tracking-tight leading-snug">{item.desa.nama}</p>
+          <p className="text-[11px] sm:text-xs text-slate-500">{item.desa.kecamatan}, {item.desa.kabupaten}</p>
         </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold shrink-0 ${copy.pill}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${item.renewalState === "OVERDUE" || item.renewalState === "URGENT" ? "bg-rose-500" : "bg-amber-500"}`} aria-hidden />
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${copy.pill}`}>
           {copy.label}
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 text-sm">
-        <div className="metric-card">
-          <p className="metric-label">Admin desa</p>
-          <p className="mt-2 text-slate-900 font-medium">{name}</p>
-          <p className="metric-note">{item.user.email}</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Jatuh tempo</p>
-          <p className="mt-2 text-slate-900 font-medium">
-            {item.renewalDueAt
-              ? new Date(item.renewalDueAt).toLocaleDateString("id-ID", { dateStyle: "long" })
-              : "Belum ada jadwal"}
-          </p>
-          <p className="metric-note">
-            {item.daysUntilRenewal === null
-              ? "Tanggal belum tersedia"
-              : item.daysUntilRenewal >= 0
-                ? `${item.daysUntilRenewal} hari lagi`
-                : `Lewat ${Math.abs(item.daysUntilRenewal)} hari`}
-          </p>
-        </div>
+      {/* Compact info */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
+        <span>{name}</span>
+        <span className="text-slate-300">·</span>
+        <span>{daysLabel}</span>
+        {item.renewalDueAt && (
+          <>
+            <span className="text-slate-300">·</span>
+            <span>{new Date(item.renewalDueAt).toLocaleDateString("id-ID", { dateStyle: "short" })}</span>
+          </>
+        )}
       </div>
 
-      <div className="notice-card notice-info text-sm leading-relaxed">
-        <p className="font-semibold">Catatan review</p>
-        <p className="mt-2 opacity-90">{copy.note}</p>
-      </div>
-
-      <div className="surface-divider pt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onApprove(item)} className="btn-lux btn-lux-success !min-h-[40px] text-xs">
-          <CheckCircle2 size={13} aria-hidden /> Setujui
-        </button>
-        <button type="button" onClick={() => onReject(item)} className="btn-lux btn-lux-danger !min-h-[40px] text-xs">
-          <AlertTriangle size={13} aria-hidden /> Tolak
-        </button>
-      </div>
+      {/* Action */}
+      {(item.renewalState === "OVERDUE" || item.renewalState === "URGENT" || item.renewalState === "DUE_SOON") && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => onApprove(item)} className="btn-lux btn-lux-success text-xs">
+            <CheckCircle2 size={11} aria-hidden /> Setujui
+          </button>
+          <button type="button" onClick={() => onReject(item)} className="btn-lux btn-lux-danger text-xs">
+            <AlertTriangle size={11} aria-hidden /> Tolak
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -255,68 +236,66 @@ export default function InternalRenewalQueue({
   const refresh = () => router.refresh();
 
   return (
-    <div className="space-y-7">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">Perpanjangan admin desa</p>
-          <h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">
-            Masa aktif yang perlu diputuskan
+          <h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">
+            Masa aktif admin
           </h1>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
-            Pantau admin desa yang mendekati jatuh tempo, lalu putuskan apakah masa aktifnya diperpanjang atau diakhiri.
-          </p>
         </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.total} total</span>
+          {summary.soon > 0 && <span className="pill-warn rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.soon} perlu disiapkan</span>}
+          {summary.overdue > 0 && <span className="pill-danger rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.overdue} lewat batas</span>}
+        </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="pill-info rounded-full px-3 py-1 text-[11px] font-semibold">{summary.total} kasus</span>
-          {summary.soon > 0 && <span className="pill-warn rounded-full px-3 py-1 text-[11px] font-semibold">{summary.soon} perlu disiapkan</span>}
-          {summary.overdue > 0 && <span className="pill-danger rounded-full px-3 py-1 text-[11px] font-semibold">{summary.overdue} lewat batas</span>}
-        </div>
-      </header>
+      {/* Compact metric row */}
+      <div className="flex flex-wrap gap-2 text-[11px]">
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Total: </span>
+          <span className="font-semibold text-slate-900">{summary.total}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Perlu siap: </span>
+          <span className="font-semibold text-slate-900">{summary.soon}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Lewat batas: </span>
+          <span className="font-semibold text-slate-900">{summary.overdue}</span>
+        </span>
+      </div>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <div className="metric-card">
-          <p className="metric-label">Total review</p>
-          <p className="metric-value">{summary.total}</p>
-          <p className="metric-note">anggota terdeteksi</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Perlu disiapkan</p>
-          <p className="metric-value">{summary.soon}</p>
-          <p className="metric-note">jatuh tempo dekat</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Lewat batas</p>
-          <p className="metric-value">{summary.overdue}</p>
-          <p className="metric-note">butuh keputusan cepat</p>
-        </div>
-      </section>
-
-      <div className="flex flex-wrap gap-2">
+      {/* Filter tabs */}
+      <div className="flex flex-wrap gap-1.5">
         {FILTERS.map((filter) => (
           <a
             key={filter.value}
             href={buildUrl(filter.value)}
-            className={`btn-lux ${stateFilter === filter.value || (filter.value === "ALL" && !stateFilter) ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[40px] text-xs`}
+            className={`btn-lux ${stateFilter === filter.value || (filter.value === "ALL" && !stateFilter) ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] sm:!min-h-[40px] text-[11px] sm:text-xs`}
           >
             {filter.label}
           </a>
         ))}
       </div>
 
+      {/* Members grid */}
       {members.length === 0 ? (
-        <div className="lux-card p-10 text-center space-y-3">
-          <CalendarClock size={28} className="mx-auto text-slate-300" aria-hidden />
-          <p className="text-sm text-slate-500">Tidak ada perpanjangan yang perlu ditinjau pada filter ini.</p>
+        <div className="lux-card p-8 text-center space-y-2">
+          <CalendarClock size={24} className="mx-auto text-slate-300" aria-hidden />
+          <p className="text-sm text-slate-500">Tidak ada data pada filter ini.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {members.map((item) => (
             <RenewalCard key={item.id} item={item} onApprove={setApproveTarget} onReject={setRejectTarget} />
           ))}
         </div>
       )}
 
+      {/* Modals */}
       {approveTarget && (
         <DecisionModal
           target={approveTarget}

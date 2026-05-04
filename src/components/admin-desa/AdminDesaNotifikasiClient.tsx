@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
-  Bell,
   BellOff,
   CheckCheck,
   CheckCircle2,
@@ -44,13 +43,11 @@ export default function AdminDesaNotifikasiClient({
   const [isPending, startTransition] = useTransition();
   const { toasts, toast, removeToast } = useToast();
 
-  const summary = useMemo(() => {
-    return {
-      total: notifications.length,
-      unread,
-      read: notifications.length - unread,
-    };
-  }, [notifications.length, unread]);
+  const summary = useMemo(() => ({
+    total: notifications.length,
+    unread,
+    read: notifications.length - unread,
+  }), [notifications.length, unread]);
 
   async function markAllRead() {
     try {
@@ -60,15 +57,12 @@ export default function AdminDesaNotifikasiClient({
         body: JSON.stringify({}),
       });
       const data = await res.json();
-      if (!res.ok) {
-        toast(data.error ?? "Gagal menandai semua sebagai dibaca.", "error");
-        return;
-      }
+      if (!res.ok) { toast(data.error ?? "Gagal.", "error"); return; }
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
         setUnread(0);
       });
-      toast("Semua notifikasi berhasil ditandai sebagai dibaca.", "success");
+      toast("Semua notifikasi ditandai dibaca.", "success");
     } catch {
       toast("Koneksi bermasalah.", "error");
     }
@@ -82,119 +76,80 @@ export default function AdminDesaNotifikasiClient({
         body: JSON.stringify({ ids: [id] }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        toast(data.error ?? "Gagal menandai notifikasi.", "error");
-        return;
-      }
+      if (!res.ok) { toast(data.error ?? "Gagal.", "error"); return; }
       startTransition(() => {
-        setNotifications((prev) => prev.map((n) => (
-          n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
-        )));
+        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
         setUnread((c) => Math.max(0, c - 1));
       });
-      toast("Notifikasi ditandai sebagai dibaca.", "success");
+      toast("Notifikasi ditandai dibaca.", "success");
     } catch {
       toast("Koneksi bermasalah.", "error");
     }
   }
 
   return (
-    <div className="space-y-6" data-testid="notification-tab">
-      <section className="grid gap-3 sm:grid-cols-3">
-        <div className="metric-card">
-          <p className="metric-label">Total notifikasi</p>
-          <p className="metric-value">{summary.total}</p>
-          <p className="metric-note">aktivitas tercatat</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Belum dibaca</p>
-          <p className="metric-value">{summary.unread}</p>
-          <p className="metric-note">butuh perhatian</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Sudah dibaca</p>
-          <p className="metric-value">{summary.read}</p>
-          <p className="metric-note">riwayat tertata</p>
-        </div>
-      </section>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="notice-card notice-info text-sm flex items-start gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 shrink-0">
-            <Bell size={16} aria-hidden />
-          </span>
-          <div>
-            <p className="font-semibold">{unread > 0 ? `${unread} notifikasi belum dibaca` : "Semua notifikasi sudah dibaca"}</p>
-            <p className="mt-1 opacity-90">Jaga inbox admin tetap bersih agar approval dan pengingat penting tidak tertinggal.</p>
-          </div>
-        </div>
-
+    <div className="space-y-4" data-testid="notification-tab">
+      {/* Compact summary + action */}
+      <div className="flex flex-wrap gap-2 text-[11px]">
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Total: </span>
+          <span className="font-semibold text-slate-900">{summary.total}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Belum baca: </span>
+          <span className="font-semibold text-slate-900">{summary.unread}</span>
+        </span>
         {unread > 0 && (
-          <button
-            onClick={markAllRead}
-            disabled={isPending}
-            className="btn-lux btn-lux-secondary w-full sm:w-auto"
-          >
-            <CheckCheck size={14} aria-hidden /> Tandai semua dibaca
+          <button onClick={markAllRead} disabled={isPending} className="btn-lux btn-lux-secondary text-[11px]">
+            <CheckCheck size={12} aria-hidden /> Tandai semua baca
           </button>
         )}
       </div>
 
+      {/* Notifications list */}
       {notifications.length === 0 ? (
-        <div className="lux-card p-12 text-center space-y-3">
-          <BellOff size={28} className="mx-auto text-slate-300" aria-hidden />
+        <div className="lux-card p-8 text-center space-y-2">
+          <BellOff size={22} className="mx-auto text-slate-300" aria-hidden />
           <p className="text-sm text-slate-500">Belum ada notifikasi.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {notifications.map((n) => {
             const meta = iconMeta(n.type);
             const Icon = meta.icon;
-
             return (
               <li
                 key={n.id}
-                className={`t-spring rounded-[1.45rem] px-5 py-4 space-y-3 ${
+                className={`t-spring rounded-xl px-4 py-3 flex items-start gap-3 ${
                   n.isRead
-                    ? "bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06),0_14px_28px_-24px_rgba(15,23,42,0.18)]"
-                    : "lux-panel shadow-[inset_0_0_0_1px_rgba(79,70,229,0.12),0_20px_34px_-26px_rgba(30,27,75,0.28)]"
+                    ? "bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05),0_8px_16px_-12px_rgba(15,23,42,0.1)]"
+                    : "lux-panel"
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl shrink-0 ${meta.tone}`}>
-                      <Icon size={18} aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className={`text-sm font-semibold leading-snug ${n.isRead ? "text-slate-800" : "text-indigo-950"}`}>
-                          {n.title}
-                        </p>
-                        {!n.isRead && <span className="pill-info rounded-full px-2.5 py-1 text-[10px] font-semibold">Baru</span>}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(n.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${meta.tone}`}>
+                  <Icon size={14} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`text-[13px] font-semibold leading-snug ${n.isRead ? "text-slate-800" : "text-indigo-950"}`}>
+                      {n.title}
+                    </p>
+                    {!n.isRead && <span className="pill-info rounded-full px-2 py-0.5 text-[10px] font-semibold">Baru</span>}
                   </div>
-
-                  {!n.isRead && (
-                    <button
-                      onClick={() => markOneRead(n.id)}
-                      disabled={isPending}
-                      className="btn-lux btn-lux-ghost !min-h-[38px] text-[11px] shrink-0"
-                      aria-label="Tandai dibaca"
-                    >
-                      Baca
-                    </button>
-                  )}
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {new Date(n.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <p className="text-[12px] text-slate-600 mt-1">{n.body}</p>
                 </div>
-
-                <p className="text-sm text-slate-600 leading-relaxed pl-[52px]">{n.body}</p>
+                {!n.isRead && (
+                  <button
+                    onClick={() => markOneRead(n.id)}
+                    disabled={isPending}
+                    className="btn-lux btn-lux-ghost text-[11px] shrink-0"
+                  >
+                    Baca
+                  </button>
+                )}
               </li>
             );
           })}

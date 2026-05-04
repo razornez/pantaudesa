@@ -319,52 +319,47 @@ export default function AdminDesaListAdminClient({
   }
 
   return (
-    <div className="space-y-7">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
           <p className="eyebrow text-[10px]">Kelola anggota</p>
-          <h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">
+          <h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">
             Tim Admin Desa
           </h1>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
-            Kelola akses admin aktif, pantau undangan yang masih menunggu, dan jaga struktur tim tetap rapi untuk {desaName}.
-          </p>
         </div>
-
         {canManage && (
           <button
             type="button"
             onClick={() => setShowInvite(true)}
             disabled={inviteLimitReached}
-            className="btn-lux btn-lux-primary w-full sm:w-auto"
+            className="btn-lux btn-lux-primary w-full sm:w-auto text-sm"
           >
-            <UserPlus size={16} aria-hidden /> Undang Admin
+            <UserPlus size={14} aria-hidden /> Undang Admin
           </button>
         )}
-      </header>
+      </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="metric-card">
-          <p className="metric-label">Admin aktif</p>
-          <p className="metric-value">{totalActive}</p>
-          <p className="metric-note">dari batas {maxAdmins} admin</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Verified</p>
-          <p className="metric-value">{roster.verifiedCount}</p>
-          <p className="metric-note">punya kewenangan penuh</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Limited</p>
-          <p className="metric-value">{roster.limitedCount}</p>
-          <p className="metric-note">butuh approval lebih lanjut</p>
-        </div>
-        <div className="metric-card">
-          <p className="metric-label">Undangan</p>
-          <p className="metric-value">{roster.pendingInvites.length}</p>
-          <p className="metric-note">masih menunggu respons</p>
-        </div>
-      </section>
+      {/* Compact summary */}
+      <div className="flex flex-wrap gap-2 text-[11px]">
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Admin aktif: </span>
+          <span className="font-semibold text-slate-900">{totalActive}/{maxAdmins}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Verified: </span>
+          <span className="font-semibold text-slate-900">{roster.verifiedCount}</span>
+        </span>
+        <span className="lux-card px-3 py-1.5">
+          <span className="text-slate-500">Terbatas: </span>
+          <span className="font-semibold text-slate-900">{roster.limitedCount}</span>
+        </span>
+        {roster.pendingInvites.length > 0 && (
+          <span className="lux-card px-3 py-1.5">
+            <span className="text-slate-500">Undangan: </span>
+            <span className="font-semibold text-slate-900">{roster.pendingInvites.length}</span>
+          </span>
+        )}
+      </div>
 
       {!canManage && (
         <div className="notice-card notice-info text-sm leading-relaxed">
