@@ -83,6 +83,15 @@ export const BACK_OFFICE_COPY = {
     notifications: { summary: { total: "Total", unread: "Belum baca" }, actions: { markAllRead: "Tandai semua baca", markOneRead: "Baca" }, messages: { markAllReadSuccess: "Semua notifikasi ditandai dibaca.", markAllReadFailed: "Gagal.", markOneReadSuccess: "Notifikasi ditandai dibaca.", markOneReadFailed: "Gagal." }, empty: "Belum ada notifikasi.", newBadge: "Baru" },
     suara: {
       category: { infrastruktur: "Infrastruktur", bansos: "Bansos", fasilitas: "Fasilitas", anggaran: "Anggaran", lingkungan: "Lingkungan", lainnya: "Lainnya" }, status: { OPEN: "Terbuka", IN_PROGRESS: "Sedang ditangani", RESOLVED: "Selesai" }, headingEyebrow: "Suara warga", headingTitle: "Masukan warga untuk desa ini", headingBody: (desaName: string) => `Ringkasan suara warga di ${desaName}. Gunakan halaman ini untuk memahami masukan tanpa mengubah ruang diskusi publik.`, openPublicPage: "Buka suara publik", summary: { total: "Total suara", open: "Terbuka", replies: "Balasan", helpful: "Helpful", publicInput: "masukan publik", unresolved: "belum selesai", discussions: "diskusi tercatat", citizenResponse: "respon warga" }, noticeTitle: "Mode baca", noticeBody: "Tab ini hanya untuk membaca dinamika warga. Balasan dan interaksi tetap dilakukan di halaman publik agar transparan.", empty: "Belum ada suara warga untuk desa ini.", authorAnonymous: "Anonim", labels: { replies: "balasan", helpful: "helpful", vote: "vote", publicArchive: "Arsip publik" },
+      statusAction: {
+        label: "Tandai status",
+        ariaLabel: (title: string) => `Tandai status untuk: ${title}`,
+        updating: "Menyimpan...",
+        success: "Status berhasil diperbarui.",
+        failed: "Gagal memperbarui status.",
+        consequence: "Status ini membantu warga melihat bahwa masukan sudah ditangani.",
+        options: { OPEN: "Terbuka", IN_PROGRESS: "Sedang ditangani", RESOLVED: "Selesai" },
+      },
     },
   },
   internalAdmin: { common: {} },
@@ -101,6 +110,32 @@ export const BACK_OFFICE_COPY = {
         none: "Belum ada pengajuan aktif.",
       },
       inviteDisabledReason: "Undangan admin hanya bisa dikirim oleh admin utama desa.",
+    },
+    profileAdminCard: {
+      eyebrow: "Akses Admin Desa",
+      heading: "Kelola sumber dan dokumen desa lewat akses resmi.",
+      subheading: "Jika kamu perwakilan desa, ajukan akses untuk mengelola informasi sumber dan dokumen desa.",
+      cta: {
+        verified: "Masuk ke Admin Desa",
+        limited: "Masuk ke Admin Desa",
+        pending: "Lihat Status Pengajuan",
+        rejected: "Ajukan Ulang",
+        suspended: "Ajukan Ulang",
+        none: "Klaim sebagai Admin Desa",
+      },
+      ctaHref: {
+        verified: "/profil/admin-desa",
+        limited: "/profil/admin-desa",
+        pending: "/profil/klaim-admin-desa",
+        rejected: "/profil/klaim-admin-desa",
+        suspended: "/profil/klaim-admin-desa",
+        none: "/profil/klaim-admin-desa",
+      },
+      contactAdmin: "Hubungi Admin",
+      roleNote: {
+        desa: "Role aplikasi DESA tetap perlu klaim resmi sebelum akses admin desa dibuka.",
+        other: "Akses admin hanya dibuka lewat kanal resmi desa atau bantuan admin PantauDesa.",
+      },
     },
   },
 } as const;

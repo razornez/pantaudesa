@@ -49,16 +49,34 @@ export async function POST(req: Request, { params }: Params) {
       return NextResponse.json({ error: "Komentar terlalu panjang (maksimal 300 karakter)" }, { status: 400 });
     }
 
-    const voice = await db.voice.findUnique({ where: { id }, select: { id: true } });
+    // B6: fetch voice's desaId to check if replier is an admin for that desa
+    const voice = await db.voice.findUnique({ where: { id }, select: { id: true, desaId: true } });
     if (!voice) {
       return NextResponse.json({ error: "Suara warga tidak ditemukan" }, { status: 404 });
+    }
+
+    // B6: auto-set isOfficialDesa if the logged-in user is a VERIFIED or LIMITED admin for this desa
+    let isOfficialDesa = false;
+    if (session?.user?.id) {
+      const adminMember = await db.desaAdminMember.findFirst({
+        where: {
+          userId: session.user.id,
+          desaId: voice.desaId,
+          status: { in: ["VERIFIED", "LIMITED"] },
+        },
+        select: { id: true },
+      });
+      if (adminMember) {
+        isOfficialDesa = true;
+      }
     }
 
     const reply = await db.voiceReply.create({
       data: {
         voiceId: id,
         text,
-        isAnon,
+        isAnon: isOfficialDesa ? false : isAnon,
+        isOfficialDesa,
         authorId: session?.user?.id ?? null,
       },
       include: { author: { select: { nama: true } } },

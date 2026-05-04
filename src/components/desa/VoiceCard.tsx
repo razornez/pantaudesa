@@ -12,6 +12,7 @@ import {
   getAvatarBg, getInitial, relativeTime,
 } from "@/lib/citizen-voice";
 import { submitReply } from "@/lib/voices-api";
+import { useAuth } from "@/lib/auth-context";
 
 // ─── Reply bubble ─────────────────────────────────────────────────────────────
 
@@ -128,6 +129,7 @@ interface Props {
 
 export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedType }: Props) {
   const cfg = VOICE_CATEGORIES[voice.category];
+  const { user } = useAuth();
 
   const [showReplies,   setShowReplies]   = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -137,6 +139,7 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
   const [replyError,    setReplyError]    = useState("");
 
   const officialReply = localReplies.find(r => r.isOfficialDesa);
+  const isHelpful = helpedIds.has(voice.id);
 
   const handleBenar  = () => onVote?.(voice.id, "BENAR");
   const handleBohong = () => onVote?.(voice.id, "BOHONG");
@@ -148,7 +151,8 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
     setReplySaving(true);
     setReplyError("");
     try {
-      const savedReply = await submitReply(voice.id, { text, isAnon: true });
+      // B3 fix: use user's login state to determine isAnon — logged-in users are not anonymous
+      const savedReply = await submitReply(voice.id, { text, isAnon: !user });
       setLocalReplies(prev => [...prev, savedReply]);
       setReplyText("");
       setShowReplyForm(false);
@@ -204,22 +208,22 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
             </button>
           )}
 
-          {/* Action bar */}
-          <div className="flex flex-wrap items-center gap-2 mt-1">
+          {/* Action bar — B8: compact for mobile, min-h-[36px], smaller padding */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
 
-            {/* Helpful */}
+            {/* Helpful — B7: display voice.helpful directly (server count), no extra +1 */}
             <button
               onClick={() => onHelpful(voice.id)}
-              disabled={helpedIds.has(voice.id)}
-              aria-label={`Tandai berguna, ${voice.helpful + (helpedIds.has(voice.id) ? 1 : 0)} sudah menandai`}
-              className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
-                helpedIds.has(voice.id)
+              disabled={isHelpful}
+              aria-label={`Tandai berguna, ${voice.helpful} sudah menandai`}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border transition-all min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
+                isHelpful
                   ? "bg-indigo-50 border-indigo-200 text-indigo-600 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50"
               }`}
             >
-              <ThumbsUp size={11} aria-hidden />
-              {voice.helpful + (helpedIds.has(voice.id) ? 1 : 0)} berguna
+              <ThumbsUp size={12} aria-hidden />
+              <span>{voice.helpful} berguna</span>
             </button>
 
             {/* Vote benar */}
@@ -227,13 +231,13 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
               onClick={handleBenar}
               disabled={!!votedType}
               aria-label={`Tandai cerita ini benar, ${voice.votes.benar} suara`}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border transition-all min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
                 votedType === "BENAR"
                   ? "bg-emerald-50 border-emerald-300 text-emerald-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
               }`}
             >
-              ✅ Benar <span className="font-semibold">{voice.votes.benar}</span>
+              ✅ <span className="font-semibold">{voice.votes.benar}</span>
             </button>
 
             {/* Vote bohong */}
@@ -241,13 +245,13 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
               onClick={handleBohong}
               disabled={!!votedType}
               aria-label={`Tandai cerita ini tidak akurat, ${voice.votes.bohong} suara`}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 ${
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border transition-all min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 ${
                 votedType === "BOHONG"
                   ? "bg-rose-50 border-rose-300 text-rose-700 cursor-default"
                   : "bg-white border-slate-200 text-slate-500 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed"
               }`}
             >
-              ❌ Bohong <span className="font-semibold">{voice.votes.bohong}</span>
+              ❌ <span className="font-semibold">{voice.votes.bohong}</span>
             </button>
 
             {/* Replies toggle */}
@@ -255,10 +259,10 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
               onClick={() => setShowReplies(v => !v)}
               aria-label={showReplies ? "Sembunyikan komentar" : `Lihat ${localReplies.length > 0 ? localReplies.length + " " : ""}komentar`}
               aria-expanded={showReplies}
-              className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-all ml-auto min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-all ml-auto min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
             >
-              <MessageCircle size={11} />
-              {localReplies.length > 0 ? `${localReplies.length} komentar` : "Komentar"}
+              <MessageCircle size={12} />
+              {localReplies.length > 0 ? `${localReplies.length}` : ""}
               {showReplies ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
           </div>
@@ -287,7 +291,9 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
                   />
                   <p className="text-[10px] leading-relaxed text-slate-400">
-                    Komentar tersimpan ke sistem dan ditampilkan sebagai anonim jika kamu belum masuk.
+                    {user
+                      ? `Komentar akan tampil dengan nama ${user.nama ?? user.username}.`
+                      : "Komentar ditampilkan sebagai anonim jika kamu belum masuk."}
                   </p>
                   {replyError && (
                     <p className="text-[10px] font-semibold text-rose-600">{replyError}</p>

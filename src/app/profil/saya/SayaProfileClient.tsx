@@ -89,6 +89,41 @@ function VoiceRow({ voice }: { voice: ReturnType<typeof getVoicesByAuthor>[numbe
   );
 }
 
+// ─── Client-side image compression ───────────────────────────────────────────
+
+function compressImage(file: File, maxPx: number, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) {
+          height = Math.round((height / width) * maxPx);
+          width = maxPx;
+        } else {
+          width = Math.round((width / height) * maxPx);
+          height = maxPx;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("canvas")); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("compress failed")),
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
+    img.src = url;
+  });
+}
+
 // ─── Avatar editor ────────────────────────────────────────────────────────────
 
 function AvatarEditor({ nama, current, onUploaded, onError }: {
@@ -118,8 +153,14 @@ function AvatarEditor({ nama, current, onUploaded, onError }: {
     setLoading(true);
 
     try {
+      // C11: client-side compression for large images (>500KB) to reduce upload size
+      let uploadFile: File | Blob = file;
+      if (file.size > 500 * 1024 && file.type !== "image/gif") {
+        uploadFile = await compressImage(file, 1280, 0.8);
+      }
+
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", uploadFile, file.name);
       const res  = await fetch("/api/users/avatar", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) {

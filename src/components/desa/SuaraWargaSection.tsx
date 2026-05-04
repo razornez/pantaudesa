@@ -6,6 +6,7 @@ import {
   VOICE_CATEGORIES, VoiceCategory, CitizenVoice,
 } from "@/lib/citizen-voice";
 import { fetchVoices, submitVoice, submitVote, submitHelpful } from "@/lib/voices-api";
+import { useAuth } from "@/lib/auth-context";
 import VoiceCard from "./VoiceCard";
 
 interface Props {
@@ -75,6 +76,7 @@ function PhotoPreview({ urls, onRemove }: { urls: string[]; onRemove: (i: number
 // ─── Komponen utama ───────────────────────────────────────────────────────────
 
 export default function SuaraWargaSection({ desaId, desaNama }: Props) {
+  const { user } = useAuth();
   const [voices,    setVoices]    = useState<CitizenVoice[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [submitErr, setSubmitErr] = useState("");
@@ -138,11 +140,12 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
     setSubmitErr("");
     setSaving(true);
     try {
+      // B2 fix: if logged in, use session identity — name field is hidden for logged-in users
       const newVoice = await submitVoice({
         desaId,
         category,
         text: text.trim(),
-        isAnon: isAnon || !name.trim(),
+        isAnon: user ? isAnon : (isAnon || !name.trim()),
       });
       setVoices(prev => [newVoice, ...prev]);
       setSubmitted(true);
@@ -316,16 +319,23 @@ export default function SuaraWargaSection({ desaId, desaNama }: Props) {
               )}
             </div>
 
-            {/* Name + anon */}
+            {/* Name + anon — B2: hide name input for logged-in users */}
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                disabled={isAnon}
-                placeholder="Namamu (kosongkan kalau mau anonim)"
-                className="flex-1 px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
-              />
+              {user ? (
+                <p className="flex-1 text-xs text-slate-500">
+                  Cerita akan tampil atas nama{" "}
+                  <span className="font-semibold text-slate-700">{isAnon ? "Anonim" : (user.nama ?? user.username)}</span>.
+                </p>
+              ) : (
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  disabled={isAnon}
+                  placeholder="Namamu (kosongkan kalau mau anonim)"
+                  className="flex-1 px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
+                />
+              )}
               <label className="flex items-center gap-2 cursor-pointer flex-shrink-0 select-none">
                 <div
                   onClick={() => setIsAnon(v => !v)}

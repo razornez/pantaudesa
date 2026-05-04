@@ -9,7 +9,28 @@ import {
   getCurrentStatusTone,
 } from "@/components/profil/admin-claim/adminClaimCopy";
 import { useAdminClaimProfile } from "@/components/profil/admin-claim/useAdminClaimProfile";
+import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 import type { AuthUser } from "@/lib/auth-context";
+
+const COPY = BACK_OFFICE_COPY.user.profileAdminCard;
+
+type ClaimStatus = "none" | "pending" | "limited" | "verified" | "rejected" | "suspended" | "platform";
+
+function getCtaLabel(status: ClaimStatus | undefined): string {
+  if (!status || status === "none" || status === "platform") return COPY.cta.none;
+  if (status === "verified") return COPY.cta.verified;
+  if (status === "limited") return COPY.cta.limited;
+  if (status === "pending") return COPY.cta.pending;
+  return COPY.cta.rejected;
+}
+
+function getCtaHref(status: ClaimStatus | undefined): string {
+  if (!status || status === "none" || status === "platform") return COPY.ctaHref.none;
+  if (status === "verified") return COPY.ctaHref.verified;
+  if (status === "limited") return COPY.ctaHref.limited;
+  if (status === "pending") return COPY.ctaHref.pending;
+  return COPY.ctaHref.rejected;
+}
 
 export default function ProfileAdminAccessEntryCard({
   user,
@@ -20,23 +41,27 @@ export default function ProfileAdminAccessEntryCard({
   const currentState = data?.currentState;
   const currentTone = currentState ? getCurrentStatusTone(currentState.status) : null;
 
+  const ctaStatus = currentState?.status as ClaimStatus | undefined;
+  const ctaLabel = getCtaLabel(ctaStatus);
+  const ctaHref = getCtaHref(ctaStatus);
+
   return (
     <section className="rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-violet-50/30 to-sky-50 p-4 shadow-sm sm:p-5">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold text-violet-700">
             <ShieldCheck size={13} />
-            Akses Admin Desa
+            {COPY.eyebrow}
           </div>
           <DataStatusBadge status={getCurrentDataStatus(data)} size="xs" />
         </div>
 
         <div className="max-w-xl">
           <h2 className="text-[22px] font-black leading-tight tracking-tight text-slate-950 sm:text-2xl">
-            Kelola sumber dan dokumen desa lewat akses resmi.
+            {COPY.heading}
           </h2>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-600 sm:text-sm">
-            Jika kamu perwakilan desa, ajukan akses untuk mengelola informasi sumber dan dokumen desa.
+            {COPY.subheading}
           </p>
         </div>
       </div>
@@ -80,12 +105,13 @@ export default function ProfileAdminAccessEntryCard({
         ) : null}
       </div>
 
+      {/* B10: CTA label and href adapt to current admin status */}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Link
-          href="/profil/klaim-admin-desa"
+          href={ctaHref}
           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
         >
-          Klaim sebagai Admin Desa
+          {ctaLabel}
           <ArrowRight size={14} />
         </Link>
         <Link
@@ -93,14 +119,12 @@ export default function ProfileAdminAccessEntryCard({
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
         >
           <LifeBuoy size={14} />
-          Hubungi Admin
+          {COPY.contactAdmin}
         </Link>
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-        {user.role === "DESA"
-          ? "Role aplikasi DESA tetap perlu klaim resmi sebelum akses admin desa dibuka."
-          : "Akses admin hanya dibuka lewat kanal resmi desa atau bantuan admin PantauDesa."}
+        {user.role === "DESA" ? COPY.roleNote.desa : COPY.roleNote.other}
       </p>
     </section>
   );

@@ -83,6 +83,7 @@ model Voice {
   text       String        @db.Text
   isAnon     Boolean       @default(false)
   status     VoiceStatus   @default(OPEN)
+  photos     String[]
   resolvedAt DateTime?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt

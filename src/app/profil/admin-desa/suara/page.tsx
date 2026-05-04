@@ -4,17 +4,13 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+import AdminDesaSuaraStatusAction from "@/components/admin-desa/AdminDesaSuaraStatusAction";
 import { ExternalLink, MessageSquare, MessagesSquare, ThumbsDown, ThumbsUp } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.suara;
 
-const STATUS_STYLE: Record<string, string> = {
-  OPEN: "pill-info",
-  IN_PROGRESS: "pill-warn",
-  RESOLVED: "pill-ok",
-};
 
 export default async function AdminDesaSuaraPage() {
   const session = await auth();
@@ -103,9 +99,6 @@ export default async function AdminDesaSuaraPage() {
       ) : (
         <ul className="space-y-3">
           {voices.map((v) => {
-            const statusKey = v.status as keyof typeof COPY.status;
-            const statusLabel = COPY.status[statusKey] ?? COPY.status.OPEN;
-            const statusCls = STATUS_STYLE[v.status] ?? STATUS_STYLE.OPEN;
             const author = v.isAnon ? COPY.authorAnonymous : (v.author?.nama ?? v.author?.username ?? COPY.authorAnonymous);
 
             return (
@@ -116,9 +109,11 @@ export default async function AdminDesaSuaraPage() {
                       <span className="pill-info rounded-full px-2.5 py-1 text-[11px] font-semibold">
                         {COPY.category[v.category as keyof typeof COPY.category] ?? v.category}
                       </span>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusCls}`}>
-                        {statusLabel}
-                      </span>
+                      {/* B4: Admin can click to change status */}
+                      <AdminDesaSuaraStatusAction
+                        voiceId={v.id}
+                        currentStatus={v.status as "OPEN" | "IN_PROGRESS" | "RESOLVED"}
+                      />
                     </div>
                     <div className="text-xs text-slate-500">
                       {author} · {new Date(v.createdAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}

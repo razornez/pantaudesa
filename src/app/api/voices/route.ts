@@ -9,7 +9,7 @@ const VALID_CATEGORIES = ["infrastruktur", "bansos", "fasilitas", "anggaran", "l
 function shapeVoice(v: {
   id: string; desaId: string; category: string; text: string;
   isAnon: boolean; authorId: string | null; createdAt: Date; resolvedAt: Date | null;
-  status: string;
+  status: string; photos: string[];
   author: { nama: string | null } | null;
   votes: { type: string }[];
   helpfuls: { userId: string }[];
@@ -31,7 +31,7 @@ function shapeVoice(v: {
     isAnon:    v.isAnon,
     createdAt: v.createdAt,
     helpful:   v.helpfuls.length,
-    photos:    [] as string[],
+    photos:    v.photos,
     votes: {
       benar:  v.votes.filter(vote => vote.type === "BENAR").length,
       bohong: v.votes.filter(vote => vote.type === "BOHONG").length,
