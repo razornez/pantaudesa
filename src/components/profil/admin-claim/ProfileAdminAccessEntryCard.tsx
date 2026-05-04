@@ -21,35 +21,40 @@ export default function ProfileAdminAccessEntryCard({
   const currentTone = currentState ? getCurrentStatusTone(currentState.status) : null;
 
   return (
-    <section className="rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-violet-50/30 to-sky-50 p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <section className="rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-violet-50/30 to-sky-50 p-4 shadow-sm sm:p-5">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold text-violet-700">
             <ShieldCheck size={13} />
             Akses Admin Desa
           </div>
-          <h2 className="mt-3 text-base font-black text-slate-950">Kelola sumber dan dokumen desa lewat akses resmi.</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+          <DataStatusBadge status={getCurrentDataStatus(data)} size="xs" />
+        </div>
+
+        <div className="max-w-xl">
+          <h2 className="text-[22px] font-black leading-tight tracking-tight text-slate-950 sm:text-2xl">
+            Kelola sumber dan dokumen desa lewat akses resmi.
+          </h2>
+          <p className="mt-2 text-[15px] leading-relaxed text-slate-600 sm:text-sm">
             Jika kamu perwakilan desa, ajukan akses untuk mengelola informasi sumber dan dokumen desa.
           </p>
         </div>
-        <DataStatusBadge status={getCurrentDataStatus(data)} size="xs" />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-white/70 bg-white/80 p-4">
+      <div className="mt-4 rounded-2xl border border-white/70 bg-white/80 p-4 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status saat ini</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status saat ini</p>
             {loading ? (
               <p className="mt-2 text-sm text-slate-500">Memuat status akses admin...</p>
             ) : loadError || !currentState ? (
               <p className="mt-2 text-sm text-slate-500">
-                Status belum bisa dimuat sekarang. Kamu tetap bisa lanjut ke alur klaim atau hubungi kami.
+                Status belum bisa dimuat sekarang. Kamu tetap bisa lanjut klaim atau hubungi admin.
               </p>
             ) : (
               <>
-                <p className="mt-2 text-sm font-black text-slate-900">{currentTone?.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500">{currentTone?.note}</p>
+                <p className="mt-2 text-[18px] font-black leading-tight text-slate-900 sm:text-lg">{currentTone?.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500 sm:text-xs">{currentTone?.note}</p>
               </>
             )}
           </div>
