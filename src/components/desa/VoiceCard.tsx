@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   CitizenVoice, VoiceReply,
-  VOICE_CATEGORIES, STATUS_CONFIG,
+  VOICE_CATEGORIES, STATUS_CONFIG, TRUST_TIER_CONFIG,
   getAvatarBg, getInitial, relativeTime,
 } from "@/lib/citizen-voice";
 import { submitReply } from "@/lib/voices-api";
@@ -176,8 +176,26 @@ export default function VoiceCard({ voice, onHelpful, helpedIds, onVote, votedTy
         <div className="flex-1 min-w-0">
 
           {/* Header */}
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
             <span className="text-sm font-semibold text-slate-800">{voice.author}</span>
+
+            {/* Admin Desa badge — shown when author is active admin for this desa */}
+            {voice.authorIsAdminDesa && !voice.isAnon && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <Shield size={8} aria-hidden /> Admin Desa
+              </span>
+            )}
+
+            {/* Warga trust tier badge */}
+            {voice.authorTrustTier && !voice.isAnon && (() => {
+              const tier = TRUST_TIER_CONFIG[voice.authorTrustTier];
+              return (
+                <span className={`inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${tier.color}`}>
+                  {tier.emoji} {tier.label}
+                </span>
+              );
+            })()}
+
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>
               {cfg.emoji} {cfg.label}
             </span>

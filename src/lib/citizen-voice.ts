@@ -38,7 +38,12 @@ export interface CitizenVoice {
   category:        VoiceCategory;
   text:            string;
   author:          string;
+  authorId?:       string | null;
   isAnon:          boolean;
+  /** true = author adalah Admin Desa aktif (VERIFIED/LIMITED) untuk desa ini */
+  authorIsAdminDesa?: boolean;
+  /** Trust tier (1–5) berdasarkan aktivitas warga di semua desa */
+  authorTrustTier?: 1 | 2 | 3 | 4 | 5;
   createdAt:       Date;
   helpful:         number;
   /** URL foto bukti. Dalam produksi: URL dari storage (S3, dll.) */
@@ -58,6 +63,15 @@ export const VOICE_CATEGORIES: Record<VoiceCategory, { label: string; emoji: str
   anggaran:      { label: "Anggaran",        emoji: "📋",  color: "bg-indigo-100 text-indigo-700 border-indigo-200"    },
   lingkungan:    { label: "Lingkungan",      emoji: "🌿",  color: "bg-teal-100 text-teal-700 border-teal-200"          },
   lainnya:       { label: "Lainnya",         emoji: "💬",  color: "bg-slate-100 text-slate-700 border-slate-200"       },
+};
+
+/** Trust tier display config — mirrors user-profile.ts USER_BADGES but usable in VoiceCard without importing mock-data deps */
+export const TRUST_TIER_CONFIG: Record<1 | 2 | 3 | 4 | 5, { emoji: string; label: string; color: string }> = {
+  1: { emoji: "🌱", label: "Warga Peduli",           color: "bg-slate-100 text-slate-600"    },
+  2: { emoji: "🔎", label: "Pemantau Desa",          color: "bg-sky-100 text-sky-700"        },
+  3: { emoji: "🤝", label: "Kontributor Warga",      color: "bg-amber-100 text-amber-700"    },
+  4: { emoji: "🛡️", label: "Penjaga Transparansi",   color: "bg-indigo-100 text-indigo-700"  },
+  5: { emoji: "🏅", label: "Penggerak Desa Terbuka", color: "bg-violet-100 text-violet-700"  },
 };
 
 export const STATUS_CONFIG: Record<VoiceStatus, { label: string; short: string; bg: string; text: string; border: string }> = {
