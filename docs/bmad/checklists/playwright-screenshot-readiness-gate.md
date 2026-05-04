@@ -28,9 +28,12 @@ A screenshot must not be counted as valid QA evidence if it shows:
 - wrong role state,
 - missing role-specific content,
 - blank page,
-- error fallback without being explicitly marked as an error-state screenshot.
+- error fallback without being explicitly marked as an error-state screenshot,
+- mobile layout that is visually broken, cramped, overlapping, clipped, or difficult to use.
 
-If any of these appear, the screenshot must be marked as `FAILED_READINESS` or `SKIPPED`, not `PASS`.
+If any of these appear, the screenshot must be marked as `FAILED_READINESS`, `FAILED_LAYOUT`, or `SKIPPED`, not `PASS`.
+
+If visual QA finds a layout issue that is clearly fixable within the task scope, the developer must fix it before handoff instead of only documenting it as a note.
 
 ---
 
@@ -53,6 +56,7 @@ Recommended helper functions:
 - `waitForNoLoadingState(page)`
 - `waitForRouteReady(page, expectedUrlPattern)`
 - `waitForRoleContent(page, roleOrPage)`
+- `assertLayoutUsable(page, viewportName)`
 - `safeScreenshot(page, screenshotPath, options)`
 
 ## A1 — `assertAuthenticated(page)`
@@ -199,6 +203,33 @@ Must verify:
 - source indicator visible only when expected,
 - source indicator absent when no published source exists.
 
+## A5 — `assertLayoutUsable(page, viewportName)`
+
+Must verify the layout is not only loaded, but also usable.
+
+At minimum, check:
+
+- no horizontal overflow on the page/body,
+- no important button or tab is clipped off-screen,
+- no card/header/action row overlaps another element,
+- critical CTAs remain tappable on mobile,
+- tab navigation can scroll horizontally when needed,
+- forms have enough spacing between fields,
+- long Indonesian copy wraps cleanly,
+- modals/popovers fit inside the viewport,
+- sticky/fixed elements do not cover primary content,
+- text is readable without zooming,
+- safe tap target size is respected where practical.
+
+Suggested horizontal overflow check:
+
+```ts
+const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+expect(overflow).toBe(false);
+```
+
+If a layout issue is found, classify the screenshot as `FAILED_LAYOUT`, fix the UI, then rerun the screenshot.
+
 ---
 
 # B. `safeScreenshot` contract
@@ -211,7 +242,8 @@ Before saving a final screenshot, it must verify:
 2. route is correct,
 3. loading state is gone,
 4. role/page marker is visible,
-5. no blocking error is visible unless the screenshot is explicitly for an error state.
+5. layout is usable for the current viewport,
+6. no blocking error is visible unless the screenshot is explicitly for an error state.
 
 If readiness fails:
 
@@ -223,10 +255,19 @@ If readiness fails:
 - record visible error/loading text,
 - mark the case as `FAILED_READINESS` or `SKIPPED` in the QA report.
 
+If layout usability fails:
+
+- do not mark the screenshot as valid,
+- save a debug screenshot using prefix `debug-failed-layout-`,
+- fix the layout if the issue is within the task scope,
+- rerun the desktop/mobile screenshot after the fix,
+- mark the case as `FAILED_LAYOUT` until fixed.
+
 Example debug filename:
 
 ```text
 debug-failed-readiness-verified-admin-profile-desktop.png
+debug-failed-layout-verified-admin-profile-iphone12mini.png
 ```
 
 Final screenshot filename examples:
@@ -234,6 +275,7 @@ Final screenshot filename examples:
 ```text
 verified-admin-profile-desktop.png
 verified-admin-profile-mobile.png
+verified-admin-profile-iphone12mini.png
 internal-admin-dokumen-desa-desktop.png
 notification-tab-mobile.png
 ```
@@ -247,6 +289,7 @@ Every screenshot in the QA report must be classified as one of:
 ```text
 VALID
 DEBUG_FAILED_READINESS
+FAILED_LAYOUT
 SKIPPED_ENV_MISSING
 SKIPPED_DATA_MISSING
 SKIPPED_NOT_IMPLEMENTED
@@ -255,24 +298,58 @@ FAILED_BUG
 
 Meaning:
 
-- `VALID`: correct role, route, page, and loaded content.
+- `VALID`: correct role, route, page, loaded content, and usable layout.
 - `DEBUG_FAILED_READINESS`: captured only for debugging readiness failure.
+- `FAILED_LAYOUT`: content loaded, but layout is cramped, clipped, overlapping, or not usable.
 - `SKIPPED_ENV_MISSING`: required env/storage/email/API not configured.
 - `SKIPPED_DATA_MISSING`: required seed/test data unavailable.
 - `SKIPPED_NOT_IMPLEMENTED`: feature intentionally not implemented yet.
 - `FAILED_BUG`: real product bug found.
 
-A task cannot be marked clean `PASS` if core screenshots are `DEBUG_FAILED_READINESS` or `FAILED_BUG`.
+A task cannot be marked clean `PASS` if core screenshots are `DEBUG_FAILED_READINESS`, `FAILED_LAYOUT`, or `FAILED_BUG`.
 
 ---
 
-# D. Required screenshot inventory for Admin Desa / internal admin UI
+# D. Required viewport coverage
 
-For every Sprint 04-008 or Admin Desa-related UI change, capture desktop and mobile screenshots where applicable.
+For every changed UI surface, capture and verify at least these viewports:
+
+```text
+Desktop: 1440 x 900 or close
+Mobile baseline: 390 x 844 or close
+Small mobile / iPhone 12 mini class: 360 x 780 or 375 x 812
+```
+
+The iPhone 12 mini / small-mobile viewport is mandatory for Admin Desa, internal admin, form-heavy pages, tab navigation, cards, modals, upload UI, and notification screens.
+
+If the layout is cramped on iPhone 12 mini class screens, the developer must fix it before marking the task PASS. Do not downgrade it to a cosmetic note unless Owner explicitly accepts the limitation.
+
+Recommended Playwright projects:
+
+```ts
+{
+  name: "desktop-chrome",
+  use: { viewport: { width: 1440, height: 900 } },
+},
+{
+  name: "mobile-390",
+  use: { viewport: { width: 390, height: 844 }, isMobile: true },
+},
+{
+  name: "iphone-12-mini",
+  use: { viewport: { width: 360, height: 780 }, isMobile: true },
+}
+```
+
+---
+
+# E. Required screenshot inventory for Admin Desa / internal admin UI
+
+For every Sprint 04-008 or Admin Desa-related UI change, capture desktop, mobile baseline, and iPhone 12 mini/small-mobile screenshots where applicable.
 
 Minimum inventory:
 
-## D1 — Navbar and routing
+## E1 — Navbar and routing
 
 - navbar after login as internal admin,
 - navbar after login as applicant pending,
@@ -281,7 +358,7 @@ Minimum inventory:
 - `/desa-admin` legacy redirect result,
 - `/desa-admin/profil` legacy redirect result.
 
-## D2 — Claim/applicant flow
+## E2 — Claim/applicant flow
 
 - claim status `PENDING`,
 - claim status `IN_REVIEW`,
@@ -289,15 +366,15 @@ Minimum inventory:
 - Hubungi Admin Pengajuan Admin Desa form,
 - support submission success/error state.
 
-## D3 — Admin Desa profile
+## E3 — Admin Desa profile
 
 - Admin Desa `VERIFIED` profile shell,
 - Admin Desa `LIMITED` profile shell,
 - badge popover `VERIFIED`,
 - badge popover `LIMITED`,
-- tab navigation desktop/mobile.
+- tab navigation desktop/mobile/small-mobile.
 
-## D4 — List Admin
+## E4 — List Admin
 
 - List Admin verified view,
 - invite modal,
@@ -305,7 +382,7 @@ Minimum inventory:
 - revoke limited modal,
 - revoked/history state where available.
 
-## D5 — Dokumen Admin Desa
+## E5 — Dokumen Admin Desa
 
 - Dokumen tab as `LIMITED`,
 - Dokumen tab as `VERIFIED`,
@@ -321,7 +398,7 @@ Minimum inventory:
 - preview signed URL flow,
 - storage not configured error if applicable.
 
-## D6 — Internal admin
+## E6 — Internal admin
 
 - internal admin shell,
 - Admin Desa review queue,
@@ -336,21 +413,21 @@ Minimum inventory:
 - publish document,
 - mark failed.
 
-## D7 — Suara and notifications
+## E7 — Suara and notifications
 
 - Admin Desa Suara tab,
 - Admin Desa Notifikasi tab,
 - notification mark-read state,
 - notification empty state.
 
-## D8 — Public page
+## E8 — Public page
 
 - public desa page with source indicator,
 - public desa page without source indicator.
 
 ---
 
-# E. Required report section
+# F. Required report section
 
 Every visual QA handoff must include this section:
 
@@ -361,9 +438,16 @@ Screenshot readiness:
 - no-loading gate checked before screenshot: yes/no
 - route readiness checked before screenshot: yes/no
 - role/page marker checked before screenshot: yes/no
+- layout usability checked before screenshot: yes/no
+- desktop viewport checked: yes/no
+- mobile 390 viewport checked: yes/no
+- iPhone 12 mini / small-mobile viewport checked: yes/no
 - screenshots showing login page counted as valid: no
 - screenshots showing shimmer/loading counted as valid: no
+- screenshots with cramped/overlapping layout counted as valid: no
 - debug failed-readiness screenshots captured: yes/no
+- debug failed-layout screenshots captured: yes/no
+- layout issues fixed before handoff: yes/no
 - skipped screenshots and reasons:
 - known screenshot gaps:
 ```
@@ -372,7 +456,7 @@ If any answer is `no`, the report must explain why and mark the QA status as `PA
 
 ---
 
-# F. Recommended Playwright storage state
+# G. Recommended Playwright storage state
 
 To avoid screenshotting login pages, prefer authenticated storage state per role:
 
@@ -395,7 +479,7 @@ If storage state is expired, recreate it before screenshot tests.
 
 ---
 
-# G. Final rule
+# H. Final rule
 
 A screenshot is evidence only when it proves all three:
 
@@ -405,4 +489,10 @@ A screenshot is evidence only when it proves all three:
 3. the correct role-specific content is visible.
 ```
 
-If it does not prove those three things, it is only a debug artifact, not QA evidence.
+For visual QA, it must also prove:
+
+```text
+4. the layout is usable on desktop, mobile baseline, and iPhone 12 mini / small-mobile viewport.
+```
+
+If it does not prove those things, it is only a debug artifact, not QA evidence.
