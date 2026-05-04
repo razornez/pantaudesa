@@ -7,6 +7,32 @@ export const BACK_OFFICE_COPY = {
       cancel: "Batal",
       you: "Kamu",
     },
+    badge: {
+      dialogLabel: "Status Admin Desa",
+      ariaLabel: (status: string) => `Status Admin Desa: ${status}. Klik untuk detail.`,
+      status: { verified: "Admin terverifikasi", limited: "Admin terbatas" },
+      verifiedItems: [
+        "✓ Dapat mengirim dan memperbarui data desa setelah dokumen lolos review.",
+        "✓ Dapat mengundang admin terbatas.",
+        "✓ Wajib perpanjang verifikasi tiap 6 bulan.",
+        "✗ Tidak punya akses internal admin PantauDesa.",
+      ],
+      limitedItems: [
+        "✓ Diundang oleh admin utama desa.",
+        "✓ Dapat melihat dan mengunggah dokumen.",
+        "✗ Tidak dapat publish data desa.",
+        "✗ Tidak dapat mengundang admin lain.",
+      ],
+      renewal: {
+        overdue: "Perpanjangan terlambat",
+        urgent: "Segera perpanjang",
+        dueSoon: "Perpanjangan akan jatuh tempo",
+        scheduled: "Perpanjangan terjadwal",
+        daysLeft: (days: number) => `${days} hari lagi`,
+        daysLate: (days: number) => `lewat ${Math.abs(days)} hari`,
+      },
+      note: "Status Admin Desa berbeda dari status data publik. Verifikasi admin tidak otomatis membuat data publik terverifikasi.",
+    },
     shell: {
       eyebrow: "Workspace Admin Desa",
       membership: { verified: "Admin terverifikasi", limited: "Admin terbatas" },
@@ -59,40 +85,19 @@ export const BACK_OFFICE_COPY = {
       },
       workStandard: {
         title: "Standar kerja yang disarankan",
-        items: [
-          "Unggah dokumen per topik dan tahun.",
-          "Gunakan judul dokumen yang konsisten.",
-          "Cek notifikasi agar persetujuan tidak menumpuk.",
-        ],
+        items: ["Unggah dokumen per topik dan tahun.", "Gunakan judul dokumen yang konsisten.", "Cek notifikasi agar persetujuan tidak menumpuk."],
       },
       access: {
         eyebrow: "Hak akses",
         title: "Yang bisa kamu lakukan",
-        verified: [
-          "Kirim dokumen desa untuk ditinjau PantauDesa.",
-          "Undang dan kelola admin terbatas.",
-          "Setujui dokumen dari admin terbatas sebelum diproses PantauDesa.",
-          "Pantau dokumen, suara warga, dan notifikasi dari workspace ini.",
-        ],
-        limited: [
-          "Unggah dokumen kontribusi dengan bukti yang jelas.",
-          "Lihat perkembangan dokumen, suara warga, dan pengingat.",
-          "Siapkan dokumen sambil menunggu persetujuan admin utama desa.",
-        ],
+        verified: ["Kirim dokumen desa untuk ditinjau PantauDesa.", "Undang dan kelola admin terbatas.", "Setujui dokumen dari admin terbatas sebelum diproses PantauDesa.", "Pantau dokumen, suara warga, dan notifikasi dari workspace ini."],
+        limited: ["Unggah dokumen kontribusi dengan bukti yang jelas.", "Lihat perkembangan dokumen, suara warga, dan pengingat.", "Siapkan dokumen sambil menunggu persetujuan admin utama desa."],
       },
       limits: {
         eyebrow: "Pembatas peran",
         title: "Yang perlu diperhatikan",
-        verified: [
-          "Verifikasi berkala tetap wajib dan tidak otomatis diperpanjang.",
-          "Akses Admin Desa berbeda dari akses internal admin PantauDesa.",
-          "Judul, kategori, dan bukti dokumen membantu review berjalan lebih cepat.",
-        ],
-        limited: [
-          "Belum bisa publish data desa langsung ke publik.",
-          "Belum bisa mengundang atau mencabut admin lain.",
-          "Dokumen yang dikirim tetap menunggu persetujuan admin utama desa.",
-        ],
+        verified: ["Verifikasi berkala tetap wajib dan tidak otomatis diperpanjang.", "Akses Admin Desa berbeda dari akses internal admin PantauDesa.", "Judul, kategori, dan bukti dokumen membantu review berjalan lebih cepat."],
+        limited: ["Belum bisa publish data desa langsung ke publik.", "Belum bisa mengundang atau mencabut admin lain.", "Dokumen yang dikirim tetap menunggu persetujuan admin utama desa."],
       },
       renewalAlert: {
         eyebrow: "Perhatian",
