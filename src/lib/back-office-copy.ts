@@ -37,12 +37,7 @@ export const BACK_OFFICE_COPY = {
     documents: {
       headingEyebrow: "Arsip kerja",
       headingTitle: "Dokumen Desa",
-      summary: {
-        total: "Total",
-        waiting: "Menunggu",
-        published: "Tayang",
-        documents: "dokumen",
-      },
+      summary: { total: "Total", waiting: "Menunggu", published: "Tayang", documents: "dokumen" },
       status: {
         WAITING_VERIFIED_APPROVAL: "Menunggu",
         PROCESSING: "Diproses",
@@ -63,8 +58,7 @@ export const BACK_OFFICE_COPY = {
         uploading: "Mengunggah...",
         uploadDocument: "Unggah Dokumen",
         uploadMultipleDocuments: (count: number) => `Unggah ${count} Dokumen`,
-        helper: (maxFileSizeMB: number, maxFilesPerUpload: number, formats: string) =>
-          `Maks ${maxFileSizeMB} MB/file, ${maxFilesPerUpload} file/unggah. Format: ${formats}.`,
+        helper: (maxFileSizeMB: number, maxFilesPerUpload: number, formats: string) => `Maks ${maxFileSizeMB} MB/file, ${maxFilesPerUpload} file/unggah. Format: ${formats}.`,
         maxFilesError: (maxFilesPerUpload: number) => `Maksimal ${maxFilesPerUpload} file per unggah.`,
         missingStorageDetail: (env: string) => `Env belum diisi: ${env}.`,
         invalidStorageDetail: (env: string) => `Format env tidak valid: ${env}.`,
@@ -77,43 +71,21 @@ export const BACK_OFFICE_COPY = {
         serverNoConfirmation: "Server tidak mengembalikan konfirmasi. Coba refresh lalu cek daftar dokumen.",
         uploadSuccess: (count: number) => `${count} dokumen berhasil diunggah.`,
       },
-      list: {
-        title: "Daftar dokumen",
-        empty: "Belum ada dokumen.",
-      },
+      list: { title: "Daftar dokumen", empty: "Belum ada dokumen." },
       failedReasonLabel: "Alasan:",
-      actions: {
-        preview: "Preview",
-        approve: "Setujui",
-        forwardedToPantauDesa: "Dokumen diteruskan ke PantauDesa.",
-      },
+      actions: { preview: "Preview", approve: "Setujui", forwardedToPantauDesa: "Dokumen diteruskan ke PantauDesa." },
     },
     listAdmin: {
       headingEyebrow: "Kelola anggota",
       headingTitle: "Tim Admin Desa",
       inviteButton: "Undang Admin",
-      summary: {
-        active: "Admin aktif",
-        verified: "Verified",
-        limited: "Terbatas",
-        invites: "Undangan",
-      },
-      roleStatus: {
-        VERIFIED: "Admin terverifikasi",
-        LIMITED: "Admin terbatas",
-        REVOKED: "Akses dicabut",
-        EXPIRED: "Masa aktif berakhir",
-      },
+      summary: { active: "Admin aktif", verified: "Verified", limited: "Terbatas", invites: "Undangan" },
+      roleStatus: { VERIFIED: "Admin terverifikasi", LIMITED: "Admin terbatas", REVOKED: "Akses dicabut", EXPIRED: "Masa aktif berakhir" },
       notices: {
         onlyMainAdminCanManage: "Hanya admin utama desa yang dapat mengundang atau mencabut akses admin lain.",
-        inviteLimitReached: (maxAdmins: number) =>
-          `Batas ${maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin terbatas jika ingin membuka slot baru.`,
+        inviteLimitReached: (maxAdmins: number) => `Batas ${maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin terbatas jika ingin membuka slot baru.`,
       },
-      activeSection: {
-        eyebrow: "Anggota aktif",
-        title: "Struktur tim yang sedang bekerja",
-        empty: "Belum ada admin aktif.",
-      },
+      activeSection: { eyebrow: "Anggota aktif", title: "Struktur tim yang sedang bekerja", empty: "Belum ada admin aktif." },
       inviteSection: {
         eyebrow: "Undangan",
         title: "Undangan yang masih menunggu",
@@ -123,11 +95,7 @@ export const BACK_OFFICE_COPY = {
         validUntil: (date: string) => `Berlaku sampai ${date}`,
         sentAt: (date: string) => `Dikirim ${date}`,
       },
-      historySection: {
-        eyebrow: "Riwayat",
-        title: "Akses yang sudah berakhir",
-        revokedWithReason: (date: string, reason: string) => `Dicabut pada ${date} karena ${reason}`,
-      },
+      historySection: { eyebrow: "Riwayat", title: "Akses yang sudah berakhir", revokedWithReason: (date: string, reason: string) => `Dicabut pada ${date} karena ${reason}` },
       modal: {
         eyebrow: "Aksi admin",
         inviteTitle: "Undang Admin Desa",
@@ -150,19 +118,11 @@ export const BACK_OFFICE_COPY = {
         revokeSuccess: "Akses admin berhasil dicabut.",
         revokeFailed: "Gagal mencabut akses.",
       },
-      actions: {
-        revokeAriaLabel: (name: string) => `Hapus akses ${name}`,
-      },
+      actions: { revokeAriaLabel: (name: string) => `Hapus akses ${name}` },
     },
     notifications: {
-      summary: {
-        total: "Total",
-        unread: "Belum baca",
-      },
-      actions: {
-        markAllRead: "Tandai semua baca",
-        markOneRead: "Baca",
-      },
+      summary: { total: "Total", unread: "Belum baca" },
+      actions: { markAllRead: "Tandai semua baca", markOneRead: "Baca" },
       messages: {
         markAllReadSuccess: "Semua notifikasi ditandai dibaca.",
         markAllReadFailed: "Gagal.",
@@ -172,13 +132,43 @@ export const BACK_OFFICE_COPY = {
       empty: "Belum ada notifikasi.",
       newBadge: "Baru",
     },
+    suara: {
+      category: {
+        infrastruktur: "Infrastruktur",
+        bansos: "Bansos",
+        fasilitas: "Fasilitas",
+        anggaran: "Anggaran",
+        lingkungan: "Lingkungan",
+        lainnya: "Lainnya",
+      },
+      status: {
+        OPEN: "Terbuka",
+        IN_PROGRESS: "Sedang ditangani",
+        RESOLVED: "Selesai",
+      },
+      headingEyebrow: "Suara warga",
+      headingTitle: "Masukan warga untuk desa ini",
+      headingBody: (desaName: string) => `Ringkasan suara warga di ${desaName}. Gunakan halaman ini untuk memahami masukan tanpa mengubah ruang diskusi publik.`,
+      openPublicPage: "Buka suara publik",
+      summary: {
+        total: "Total suara",
+        open: "Terbuka",
+        replies: "Balasan",
+        helpful: "Helpful",
+        publicInput: "masukan publik",
+        unresolved: "belum selesai",
+        discussions: "diskusi tercatat",
+        citizenResponse: "respon warga",
+      },
+      noticeTitle: "Mode baca",
+      noticeBody: "Tab ini hanya untuk membaca dinamika warga. Balasan dan interaksi tetap dilakukan di halaman publik agar transparan.",
+      empty: "Belum ada suara warga untuk desa ini.",
+      authorAnonymous: "Anonim",
+      labels: { replies: "balasan", helpful: "helpful", vote: "vote", publicArchive: "Arsip publik" },
+    },
   },
-  internalAdmin: {
-    common: {},
-  },
-  user: {
-    common: {},
-  },
+  internalAdmin: { common: {} },
+  user: { common: {} },
 } as const;
 
 export type BackOfficeCopy = typeof BACK_OFFICE_COPY;
