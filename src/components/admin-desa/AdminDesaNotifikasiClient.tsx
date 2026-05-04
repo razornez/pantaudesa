@@ -11,6 +11,10 @@ import {
   UserCog,
 } from "lucide-react";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
+import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+
+const COPY = BACK_OFFICE_COPY.adminDesa.notifications;
+const COMMON_COPY = BACK_OFFICE_COPY.adminDesa.common;
 
 interface NotifRow {
   id: string;
@@ -57,14 +61,14 @@ export default function AdminDesaNotifikasiClient({
         body: JSON.stringify({}),
       });
       const data = await res.json();
-      if (!res.ok) { toast(data.error ?? "Gagal.", "error"); return; }
+      if (!res.ok) { toast(data.error ?? COPY.messages.markAllReadFailed, "error"); return; }
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
         setUnread(0);
       });
-      toast("Semua notifikasi ditandai dibaca.", "success");
+      toast(COPY.messages.markAllReadSuccess, "success");
     } catch {
-      toast("Koneksi bermasalah.", "error");
+      toast(COMMON_COPY.connectionError, "error");
     }
   }
 
@@ -76,14 +80,14 @@ export default function AdminDesaNotifikasiClient({
         body: JSON.stringify({ ids: [id] }),
       });
       const data = await res.json();
-      if (!res.ok) { toast(data.error ?? "Gagal.", "error"); return; }
+      if (!res.ok) { toast(data.error ?? COPY.messages.markOneReadFailed, "error"); return; }
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
         setUnread((c) => Math.max(0, c - 1));
       });
-      toast("Notifikasi ditandai dibaca.", "success");
+      toast(COPY.messages.markOneReadSuccess, "success");
     } catch {
-      toast("Koneksi bermasalah.", "error");
+      toast(COMMON_COPY.connectionError, "error");
     }
   }
 
@@ -93,10 +97,10 @@ export default function AdminDesaNotifikasiClient({
       <div className="flex flex-col gap-2 rounded-2xl bg-white/72 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] sm:inline-flex sm:flex-row sm:items-center sm:gap-2">
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
           <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-slate-600 ring-1 ring-slate-200/70">
-            Total <strong className="font-semibold text-slate-900">{summary.total}</strong>
+            {COPY.summary.total} <strong className="font-semibold text-slate-900">{summary.total}</strong>
           </span>
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 ring-1 ${summary.unread > 0 ? "bg-amber-50 text-amber-800 ring-amber-200/80" : "bg-emerald-50 text-emerald-800 ring-emerald-200/80"}`}>
-            Belum baca <strong className="font-semibold">{summary.unread}</strong>
+            {COPY.summary.unread} <strong className="font-semibold">{summary.unread}</strong>
           </span>
         </div>
         {unread > 0 && (
@@ -105,7 +109,7 @@ export default function AdminDesaNotifikasiClient({
             disabled={isPending}
             className="inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-800 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08),0_10px_22px_-18px_rgba(15,23,42,0.35)] transition hover:bg-slate-50 disabled:opacity-60"
           >
-            <CheckCheck size={12} aria-hidden /> Tandai semua baca
+            <CheckCheck size={12} aria-hidden /> {COPY.actions.markAllRead}
           </button>
         )}
       </div>
@@ -114,7 +118,7 @@ export default function AdminDesaNotifikasiClient({
       {notifications.length === 0 ? (
         <div className="lux-card p-8 text-center space-y-2">
           <BellOff size={22} className="mx-auto text-slate-300" aria-hidden />
-          <p className="text-sm text-slate-500">Belum ada notifikasi.</p>
+          <p className="text-sm text-slate-500">{COPY.empty}</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -138,7 +142,7 @@ export default function AdminDesaNotifikasiClient({
                     <p className={`text-[13px] font-semibold leading-snug ${n.isRead ? "text-slate-800" : "text-indigo-950"}`}>
                       {n.title}
                     </p>
-                    {!n.isRead && <span className="pill-info rounded-full px-2 py-0.5 text-[10px] font-semibold">Baru</span>}
+                    {!n.isRead && <span className="pill-info rounded-full px-2 py-0.5 text-[10px] font-semibold">{COPY.newBadge}</span>}
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     {new Date(n.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
@@ -151,7 +155,7 @@ export default function AdminDesaNotifikasiClient({
                     disabled={isPending}
                     className="btn-lux btn-lux-ghost text-[11px] shrink-0"
                   >
-                    Baca
+                    {COPY.actions.markOneRead}
                   </button>
                 )}
               </li>
