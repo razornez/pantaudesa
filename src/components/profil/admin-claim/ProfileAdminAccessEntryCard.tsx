@@ -42,23 +42,25 @@ export default function ProfileAdminAccessEntryCard({
       </div>
 
       <div className="mt-4 rounded-2xl border border-white/70 bg-white/80 p-4 sm:p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status saat ini</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status saat ini</p>
+              {currentState ? <ClaimStatusBadge status={currentState.status} compact /> : null}
+            </div>
             {loading ? (
-              <p className="mt-2 text-sm text-slate-500">Memuat status akses admin...</p>
+              <p className="text-sm text-slate-500">Memuat status akses admin...</p>
             ) : loadError || !currentState ? (
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="text-sm text-slate-500">
                 Status belum bisa dimuat sekarang. Kamu tetap bisa lanjut klaim atau hubungi admin.
               </p>
             ) : (
               <>
-                <p className="mt-2 text-[18px] font-black leading-tight text-slate-900 sm:text-lg">{currentTone?.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-500 sm:text-xs">{currentTone?.note}</p>
+                <p className="text-[18px] font-black leading-tight text-slate-900 sm:text-lg">{currentTone?.title}</p>
+                <p className="text-sm leading-relaxed text-slate-500 sm:text-xs">{currentTone?.note}</p>
               </>
             )}
           </div>
-          {currentState ? <ClaimStatusBadge status={currentState.status} compact /> : null}
         </div>
 
         {currentState ? (
