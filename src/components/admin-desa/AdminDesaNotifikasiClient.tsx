@@ -90,17 +90,21 @@ export default function AdminDesaNotifikasiClient({
   return (
     <div className="space-y-4" data-testid="notification-tab">
       {/* Compact summary + action */}
-      <div className="flex flex-wrap gap-2 text-[11px]">
-        <span className="lux-card px-3 py-1.5">
-          <span className="text-slate-500">Total: </span>
-          <span className="font-semibold text-slate-900">{summary.total}</span>
-        </span>
-        <span className="lux-card px-3 py-1.5">
-          <span className="text-slate-500">Belum baca: </span>
-          <span className="font-semibold text-slate-900">{summary.unread}</span>
-        </span>
+      <div className="flex flex-col gap-2 rounded-2xl bg-white/72 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] sm:inline-flex sm:flex-row sm:items-center sm:gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-slate-600 ring-1 ring-slate-200/70">
+            Total <strong className="font-semibold text-slate-900">{summary.total}</strong>
+          </span>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 ring-1 ${summary.unread > 0 ? "bg-amber-50 text-amber-800 ring-amber-200/80" : "bg-emerald-50 text-emerald-800 ring-emerald-200/80"}`}>
+            Belum baca <strong className="font-semibold">{summary.unread}</strong>
+          </span>
+        </div>
         {unread > 0 && (
-          <button onClick={markAllRead} disabled={isPending} className="btn-lux btn-lux-secondary text-[11px]">
+          <button
+            onClick={markAllRead}
+            disabled={isPending}
+            className="inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-800 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08),0_10px_22px_-18px_rgba(15,23,42,0.35)] transition hover:bg-slate-50 disabled:opacity-60"
+          >
             <CheckCheck size={12} aria-hidden /> Tandai semua baca
           </button>
         )}
