@@ -3,9 +3,12 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import { getVisibleTabs } from "@/lib/admin-claim/profile-tabs";
+import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 import AdminDesaBadge from "@/components/admin-desa/AdminDesaBadge";
 import AdminDesaTabNav from "@/components/admin-desa/AdminDesaTabNav";
 import { BadgeCheck, Sparkles } from "lucide-react";
+
+const COPY = BACK_OFFICE_COPY.adminDesa.shell;
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +29,8 @@ export default async function AdminDesaLayout({
 
   const visibleTabs = getVisibleTabs(ctx.member.status);
   const isVerified = ctx.member.status === "VERIFIED";
-  const membershipLabel = isVerified ? "Admin terverifikasi" : "Admin terbatas";
-  const roleLabel = ctx.member.role === "VERIFIED_ADMIN" ? "Bisa kelola anggota" : "Kontributor dokumen";
+  const membershipLabel = isVerified ? COPY.membership.verified : COPY.membership.limited;
+  const roleLabel = ctx.member.role === "VERIFIED_ADMIN" ? COPY.role.verifiedAdmin : COPY.role.limitedAdmin;
 
   return (
     <div className="min-h-screen" data-testid="admin-desa-shell">
@@ -48,7 +51,7 @@ export default async function AdminDesaLayout({
                     displayName={ctx.user.nama ?? ctx.user.username ?? ctx.user.email}
                   />
                   <div className="min-w-0 space-y-2">
-                    <p className="eyebrow text-[10px]">Workspace Admin Desa</p>
+                    <p className="eyebrow text-[10px]">{COPY.eyebrow}</p>
                     <div>
                       <p className="display text-[24px] sm:text-[28px] font-semibold text-slate-900 tracking-tight leading-tight">
                         {ctx.desa.nama}
@@ -76,7 +79,7 @@ export default async function AdminDesaLayout({
                 <div className="flex flex-col items-start gap-3 lg:items-end">
                   <div className="grid grid-cols-2 gap-3 w-full lg:w-auto">
                     <div className="metric-card min-w-[132px] flex flex-col justify-between">
-                      <p className="metric-label">Status akun</p>
+                      <p className="metric-label">{COPY.accountStatus.title}</p>
                       <div className="mt-3">
                         <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px] font-semibold shadow-[0_14px_28px_-20px_rgba(15,23,42,0.35)] ${
                           isVerified
@@ -88,20 +91,20 @@ export default async function AdminDesaLayout({
                           }`}>
                             {isVerified ? <BadgeCheck size={14} aria-hidden /> : <Sparkles size={13} aria-hidden />}
                           </span>
-                          {isVerified ? "Verified Resmi" : "Limited Access"}
+                          {isVerified ? COPY.accountStatus.verifiedBadge : COPY.accountStatus.limitedBadge}
                         </span>
                       </div>
-                      <p className="metric-note mt-3">{isVerified ? "Badge resmi admin desa aktif" : "Masih menunggu penguatan akses"}</p>
+                      <p className="metric-note mt-3">{isVerified ? COPY.accountStatus.verifiedNote : COPY.accountStatus.limitedNote}</p>
                     </div>
                     <div className="metric-card min-w-[132px]">
-                      <p className="metric-label">Perpanjangan</p>
-                      <p className="metric-value text-[1.35rem]">{ctx.member.renewalDueAt ? "Aktif" : "-"}</p>
+                      <p className="metric-label">{COPY.renewal.title}</p>
+                      <p className="metric-value text-[1.35rem]">{ctx.member.renewalDueAt ? COPY.renewal.active : COPY.renewal.emptyValue}</p>
                       <p className="metric-note">
                         {ctx.member.renewalDueAt
                           ? ctx.renewal.daysUntil !== null
-                            ? `${Math.abs(ctx.renewal.daysUntil)} hari`
-                            : "Terjadwal"
-                          : "Belum ada"}
+                            ? COPY.renewal.days(ctx.renewal.daysUntil)
+                            : COPY.renewal.scheduled
+                          : COPY.renewal.none}
                       </p>
                     </div>
                   </div>
@@ -110,7 +113,7 @@ export default async function AdminDesaLayout({
                     href="/profil/saya"
                     className="btn-lux btn-lux-secondary w-full lg:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                   >
-                    Kembali ke profil saya
+                    {COPY.backToProfile}
                   </Link>
                 </div>
               </div>

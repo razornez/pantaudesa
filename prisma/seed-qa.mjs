@@ -493,7 +493,7 @@ function buildQaNotifications() {
       id: "qa-notif-doc-waiting-approval",
       userId: "qa-admin-verified-a",
       desaId: "qa-desa-a",
-      type: "DOCUMENT_WAITING_APPROVAL",
+      type: "DOCUMENT_UPLOADED_WAITING",
       channel: "in_app",
       title: "Dokumen menunggu persetujuan Anda",
       body: "Admin Desa Limited telah mengunggah APBDes 2026. Dokumen ini perlu persetujuan Anda sebelum diproses lebih lanjut.",
@@ -527,7 +527,7 @@ function buildQaNotifications() {
       id: "qa-notif-limited-doc-waiting",
       userId: "qa-admin-limited-a1",
       desaId: "qa-desa-a",
-      type: "DOCUMENT_AWAITING_VERIFIED_APPROVAL",
+      type: "DOCUMENT_UPLOADED_WAITING",
       channel: "in_app",
       title: "Dokumen Anda menunggu persetujuan",
       body: "APBDes 2026 yang Anda unggah sedang menunggu persetujuan dari Admin Desa Terverifikasi.",
@@ -545,29 +545,6 @@ function buildQaNotifications() {
       metadata: { documentId: "qa-doc-failed", failedReason: "File tidak dapat dibaca" },
       isRead: false,
     },
-    // For internal admin
-    {
-      id: "qa-notif-internal-in-review",
-      userId: "qa-internal-admin",
-      desaId: "qa-desa-c",
-      type: "CLAIM_IN_REVIEW",
-      channel: "in_app",
-      title: "Klaim baru menunggu review",
-      body: "Pengajuan klaim Admin Desa Barutama QA via website token siap ditinjau.",
-      metadata: { claimId: "qa-claim-in-review-website" },
-      isRead: false,
-    },
-    {
-      id: "qa-notif-internal-in-review-email",
-      userId: "qa-internal-admin",
-      desaId: "qa-desa-c",
-      type: "CLAIM_IN_REVIEW",
-      channel: "in_app",
-      title: "Klaim baru menunggu review",
-      body: "Pengajuan klaim Admin Desa Barutama QA via email OTP siap ditinjau.",
-      metadata: { claimId: "qa-claim-in-review-email" },
-      isRead: false,
-    },
     {
       id: "qa-notif-renewal-reminder",
       userId: "qa-admin-verified-a",
@@ -579,6 +556,13 @@ function buildQaNotifications() {
       metadata: { renewalDueAt: daysFromNow(30).toISOString() },
       isRead: false,
     },
+    // NOTE: Internal admin notifications are NOT created via createNotifications for
+    // in-app delivery. Internal admins check the review queue manually. Only the
+    // following in-app notification types are valid per NOTIF_TYPE:
+    // DOCUMENT_UPLOADED_WAITING, DOCUMENT_APPROVED, DOCUMENT_PUBLISHED,
+    // DOCUMENT_FAILED, INVITE_ACCEPTED, RENEWAL_REMINDER, RENEWAL_EXPIRED,
+    // CLAIM_APPROVED, CLAIM_REJECTED, VOICE_CREATED, VOICE_REPLY_CREATED,
+    // VOICE_VOTED, VOICE_HELPFUL
   ];
 }
 

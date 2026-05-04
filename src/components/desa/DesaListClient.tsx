@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Info, LayoutGrid, List } from "lucide-react";
 import SearchFilterBar from "@/components/desa/SearchFilterBar";
@@ -39,6 +39,7 @@ export default function DesaListClient({
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [view, setView] = useState<ViewMode>("grid");
   const [page, setPage] = useState(1);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const PAGE_SIZE = 12;
 
@@ -109,6 +110,13 @@ export default function DesaListClient({
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // B9: scroll results into view when search query produces results
+  useEffect(() => {
+    if (search && filtered.length > 0) {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [search, filtered.length]);
 
   const handleFilterChange = (setter: (v: string) => void) => (v: string) => {
     setter(v);
@@ -192,6 +200,9 @@ export default function DesaListClient({
         kecamatanList={kecamatanList}
         totalResults={filtered.length}
       />
+
+      {/* B9 scroll target */}
+      <div ref={resultsRef} />
 
       {readState !== "ready" ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-amber-100 bg-white px-6 py-12 text-center shadow-sm">
