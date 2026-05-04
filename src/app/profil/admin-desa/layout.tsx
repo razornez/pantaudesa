@@ -57,7 +57,7 @@ export default async function AdminDesaLayout({ children }: { children: React.Re
                         {ctx.desa.kecamatan}, {ctx.desa.kabupaten}, {ctx.desa.provinsi}
                       </p>
                     </div>
-                    <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden rounded-2xl bg-white/70 px-2 py-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] sm:bg-transparent sm:p-0 sm:shadow-none">
+                    <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden px-0 py-0 sm:p-0">
                       <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-[11px] ${isVerified ? "pill-ok" : "pill-warn"}`}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: isVerified ? "#10B981" : "#D97706" }} aria-hidden />
                         {membershipLabel}
