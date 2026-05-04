@@ -13,15 +13,19 @@ import {
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
 import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDesaDokumenPage() {
+  const tAuth = perfStart();
   const session = await auth();
+  perfLog("admin-desa.dokumen", "auth()", tAuth);
   if (!session?.user?.id) redirect("/login");
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
+  const tDocs = perfStart();
   const docs = db
     ? await db.adminDesaDocument.findMany({
         where: { desaId: ctx.desa.id },
@@ -47,6 +51,7 @@ export default async function AdminDesaDokumenPage() {
         },
       })
     : [];
+  perfLog("admin-desa.dokumen", "adminDesaDocument.findMany", tDocs);
 
   const serialized = docs.map((d) => ({
     ...d,

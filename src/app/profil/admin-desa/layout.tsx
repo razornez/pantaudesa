@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import { getVisibleTabs } from "@/lib/admin-claim/profile-tabs";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+import { perfLog, perfStart } from "@/lib/perf";
 import AdminDesaBadge from "@/components/admin-desa/AdminDesaBadge";
 import AdminDesaTabNav from "@/components/admin-desa/AdminDesaTabNav";
 import { BadgeCheck, Sparkles } from "lucide-react";
@@ -13,7 +14,9 @@ const COPY = BACK_OFFICE_COPY.adminDesa.shell;
 export const dynamic = "force-dynamic";
 
 export default async function AdminDesaLayout({ children }: { children: React.ReactNode }) {
+  const tAuth = perfStart();
   const session = await auth();
+  perfLog("admin-desa.layout", "auth()", tAuth);
   if (!session?.user?.id) redirect("/login?next=/profil/admin-desa");
 
   const ctx = await getAdminDesaContext(session.user.id);

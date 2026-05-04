@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { getRenewalState, daysUntilRenewal, type RenewalState } from "@/lib/admin-claim/renewal";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export interface AdminDesaContext {
   member: {
@@ -41,10 +43,18 @@ export interface AdminDesaContext {
  * Fetches the active Admin Desa membership for a user.
  * Returns null if the user is not a current Admin Desa (LIMITED/VERIFIED).
  * REVOKED and EXPIRED do NOT count — those users fall back to regular profile.
+ *
+ * Wrapped with React `cache()` so that within a single render/request the
+ * layout + nested page do not duplicate the same DB roundtrip. This is
+ * REQUEST-scoped only (not a persistent cache), and the result still respects
+ * `userId` as cache key, so user-specific data stays isolated.
  */
-export async function getAdminDesaContext(userId: string): Promise<AdminDesaContext | null> {
+export const getAdminDesaContext = cache(async function getAdminDesaContext(
+  userId: string,
+): Promise<AdminDesaContext | null> {
   if (!db) return null;
 
+  const t = perfStart();
   const member = await db.desaAdminMember.findFirst({
     where: {
       userId,
@@ -85,6 +95,7 @@ export async function getAdminDesaContext(userId: string): Promise<AdminDesaCont
       },
     },
   });
+  perfLog("admin-desa.context", "desaAdminMember.findFirst", t);
 
   if (!member) return null;
 
@@ -109,4 +120,4 @@ export async function getAdminDesaContext(userId: string): Promise<AdminDesaCont
     user: member.user,
     renewal: { state: renewalState, daysUntil: days },
   };
-}
+});

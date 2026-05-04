@@ -7,6 +7,7 @@ import {
   getRenewalState,
 } from "@/lib/admin-claim/renewal";
 import InternalRenewalQueue from "@/components/internal-admin/InternalRenewalQueue";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export default async function InternalAdminRenewalsPage({
 }: {
   searchParams: Promise<{ state?: string }>;
 }) {
+  const tSession = perfStart();
   const session = await getInternalAdminSession();
+  perfLog("internal-admin.renewals", "getInternalAdminSession()", tSession);
   if (!session) redirect("/masuk?error=unauthorized");
 
   const params = await searchParams;
@@ -38,6 +41,7 @@ export default async function InternalAdminRenewalsPage({
       ? { status: "VERIFIED" as const, renewalDueAt: { gte: now, lte: horizon } }
       : { status: "VERIFIED" as const, renewalDueAt: { not: null, lte: horizon } };
 
+  const tQuery = perfStart();
   const members = await db.desaAdminMember.findMany({
     where,
     orderBy: { renewalDueAt: "asc" },
@@ -53,6 +57,7 @@ export default async function InternalAdminRenewalsPage({
       user: { select: { id: true, nama: true, username: true, email: true } },
     },
   });
+  perfLog("internal-admin.renewals", "desaAdminMember.findMany", tQuery);
 
   const serialized = members.map((item) => ({
     ...item,

@@ -3,15 +3,19 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import AdminDesaNotifikasiClient from "@/components/admin-desa/AdminDesaNotifikasiClient";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDesaNotifikasiPage() {
+  const tAuth = perfStart();
   const session = await auth();
+  perfLog("admin-desa.notifikasi", "auth()", tAuth);
   if (!session?.user?.id) redirect("/login");
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
+  const tNotif = perfStart();
   const notifications = db
     ? await db.adminDesaNotification.findMany({
         where: { userId: session.user.id, channel: "in_app" },
@@ -29,6 +33,7 @@ export default async function AdminDesaNotifikasiPage() {
         },
       })
     : [];
+  perfLog("admin-desa.notifikasi", "adminDesaNotification.findMany", tNotif);
 
   const serialized = notifications.map((n) => ({
     ...n,

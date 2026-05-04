@@ -2,13 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldCheck, FileText, RefreshCcw, UserCog } from "lucide-react";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export default async function InternalAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = perfStart();
   const session = await getInternalAdminSession();
+  perfLog("internal-admin.layout", "getInternalAdminSession()", t);
   if (!session) {
     redirect("/masuk?error=unauthorized");
   }

@@ -26,7 +26,7 @@ interface DocRow {
   publishedAt: string | null;
   failedReason: string | null;
   aiMappingStatus: string | null;
-  aiMappingResult: unknown;
+  aiMappingResult?: unknown;
   createdAt: string;
   updatedAt: string;
   desa: { id: string; nama: string; kecamatan: string; kabupaten: string };

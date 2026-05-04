@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export interface DesaAdminRow {
   id: string;
@@ -40,6 +41,7 @@ export async function getDesaAdminRoster(desaId: string): Promise<DesaAdminRoste
     return { active: [], history: [], pendingInvites: [], verifiedCount: 0, limitedCount: 0 };
   }
 
+  const t = perfStart();
   const [members, invites] = await Promise.all([
     db.desaAdminMember.findMany({
       where: { desaId },
@@ -78,6 +80,7 @@ export async function getDesaAdminRoster(desaId: string): Promise<DesaAdminRoste
       },
     }),
   ]);
+  perfLog("admin-desa.list-admin", "desaAdminMember+invite.findMany(parallel)", t);
 
   const rows: DesaAdminRow[] = members.map((m) => ({
     id: m.id,
