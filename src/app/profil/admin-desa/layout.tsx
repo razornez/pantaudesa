@@ -23,8 +23,7 @@ export default async function AdminDesaLayout({ children }: { children: React.Re
   const isVerified = ctx.member.status === "VERIFIED";
   const membershipLabel = isVerified ? COPY.membership.verified : COPY.membership.limited;
   const roleLabel = ctx.member.role === "VERIFIED_ADMIN" ? COPY.role.verifiedAdmin : COPY.role.limitedAdmin;
-  const accountBadgeLabel = isVerified ? COPY.accountStatus.verifiedBadge : COPY.accountStatus.limitedBadge;
-  const accountNote = isVerified ? COPY.accountStatus.verifiedNote : COPY.accountStatus.limitedNote;
+  const accountBadgeLabel = isVerified ? "Verified" : COPY.accountStatus.limitedBadge;
   const renewalValue = ctx.member.renewalDueAt ? COPY.renewal.active : COPY.renewal.emptyValue;
   const renewalNote = ctx.member.renewalDueAt
     ? ctx.renewal.daysUntil !== null
@@ -58,27 +57,26 @@ export default async function AdminDesaLayout({ children }: { children: React.Re
                         {ctx.desa.kecamatan}, {ctx.desa.kabupaten}, {ctx.desa.provinsi}
                       </p>
                     </div>
-                    <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl bg-white/70 px-2 py-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] sm:bg-transparent sm:p-0 sm:shadow-none">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold ${isVerified ? "pill-ok" : "pill-warn"}`}>
+                    <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden rounded-2xl bg-white/70 px-2 py-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] sm:bg-transparent sm:p-0 sm:shadow-none">
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-[11px] ${isVerified ? "pill-ok" : "pill-warn"}`}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: isVerified ? "#10B981" : "#D97706" }} aria-hidden />
                         {membershipLabel}
                       </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold pill-info">{roleLabel}</span>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold whitespace-nowrap pill-info sm:px-2.5 sm:py-1 sm:text-[11px]">{roleLabel}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-stretch gap-3 lg:items-end">
                   <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full lg:w-auto">
-                    <div className="metric-card min-w-0 !p-3 sm:!p-4 flex flex-col gap-2 sm:min-w-[132px]">
+                    <div className="metric-card min-w-0 !p-3 sm:!p-4 sm:min-w-[132px]">
                       <p className="metric-label text-[10px]">{COPY.accountStatus.title}</p>
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="mt-2 flex items-center gap-2 min-w-0">
                         <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isVerified ? "bg-[#1877F2] text-white" : "bg-amber-500 text-white"}`}>
                           {isVerified ? <BadgeCheck size={15} aria-hidden /> : <Sparkles size={14} aria-hidden />}
                         </span>
-                        <span className={`min-w-0 flex-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold leading-tight ${isVerified ? "bg-[linear-gradient(135deg,rgba(79,70,229,0.12),rgba(16,185,129,0.12))] text-slate-900 ring-1 ring-indigo-100" : "bg-amber-50 text-amber-900 ring-1 ring-amber-100"}`}>{accountBadgeLabel}</span>
+                        <span className={`inline-flex min-w-0 shrink items-center rounded-full px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap ${isVerified ? "bg-[linear-gradient(135deg,rgba(79,70,229,0.12),rgba(16,185,129,0.12))] text-slate-900 ring-1 ring-indigo-100" : "bg-amber-50 text-amber-900 ring-1 ring-amber-100"}`}>{accountBadgeLabel}</span>
                       </div>
-                      <p className="metric-note text-[11px] leading-snug line-clamp-2">{accountNote}</p>
                     </div>
                     <div className="metric-card min-w-0 !p-3 sm:!p-4 sm:min-w-[132px]">
                       <p className="metric-label text-[10px]">{COPY.renewal.title}</p>
