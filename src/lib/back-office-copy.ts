@@ -7,6 +7,33 @@ export const BACK_OFFICE_COPY = {
       cancel: "Batal",
       you: "Kamu",
     },
+    shell: {
+      eyebrow: "Workspace Admin Desa",
+      membership: {
+        verified: "Admin terverifikasi",
+        limited: "Admin terbatas",
+      },
+      role: {
+        verifiedAdmin: "Bisa kelola anggota",
+        limitedAdmin: "Kontributor dokumen",
+      },
+      accountStatus: {
+        title: "Status akun",
+        verifiedBadge: "Verified Resmi",
+        limitedBadge: "Limited Access",
+        verifiedNote: "Badge resmi admin desa aktif",
+        limitedNote: "Masih menunggu penguatan akses",
+      },
+      renewal: {
+        title: "Perpanjangan",
+        active: "Aktif",
+        emptyValue: "-",
+        scheduled: "Terjadwal",
+        none: "Belum ada",
+        days: (days: number) => `${Math.abs(days)} hari`,
+      },
+      backToProfile: "Kembali ke profil saya",
+    },
     documents: {
       headingEyebrow: "Arsip kerja",
       headingTitle: "Dokumen Desa",
