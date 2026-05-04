@@ -5,12 +5,15 @@ import AdminClaimWizard from "@/components/profil/admin-claim/AdminClaimWizard";
 import { auth } from "@/lib/auth";
 import { getAdminClaimPageNotice } from "@/lib/admin-claim/eligibility";
 import type { UserRole } from "@/lib/auth-context";
+import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const COPY = BACK_OFFICE_COPY.user.common;
 
 export default async function KlaimAdminDesaPage({ searchParams }: PageProps) {
   const session = await auth();
@@ -35,7 +38,7 @@ export default async function KlaimAdminDesaPage({ searchParams }: PageProps) {
         className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
       >
         <ArrowLeft size={15} />
-        Kembali ke profil saya
+        {COPY.backToProfile}
       </Link>
 
       <AdminClaimWizard user={user} initialNotice={notice} />
