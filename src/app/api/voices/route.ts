@@ -97,7 +97,7 @@ const VOICE_INCLUDE = {
 };
 
 async function resolveDesaFilter(desaId: string | null) {
-  if (!desaId) return { where: undefined, desaMap: new Map<string, { id: string; nama: string; kabupaten: string; slug: string }>() };
+  if (!desaId || !db) return { where: undefined, desaMap: new Map<string, { id: string; nama: string; kabupaten: string; slug: string }>() };
 
   const desa = await db.desa.findFirst({
     where: { OR: [{ id: desaId }, { slug: desaId }] },
@@ -124,6 +124,7 @@ async function notifyActiveAdmins(input: {
   body: string;
   metadata: Record<string, unknown>;
 }) {
+  if (!db) return;
   const admins = await db.desaAdminMember.findMany({
     where: {
       desaId: input.desaId,
