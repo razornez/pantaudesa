@@ -12,6 +12,10 @@ export const NOTIF_TYPE = {
   CLAIM_SUBMITTED:            "CLAIM_SUBMITTED",              // internal only (no in-app)
   CLAIM_APPROVED:             "CLAIM_APPROVED",               // to claimant
   CLAIM_REJECTED:             "CLAIM_REJECTED",               // to claimant
+  VOICE_CREATED:              "VOICE_CREATED",                // to active desa admins
+  VOICE_REPLY_CREATED:        "VOICE_REPLY_CREATED",          // to active desa admins / voice author
+  VOICE_VOTED:                "VOICE_VOTED",                  // to active desa admins
+  VOICE_HELPFUL:              "VOICE_HELPFUL",                // to active desa admins / voice author
 } as const;
 
 export type NotifType = typeof NOTIF_TYPE[keyof typeof NOTIF_TYPE];
