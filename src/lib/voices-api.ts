@@ -8,55 +8,58 @@ import type { CitizenVoice, VoiceReply } from "./citizen-voice";
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 export async function fetchVoices(desaId?: string): Promise<CitizenVoice[]> {
-  const url = desaId ? `/api/voices?desaId=${desaId}` : "/api/voices";
+  const url = desaId ? `/api/voices?desaId=${encodeURIComponent(desaId)}` : "/api/voices";
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("Gagal mengambil data suara warga");
   const data = await res.json();
-  // Restore Date objects from JSON strings
-  return data.map((v: CitizenVoice & { createdAt: string; resolvedAt?: string; replies: Array<{ createdAt: string }> }) => ({
+  return data.map((v: CitizenVoice & { createdAt: string; resolvedAt?: string; replies: Array<VoiceReply & { createdAt: string }> }) => ({
     ...v,
-    createdAt:  new Date(v.createdAt),
+    createdAt: new Date(v.createdAt),
     resolvedAt: v.resolvedAt ? new Date(v.resolvedAt) : undefined,
-    replies:    v.replies.map(r => ({ ...r, createdAt: new Date(r.createdAt) })),
+    replies: v.replies.map((r) => ({ ...r, createdAt: new Date(r.createdAt) })),
   }));
 }
 
 export async function submitVoice(payload: {
-  desaId:   string;
+  desaId: string;
   category: string;
-  text:     string;
-  isAnon:   boolean;
+  text: string;
+  isAnon: boolean;
+  photos?: string[];
 }): Promise<CitizenVoice> {
   const res = await fetch("/api/voices", {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(payload),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error ?? "Gagal mengirim suara");
   }
   const v = await res.json();
-  return { ...v, createdAt: new Date(v.createdAt), replies: [] };
+  return {
+    ...v,
+    createdAt: new Date(v.createdAt),
+    resolvedAt: v.resolvedAt ? new Date(v.resolvedAt) : undefined,
+    replies: (v.replies ?? []).map((r: VoiceReply & { createdAt: string }) => ({ ...r, createdAt: new Date(r.createdAt) })),
+  };
 }
 
 export async function submitVote(voiceId: string, type: "BENAR" | "BOHONG") {
   const res = await fetch(`/api/voices/${voiceId}/vote`, {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ type }),
+    body: JSON.stringify({ type }),
   });
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error ?? "Gagal mengirim vote");
   }
-  return res.json() as Promise<{ benar: number; bohong: number }>;
+  return res.json() as Promise<{ benar: number; bohong: number; viewerVoteType?: "BENAR" | "BOHONG" }>;
 }
 
 export async function submitHelpful(voiceId: string) {
-  const res = await fetch(`/api/voices/${voiceId}/helpful`, {
-    method: "POST",
-  });
+  const res = await fetch(`/api/voices/${voiceId}/helpful`, { method: "POST" });
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error ?? "Gagal menandai berguna");
@@ -69,9 +72,9 @@ export async function submitReply(voiceId: string, payload: {
   isAnon: boolean;
 }): Promise<VoiceReply> {
   const res = await fetch(`/api/voices/${voiceId}/replies`, {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(payload),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const data = await res.json();
