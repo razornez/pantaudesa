@@ -8,6 +8,7 @@ import {
   createDocumentSignedUrl,
   getStorageConfigurationErrorMessage,
   getStorageConfigurationStatus,
+  StorageObjectNotFoundError,
 } from "@/lib/storage/supabase-storage";
 import { isInternalAdmin } from "@/lib/auth/internal-admin";
 
@@ -78,6 +79,12 @@ export async function GET(
     try {
       signedUrl = await createDocumentSignedUrl(doc.storageKey);
     } catch (e) {
+      if (e instanceof StorageObjectNotFoundError) {
+        return NextResponse.json({
+          error: "File dokumen ini tidak ditemukan di storage. Arsipnya tercatat di sistem, tetapi berkas fisiknya tidak tersedia. Silakan unggah ulang dokumen ini.",
+          code: "STORAGE_OBJECT_MISSING",
+        }, { status: 404 });
+      }
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({
         error: `Gagal membuat tautan preview: ${msg}`,

@@ -10,9 +10,9 @@ import {
   FolderKanban,
   ShieldAlert,
   Upload,
-  X,
 } from "lucide-react";
 import type { StorageConfigurationStatus } from "@/lib/storage/supabase-storage";
+import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
 
 type DocStatus = "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "FAILED";
 
@@ -46,10 +46,10 @@ interface Props {
 }
 
 const STATUS_PILL: Record<DocStatus, { label: string; cls: string; dot: string }> = {
-  WAITING_VERIFIED_APPROVAL: { label: "Menunggu Persetujuan VERIFIED", cls: "pill-warn", dot: "#D97706" },
-  PROCESSING: { label: "Sedang Diproses", cls: "pill-info", dot: "#4F46E5" },
-  PUBLISHED: { label: "Dipublikasikan", cls: "pill-ok", dot: "#10B981" },
-  FAILED: { label: "Gagal", cls: "pill-danger", dot: "#F43F5E" },
+  WAITING_VERIFIED_APPROVAL: { label: "Menunggu persetujuan admin utama", cls: "pill-warn", dot: "#D97706" },
+  PROCESSING: { label: "Sedang diproses PantauDesa", cls: "pill-info", dot: "#4F46E5" },
+  PUBLISHED: { label: "Sudah dipublikasikan", cls: "pill-ok", dot: "#10B981" },
+  FAILED: { label: "Gagal diproses", cls: "pill-danger", dot: "#F43F5E" },
 };
 
 function formatBytes(bytes: number): string {
@@ -130,7 +130,7 @@ function DocCard({
             disabled={busyId === doc.id}
             className="btn-lux btn-lux-success !min-h-[40px] text-xs"
           >
-            <Check size={13} aria-hidden /> Setujui ke PROCESSING
+            <Check size={13} aria-hidden /> Setujui untuk review PantauDesa
           </button>
         )}
       </div>
@@ -145,6 +145,7 @@ function UploadForm({
   allowedMimeTypes,
   storageStatus,
   onUploaded,
+  onNotify,
 }: {
   categories: ReadonlyArray<{ value: string; label: string }>;
   maxFileSizeMB: number;
@@ -152,14 +153,13 @@ function UploadForm({
   allowedMimeTypes: string[];
   storageStatus: StorageConfigurationStatus;
   onUploaded: () => void;
+  onNotify: (message: string, type?: ToastType) => void;
 }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(categories[0]?.value ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [ack, setAck] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
@@ -167,19 +167,17 @@ function UploadForm({
     setCategory(categories[0]?.value ?? "");
     setFiles([]);
     setAck(false);
-    setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
     if (selected.length > maxFilesPerUpload) {
-      setError(`Maksimal ${maxFilesPerUpload} file per unggah.`);
+      onNotify(`Maksimal ${maxFilesPerUpload} file per unggah.`, "error");
       if (fileInputRef.current) fileInputRef.current.value = "";
       setFiles([]);
       return;
     }
-    setError(null);
     setFiles(selected);
   }
 
@@ -193,31 +191,29 @@ function UploadForm({
         : invalid
           ? `Format env tidak valid: ${invalid}.`
           : "Hubungi admin PantauDesa.";
-      setError(`Storage belum siap. ${detail}`);
+      onNotify(`Storage belum siap. ${detail}`, "error");
       return;
     }
     if (files.length === 0) {
-      setError("Pilih minimal satu file.");
+      onNotify("Pilih minimal satu file.", "error");
       return;
     }
     if (!ack) {
-      setError("Centang pernyataan tanggung jawab sebelum unggah.");
+      onNotify("Centang pernyataan tanggung jawab sebelum unggah.", "error");
       return;
     }
     for (const file of files) {
       if (file.size > maxFileSizeMB * 1024 * 1024) {
-        setError(`"${file.name}" melebihi batas ${maxFileSizeMB} MB.`);
+        onNotify(`"${file.name}" melebihi batas ${maxFileSizeMB} MB.`, "error");
         return;
       }
       if (!allowedMimeTypes.includes(file.type)) {
-        setError(`"${file.name}": tipe file tidak diizinkan. Diizinkan: ${allowedMimeTypes.join(", ")}.`);
+        onNotify(`"${file.name}": tipe file tidak diizinkan. Diizinkan: ${allowedMimeTypes.join(", ")}.`, "error");
         return;
       }
     }
 
     setLoading(true);
-    setError(null);
-    setSuccess(null);
     try {
       const fd = new FormData();
       for (const file of files) fd.append("files", file);
@@ -228,26 +224,26 @@ function UploadForm({
       const data = await res.json();
       if (!res.ok) {
         const detail = data.detail ? ` (${data.detail})` : "";
-        setError(`${data.error ?? "Gagal mengunggah."}${detail}`);
+        onNotify(`${data.error ?? "Gagal mengunggah."}${detail}`, "error");
         return;
       }
       const persisted = Array.isArray(data.documents) ? data.documents.length : 0;
       if (persisted === 0) {
-        setError("Server tidak mengembalikan konfirmasi dokumen tersimpan. Coba refresh halaman lalu cek daftar dokumen.");
+        onNotify("Server tidak mengembalikan konfirmasi dokumen tersimpan. Coba refresh halaman lalu cek daftar dokumen.", "error");
         return;
       }
-      setSuccess(`${data.message ?? "Dokumen berhasil diunggah."} (${persisted} dokumen tercatat di database)`);
+      onNotify(`${data.message ?? "Dokumen berhasil diunggah."} (${persisted} dokumen tercatat di database)`, "success");
       reset();
       onUploaded();
     } catch {
-      setError("Koneksi bermasalah. Coba lagi.");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="lux-panel p-6 sm:p-7 space-y-5">
+    <form data-testid="document-upload-form" onSubmit={handleSubmit} className="lux-panel p-6 sm:p-7 space-y-5">
       <div className="space-y-2">
         <p className="eyebrow text-[10px]">Unggah dokumen</p>
         <h2 className="text-[20px] font-semibold text-slate-900 tracking-tight">Tambah dokumen ke desa</h2>
@@ -333,9 +329,6 @@ function UploadForm({
         </span>
       </label>
 
-      {error && <div role="alert" className="notice-card notice-danger text-sm leading-relaxed">{error}</div>}
-      {success && <div role="status" className="notice-card notice-ok text-sm leading-relaxed">{success}</div>}
-
       <button type="submit" disabled={loading || !storageStatus.configured} className="btn-lux btn-lux-primary w-full">
         {loading ? "Mengunggah..." : <><Upload size={14} aria-hidden /> Unggah {files.length > 1 ? `${files.length} Dokumen` : "Dokumen"}</>}
       </button>
@@ -346,7 +339,7 @@ function UploadForm({
 export default function AdminDesaDokumenClient(props: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionMsg, setActionMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const { toasts, toast, removeToast } = useToast();
   const canUpload = props.memberStatus === "VERIFIED" || props.memberStatus === "LIMITED";
   const canApprove = props.memberStatus === "VERIFIED" && props.memberRole === "VERIFIED_ADMIN";
 
@@ -368,19 +361,18 @@ export default function AdminDesaDokumenClient(props: Props) {
   }, [props.documents]);
 
   async function handleApprove(id: string) {
-    setBusyId(id);
-    setActionMsg(null);
-    try {
-      const res = await fetch(`/api/admin-claim/documents/${id}/approve`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setActionMsg({ kind: "error", text: data.error ?? "Gagal menyetujui." });
-        return;
-      }
-      setActionMsg({ kind: "ok", text: "Dokumen berhasil masuk PROCESSING." });
+      setBusyId(id);
+      try {
+        const res = await fetch(`/api/admin-claim/documents/${id}/approve`, { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) {
+          toast(data.error ?? "Gagal menyetujui.", "error");
+          return;
+        }
+      toast("Dokumen berhasil diteruskan ke tahap review PantauDesa.", "success");
       router.refresh();
     } catch {
-      setActionMsg({ kind: "error", text: "Koneksi bermasalah." });
+      toast("Koneksi bermasalah.", "error");
     } finally {
       setBusyId(null);
     }
@@ -388,17 +380,16 @@ export default function AdminDesaDokumenClient(props: Props) {
 
   async function handlePreview(id: string) {
     setBusyId(id);
-    setActionMsg(null);
     try {
       const res = await fetch(`/api/admin-claim/documents/${id}/preview`);
       const data = await res.json();
       if (!res.ok || !data.signedUrl) {
-        setActionMsg({ kind: "error", text: data.error ?? "Gagal membuat tautan preview." });
+        toast(data.error ?? "Gagal membuat tautan preview.", "error");
         return;
       }
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch {
-      setActionMsg({ kind: "error", text: "Koneksi bermasalah." });
+      toast("Koneksi bermasalah.", "error");
     } finally {
       setBusyId(null);
     }
@@ -414,8 +405,8 @@ export default function AdminDesaDokumenClient(props: Props) {
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
             {props.memberStatus === "VERIFIED"
-              ? "Upload langsung masuk ke tahap processing dan siap ditinjau tim PantauDesa."
-              : "Upload berfungsi sebagai kontribusi kerja yang akan menunggu persetujuan Admin Desa VERIFIED."}
+              ? "Unggahan dari admin terverifikasi langsung masuk ke tahap review PantauDesa."
+              : "Unggahan dari admin terbatas akan menunggu persetujuan admin utama desa terlebih dahulu."}
           </p>
         </div>
 
@@ -450,18 +441,6 @@ export default function AdminDesaDokumenClient(props: Props) {
         </div>
       </section>
 
-      {actionMsg && (
-        <div
-          role={actionMsg.kind === "error" ? "alert" : "status"}
-          className={`notice-card ${actionMsg.kind === "ok" ? "notice-ok" : "notice-danger"} text-sm flex items-start gap-3`}
-        >
-          <span className={`mt-0.5 inline-flex w-8 h-8 rounded-2xl items-center justify-center ${actionMsg.kind === "ok" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-            {actionMsg.kind === "ok" ? <Check size={14} aria-hidden /> : <X size={14} aria-hidden />}
-          </span>
-          <span className="leading-snug">{actionMsg.text}</span>
-        </div>
-      )}
-
       {canUpload && (
         <UploadForm
           categories={props.categories}
@@ -470,6 +449,7 @@ export default function AdminDesaDokumenClient(props: Props) {
           allowedMimeTypes={props.allowedMimeTypes}
           storageStatus={props.storageStatus}
           onUploaded={() => router.refresh()}
+          onNotify={toast}
         />
       )}
 
@@ -520,6 +500,8 @@ export default function AdminDesaDokumenClient(props: Props) {
           </div>
         )}
       </section>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

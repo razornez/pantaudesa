@@ -26,8 +26,8 @@ export default async function InternalAdminClaimsPage({
 
   if (!db) {
     return (
-      <div className="text-red-600 text-sm p-4 bg-red-50 rounded-lg">
-        Database unavailable. Check server configuration.
+      <div className="notice-card notice-danger text-sm leading-relaxed">
+        Database belum tersedia. Cek konfigurasi server sebelum membuka antrean pengajuan.
       </div>
     );
   }

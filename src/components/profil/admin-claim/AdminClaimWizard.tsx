@@ -87,11 +87,11 @@ export default function AdminClaimWizard({
   const canInvite = data?.currentMember?.status === "VERIFIED" && data.currentMember.role === "VERIFIED_ADMIN";
   const inviteDisabledReason = canInvite
     ? ""
-    : "Undangan admin hanya bisa dikirim oleh Admin Desa VERIFIED.";
+    : "Undangan admin hanya bisa dikirim oleh admin utama desa.";
   const progressSummary = data?.currentMember?.status === "VERIFIED"
-    ? "Admin desa sudah VERIFIED."
+    ? "Akun sudah menjadi admin terverifikasi."
     : data?.currentMember?.status === "LIMITED"
-    ? "Akun sudah LIMITED, lanjutkan sampai VERIFIED."
+    ? "Akun sudah punya akses terbatas, lanjutkan sampai terverifikasi."
     : data?.currentClaim
     ? "Klaim aktif sedang diproses."
     : "Belum ada klaim aktif.";

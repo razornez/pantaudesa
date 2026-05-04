@@ -5,6 +5,7 @@ import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import { getVisibleTabs } from "@/lib/admin-claim/profile-tabs";
 import AdminDesaBadge from "@/components/admin-desa/AdminDesaBadge";
 import AdminDesaTabNav from "@/components/admin-desa/AdminDesaTabNav";
+import { BadgeCheck, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,11 @@ export default async function AdminDesaLayout({
 
   const visibleTabs = getVisibleTabs(ctx.member.status);
   const isVerified = ctx.member.status === "VERIFIED";
+  const membershipLabel = isVerified ? "Admin terverifikasi" : "Admin terbatas";
+  const roleLabel = ctx.member.role === "VERIFIED_ADMIN" ? "Bisa kelola anggota" : "Kontributor dokumen";
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" data-testid="admin-desa-shell">
       <header className="pt-5 sm:pt-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="lux-panel overflow-hidden">
@@ -61,10 +64,10 @@ export default async function AdminDesaLayout({
                           style={{ background: isVerified ? "#10B981" : "#D97706" }}
                           aria-hidden
                         />
-                        {isVerified ? "Admin VERIFIED" : "Admin LIMITED"}
+                        {membershipLabel}
                       </span>
                       <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold pill-info">
-                        {ctx.member.role === "VERIFIED_ADMIN" ? "Bisa kelola anggota" : "Kontributor desa"}
+                        {roleLabel}
                       </span>
                     </div>
                   </div>
@@ -72,10 +75,23 @@ export default async function AdminDesaLayout({
 
                 <div className="flex flex-col items-start gap-3 lg:items-end">
                   <div className="grid grid-cols-2 gap-3 w-full lg:w-auto">
-                    <div className="metric-card min-w-[132px]">
-                      <p className="metric-label">Status</p>
-                      <p className="metric-value text-[1.35rem]">{isVerified ? "V" : "L"}</p>
-                      <p className="metric-note">{isVerified ? "Terverifikasi" : "Terbatas"}</p>
+                    <div className="metric-card min-w-[132px] flex flex-col justify-between">
+                      <p className="metric-label">Status akun</p>
+                      <div className="mt-3">
+                        <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px] font-semibold shadow-[0_14px_28px_-20px_rgba(15,23,42,0.35)] ${
+                          isVerified
+                            ? "bg-[linear-gradient(135deg,rgba(79,70,229,0.12),rgba(16,185,129,0.12))] text-slate-900 ring-1 ring-indigo-100"
+                            : "bg-amber-50 text-amber-900 ring-1 ring-amber-100"
+                        }`}>
+                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                            isVerified ? "bg-[#1877F2] text-white" : "bg-amber-500 text-white"
+                          }`}>
+                            {isVerified ? <BadgeCheck size={14} aria-hidden /> : <Sparkles size={13} aria-hidden />}
+                          </span>
+                          {isVerified ? "Verified Resmi" : "Limited Access"}
+                        </span>
+                      </div>
+                      <p className="metric-note mt-3">{isVerified ? "Badge resmi admin desa aktif" : "Masih menunggu penguatan akses"}</p>
                     </div>
                     <div className="metric-card min-w-[132px]">
                       <p className="metric-label">Perpanjangan</p>

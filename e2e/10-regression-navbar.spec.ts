@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { login, logout, QA, screenshot } from "./helpers";
 
-const viewport = () => (test.info().project.name as "desktop" | "mobile");
+const viewport = () => {
+  const name = test.info().project.name;
+  if (name === "mobile-390") return "mobile";
+  if (name === "iphone-12-mini") return "iphone-12-mini";
+  return "desktop";
+};
 
 // Regression coverage for the bugs reported by owner:
 //   1. Navbar shows account name (NOT "Dashboard") for all roles.

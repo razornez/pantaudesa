@@ -6,13 +6,13 @@ const guideItems = [
   "Token website perlu diperbarui setiap 6 bulan agar hubungan dengan website resmi desa tetap valid dan segar.",
   "Token mentah hanya ditampilkan sekali di sesi aktif dan tidak disimpan di browser maupun database setelah halaman di-refresh.",
   "Jika token mentah hilang setelah refresh, kamu bisa generate ulang token baru dari halaman ini.",
-  "Status PENDING artinya klaim sedang dalam proses verifikasi. Segera selesaikan verifikasi agar status segera diperbarui.",
-  "Status LIMITED artinya kamu sudah punya akses admin awal, tapi belum terhubung penuh ke kanal resmi desa.",
-  "Status VERIFIED artinya kamu sudah terhubung penuh ke kanal resmi desa dan boleh mengundang admin lain.",
+  "Pengajuan dibuat artinya klaim sedang dalam proses verifikasi. Segera selesaikan verifikasi agar status cepat diperbarui.",
+  "Admin terbatas artinya kamu sudah punya akses admin awal, tapi belum terhubung penuh ke kanal resmi desa.",
+  "Admin terverifikasi artinya kamu sudah terhubung penuh ke kanal resmi desa dan boleh mengundang admin lain.",
   "Verifikasi admin desa berbeda dari verifikasi data publik desa. Admin terverifikasi tidak otomatis membuat data publik menjadi terverifikasi.",
   "Data publik desa tetap mengikuti alur review/governance PantauDesa yang terpisah dari status keanggotaan admin.",
-  "Hanya Admin Desa dengan status VERIFIED yang boleh mengundang admin lain.",
-  "Admin hasil undangan selalu mulai dari status LIMITED, bukan langsung VERIFIED.",
+  "Hanya admin utama desa yang boleh mengundang admin lain.",
+  "Admin hasil undangan selalu mulai dari status admin terbatas, bukan langsung admin terverifikasi.",
   "Satu desa maksimal memiliki 5 admin. Jika batas sudah tercapai, undangan baru tidak bisa dikirim.",
   "Pengundang bertanggung jawab atas tindakan admin yang diundangnya.",
   "Email verifikasi memiliki batas waktu berlaku. Jika tautan sudah kedaluwarsa, kirim ulang dari halaman ini.",
@@ -23,7 +23,7 @@ const guideItems = [
 
 export default function AdminDesaGuide() {
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+    <section className="lux-card p-5">
       <p className="text-sm font-black text-slate-900">Panduan Admin Desa</p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {guideItems.map((item) => (

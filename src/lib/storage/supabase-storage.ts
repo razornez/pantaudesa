@@ -85,10 +85,18 @@ export class StorageNotConfiguredError extends Error {
 }
 
 export class StorageOperationError extends Error {
-  code = "STORAGE_OPERATION_FAILED" as const;
+  code: "STORAGE_OPERATION_FAILED" | "STORAGE_OBJECT_NOT_FOUND" = "STORAGE_OPERATION_FAILED";
   constructor(message: string) {
     super(message);
     this.name = "StorageOperationError";
+  }
+}
+
+export class StorageObjectNotFoundError extends StorageOperationError {
+  code = "STORAGE_OBJECT_NOT_FOUND" as const;
+  constructor(message = "Object not found") {
+    super(message);
+    this.name = "StorageObjectNotFoundError";
   }
 }
 
@@ -138,8 +146,18 @@ export async function createDocumentSignedUrl(
   ttlSeconds = getSignedUrlTtl(),
 ): Promise<string> {
   const { client, bucket } = getStorageClient();
+  const { error: infoError } = await client.storage.from(bucket).info(storageKey);
+  if (infoError) {
+    if (/object not found/i.test(infoError.message)) {
+      throw new StorageObjectNotFoundError();
+    }
+    throw new StorageOperationError(`Object info failed: ${infoError.message}`);
+  }
   const { data, error } = await client.storage.from(bucket).createSignedUrl(storageKey, ttlSeconds);
   if (error || !data?.signedUrl) {
+    if (error && /object not found/i.test(error.message)) {
+      throw new StorageObjectNotFoundError();
+    }
     throw new StorageOperationError(`Signed URL failed: ${error?.message ?? "no signedUrl returned"}`);
   }
   return data.signedUrl;

@@ -26,8 +26,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
     },
     {
-      name: "mobile",
+      name: "mobile-390",
       use: { ...devices["iPhone 14"], viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "iphone-12-mini",
+      use: { ...devices["iPhone 12 Mini"], viewport: { width: 360, height: 780 } },
     },
   ],
 });

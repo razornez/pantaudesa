@@ -114,7 +114,7 @@ export default function Navbar() {
           )}
         </Link>
         {/* Account — name + avatar, always points to /profil */}
-        <Link href="/profil" className="flex items-center gap-2 hover:bg-slate-50 px-2 py-1.5 rounded-xl transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+        <Link data-testid="navbar-account-link" href="/profil" className="flex items-center gap-2 hover:bg-slate-50 px-2 py-1.5 rounded-xl transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
           <NavAvatar nama={user.nama} avatarUrl={user.avatarUrl} />
           <span className="text-xs font-semibold text-slate-700 max-w-[80px] truncate hidden sm:block">
             {displayName}
@@ -145,7 +145,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1 rounded-2xl bg-white/72 p-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06),0_14px_30px_-24px_rgba(15,23,42,0.24)]">
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
               <Link
                 key={link.href}

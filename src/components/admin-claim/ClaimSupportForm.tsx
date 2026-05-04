@@ -13,6 +13,18 @@ interface Props {
   alreadySubmittedAt: string | null;
 }
 
+function claimStatusLabel(status: string) {
+  if (status === "PENDING") return "Pengajuan dibuat";
+  if (status === "IN_REVIEW") return "Sedang diperiksa";
+  return "Pengajuan ditolak";
+}
+
+function claimStatusTone(status: string) {
+  if (status === "PENDING") return "pill-warn";
+  if (status === "IN_REVIEW") return "pill-info";
+  return "pill-danger";
+}
+
 export default function ClaimSupportForm({
   claimId,
   desaId,
@@ -55,12 +67,12 @@ export default function ClaimSupportForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Terjadi kesalahan. Coba lagi.");
+        setError(data.error ?? "Pengajuan belum berhasil dikirim. Coba lagi beberapa saat.");
         return;
       }
       setResult({ ok: true, message: data.message });
     } catch {
-      setError("Koneksi bermasalah. Periksa jaringan dan coba lagi.");
+      setError("Koneksi bermasalah. Periksa jaringan lalu coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -70,22 +82,18 @@ export default function ClaimSupportForm({
 
   if (result?.ok) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-6 space-y-2">
-        <p className="font-semibold text-green-800">
-          {isRejected ? "Keberatan terkirim" : "Pengajuan terkirim"}
+      <div className="lux-card p-6 space-y-3">
+        <div className="notice-card notice-ok text-sm leading-relaxed">
+          <p className="font-semibold">{isRejected ? "Keberatan terkirim" : "Pengajuan tambahan terkirim"}</p>
+          <p className="mt-2">{result.message}</p>
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          {isRejected
+            ? "Status pengajuan belum langsung berubah. Admin PantauDesa akan meninjau ulang bukti yang kamu kirim dan memberi kabar lewat email."
+            : "Tim PantauDesa akan meninjau informasi tambahan ini bersama data pengajuan yang sudah ada."}
         </p>
-        <p className="text-sm text-green-700">{result.message}</p>
-        {isRejected && (
-          <p className="text-xs text-green-700">
-            Status klaim kamu tetap <strong>REJECTED</strong> sampai admin PantauDesa
-            meninjau ulang bukti yang kamu kirim. Update akan dikirimkan via email.
-          </p>
-        )}
-        <Link
-          href="/profil/klaim-admin-desa"
-          className="mt-2 inline-block text-sm text-indigo-600 font-medium hover:underline"
-        >
-          Kembali ke status klaim →
+        <Link href="/profil/klaim-admin-desa" className="btn-lux btn-lux-secondary w-full sm:w-auto">
+          Kembali ke status klaim
         </Link>
       </div>
     );
@@ -93,143 +101,130 @@ export default function ClaimSupportForm({
 
   return (
     <div className="space-y-5">
-      {/* Claim context */}
-      <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 space-y-1">
-        <p className="text-sm font-medium text-slate-700">Desa yang diklaim</p>
+      <div className="lux-card p-5 space-y-2">
+        <p className="eyebrow text-[10px]">Konteks pengajuan</p>
         <p className="text-base font-semibold text-slate-900">{desaName}</p>
         <p className="text-sm text-slate-500">{desaLocation}</p>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-          claimStatus === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-          claimStatus === "IN_REVIEW" ? "bg-blue-100 text-blue-800" :
-          "bg-red-100 text-red-800"
-        }`}>
-          {claimStatus}
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${claimStatusTone(claimStatus)}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" aria-hidden />
+          {claimStatusLabel(claimStatus)}
         </span>
       </div>
 
-      {/* Explicit notice for REJECTED claims: submission does NOT auto-restore access */}
       {isRejected && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 space-y-1">
-          <p className="font-medium">Klaim kamu saat ini berstatus REJECTED</p>
-          <p className="text-red-700">
-            Mengirim keberatan/bukti tambahan <strong>tidak otomatis mengubah status menjadi VERIFIED</strong>.
-            Klaim akan tetap REJECTED sampai admin PantauDesa meninjau ulang bukti yang kamu kirim.
-            Hasil peninjauan akan dikirimkan via email ke akun kamu.
+        <div className="notice-card notice-danger text-sm leading-relaxed">
+          <p className="font-medium">Pengajuan kamu saat ini belum bisa diterima</p>
+          <p className="mt-2">
+            Mengirim keberatan atau bukti tambahan tidak otomatis membuat akun menjadi admin terverifikasi. Tim PantauDesa akan membaca ulang bukti yang kamu kirim, lalu memberi keputusan lewat email.
           </p>
         </div>
       )}
 
       {alreadySubmitted && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+        <div className="notice-card notice-info text-sm leading-relaxed">
           <p className="font-medium">
-            {isRejected ? "Keberatan/bukti sudah pernah dikirim" : "Pengajuan sudah dikirim sebelumnya"}
+            {isRejected ? "Bukti tambahan sudah pernah dikirim" : "Pengajuan tambahan sudah pernah dikirim"}
           </p>
-          {alreadySubmittedAt && (
-            <p className="text-blue-600 text-xs mt-0.5">
-              Dikirim: {new Date(alreadySubmittedAt).toLocaleString("id-ID")}
+          {alreadySubmittedAt ? (
+            <p className="mt-2 text-xs opacity-80">
+              Dikirim pada {new Date(alreadySubmittedAt).toLocaleString("id-ID")}
             </p>
-          )}
-          <p className="mt-1">
+          ) : null}
+          <p className="mt-2">
             {isRejected
-              ? "Kamu dapat mengirim bukti tambahan jika ada informasi baru."
-              : "Kamu dapat mengirim pengajuan tambahan dengan bukti terbaru."}
+              ? "Kamu boleh mengirim informasi baru bila ada bukti yang lebih kuat."
+              : "Kamu boleh mengirim penjelasan tambahan bila ada perkembangan baru."}
           </p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-white border border-slate-200 rounded-xl px-5 py-5 space-y-4">
+        <div className="lux-card p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-slate-900">Detail pengajuan</h2>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Alasan kamu mengajukan sebagai Admin Desa{" "}
-              <span className="text-red-500">*</span>
+            <label className="field-label">
+              Alasan kamu mengajukan sebagai Admin Desa <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
-              placeholder="Contoh: Saya adalah Kepala Desa / Sekdes / perangkat desa resmi"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="Contoh: Saya perangkat desa yang mengelola data resmi desa."
+              className="field-lux"
               required
             />
-            <p className="text-xs text-slate-400 mt-0.5">{reason.length}/200</p>
+            <p className="text-xs text-slate-400 mt-1">{reason.length}/200</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Penjelasan lengkap pengajuan kamu <span className="text-red-500">*</span>
+            <label className="field-label">
+              Penjelasan lengkap pengajuan kamu <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
               maxLength={2000}
               rows={4}
-              placeholder="Ceritakan latar belakang, jabatan, dan bukti bahwa kamu berwenang mengelola data desa ini..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+              placeholder="Ceritakan jabatan, peran, dan alasan kamu berwenang mengelola informasi desa ini."
+              className="textarea-lux"
               required
             />
-            <p className="text-xs text-slate-400 mt-0.5">{explanation.length}/2000</p>
+            <p className="text-xs text-slate-400 mt-1">{explanation.length}/2000</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Mengapa kamu tidak bisa verifikasi via website token atau OTP email?{" "}
-              <span className="text-red-500">*</span>
+            <label className="field-label">
+              Mengapa kamu belum bisa verifikasi lewat token website atau email resmi? <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={whyCannotVerify}
               onChange={(e) => setWhyCannotVerify(e.target.value)}
               maxLength={1000}
               rows={3}
-              placeholder="Contoh: Website desa sedang dalam perbaikan / tidak ada akses ke email desa resmi / domain desa belum aktif..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+              placeholder="Contoh: website desa sedang diperbaiki, email resmi belum aktif, atau akses email dipegang pihak lain."
+              className="textarea-lux"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Deskripsi bukti/dokumen pendukung{" "}
-              <span className="text-slate-400 font-normal">(opsional)</span>
+            <label className="field-label">
+              Gambaran bukti yang kamu miliki <span className="text-slate-400 font-normal">(opsional)</span>
             </label>
             <textarea
               value={evidenceDescription}
               onChange={(e) => setEvidenceDescription(e.target.value)}
               maxLength={1000}
-              rows={2}
-              placeholder="Contoh: SK Pengangkatan nomor ..., surat kuasa dari kades, foto dokumen resmi..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+              rows={3}
+              placeholder="Contoh: SK pengangkatan, surat kuasa, atau dokumen resmi lain yang bisa membantu review."
+              className="textarea-lux"
             />
-            <p className="text-xs text-slate-400 mt-0.5">
-              Upload file belum tersedia. Deskripsikan bukti yang kamu miliki — bisa dikirimkan lewat email balasan setelah pengajuan.
+            <p className="text-xs text-slate-400 mt-1">
+              Upload file belum tersedia di form ini. Jelaskan dulu bukti yang kamu punya agar tim tahu dokumen apa yang bisa diminta bila perlu.
             </p>
           </div>
         </div>
 
-        {/* Responsibility acknowledgment */}
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)] cursor-pointer">
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 rounded border-slate-300 shrink-0"
+            className="mt-1 rounded border-slate-300 accent-[#1E1B4B]"
           />
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-slate-700 leading-relaxed">
             Saya menyatakan informasi yang saya kirimkan benar dan dapat dipertanggungjawabkan.
           </span>
         </label>
 
-        {error && (
-          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-        )}
+        {error && <p className="notice-card notice-danger text-sm">{error}</p>}
 
         <button
           type="submit"
           disabled={loading || !agreed}
-          className="w-full bg-indigo-600 text-white text-sm font-semibold rounded-xl px-6 py-3 hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-lux btn-lux-primary w-full"
         >
           {loading ? "Mengirim..." : "Kirim Pengajuan Admin Desa"}
         </button>

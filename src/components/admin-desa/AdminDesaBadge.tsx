@@ -50,6 +50,7 @@ export default function AdminDesaBadge({
   }, [open]);
 
   const isVerified = status === "VERIFIED";
+  const statusLabel = isVerified ? "Admin terverifikasi" : "Admin terbatas";
   const badgeColor = isVerified ? "bg-emerald-500" : "bg-amber-500";
   const badgeIcon = isVerified ? <ShieldCheck size={11} className="text-white" /> : <BadgeCheck size={11} className="text-white" />;
 
@@ -61,7 +62,7 @@ export default function AdminDesaBadge({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={`Status Admin Desa: ${status}. Klik untuk detail.`}
+        aria-label={`Status Admin Desa: ${statusLabel}. Klik untuk detail.`}
         className="relative w-12 h-12 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:outline-none focus-visible:ring-offset-2 rounded-full"
       >
         <span className="absolute inset-0 overflow-hidden rounded-full border-2 border-white shadow-sm ring-1 ring-black/5 bg-white z-0">
@@ -101,7 +102,7 @@ export default function AdminDesaBadge({
             </span>
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 text-sm">
-                Admin Desa {status}
+                {statusLabel}
               </p>
               <p className="text-xs text-slate-500 truncate">{desaName}</p>
             </div>
@@ -110,13 +111,13 @@ export default function AdminDesaBadge({
           {isVerified ? (
             <ul className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
               <li>✓ Dapat publish/update data desa setelah dokumen lolos review.</li>
-              <li>✓ Dapat mengundang Admin Desa LIMITED.</li>
+              <li>✓ Dapat mengundang admin terbatas.</li>
               <li>✓ Wajib memperpanjang verifikasi tiap 6 bulan.</li>
               <li>✗ Tidak dapat akses panel internal admin PantauDesa.</li>
             </ul>
           ) : (
             <ul className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
-              <li>✓ Diundang oleh Admin Desa VERIFIED.</li>
+              <li>✓ Diundang oleh admin utama desa.</li>
               <li>✓ Dapat lihat dan upload dokumen kontribusi.</li>
               <li>✗ Tidak dapat publish data desa.</li>
               <li>✗ Tidak dapat mengundang admin lain.</li>

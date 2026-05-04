@@ -9,9 +9,9 @@ import {
   Clock3,
   FileText,
   MailWarning,
-  ShieldAlert,
   UserCog,
 } from "lucide-react";
+import { ToastContainer, useToast } from "@/components/ui/Toast";
 
 interface NotifRow {
   id: string;
@@ -42,7 +42,7 @@ export default function AdminDesaNotifikasiClient({
   const [notifications, setNotifications] = useState(initialNotifications);
   const [unread, setUnread] = useState(initialUnread);
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, toast, removeToast } = useToast();
 
   const summary = useMemo(() => {
     return {
@@ -53,7 +53,6 @@ export default function AdminDesaNotifikasiClient({
   }, [notifications.length, unread]);
 
   async function markAllRead() {
-    setError(null);
     try {
       const res = await fetch("/api/admin-claim/notifications/mark-read", {
         method: "POST",
@@ -62,20 +61,20 @@ export default function AdminDesaNotifikasiClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menandai semua sebagai dibaca.");
+        toast(data.error ?? "Gagal menandai semua sebagai dibaca.", "error");
         return;
       }
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
         setUnread(0);
       });
+      toast("Semua notifikasi berhasil ditandai sebagai dibaca.", "success");
     } catch {
-      setError("Koneksi bermasalah.");
+      toast("Koneksi bermasalah.", "error");
     }
   }
 
   async function markOneRead(id: string) {
-    setError(null);
     try {
       const res = await fetch("/api/admin-claim/notifications/mark-read", {
         method: "POST",
@@ -84,7 +83,7 @@ export default function AdminDesaNotifikasiClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menandai notifikasi.");
+        toast(data.error ?? "Gagal menandai notifikasi.", "error");
         return;
       }
       startTransition(() => {
@@ -93,13 +92,14 @@ export default function AdminDesaNotifikasiClient({
         )));
         setUnread((c) => Math.max(0, c - 1));
       });
+      toast("Notifikasi ditandai sebagai dibaca.", "success");
     } catch {
-      setError("Koneksi bermasalah.");
+      toast("Koneksi bermasalah.", "error");
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="notification-tab">
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="metric-card">
           <p className="metric-label">Total notifikasi</p>
@@ -139,15 +139,6 @@ export default function AdminDesaNotifikasiClient({
           </button>
         )}
       </div>
-
-      {error && (
-        <div role="alert" className="notice-card notice-danger text-sm flex items-start gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 shrink-0">
-            <ShieldAlert size={16} aria-hidden />
-          </span>
-          <span>{error}</span>
-        </div>
-      )}
 
       {notifications.length === 0 ? (
         <div className="lux-card p-12 text-center space-y-3">
@@ -209,6 +200,8 @@ export default function AdminDesaNotifikasiClient({
           })}
         </ul>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

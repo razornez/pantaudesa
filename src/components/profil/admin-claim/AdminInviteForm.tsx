@@ -14,16 +14,17 @@ export default function AdminInviteForm({
   onSubmit: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+    <div className="lux-card p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-black text-slate-900">Undang admin desa</p>
+          <p className="eyebrow text-[10px]">Undang admin desa</p>
+          <p className="mt-2 text-sm font-semibold text-slate-900">Tambahkan rekan kerja bila memang perlu</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Hanya Admin Desa VERIFIED yang boleh mengundang. Admin baru masuk sebagai LIMITED, maksimal 5 admin per desa.
+            Hanya admin utama desa yang boleh mengundang. Admin baru akan masuk sebagai admin terbatas, maksimal 5 admin per desa.
           </p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${canInvite ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-          {canInvite ? "✓ Bisa undang" : "Tidak tersedia"}
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${canInvite ? "pill-ok" : "pill-info"}`}>
+          {canInvite ? "Bisa undang" : "Belum tersedia"}
         </span>
       </div>
 
@@ -35,7 +36,7 @@ export default function AdminInviteForm({
             onChange={(event) => onEmailChange(event.target.value)}
             placeholder="email calon admin"
             disabled={invite.loading}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
+            className="field-lux disabled:cursor-not-allowed disabled:bg-slate-50"
           />
           {!canInvite ? (
             <p className="mt-1.5 text-[10px] text-amber-700 flex items-center gap-1">
@@ -48,18 +49,14 @@ export default function AdminInviteForm({
           type="button"
           onClick={onSubmit}
           disabled={invite.loading || !invite.email.trim() || !canInvite}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-lux btn-lux-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
         >
           {invite.loading ? "Mengirim..." : "Kirim undangan admin"}
         </button>
         {invite.success ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
-            ✓ {invite.success}
-          </div>
+          <div className="notice-card notice-ok text-xs leading-relaxed">{invite.success}</div>
         ) : invite.error ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800">
-            ✗ {invite.error}
-          </div>
+          <div className="notice-card notice-danger text-xs leading-relaxed">{invite.error}</div>
         ) : null}
       </div>
     </div>

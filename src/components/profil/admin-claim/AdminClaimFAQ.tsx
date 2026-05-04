@@ -9,16 +9,16 @@ export default function AdminClaimFAQ() {
       a: "Tidak. Admin terverifikasi adalah status keanggotaan admin, bukan status verifikasi data publik desa. Data publik desa tetap mengikuti alur review/governance yang terpisah.",
     },
     {
-      q: "Mengapa hanya Admin Desa VERIFIED yang boleh mengundang admin lain?",
-      a: "Mengundang admin adalah tindakan yang sensitif karena pengundang bertanggung jawab atas siapa yang diundang. Hanya admin yang sudah terhubung penuh ke kanal resmi desa (status VERIFIED) yang dianggap cukup terpercaya untuk tindakan ini.",
+      q: "Mengapa hanya admin utama desa yang boleh mengundang admin lain?",
+      a: "Mengundang admin adalah tindakan yang sensitif karena pengundang bertanggung jawab atas siapa yang diundang. Hanya admin yang sudah terhubung penuh ke kanal resmi desa yang dianggap cukup siap untuk tindakan ini.",
     },
     {
       q: "Apa yang terjadi setelah seseorang menerima undangan admin?",
-      a: "Admin yang menerima undangan akan masuk sebagai Admin Desa LIMITED, bukan VERIFIED. Mereka harus melalui verifikasi sendiri untuk naik ke status VERIFIED.",
+      a: "Admin yang menerima undangan akan masuk sebagai admin terbatas, bukan langsung admin terverifikasi. Mereka harus melalui verifikasi sendiri untuk naik status.",
     },
     {
-      q: "Bisakah admin LIMITED mengundang admin lain?",
-      a: "Tidak. Hanya Admin Desa VERIFIED yang boleh mengundang admin baru. Admin LIMITED perlu menyelesaikan verifikasi sendiri terlebih dahulu.",
+      q: "Bisakah admin terbatas mengundang admin lain?",
+      a: "Tidak. Hanya admin utama desa yang boleh mengundang admin baru. Admin terbatas perlu menyelesaikan verifikasi sendiri terlebih dahulu.",
     },
     {
       q: "Mengapa batas maksimal admin per desa adalah 5 orang?",
@@ -63,7 +63,7 @@ export default function AdminClaimFAQ() {
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+    <div className="lux-card p-5">
       <p className="text-sm font-black text-slate-900">Pertanyaan Umum (FAQ)</p>
       <div className="mt-3 space-y-2">
         {faqs.map((faq, i) => (

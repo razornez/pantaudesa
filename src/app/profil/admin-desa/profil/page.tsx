@@ -14,6 +14,8 @@ export default async function AdminDesaProfilePage() {
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
   const isVerified = ctx.member.status === "VERIFIED";
+  const membershipLabel = isVerified ? "Admin terverifikasi" : "Admin terbatas";
+  const roleLabel = ctx.member.role === "VERIFIED_ADMIN" ? "Admin utama desa" : "Kontributor dokumen";
 
   return (
     <div className="space-y-7">
@@ -44,7 +46,7 @@ export default async function AdminDesaProfilePage() {
                 <p className="eyebrow text-[10px]">Status keanggotaan</p>
                 <div className="flex items-center gap-3 mt-2">
                   <p className={`display text-[28px] sm:text-[34px] font-semibold ${isVerified ? "text-emerald-900" : "text-amber-900"}`}>
-                    {isVerified ? "VERIFIED" : "LIMITED"}
+                    {membershipLabel}
                   </p>
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${isVerified ? "pill-ok" : "pill-warn"}`}>
                     <span
@@ -52,7 +54,7 @@ export default async function AdminDesaProfilePage() {
                       style={{ background: isVerified ? "#10B981" : "#D97706" }}
                       aria-hidden
                     />
-                    {ctx.member.role.replace("_", " ")}
+                    {roleLabel}
                   </span>
                 </div>
               </div>
@@ -120,7 +122,7 @@ export default async function AdminDesaProfilePage() {
                   <p className="text-sm leading-relaxed opacity-90">
                     {isVerified
                       ? "Kamu memegang kendali penuh untuk alur dokumen desa, koordinasi admin, dan pengiriman data yang siap ditinjau PantauDesa."
-                      : "Kamu sudah punya akses kerja, tetapi keputusan penting masih menunggu persetujuan Admin Desa VERIFIED."}
+                      : "Kamu sudah punya akses kerja, tetapi keputusan penting masih menunggu persetujuan admin utama desa."}
                   </p>
                 </div>
               </div>
@@ -161,15 +163,15 @@ export default async function AdminDesaProfilePage() {
             {isVerified ? (
               <>
                 <li>Publikasikan atau update data desa setelah dokumen lolos review internal.</li>
-                <li>Undang dan kelola Admin Desa LIMITED sesuai kebutuhan operasional.</li>
-                <li>Setujui dokumen kontribusi dari admin LIMITED agar masuk ke tahap processing.</li>
+                <li>Undang dan kelola admin terbatas sesuai kebutuhan operasional.</li>
+                <li>Setujui dokumen kontribusi dari admin terbatas agar masuk ke tahap peninjauan PantauDesa.</li>
                 <li>Gunakan dashboard ini sebagai workspace harian untuk dokumen, suara, dan notifikasi.</li>
               </>
             ) : (
               <>
                 <li>Unggah dokumen kontribusi dengan bukti yang rapi dan dapat diverifikasi.</li>
                 <li>Lihat perkembangan dokumen, suara warga, dan pengingat dari PantauDesa.</li>
-                <li>Siapkan dokumen kerja sambil menunggu approval dari Admin Desa VERIFIED.</li>
+                <li>Siapkan dokumen kerja sambil menunggu persetujuan admin utama desa.</li>
               </>
             )}
           </ul>
@@ -197,7 +199,7 @@ export default async function AdminDesaProfilePage() {
               <>
                 <li className="text-rose-700">Belum bisa publish data desa langsung ke publik.</li>
                 <li className="text-rose-700">Belum bisa mengundang atau mencabut admin lain.</li>
-                <li className="text-rose-700">Dokumen yang kamu kirim tetap menunggu approval Admin VERIFIED.</li>
+                <li className="text-rose-700">Dokumen yang kamu kirim tetap menunggu persetujuan admin utama desa.</li>
               </>
             )}
           </ul>

@@ -4,10 +4,10 @@ const guideItems = [
   "Verifikasi admin bisa melalui email resmi desa atau token yang dipasang di website resmi desa.",
   "Token website harus dipasang di halaman yang mudah diakses dari website resmi desa.",
   "Token website perlu diperbarui setiap 6 bulan agar hubungan dengan website resmi desa tetap valid.",
-  "Status PENDING berarti klaim sedang diproses dan verifikasi masih perlu diselesaikan.",
-  "Status LIMITED berarti akses admin awal sudah aktif, tetapi belum penuh ke kanal resmi desa.",
-  "Status VERIFIED berarti akun sudah terhubung penuh ke kanal resmi desa dan boleh mengundang admin lain.",
-  "Admin hasil undangan selalu mulai dari status LIMITED, bukan langsung VERIFIED.",
+  "Pengajuan dibuat berarti klaim sedang diproses dan verifikasi masih perlu diselesaikan.",
+  "Admin terbatas berarti akses admin awal sudah aktif, tetapi belum penuh ke kanal resmi desa.",
+  "Admin terverifikasi berarti akun sudah terhubung penuh ke kanal resmi desa dan boleh mengundang admin lain.",
+  "Admin hasil undangan selalu mulai dari status admin terbatas, bukan langsung admin terverifikasi.",
   "Satu desa maksimal memiliki 5 admin. Jika batas tercapai, undangan baru tidak bisa dikirim.",
   "Hubungi Admin dipakai untuk bantuan, klarifikasi, atau melaporkan dugaan admin palsu.",
   "Jika kamu tidak lagi mewakili desa tersebut, hubungi tim PantauDesa agar status admin ditinjau ulang.",
@@ -23,12 +23,12 @@ const faqs = [
     a: "Tidak. Admin terverifikasi adalah status keanggotaan admin, bukan status verifikasi data publik desa. Data publik desa tetap mengikuti alur review yang terpisah.",
   },
   {
-    q: "Mengapa hanya Admin Desa VERIFIED yang boleh mengundang admin lain?",
+    q: "Mengapa hanya admin utama desa yang boleh mengundang admin lain?",
     a: "Karena undangan admin adalah tindakan sensitif. Hanya admin yang sudah terhubung penuh ke kanal resmi desa yang boleh melakukannya.",
   },
   {
     q: "Apa yang terjadi setelah seseorang menerima undangan admin?",
-    a: "Admin yang menerima undangan akan masuk sebagai Admin Desa LIMITED dan tetap harus menjalani verifikasi sendiri untuk naik ke VERIFIED.",
+    a: "Admin yang menerima undangan akan masuk sebagai admin terbatas dan tetap harus menjalani verifikasi sendiri untuk naik menjadi admin terverifikasi.",
   },
   {
     q: "Apa yang harus saya lakukan jika tidak punya akses ke email resmi desa?",
@@ -50,7 +50,7 @@ const faqs = [
 
 export default function AdminClaimHelpSection() {
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+    <section className="lux-card p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-black text-slate-900">Panduan dan FAQ Admin Desa</p>

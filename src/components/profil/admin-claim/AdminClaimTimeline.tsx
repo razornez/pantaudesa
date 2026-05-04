@@ -55,12 +55,12 @@ export default function AdminClaimTimeline({
     {
       num: 4,
       state: !hasVerifiedToken ? "upcoming" : isLimited || isVerified ? "done" : "active",
-      title: isVerified ? "Admin VERIFIED aktif" : "Admin LIMITED aktif",
+      title: isVerified ? "Admin terverifikasi aktif" : "Admin terbatas aktif",
       note: !hasVerifiedToken
         ? "Selesaikan verifikasi lebih dulu."
         : isVerified
-        ? "Kamu admin terverifikasi. Bisa mengundang admin lain."
-        : "Akses admin terbatas aktif. Selesaikan verifikasi untuk naik ke VERIFIED.",
+        ? "Kamu sudah menjadi admin terverifikasi dan bisa mengundang admin lain."
+        : "Akses admin terbatas sudah aktif. Selesaikan verifikasi untuk menjadi admin terverifikasi.",
     },
   ];
 
@@ -190,7 +190,7 @@ export default function AdminClaimTimeline({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+    <div className="lux-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm font-black text-slate-900">Progress Klaim Admin</p>
         {activeIndex >= 0 ? (

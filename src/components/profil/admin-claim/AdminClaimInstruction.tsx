@@ -34,19 +34,19 @@ export default function AdminClaimInstruction({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+      <div className="notice-card notice-info">
         <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Cara yang dipilih</p>
         <p className="mt-1 text-sm font-black text-slate-900">{copy.title}</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{copy.instruction}</p>
         {method === "WEBSITE_TOKEN" ? (
           <p className="mt-2 text-xs leading-relaxed text-indigo-800">
-            Verifikasi website perlu diperbarui setiap 6 bulan agar hubungan dengan website resmi desa tetap segar.
+            Verifikasi website perlu diperbarui setiap 6 bulan agar hubungan dengan website resmi desa tetap aktif.
           </p>
         ) : null}
       </div>
 
       {selectedDesa ? (
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="lux-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ringkasan desa</p>
@@ -57,20 +57,22 @@ export default function AdminClaimInstruction({
             </div>
             <DataStatusBadge status={selectedDesa.dataStatus} size="xs" />
           </div>
+
           <div className="mt-3 space-y-2 rounded-2xl bg-slate-50 p-4 text-xs leading-relaxed text-slate-600">
             <p>Sumber yang tercatat: {selectedDesa.sourceLabel}</p>
             <p>Email resmi: {selectedDesa.officialEmailLabel}</p>
             <p>Website resmi: {selectedDesa.websiteUrl ?? "Belum tercatat"}</p>
           </div>
+
           {eligibility && !eligibility.canStartNewClaim ? (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+            <div className="mt-3 notice-card notice-warn text-xs leading-relaxed">
               {eligibility.message}
             </div>
           ) : null}
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="lux-card p-5">
         <div className="flex items-start gap-3">
           <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
             <CopyCheck size={16} />
@@ -87,13 +89,13 @@ export default function AdminClaimInstruction({
               type="button"
               onClick={flow.submitClaimOnly}
               disabled={flow.busy || !selectedDesa}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-lux btn-lux-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {flow.busy ? "Memproses..." : "Kirim klaim"}
             </button>
           ) : currentClaim ? (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
-              Klaim aktif untuk <strong>{currentClaim.desaName}</strong> sudah tercatat. Lanjutkan dengan verifikasi di bawah. Kamu tidak bisa mengirim klaim baru selama klaim aktif sudah ada.
+            <div className="notice-card notice-ok text-xs leading-relaxed">
+              Klaim aktif untuk <strong>{currentClaim.desaName}</strong> sudah tercatat. Kamu tidak bisa membuat klaim baru sampai klaim aktif ini selesai diproses.
             </div>
           ) : null}
 
@@ -103,19 +105,19 @@ export default function AdminClaimInstruction({
                 type="email"
                 value={flow.officialEmail}
                 onChange={(event) => flow.setOfficialEmail(event.target.value)}
-                placeholder="email resmi desa,例: admin@desakita.go.id"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                placeholder="email resmi desa, contoh: admin@desakita.go.id"
+                className="field-lux"
               />
               <button
                 type="button"
                 disabled={flow.busy || !flow.officialEmail.trim()}
                 onClick={flow.sendEmailToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-lux btn-lux-secondary w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {flow.busy ? "Mengirim..." : currentClaim?.method === "OFFICIAL_EMAIL" ? "Kirim ulang email verifikasi" : "Kirim email verifikasi"}
               </button>
               <p className="text-[10px] text-slate-400">
-                Buka email dari inbox dan klik tautan verifikasi. Tautan berlaku beberapa waktu.
+                Buka email dari inbox dan klik tautan verifikasi. Jika email belum masuk, kamu bisa kirim ulang dari halaman ini.
               </p>
             </>
           ) : null}
@@ -127,72 +129,60 @@ export default function AdminClaimInstruction({
                 value={flow.websiteUrl}
                 onChange={(event) => flow.setWebsiteUrl(event.target.value)}
                 placeholder="https://desa.go.id"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                className="field-lux"
               />
               <button
                 type="button"
                 disabled={flow.busy || !flow.websiteUrl.trim()}
                 onClick={flow.generateWebsiteToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-lux btn-lux-secondary w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {flow.busy ? "Membuat token..." : currentClaim?.method === "WEBSITE_TOKEN" ? "Generate ulang token website" : "Generate token website"}
               </button>
               {flow.websiteInstruction ? (
-                <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 text-xs leading-relaxed text-indigo-700">
+                <div className="notice-card notice-info text-xs leading-relaxed">
                   {flow.websiteInstruction}
                 </div>
               ) : null}
               {flow.rawToken ? (
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs leading-relaxed text-indigo-800">
-                  <p className="font-bold mb-1">Token sesi aktif (hanya sekali tampil):</p>
+                <div className="notice-card notice-info text-xs leading-relaxed">
+                  <p className="font-bold mb-1">Token sesi aktif (hanya tampil sekali):</p>
                   <code className="break-all font-mono text-[11px]">{flow.rawToken}</code>
                 </div>
               ) : null}
               {rawTokenLost ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-                  Token dari sesi sebelumnya tidak tersedia karena refresh halaman. Generate token baru di atas, lalu pasang di website dan cek dari sini.
+                <div className="notice-card notice-warn text-xs leading-relaxed">
+                  Token dari sesi sebelumnya tidak lagi tersedia karena halaman sempat dimuat ulang. Buat token baru, pasang di website, lalu cek lagi dari sini.
                 </div>
               ) : null}
               <button
                 type="button"
                 disabled={flow.busy || !flow.rawToken}
                 onClick={flow.checkWebsiteToken}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-lux btn-lux-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {flow.busy ? "Mengecek..." : "Cek token di website"}
               </button>
               <p className="text-[10px] text-slate-400">
-                Token hanya dicek jika sudah dipasang di website. Verifikasi perlu diperbarui setiap 6 bulan.
+                Cek token hanya dilakukan setelah token dipasang di website resmi desa.
               </p>
             </>
           ) : null}
 
           {flow.feedback ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
-              ✓ {flow.feedback}
-            </div>
+            <div className="notice-card notice-ok text-xs leading-relaxed">{flow.feedback}</div>
           ) : null}
           {flow.error ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800">
-              ✗ {flow.error}
-            </div>
+            <div className="notice-card notice-danger text-xs leading-relaxed">{flow.error}</div>
           ) : null}
         </div>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
-        >
+        <button type="button" onClick={onBack} className="btn-lux btn-lux-secondary">
           Kembali
         </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2"
-        >
+        <button type="button" onClick={onContinue} className="btn-lux btn-lux-primary flex-1">
           Lanjut ke status
         </button>
       </div>

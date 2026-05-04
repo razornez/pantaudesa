@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  Mail,
+} from "lucide-react";
+import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
 
 type ClaimRow = {
   id: string;
@@ -35,88 +43,130 @@ type ClaimRow = {
   };
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING:   "bg-yellow-100 text-yellow-800",
-  IN_REVIEW: "bg-blue-100 text-blue-800",
-  REJECTED:  "bg-red-100 text-red-800",
-  APPROVED:  "bg-green-100 text-green-800",
+const STATUS_META: Record<string, { label: string; pill: string; note: string }> = {
+  PENDING: {
+    label: "Pengajuan dibuat",
+    pill: "pill-warn",
+    note: "Pengaju sudah membuat klaim, tetapi verifikasi lanjutan belum lengkap.",
+  },
+  IN_REVIEW: {
+    label: "Sedang diperiksa",
+    pill: "pill-info",
+    note: "Bukti sudah masuk dan menunggu keputusan internal admin.",
+  },
+  REJECTED: {
+    label: "Pengajuan ditolak",
+    pill: "pill-danger",
+    note: "Pengaju perlu membaca alasan dan memperbaiki bukti sebelum lanjut lagi.",
+  },
+  APPROVED: {
+    label: "Pengajuan disetujui",
+    pill: "pill-ok",
+    note: "Akses admin desa sudah diberikan dan audit tercatat.",
+  },
 };
 
+const STATUS_TABS = [
+  { value: "", label: "Semua" },
+  { value: "PENDING", label: "Baru dibuat" },
+  { value: "IN_REVIEW", label: "Sedang diperiksa" },
+  { value: "REJECTED", label: "Ditolak" },
+  { value: "APPROVED", label: "Disetujui" },
+] as const;
+
 const REASON_CATEGORIES = [
-  { value: "WEBSITE_NOT_OFFICIAL",     label: "Website tidak resmi" },
-  { value: "WEBSITE_MISMATCH",         label: "Website tidak cocok" },
-  { value: "TOKEN_NOT_VALID",          label: "Token tidak valid" },
-  { value: "EMAIL_NOT_CONVINCING",     label: "Email tidak meyakinkan" },
-  { value: "DOCUMENT_NOT_SUFFICIENT",  label: "Dokumen tidak cukup" },
-  { value: "SOURCE_CONFLICT",          label: "Konflik sumber data" },
-  { value: "SUSPICIOUS_ACTIVITY",      label: "Aktivitas mencurigakan" },
-  { value: "RENEWAL_FAILED",           label: "Perpanjangan gagal" },
-  { value: "OTHER",                    label: "Lainnya" },
-];
+  { value: "WEBSITE_NOT_OFFICIAL", label: "Website tidak resmi" },
+  { value: "WEBSITE_MISMATCH", label: "Website tidak cocok" },
+  { value: "TOKEN_NOT_VALID", label: "Token tidak valid" },
+  { value: "EMAIL_NOT_CONVINCING", label: "Email tidak meyakinkan" },
+  { value: "DOCUMENT_NOT_SUFFICIENT", label: "Dokumen tidak cukup" },
+  { value: "SOURCE_CONFLICT", label: "Konflik sumber data" },
+  { value: "SUSPICIOUS_ACTIVITY", label: "Aktivitas mencurigakan" },
+  { value: "RENEWAL_FAILED", label: "Perpanjangan gagal" },
+  { value: "OTHER", label: "Lainnya" },
+] as const;
+
+function methodLabel(method: string | null) {
+  if (method === "OFFICIAL_EMAIL") return "Email resmi";
+  if (method === "WEBSITE_TOKEN") return "Token website resmi";
+  return "Belum dipilih";
+}
+
+function buildUrl(params: Record<string, string>) {
+  const url = new URL(window.location.href);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) url.searchParams.set(k, v);
+    else url.searchParams.delete(k);
+  });
+  return url.pathname + url.search;
+}
 
 function RejectModal({
-  claimId,
-  desaName,
-  userEmail,
+  claim,
   onClose,
   onDone,
+  onNotify,
 }: {
-  claimId: string;
-  desaName: string;
-  userEmail: string;
+  claim: ClaimRow;
   onClose: () => void;
   onDone: () => void;
+  onNotify: (message: string, type?: ToastType) => void;
 }) {
   const [reasonCategory, setReasonCategory] = useState("EMAIL_NOT_CONVINCING");
   const [reasonText, setReasonText] = useState("");
   const [fixInstructions, setFixInstructions] = useState("");
   const [isFraud, setIsFraud] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reasonText.trim() || !fixInstructions.trim()) {
-      setError("Alasan dan instruksi wajib diisi.");
+      onNotify("Alasan penolakan dan langkah perbaikan wajib diisi.", "error");
       return;
     }
     setLoading(true);
-    setError(null);
     try {
-      const res = await fetch(`/api/internal-admin/claims/${claimId}/reject`, {
+      const res = await fetch(`/api/internal-admin/claims/${claim.id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reasonCategory, reasonText, fixInstructions, isFraud }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menolak klaim.");
+        onNotify(data.error ?? "Penolakan pengajuan belum berhasil disimpan.", "error");
         return;
       }
+      onNotify("Pengajuan ditolak dan alasan sudah dikirim ke pengguna.", "success");
       onDone();
     } catch {
-      setError("Terjadi kesalahan. Coba lagi.");
+      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
     } finally {
       setLoading(false);
     }
   }
 
+  const displayName = claim.user.nama ?? claim.user.username ?? claim.user.email;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Tolak Klaim Admin Desa</h2>
-        <p className="text-sm text-slate-600">
-          <span className="font-medium">{desaName}</span> — {userEmail}
-        </p>
+    <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="lux-panel max-w-lg w-full p-5 sm:p-6 space-y-5">
+        <div className="space-y-2">
+          <p className="eyebrow text-[10px]">Tolak pengajuan</p>
+          <h2 className="text-[20px] font-semibold text-slate-900 tracking-tight">{claim.desa.nama}</h2>
+          <p className="text-sm text-slate-500 leading-relaxed">{displayName} • {claim.user.email}</p>
+        </div>
+
+        <div className="notice-card notice-danger text-sm leading-relaxed">
+          Keputusan ini akan menahan aktivasi akun admin desa. Pengguna akan melihat alasan penolakan dan langkah yang perlu diperbaiki.
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Kategori penolakan <span className="text-red-500">*</span>
-            </label>
+            <label className="field-label">Kategori alasan</label>
             <select
               value={reasonCategory}
               onChange={(e) => setReasonCategory(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="select-lux"
               required
             >
               {REASON_CATEGORIES.map((cat) => (
@@ -124,58 +174,49 @@ function RejectModal({
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Alasan penolakan (ditampilkan ke pengaju) <span className="text-red-500">*</span>
-            </label>
+            <label className="field-label">Alasan yang dilihat pengaju</label>
             <textarea
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
-              placeholder="Jelaskan mengapa klaim tidak bisa diterima..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-h-[80px]"
+              placeholder="Jelaskan kenapa pengajuan belum bisa diterima."
+              className="textarea-lux"
+              rows={4}
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Instruksi perbaikan (ditampilkan ke pengaju) <span className="text-red-500">*</span>
-            </label>
+            <label className="field-label">Yang perlu diperbaiki pengaju</label>
             <textarea
               value={fixInstructions}
               onChange={(e) => setFixInstructions(e.target.value)}
-              placeholder="Apa yang perlu diperbaiki sebelum mengajukan ulang..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-h-[80px]"
+              placeholder="Tuliskan bukti atau langkah yang perlu dilengkapi pengguna."
+              className="textarea-lux"
+              rows={4}
               required
             />
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
+
+          <label className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)] text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={isFraud}
               onChange={(e) => setIsFraud(e.target.checked)}
-              className="rounded border-slate-300"
+              className="mt-1 accent-[#1E1B4B]"
             />
-            <span className="text-sm text-red-700 font-medium">
-              Fraud/aktivitas mencurigakan — terapkan masa tunggu 3 hari
+            <span className="text-slate-700 leading-relaxed">
+              Tandai sebagai aktivitas mencurigakan bila perlu masa tunggu tambahan sebelum pengajuan berikutnya.
             </span>
           </label>
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 transition-colors"
-            >
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
               Batal
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Memproses..." : "Tolak Klaim"}
+            <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">
+              {loading ? "Menyimpan..." : "Tolak pengajuan"}
             </button>
           </div>
         </form>
@@ -184,155 +225,147 @@ function RejectModal({
   );
 }
 
-function ClaimCard({ claim, onAction }: { claim: ClaimRow; onAction: () => void }) {
+function ClaimCard({
+  claim,
+  onRefresh,
+  onReject,
+  onNotify,
+}: {
+  claim: ClaimRow;
+  onRefresh: () => void;
+  onReject: (claim: ClaimRow) => void;
+  onNotify: (message: string, type?: ToastType) => void;
+}) {
   const [approving, setApproving] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const displayName = claim.user.nama ?? claim.user.username ?? claim.user.email;
+  const status = STATUS_META[claim.status] ?? {
+    label: claim.status,
+    pill: "pill-info",
+    note: "Status belum dikenali.",
+  };
 
   async function handleApprove() {
     setApproving(true);
-    setError(null);
     try {
-      const res = await fetch(`/api/internal-admin/claims/${claim.id}/approve`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/internal-admin/claims/${claim.id}/approve`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal menyetujui klaim.");
+        onNotify(data.error ?? "Persetujuan pengajuan belum berhasil.", "error");
         return;
       }
-      onAction();
+      onNotify("Pengajuan disetujui dan akun admin desa sudah diperbarui.", "success");
+      onRefresh();
     } catch {
-      setError("Terjadi kesalahan. Coba lagi.");
+      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
     } finally {
       setApproving(false);
     }
   }
 
-  const displayName = claim.user.nama ?? claim.user.username ?? claim.user.email;
-  const statusColor = STATUS_COLORS[claim.status] ?? "bg-slate-100 text-slate-800";
-
   return (
-    <>
-      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <p className="font-medium text-slate-900 truncate">{claim.desa.nama}</p>
-            <p className="text-sm text-slate-500">{claim.desa.kecamatan}, {claim.desa.kabupaten}</p>
-          </div>
-          <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${statusColor}`}>
-            {claim.status}
-          </span>
+    <article className="lux-card t-spring lift hover:shadow-lux-hover p-5 sm:p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-semibold text-slate-900 text-[16px] tracking-tight leading-snug">{claim.desa.nama}</p>
+          <p className="text-sm text-slate-500">{claim.desa.kecamatan}, {claim.desa.kabupaten}</p>
         </div>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold shrink-0 ${status.pill}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${claim.status === "APPROVED" ? "bg-emerald-500" : claim.status === "REJECTED" ? "bg-rose-500" : claim.status === "IN_REVIEW" ? "bg-indigo-500" : "bg-amber-500"}`} aria-hidden />
+          {status.label}
+        </span>
+      </div>
 
-        <div className="text-sm text-slate-700 space-y-1">
-          <p><span className="text-slate-400">Pengaju:</span> {displayName} ({claim.user.email})</p>
-          <p><span className="text-slate-400">Metode:</span> {claim.method ?? "—"}</p>
-          {claim.officialEmail && (
-            <p><span className="text-slate-400">Email desa:</span> {claim.officialEmail}</p>
-          )}
-          {claim.websiteUrl && (
-            <p>
-              <span className="text-slate-400">Website:</span>{" "}
-              <a
-                href={claim.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-600 hover:underline truncate"
-              >
-                {claim.websiteUrl}
-              </a>
-            </p>
-          )}
-          {claim.supportSubmittedAt && (
-            <div className={`mt-1 rounded-md px-2 py-1 text-xs ${
-              claim.status === "REJECTED"
-                ? "bg-amber-50 border border-amber-200 text-amber-800"
-                : "bg-indigo-50 border border-indigo-200 text-indigo-800"
-            }`}>
-              <p className="font-medium">
-                📝 {claim.status === "REJECTED" ? "Bukti tambahan masuk (perlu review ulang)" : "Bukti pengajuan diterima"}
-              </p>
-              <p className="text-[11px] opacity-80">
-                {new Date(claim.supportSubmittedAt).toLocaleString("id-ID")}
-              </p>
-            </div>
-          )}
-          {claim.verifiedAt && (
-            <p className="text-xs text-slate-400">Diverifikasi: {new Date(claim.verifiedAt).toLocaleString("id-ID")}</p>
-          )}
-          <p className="text-xs text-slate-400">
-            Diperbarui: {new Date(claim.updatedAt).toLocaleString("id-ID")}
+      <div className="grid gap-3 sm:grid-cols-2 text-sm">
+        <div className="metric-card">
+          <p className="metric-label">Pengaju</p>
+          <p className="mt-2 text-slate-900 font-medium">{displayName}</p>
+          <p className="metric-note">{claim.user.email}</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Jalur verifikasi</p>
+          <p className="mt-2 text-slate-900 font-medium">{methodLabel(claim.method)}</p>
+          <p className="metric-note">
+            Diperbarui {new Date(claim.updatedAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
           </p>
         </div>
+      </div>
 
-        {claim.status === "REJECTED" && (
-          <div className="text-sm bg-red-50 rounded-lg p-3 space-y-1">
-            {claim.rejectCategory && (
-              <p className="text-red-700 font-medium text-xs">{claim.rejectCategory}</p>
-            )}
-            {claim.rejectReason && <p className="text-red-800">{claim.rejectReason}</p>}
-            {claim.rejectInstructions && (
-              <p className="text-slate-600 text-xs">{claim.rejectInstructions}</p>
-            )}
-            {claim.fraudCooldownUntil && (
-              <p className="text-red-600 text-xs font-medium">
-                Fraud cooldown: {new Date(claim.fraudCooldownUntil).toLocaleString("id-ID")}
-              </p>
-            )}
-            {claim.reapplyAllowedAt && (
-              <p className="text-slate-500 text-xs">
-                Reapply tersedia: {new Date(claim.reapplyAllowedAt).toLocaleString("id-ID")}
-              </p>
-            )}
-          </div>
+      <div className="notice-card notice-info text-sm leading-relaxed">
+        <p className="font-semibold">Ringkasan keputusan</p>
+        <p className="mt-2 opacity-90">{status.note}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+        {claim.officialEmail && (
+          <span className="inline-flex items-center gap-1"><Mail size={12} aria-hidden /> {claim.officialEmail}</span>
         )}
-
-        {error && (
-          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-        )}
-
-        {claim.status === "IN_REVIEW" && (
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleApprove}
-              disabled={approving}
-              className="flex-1 bg-green-600 text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              {approving ? "Memproses..." : "Setujui → VERIFIED"}
-            </button>
-            <button
-              onClick={() => setShowRejectModal(true)}
-              className="flex-1 border border-red-300 text-red-700 text-sm font-medium rounded-lg px-4 py-2 hover:bg-red-50 transition-colors"
-            >
-              Tolak
-            </button>
-          </div>
-        )}
-
-        {claim.status === "PENDING" && (
-          <button
-            onClick={() => setShowRejectModal(true)}
-            className="w-full border border-red-300 text-red-700 text-sm font-medium rounded-lg px-4 py-2 hover:bg-red-50 transition-colors"
+        {claim.websiteUrl && (
+          <a
+            href={claim.websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-700 hover:underline"
           >
-            Tolak (PENDING)
-          </button>
+            <ExternalLink size={12} aria-hidden /> Buka website desa
+          </a>
+        )}
+        {claim.supportSubmittedAt && (
+          <span className="inline-flex items-center gap-1">
+            <BadgeCheck size={12} aria-hidden /> Bukti tambahan masuk {new Date(claim.supportSubmittedAt).toLocaleDateString("id-ID")}
+          </span>
+        )}
+        {claim.verifiedAt && (
+          <span className="inline-flex items-center gap-1">
+            <CheckCircle2 size={12} aria-hidden /> Disetujui {new Date(claim.verifiedAt).toLocaleDateString("id-ID")}
+          </span>
         )}
       </div>
 
-      {showRejectModal && (
-        <RejectModal
-          claimId={claim.id}
-          desaName={claim.desa.nama}
-          userEmail={claim.user.email}
-          onClose={() => setShowRejectModal(false)}
-          onDone={() => {
-            setShowRejectModal(false);
-            onAction();
-          }}
-        />
+      {claim.status === "REJECTED" && (
+        <div className="notice-card notice-danger text-sm leading-relaxed">
+          <p className="font-semibold">Alasan yang terlihat oleh pengaju</p>
+          {claim.rejectReason ? <p className="mt-2 opacity-90">{claim.rejectReason}</p> : null}
+          {claim.rejectInstructions ? (
+            <>
+              <p className="font-semibold mt-3">Langkah perbaikan</p>
+              <p className="mt-2 opacity-90">{claim.rejectInstructions}</p>
+            </>
+          ) : null}
+          {claim.reapplyAllowedAt ? (
+            <p className="mt-3 text-xs opacity-80">
+              Pengajuan ulang tersedia pada {new Date(claim.reapplyAllowedAt).toLocaleDateString("id-ID", { dateStyle: "long" })}.
+            </p>
+          ) : null}
+          {claim.fraudCooldownUntil ? (
+            <p className="mt-2 text-xs font-semibold">
+              Masa tunggu khusus sampai {new Date(claim.fraudCooldownUntil).toLocaleDateString("id-ID", { dateStyle: "long" })}.
+            </p>
+          ) : null}
+        </div>
       )}
-    </>
+
+      {(claim.status === "IN_REVIEW" || claim.status === "PENDING") && (
+        <div className="surface-divider pt-4 flex flex-wrap gap-2">
+          {claim.status === "IN_REVIEW" ? (
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={approving}
+              className="btn-lux btn-lux-success !min-h-[40px] text-xs"
+            >
+              {approving ? "Memproses..." : "Setujui jadi admin terverifikasi"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onReject(claim)}
+            className="btn-lux btn-lux-danger !min-h-[40px] text-xs"
+          >
+            {claim.status === "PENDING" ? "Tolak dari tahap awal" : "Tolak pengajuan"}
+          </button>
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -350,48 +383,76 @@ export default function ClaimReviewQueue({
   statusFilter: string;
 }) {
   const router = useRouter();
+  const { toasts, toast, removeToast } = useToast();
+  const [rejectTarget, setRejectTarget] = useState<ClaimRow | null>(null);
+
+  const totalPages = Math.ceil(total / pageSize);
+  const summary = useMemo(() => {
+    return claims.reduce(
+      (acc, claim) => {
+        acc.total += 1;
+        if (claim.status === "PENDING") acc.pending += 1;
+        if (claim.status === "IN_REVIEW") acc.review += 1;
+        if (claim.status === "REJECTED") acc.rejected += 1;
+        if (claim.status === "APPROVED") acc.approved += 1;
+        return acc;
+      },
+      { total: 0, pending: 0, review: 0, rejected: 0, approved: 0 },
+    );
+  }, [claims]);
 
   function refresh() {
     router.refresh();
   }
 
-  const totalPages = Math.ceil(total / pageSize);
-
-  const STATUS_TABS = [
-    { value: "", label: "Semua" },
-    { value: "PENDING", label: "Pending" },
-    { value: "IN_REVIEW", label: "In Review" },
-    { value: "REJECTED", label: "Ditolak" },
-    { value: "APPROVED", label: "Disetujui" },
-  ];
-
-  function buildUrl(params: Record<string, string>) {
-    const url = new URL(window.location.href);
-    Object.entries(params).forEach(([k, v]) => {
-      if (v) url.searchParams.set(k, v);
-      else url.searchParams.delete(k);
-    });
-    return url.pathname + url.search;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Admin Desa — Review Queue</h1>
-        <span className="text-sm text-slate-500">{total} klaim</span>
-      </div>
+    <div className="space-y-7" data-testid="internal-claims-queue">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="eyebrow text-[10px]">Review pengajuan admin desa</p>
+          <h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">
+            Antrean keputusan yang perlu ditangani
+          </h1>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+            Periksa bukti pengajuan, putuskan dengan jelas, dan pastikan pengaju memahami langkah berikutnya.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="pill-info rounded-full px-3 py-1 text-[11px] font-semibold">{total} total klaim</span>
+          {summary.review > 0 && <span className="pill-warn rounded-full px-3 py-1 text-[11px] font-semibold">{summary.review} sedang diperiksa</span>}
+          {summary.rejected > 0 && <span className="pill-danger rounded-full px-3 py-1 text-[11px] font-semibold">{summary.rejected} ditolak</span>}
+        </div>
+      </header>
 
-      {/* Status filter tabs */}
-      <div className="flex gap-2 flex-wrap">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="metric-card">
+          <p className="metric-label">Klaim aktif</p>
+          <p className="metric-value">{summary.total}</p>
+          <p className="metric-note">terbaca di halaman ini</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Baru dibuat</p>
+          <p className="metric-value">{summary.pending}</p>
+          <p className="metric-note">verifikasi belum lengkap</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Sedang diperiksa</p>
+          <p className="metric-value">{summary.review}</p>
+          <p className="metric-note">siap diputuskan</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Sudah disetujui</p>
+          <p className="metric-value">{summary.approved}</p>
+          <p className="metric-note">audit sudah tercatat</p>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2">
         {STATUS_TABS.map((tab) => (
           <a
             key={tab.value}
             href={buildUrl({ status: tab.value, page: "1" })}
-            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-              statusFilter === tab.value
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "border-slate-300 text-slate-600 hover:bg-slate-50"
-            }`}
+            className={`btn-lux ${statusFilter === tab.value ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[40px] text-xs`}
           >
             {tab.label}
           </a>
@@ -399,35 +460,51 @@ export default function ClaimReviewQueue({
       </div>
 
       {claims.length === 0 ? (
-        <div className="text-center py-16 text-slate-500 text-sm">
-          Tidak ada klaim dengan status ini.
+        <div className="lux-card p-10 text-center space-y-3">
+          <Clock3 size={28} className="mx-auto text-slate-300" aria-hidden />
+          <p className="text-sm text-slate-500">Tidak ada pengajuan pada filter ini.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {claims.map((claim) => (
-            <ClaimCard key={claim.id} claim={claim} onAction={refresh} />
+            <ClaimCard
+              key={claim.id}
+              claim={claim}
+              onRefresh={refresh}
+              onReject={setRejectTarget}
+              onNotify={toast}
+            />
           ))}
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 pt-4">
+        <div className="flex justify-center gap-2 pt-2">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <a
               key={p}
               href={buildUrl({ page: String(p) })}
-              className={`w-8 h-8 text-sm flex items-center justify-center rounded-lg border transition-colors ${
-                p === page
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
-              }`}
+              className={`btn-lux ${p === page ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] !w-[36px] !px-0 text-xs`}
             >
               {p}
             </a>
           ))}
         </div>
       )}
+
+      {rejectTarget && (
+        <RejectModal
+          claim={rejectTarget}
+          onNotify={toast}
+          onClose={() => setRejectTarget(null)}
+          onDone={() => {
+            setRejectTarget(null);
+            refresh();
+          }}
+        />
+      )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

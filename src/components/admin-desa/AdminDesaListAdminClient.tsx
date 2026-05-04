@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import type { DesaAdminRoster, DesaAdminRow } from "@/lib/data/desa-admins";
+import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
 
 interface Props {
   currentUserId: string;
@@ -27,10 +28,10 @@ interface Props {
 
 function StatusPill({ status }: { status: DesaAdminRow["status"] }) {
   const map: Record<DesaAdminRow["status"], { label: string; cls: string }> = {
-    VERIFIED: { label: "VERIFIED", cls: "pill-ok" },
-    LIMITED: { label: "LIMITED", cls: "pill-warn" },
-    REVOKED: { label: "REVOKED", cls: "pill-danger" },
-    EXPIRED: { label: "EXPIRED", cls: "pill-info" },
+    VERIFIED: { label: "Admin terverifikasi", cls: "pill-ok" },
+    LIMITED: { label: "Admin terbatas", cls: "pill-warn" },
+    REVOKED: { label: "Akses dicabut", cls: "pill-danger" },
+    EXPIRED: { label: "Masa aktif berakhir", cls: "pill-info" },
   };
   const m = map[status];
   return <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${m.cls}`}>{m.label}</span>;
@@ -144,25 +145,24 @@ function InviteModal({
   desaName,
   onClose,
   onDone,
+  onNotify,
 }: {
   desaId: string;
   desaName: string;
   onClose: () => void;
   onDone: () => void;
+  onNotify: (message: string, type?: ToastType) => void;
 }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) {
-      setError("Email wajib diisi.");
+      onNotify("Email wajib diisi.", "error");
       return;
     }
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/admin-claim/invite", {
         method: "POST",
@@ -171,14 +171,14 @@ function InviteModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal mengirim undangan.");
+        onNotify(data.error ?? "Gagal mengirim undangan.", "error");
         return;
       }
-      setSuccess("Undangan berhasil dikirim. Calon admin akan menerima tautan untuk menerima undangan.");
+      onNotify("Undangan berhasil dikirim. Calon admin akan menerima tautan untuk menerima undangan.", "success");
       setEmail("");
-      setTimeout(() => onDone(), 1200);
+      setTimeout(() => onDone(), 250);
     } catch {
-      setError("Koneksi bermasalah. Coba lagi.");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
@@ -191,7 +191,7 @@ function InviteModal({
       onClose={onClose}
     >
       <div className="notice-card notice-warn text-sm leading-relaxed">
-        Invitee akan masuk sebagai <strong>Admin Desa LIMITED</strong> sampai diverifikasi lebih lanjut.
+        Undangan ini memberi akses awal sebagai <strong>admin terbatas</strong>. Setelah itu, pengguna tetap perlu melalui verifikasi lanjutan.
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -211,9 +211,6 @@ function InviteModal({
           </p>
         </div>
 
-        {error && <div className="notice-card notice-danger text-sm">{error}</div>}
-        {success && <div className="notice-card notice-ok text-sm">{success}</div>}
-
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
             Batal
@@ -231,20 +228,20 @@ function RevokeModal({
   member,
   onClose,
   onDone,
+  onNotify,
 }: {
   member: DesaAdminRow;
   onClose: () => void;
   onDone: () => void;
+  onNotify: (message: string, type?: ToastType) => void;
 }) {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const displayName = member.user.nama ?? member.user.username ?? member.user.email;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch(`/api/admin-claim/revoke-member/${member.id}`, {
         method: "POST",
@@ -253,12 +250,13 @@ function RevokeModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Gagal mencabut akses.");
+        onNotify(data.error ?? "Gagal mencabut akses.", "error");
         return;
       }
+      onNotify("Akses admin berhasil dicabut.", "success");
       onDone();
     } catch {
-      setError("Koneksi bermasalah. Coba lagi.");
+      onNotify("Koneksi bermasalah. Coba lagi.", "error");
     } finally {
       setLoading(false);
     }
@@ -286,8 +284,6 @@ function RevokeModal({
           />
         </div>
 
-        {error && <div className="notice-card notice-danger text-sm">{error}</div>}
-
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
             Batal
@@ -310,6 +306,7 @@ export default function AdminDesaListAdminClient({
   maxAdmins,
 }: Props) {
   const router = useRouter();
+  const { toasts, toast, removeToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<DesaAdminRow | null>(null);
   const [nowMs] = useState(() => Date.now());
@@ -371,13 +368,13 @@ export default function AdminDesaListAdminClient({
 
       {!canManage && (
         <div className="notice-card notice-info text-sm leading-relaxed">
-          Hanya Admin Desa VERIFIED yang dapat mengundang atau mencabut akses admin lain.
+          Hanya admin utama desa yang dapat mengundang atau mencabut akses admin lain.
         </div>
       )}
 
       {inviteLimitReached && canManage && (
         <div className="notice-card notice-warn text-sm leading-relaxed">
-          Batas {maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin LIMITED jika ingin membuka slot baru.
+          Batas {maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin terbatas jika ingin membuka slot baru.
         </div>
       )}
 
@@ -474,6 +471,7 @@ export default function AdminDesaListAdminClient({
         <InviteModal
           desaId={desaId}
           desaName={desaName}
+          onNotify={toast}
           onClose={() => setShowInvite(false)}
           onDone={() => {
             setShowInvite(false);
@@ -484,6 +482,7 @@ export default function AdminDesaListAdminClient({
       {revokeTarget && (
         <RevokeModal
           member={revokeTarget}
+          onNotify={toast}
           onClose={() => setRevokeTarget(null)}
           onDone={() => {
             setRevokeTarget(null);
@@ -491,6 +490,8 @@ export default function AdminDesaListAdminClient({
           }}
         />
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

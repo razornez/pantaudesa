@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { login, logout, QA, screenshot } from "./helpers";
 
-const viewport = () => (test.info().project.name as "desktop" | "mobile");
+const viewport = () => {
+  const name = test.info().project.name;
+  if (name === "mobile-390") return "mobile";
+  if (name === "iphone-12-mini") return "iphone-12-mini";
+  return "desktop";
+};
 
 test.describe("Admin LIMITED — profile and access", () => {
   test.beforeEach(async ({ page }) => {
@@ -9,12 +14,12 @@ test.describe("Admin LIMITED — profile and access", () => {
   });
   test.afterEach(async ({ page }) => { await logout(page); });
 
-  test("admin-desa profile shell visible with LIMITED badge", async ({ page }) => {
+  test("admin-desa profile shell visible with admin terbatas badge", async ({ page }) => {
     await page.goto("/profil/admin-desa");
     await screenshot(page, "admin-desa-profile-limited", viewport());
     await expect(page.locator("body")).toBeVisible();
-    // Limited badge should appear somewhere
-    const limitedText = page.locator("text=LIMITED").or(page.locator("text=Limited")).first();
+    // Status admin terbatas should appear somewhere
+    const limitedText = page.locator("text=Admin terbatas").or(page.locator("text=terbatas")).first();
     await expect(limitedText).toBeVisible({ timeout: 6_000 });
   });
 

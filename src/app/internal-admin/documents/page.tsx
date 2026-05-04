@@ -22,8 +22,8 @@ export default async function InternalDocumentsPage({
 
   if (!db) {
     return (
-      <div className="text-red-700 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-        Database unavailable.
+      <div className="notice-card notice-danger text-sm leading-relaxed">
+        Database belum tersedia. Cek konfigurasi server sebelum membuka antrean dokumen.
       </div>
     );
   }
