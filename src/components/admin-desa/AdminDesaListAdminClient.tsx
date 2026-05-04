@@ -3,7 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShieldCheck, BadgeCheck, UserPlus, MoreVertical, X, AlertTriangle, Clock } from "lucide-react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  Clock,
+  Mail,
+  MoreVertical,
+  ShieldCheck,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import type { DesaAdminRoster, DesaAdminRow } from "@/lib/data/desa-admins";
 
 interface Props {
@@ -17,17 +27,13 @@ interface Props {
 
 function StatusPill({ status }: { status: DesaAdminRow["status"] }) {
   const map: Record<DesaAdminRow["status"], { label: string; cls: string }> = {
-    VERIFIED: { label: "VERIFIED", cls: "bg-emerald-100 text-emerald-800" },
-    LIMITED:  { label: "LIMITED",  cls: "bg-amber-100 text-amber-800" },
-    REVOKED:  { label: "REVOKED",  cls: "bg-slate-200 text-slate-700" },
-    EXPIRED:  { label: "EXPIRED",  cls: "bg-slate-200 text-slate-700" },
+    VERIFIED: { label: "VERIFIED", cls: "pill-ok" },
+    LIMITED: { label: "LIMITED", cls: "pill-warn" },
+    REVOKED: { label: "REVOKED", cls: "pill-danger" },
+    EXPIRED: { label: "EXPIRED", cls: "pill-info" },
   };
   const m = map[status];
-  return (
-    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.cls}`}>
-      {m.label}
-    </span>
-  );
+  return <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${m.cls}`}>{m.label}</span>;
 }
 
 function AdminRow({
@@ -46,41 +52,45 @@ function AdminRow({
   const canRevokeThis = canManage && row.status === "LIMITED" && !isSelf;
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0">
-      <span className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-slate-100 relative">
-        {row.user.avatarUrl ? (
-          <Image src={row.user.avatarUrl} alt={displayName} width={40} height={40} className="object-cover" />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-700">
-            {displayName.slice(0, 2).toUpperCase()}
-          </span>
-        )}
+    <div className="flex items-start gap-4 rounded-[1.3rem] bg-white/72 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]">
+      <span className="relative shrink-0 w-12 h-12">
+        <span className="absolute inset-0 rounded-full overflow-hidden bg-slate-100 ring-1 ring-black/5 border border-white z-0">
+          {row.user.avatarUrl ? (
+            <Image src={row.user.avatarUrl} alt={displayName} width={48} height={48} className="w-full h-full object-cover" />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-slate-700">
+              {displayName.slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </span>
         {(isVerified || row.status === "LIMITED") && (
-          <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${
-            isVerified ? "bg-emerald-500" : "bg-amber-500"
-          } flex items-center justify-center border-2 border-white`}>
-            {isVerified ? <ShieldCheck size={9} className="text-white" /> : <BadgeCheck size={9} className="text-white" />}
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 z-10 w-[20px] h-[20px] rounded-full ${
+              isVerified ? "bg-emerald-500" : "bg-amber-500"
+            } flex items-center justify-center border-2 border-white shadow-[0_6px_14px_rgba(15,23,42,0.2)] ring-1 ring-black/5`}
+          >
+            {isVerified ? <ShieldCheck size={10} className="text-white" /> : <BadgeCheck size={10} className="text-white" />}
           </span>
         )}
       </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-slate-900 truncate">{displayName}</p>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-slate-900 truncate">{displayName}</p>
           <StatusPill status={row.status} />
           {isSelf && (
-            <span className="text-[10px] text-slate-500 px-1.5 py-0.5 bg-slate-100 rounded">Kamu</span>
+            <span className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-full">Kamu</span>
           )}
         </div>
-        <p className="text-xs text-slate-500 truncate">{row.user.email}</p>
-        {row.acceptedAt && (
-          <p className="text-[11px] text-slate-400">
-            Bergabung: {new Date(row.acceptedAt).toLocaleDateString("id-ID")}
-          </p>
-        )}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1"><Mail size={12} aria-hidden /> {row.user.email}</span>
+          {row.acceptedAt && <span>Bergabung {new Date(row.acceptedAt).toLocaleDateString("id-ID")}</span>}
+        </div>
+
         {row.revokedAt && row.revokedReason && (
-          <p className="text-[11px] text-slate-500 italic mt-0.5">
-            Dicabut: {new Date(row.revokedAt).toLocaleDateString("id-ID")} — {row.revokedReason}
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Dicabut pada {new Date(row.revokedAt).toLocaleDateString("id-ID")} karena {row.revokedReason}
           </p>
         )}
       </div>
@@ -89,12 +99,42 @@ function AdminRow({
         <button
           type="button"
           onClick={() => onRevoke(row)}
-          className="shrink-0 p-2 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+          className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
           aria-label={`Hapus akses ${displayName}`}
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={16} aria-hidden />
         </button>
       )}
+    </div>
+  );
+}
+
+function ModalFrame({
+  title,
+  subtitle,
+  children,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="lux-panel max-w-md w-full p-5 sm:p-6 space-y-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow text-[10px]">Aksi admin</p>
+            <h2 className="text-[20px] font-semibold text-slate-900 mt-1">{title}</h2>
+            <p className="text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>
+          </div>
+          <button onClick={onClose} className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0" aria-label="Tutup">
+            <X size={18} aria-hidden />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
@@ -134,11 +174,9 @@ function InviteModal({
         setError(data.error ?? "Gagal mengirim undangan.");
         return;
       }
-      setSuccess("Undangan berhasil dikirim. Invitee akan menerima email dengan tautan terima undangan.");
+      setSuccess("Undangan berhasil dikirim. Calon admin akan menerima tautan untuk menerima undangan.");
       setEmail("");
-      setTimeout(() => {
-        onDone();
-      }, 1500);
+      setTimeout(() => onDone(), 1200);
     } catch {
       setError("Koneksi bermasalah. Coba lagi.");
     } finally {
@@ -147,59 +185,45 @@ function InviteModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Undang Admin Desa</h2>
-            <p className="text-sm text-slate-500 mt-0.5">untuk {desaName}</p>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100" aria-label="Tutup">
-            <X size={18} />
+    <ModalFrame
+      title="Undang Admin Desa"
+      subtitle={`Undangan baru untuk ${desaName}`}
+      onClose={onClose}
+    >
+      <div className="notice-card notice-warn text-sm leading-relaxed">
+        Invitee akan masuk sebagai <strong>Admin Desa LIMITED</strong> sampai diverifikasi lebih lanjut.
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="field-label">Email invitee</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@desa.id"
+            className="field-lux"
+            required
+            autoFocus
+          />
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            Sistem akan memblokir undangan jika email ini sudah aktif sebagai Admin Desa di desa lain.
+          </p>
+        </div>
+
+        {error && <div className="notice-card notice-danger text-sm">{error}</div>}
+        {success && <div className="notice-card notice-ok text-sm">{success}</div>}
+
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
+            Batal
+          </button>
+          <button type="submit" disabled={loading} className="btn-lux btn-lux-primary flex-1">
+            {loading ? "Mengirim..." : "Kirim Undangan"}
           </button>
         </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-          Invitee akan menjadi Admin Desa <strong>LIMITED</strong>. Mereka tidak dapat publish data atau mengundang admin lain.
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email invitee</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@desa.id"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              required
-              autoFocus
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Sistem akan memblokir invite jika email ini sudah aktif sebagai Admin Desa di desa lain.
-            </p>
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-          )}
-          {success && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{success}</p>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">
-              Batal
-            </button>
-            <button type="submit" disabled={loading}
-              className="flex-1 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
-              {loading ? "Mengirim..." : "Kirim Undangan"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalFrame>
   );
 }
 
@@ -241,54 +265,39 @@ function RevokeModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-4">
-        <div className="flex items-start gap-3">
-          <span className="shrink-0 w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-            <AlertTriangle size={20} />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Hapus akses Admin Desa</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{displayName}</p>
-          </div>
+    <ModalFrame
+      title="Cabut akses admin"
+      subtitle={displayName}
+      onClose={onClose}
+    >
+      <div className="notice-card notice-danger text-sm leading-relaxed">
+        Akses akan diubah menjadi <strong>REVOKED</strong>. Riwayat audit dan dokumen yang pernah diunggah tetap tersimpan.
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="field-label">Alasan pencabutan</label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={4}
+            placeholder="Contoh: Tidak lagi bertugas sebagai pengelola data desa."
+            className="textarea-lux"
+          />
         </div>
 
-        <p className="text-sm text-slate-700">
-          Akses akan dicabut dan diubah menjadi <strong>REVOKED</strong>. Riwayat akses tetap tersimpan untuk audit.
-          User akan kehilangan akses Admin Desa, tetapi data dokumen yang sudah mereka unggah tetap tersedia.
-        </p>
+        {error && <div className="notice-card notice-danger text-sm">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Alasan pencabutan <span className="text-slate-400 font-normal">(opsional)</span>
-            </label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              placeholder="Contoh: Tidak lagi berperan sebagai admin desa..."
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">
-              Batal
-            </button>
-            <button type="submit" disabled={loading}
-              className="flex-1 bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50">
-              {loading ? "Memproses..." : "Hapus Akses"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
+            Batal
+          </button>
+          <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">
+            {loading ? "Memproses..." : "Hapus Akses"}
+          </button>
+        </div>
+      </form>
+    </ModalFrame>
   );
 }
 
@@ -303,7 +312,6 @@ export default function AdminDesaListAdminClient({
   const router = useRouter();
   const [showInvite, setShowInvite] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<DesaAdminRow | null>(null);
-  // Stable "now" captured at mount to avoid impure Date.now() during render (React 19 purity rule).
   const [nowMs] = useState(() => Date.now());
 
   const totalActive = roster.verifiedCount + roster.limitedCount;
@@ -314,46 +322,82 @@ export default function AdminDesaListAdminClient({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">List Admin</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {totalActive} dari {maxAdmins} admin aktif untuk {desaName}
+    <div className="space-y-7">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="eyebrow text-[10px]">Kelola anggota</p>
+          <h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">
+            Tim Admin Desa
+          </h1>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+            Kelola akses admin aktif, pantau undangan yang masih menunggu, dan jaga struktur tim tetap rapi untuk {desaName}.
           </p>
         </div>
+
         {canManage && (
           <button
             type="button"
             onClick={() => setShowInvite(true)}
             disabled={inviteLimitReached}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl px-4 py-2 transition-colors"
+            className="btn-lux btn-lux-primary w-full sm:w-auto"
           >
-            <UserPlus size={16} />
-            Undang Admin
+            <UserPlus size={16} aria-hidden /> Undang Admin
           </button>
         )}
       </header>
 
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="metric-card">
+          <p className="metric-label">Admin aktif</p>
+          <p className="metric-value">{totalActive}</p>
+          <p className="metric-note">dari batas {maxAdmins} admin</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Verified</p>
+          <p className="metric-value">{roster.verifiedCount}</p>
+          <p className="metric-note">punya kewenangan penuh</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Limited</p>
+          <p className="metric-value">{roster.limitedCount}</p>
+          <p className="metric-note">butuh approval lebih lanjut</p>
+        </div>
+        <div className="metric-card">
+          <p className="metric-label">Undangan</p>
+          <p className="metric-value">{roster.pendingInvites.length}</p>
+          <p className="metric-note">masih menunggu respons</p>
+        </div>
+      </section>
+
       {!canManage && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-600">
-          Hanya Admin Desa VERIFIED yang dapat mengundang/mencabut akses admin lain.
+        <div className="notice-card notice-info text-sm leading-relaxed">
+          Hanya Admin Desa VERIFIED yang dapat mengundang atau mencabut akses admin lain.
         </div>
       )}
 
       {inviteLimitReached && canManage && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-          Sudah mencapai batas {maxAdmins} admin per desa. Cabut salah satu LIMITED untuk mengundang admin baru.
+        <div className="notice-card notice-warn text-sm leading-relaxed">
+          Batas {maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin LIMITED jika ingin membuka slot baru.
         </div>
       )}
 
-      {/* Active admins */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-2">Admin Aktif</h2>
+      <section className="lux-panel p-5 sm:p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+            <Users size={18} aria-hidden />
+          </span>
+          <div>
+            <p className="eyebrow text-[10px]">Anggota aktif</p>
+            <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Struktur tim yang sedang bekerja</h2>
+          </div>
+        </div>
+
         {roster.active.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">Belum ada admin aktif.</p>
+          <div className="lux-card p-10 text-center">
+            <p className="text-sm text-slate-500">Belum ada admin aktif.</p>
+          </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-3">
             {roster.active.map((row) => (
               <AdminRow
                 key={row.id}
@@ -367,37 +411,52 @@ export default function AdminDesaListAdminClient({
         )}
       </section>
 
-      {/* Pending invites */}
       {canManage && roster.pendingInvites.length > 0 && (
-        <section className="bg-white border border-slate-200 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <Clock size={14} /> Undangan menunggu
-          </h2>
-          <ul className="space-y-2">
+        <section className="lux-card p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+              <Clock size={18} aria-hidden />
+            </span>
+            <div>
+              <p className="eyebrow text-[10px]">Undangan</p>
+              <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Undangan yang masih menunggu</h2>
+            </div>
+          </div>
+
+          <div className="space-y-3">
             {roster.pendingInvites.map((inv) => {
               const expired = new Date(inv.expiresAt).getTime() < nowMs;
               return (
-                <li key={inv.id} className="flex items-center justify-between text-sm py-2 border-b border-slate-100 last:border-0">
-                  <div>
-                    <p className="font-medium text-slate-900">{inv.email}</p>
-                    <p className={`text-xs ${expired ? "text-red-600" : "text-slate-500"}`}>
-                      Dikirim {new Date(inv.createdAt).toLocaleDateString("id-ID")} •{" "}
-                      {expired ? "Sudah kedaluwarsa" : `Berlaku sampai ${new Date(inv.expiresAt).toLocaleDateString("id-ID")}`}
+                <div key={inv.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-900">{inv.email}</p>
+                    <p className={`text-xs ${expired ? "text-rose-600" : "text-slate-500"}`}>
+                      Dikirim {new Date(inv.createdAt).toLocaleDateString("id-ID")} · {expired ? "Sudah kedaluwarsa" : `Berlaku sampai ${new Date(inv.expiresAt).toLocaleDateString("id-ID")}`}
                     </p>
                   </div>
-                </li>
+                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${expired ? "pill-danger" : "pill-warn"}`}>
+                    {expired ? "Expired" : "Pending"}
+                  </span>
+                </div>
               );
             })}
-          </ul>
+          </div>
         </section>
       )}
 
-      {/* History */}
       {roster.history.length > 0 && (
-        <section className="bg-white border border-slate-200 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-2">Riwayat Akses</h2>
-          <p className="text-xs text-slate-500 mb-2">Akses sebelumnya yang sudah dicabut atau berakhir.</p>
-          <div className="divide-y divide-slate-100">
+        <section className="lux-card p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+              <AlertTriangle size={18} aria-hidden />
+            </span>
+            <div>
+              <p className="eyebrow text-[10px]">Riwayat</p>
+              <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Akses yang sudah berakhir</h2>
+            </div>
+          </div>
+
+          <div className="space-y-3">
             {roster.history.map((row) => (
               <AdminRow
                 key={row.id}
@@ -412,14 +471,25 @@ export default function AdminDesaListAdminClient({
       )}
 
       {showInvite && (
-        <InviteModal desaId={desaId} desaName={desaName}
+        <InviteModal
+          desaId={desaId}
+          desaName={desaName}
           onClose={() => setShowInvite(false)}
-          onDone={() => { setShowInvite(false); refresh(); }} />
+          onDone={() => {
+            setShowInvite(false);
+            refresh();
+          }}
+        />
       )}
       {revokeTarget && (
-        <RevokeModal member={revokeTarget}
+        <RevokeModal
+          member={revokeTarget}
           onClose={() => setRevokeTarget(null)}
-          onDone={() => { setRevokeTarget(null); refresh(); }} />
+          onDone={() => {
+            setRevokeTarget(null);
+            refresh();
+          }}
+        />
       )}
     </div>
   );

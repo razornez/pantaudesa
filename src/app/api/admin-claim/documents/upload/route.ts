@@ -8,7 +8,8 @@ import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import {
   uploadDocumentBuffer,
   buildDocumentStoragePath,
-  isStorageConfigured,
+  getStorageConfigurationErrorMessage,
+  getStorageConfigurationStatus,
 } from "@/lib/storage/supabase-storage";
 import {
   validateUpload,
@@ -38,10 +39,14 @@ export async function POST(req: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
     }
-    if (!isStorageConfigured()) {
+    const storageStatus = getStorageConfigurationStatus();
+    if (!storageStatus.configured) {
       return NextResponse.json({
-        error: "Storage tidak terkonfigurasi. Hubungi admin PantauDesa.",
+        error: getStorageConfigurationErrorMessage(storageStatus),
         code: "STORAGE_NOT_CONFIGURED",
+        bucket: storageStatus.bucket,
+        missingEnvVars: storageStatus.missingEnvVars,
+        invalidEnvVars: storageStatus.invalidEnvVars,
       }, { status: 503 });
     }
 

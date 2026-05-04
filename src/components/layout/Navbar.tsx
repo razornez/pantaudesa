@@ -134,26 +134,26 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 glass" style={{ borderRadius: 0 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
+        <div className="flex items-center justify-between gap-4 h-16">
 
           {/* Brand */}
           <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-7 h-7 rounded-lg overflow-hidden shadow-sm">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-[0_10px_22px_-14px_rgba(30,27,75,0.55)]">
               <Image src={ASSETS.logo} alt="PantauDesa" width={28} height={28} className="w-full h-full object-cover" priority />
             </div>
-            <span className="font-bold text-lg text-slate-800">Pantau<span className="text-indigo-600">Desa</span></span>
+            <span className="font-bold text-lg text-slate-800 tracking-tight">Pantau<span className="text-indigo-600">Desa</span></span>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-0.5">
+          <div className="hidden md:flex items-center gap-1 rounded-2xl bg-white/72 p-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06),0_14px_30px_-24px_rgba(15,23,42,0.24)]">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+                className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                   pathname === link.href
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50"
+                    ? "bg-white text-[#1E1B4B] shadow-[inset_0_0_0_1px_rgba(79,70,229,0.12),0_14px_24px_-22px_rgba(30,27,75,0.55)]"
+                    : "text-slate-600 hover:text-indigo-600 hover:bg-white/80"
                 }`}
               >
                 {link.label}
@@ -178,14 +178,14 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-slate-100 bg-white px-4 pb-4 pt-2">
+        <div className="md:hidden border-t border-slate-100/80 bg-white/90 backdrop-blur-sm px-4 pb-4 pt-3">
           {navLinks.map(link => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                pathname === link.href ? "bg-indigo-50 text-indigo-600" : "text-slate-600 hover:bg-slate-50"
+              className={`block px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                pathname === link.href ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               {link.label}

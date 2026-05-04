@@ -62,24 +62,26 @@ export default function AdminDesaBadge({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Status Admin Desa: ${status}. Klik untuk detail.`}
-        className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:outline-none"
+        className="relative w-12 h-12 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:outline-none focus-visible:ring-offset-2 rounded-full"
       >
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt={displayName}
-            width={48}
-            height={48}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-700 font-semibold text-sm">
-            {displayName.slice(0, 2).toUpperCase()}
-          </span>
-        )}
+        <span className="absolute inset-0 overflow-hidden rounded-full border-2 border-white shadow-sm ring-1 ring-black/5 bg-white z-0">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={displayName}
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-700 font-semibold text-sm">
+              {displayName.slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </span>
         {/* Status badge — bottom-right */}
         <span
-          className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full ${badgeColor} flex items-center justify-center border-2 border-white`}
+          className={`absolute -bottom-1 -right-1 z-10 w-[22px] h-[22px] rounded-full ${badgeColor} flex items-center justify-center border-2 border-white shadow-[0_6px_14px_rgba(15,23,42,0.22)] ring-1 ring-black/5`}
           aria-hidden="true"
         >
           {badgeIcon}

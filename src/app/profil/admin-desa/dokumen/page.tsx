@@ -12,7 +12,7 @@ import {
   getMaxFilesPerUpload,
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
-import { isStorageConfigured } from "@/lib/storage/supabase-storage";
+import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,8 @@ export default async function AdminDesaDokumenPage() {
     publishedAt: d.publishedAt?.toISOString() ?? null,
   }));
 
-  const storageOk = isStorageConfigured();
+  const storage = getStorageConfigurationStatus();
+  const storageOk = storage.configured;
   const maxBytes = storageOk ? getMaxFileSizeBytes() : DEFAULT_MAX_FILE_SIZE_MB * 1024 * 1024;
   const maxFiles = storageOk ? getMaxFilesPerUpload() : DEFAULT_MAX_FILES_PER_UPLOAD;
   const allowedMime = storageOk ? getAllowedMimeTypes() : [...DEFAULT_ALLOWED_MIME_TYPES];
@@ -70,7 +71,7 @@ export default async function AdminDesaDokumenPage() {
       maxFileSizeMB={Math.round(maxBytes / (1024 * 1024))}
       maxFilesPerUpload={maxFiles}
       allowedMimeTypes={allowedMime}
-      storageConfigured={storageOk}
+      storageStatus={storage}
     />
   );
 }

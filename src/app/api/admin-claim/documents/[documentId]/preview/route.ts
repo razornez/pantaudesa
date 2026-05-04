@@ -4,7 +4,11 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { createDocumentSignedUrl, isStorageConfigured } from "@/lib/storage/supabase-storage";
+import {
+  createDocumentSignedUrl,
+  getStorageConfigurationErrorMessage,
+  getStorageConfigurationStatus,
+} from "@/lib/storage/supabase-storage";
 import { isInternalAdmin } from "@/lib/auth/internal-admin";
 
 // GET /api/admin-claim/documents/:documentId/preview
@@ -27,10 +31,14 @@ export async function GET(
     if (!db) {
       return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
     }
-    if (!isStorageConfigured()) {
+    const storageStatus = getStorageConfigurationStatus();
+    if (!storageStatus.configured) {
       return NextResponse.json({
-        error: "Storage tidak terkonfigurasi.",
+        error: getStorageConfigurationErrorMessage(storageStatus),
         code: "STORAGE_NOT_CONFIGURED",
+        bucket: storageStatus.bucket,
+        missingEnvVars: storageStatus.missingEnvVars,
+        invalidEnvVars: storageStatus.invalidEnvVars,
       }, { status: 503 });
     }
 

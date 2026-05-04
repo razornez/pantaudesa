@@ -9,18 +9,64 @@ let _bucket: string | null = null;
 export const ADMIN_DESA_DOCUMENTS_BUCKET_DEFAULT = "admin-desa-documents";
 export const SIGNED_URL_TTL_SECONDS_DEFAULT = 900; // 15 minutes
 
+export interface StorageConfigurationStatus {
+  configured: boolean;
+  bucket: string;
+  missingEnvVars: string[];
+  invalidEnvVars: string[];
+}
+
+function getConfiguredBucketName(): string {
+  return process.env.SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS ?? ADMIN_DESA_DOCUMENTS_BUCKET_DEFAULT;
+}
+
+export function getStorageConfigurationStatus(): StorageConfigurationStatus {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const missingEnvVars: string[] = [];
+  const invalidEnvVars: string[] = [];
+  const looksLikeJwt = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(serviceRoleKey);
+  const looksLikeSecretKey = serviceRoleKey.startsWith("sb_secret_");
+
+  if (!url) missingEnvVars.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!serviceRoleKey) missingEnvVars.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (url && !/^https:\/\/[^/]+\.supabase\.co\/?$/i.test(url)) {
+    invalidEnvVars.push("NEXT_PUBLIC_SUPABASE_URL");
+  }
+  if (serviceRoleKey && !looksLikeJwt && !looksLikeSecretKey) {
+    invalidEnvVars.push("SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  return {
+    configured: missingEnvVars.length === 0 && invalidEnvVars.length === 0,
+    bucket: getConfiguredBucketName(),
+    missingEnvVars,
+    invalidEnvVars,
+  };
+}
+
+export function getStorageConfigurationErrorMessage(
+  status = getStorageConfigurationStatus(),
+): string {
+  if (status.missingEnvVars.length > 0) {
+    return `Storage belum terkonfigurasi. Env yang belum diisi: ${status.missingEnvVars.join(", ")}.`;
+  }
+  if (status.invalidEnvVars.length > 0) {
+    return `Storage belum terkonfigurasi. Env ini formatnya tidak valid: ${status.invalidEnvVars.join(", ")}.`;
+  }
+  return "Storage belum terkonfigurasi. Hubungi admin PantauDesa.";
+}
+
 function getStorageClient(): { client: SupabaseClient; bucket: string } {
   if (_client && _bucket) return { client: _client, bucket: _bucket };
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET_ADMIN_DESA_DOCUMENTS ?? ADMIN_DESA_DOCUMENTS_BUCKET_DEFAULT;
+  const status = getStorageConfigurationStatus();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const bucket = status.bucket;
 
-  if (!url) {
-    throw new StorageNotConfiguredError("NEXT_PUBLIC_SUPABASE_URL is not set");
-  }
-  if (!serviceRoleKey) {
-    throw new StorageNotConfiguredError("SUPABASE_SERVICE_ROLE_KEY is not set");
+  if (!status.configured || !url || !serviceRoleKey) {
+    throw new StorageNotConfiguredError(getStorageConfigurationErrorMessage(status));
   }
 
   _client = createClient(url, serviceRoleKey, {
@@ -47,7 +93,7 @@ export class StorageOperationError extends Error {
 }
 
 export function isStorageConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return getStorageConfigurationStatus().configured;
 }
 
 export function getSignedUrlTtl(): number {
