@@ -2,25 +2,28 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma as db } from "@/lib/prisma";
 import { handleApiError } from "@/lib/api-error";
+import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 import type { VoiceCategory } from "@/lib/citizen-voice";
 
 const VALID_CATEGORIES = ["infrastruktur", "bansos", "fasilitas", "anggaran", "lingkungan", "lainnya"];
+const ACTIVE_ADMIN_STATUSES = ["VERIFIED", "LIMITED"] as const;
 
-// Trust score thresholds (mirrors user-profile.ts USER_BADGES)
 const TRUST_TIERS = [
   { tier: 5 as const, minScore: 250 },
   { tier: 4 as const, minScore: 120 },
-  { tier: 3 as const, minScore: 60  },
-  { tier: 2 as const, minScore: 20  },
-  { tier: 1 as const, minScore: 0   },
+  { tier: 3 as const, minScore: 60 },
+  { tier: 2 as const, minScore: 20 },
+  { tier: 1 as const, minScore: 0 },
 ];
 
 function computeTrustTier(voiceCount: number, helpfulCount: number, resolvedCount: number): 1 | 2 | 3 | 4 | 5 {
   const score = voiceCount * 5 + helpfulCount * 2 + resolvedCount * 10;
-  for (const { tier, minScore } of TRUST_TIERS) {
-    if (score >= minScore) return tier;
-  }
+  for (const { tier, minScore } of TRUST_TIERS) if (score >= minScore) return tier;
   return 1;
+}
+
+function displayName(user: { nama: string | null; username: string | null; email?: string | null } | null) {
+  return user?.nama ?? user?.username ?? user?.email ?? "Anonim";
 }
 
 function shapeVoice(
@@ -28,65 +31,117 @@ function shapeVoice(
     id: string; desaId: string; category: string; text: string;
     isAnon: boolean; authorId: string | null; createdAt: Date; resolvedAt: Date | null;
     status: string; photos: string[];
-    author: { id: string; nama: string | null; username: string | null } | null;
-    votes: { type: string }[];
+    author: { id: string; nama: string | null; username: string | null; email?: string | null } | null;
+    votes: { userId?: string; type: string }[];
     helpfuls: { userId: string }[];
     replies: {
       id: string; isAnon: boolean; isOfficialDesa: boolean; text: string; createdAt: Date;
-      author: { nama: string | null; username: string | null } | null;
+      author: { nama: string | null; username: string | null; email?: string | null } | null;
     }[];
   },
-  desa?: { nama: string; kabupaten: string; slug: string },
-  authorIsAdminDesa?: boolean,
-  authorTrustTier?: 1 | 2 | 3 | 4 | 5,
+  opts: {
+    desa?: { id: string; nama: string; kabupaten: string; slug: string };
+    canonicalDesaId?: string;
+    authorAdminStatus?: "VERIFIED" | "LIMITED";
+    authorTrustTier?: 1 | 2 | 3 | 4 | 5;
+    viewerUserId?: string;
+  } = {},
 ) {
-  const authorName = v.isAnon
-    ? "Anonim"
-    : (v.author?.nama ?? v.author?.username ?? "Anonim");
+  const viewerVote = opts.viewerUserId ? v.votes.find((vote) => vote.userId === opts.viewerUserId)?.type : undefined;
 
   return {
-    id:           v.id,
-    desaId:       v.desaId,
-    desaNama:     desa?.nama,
-    desaKabupaten: desa?.kabupaten,
-    desaSlug:     desa?.slug,
-    category:     v.category as VoiceCategory,
-    text:         v.text,
-    author:       authorName,
-    authorId:     v.authorId,
-    isAnon:       v.isAnon,
-    authorIsAdminDesa: v.isAnon ? false : (authorIsAdminDesa ?? false),
-    authorTrustTier:   v.isAnon ? undefined : authorTrustTier,
-    createdAt:    v.createdAt,
-    helpful:      v.helpfuls.length,
-    photos:       v.photos,
+    id: v.id,
+    desaId: opts.canonicalDesaId ?? v.desaId,
+    desaNama: opts.desa?.nama,
+    desaKabupaten: opts.desa?.kabupaten,
+    desaSlug: opts.desa?.slug,
+    category: v.category as VoiceCategory,
+    text: v.text,
+    author: v.isAnon ? "Anonim" : displayName(v.author),
+    authorId: v.authorId,
+    isAnon: v.isAnon,
+    authorIsAdminDesa: v.isAnon ? false : !!opts.authorAdminStatus,
+    authorAdminDesaStatus: v.isAnon ? undefined : opts.authorAdminStatus,
+    authorTrustTier: v.isAnon ? undefined : opts.authorTrustTier,
+    viewerHasHelped: opts.viewerUserId ? v.helpfuls.some((h) => h.userId === opts.viewerUserId) : false,
+    viewerVoteType: viewerVote === "BENAR" || viewerVote === "BOHONG" ? viewerVote : undefined,
+    createdAt: v.createdAt,
+    helpful: v.helpfuls.length,
+    photos: v.photos,
     votes: {
-      benar:  v.votes.filter(vote => vote.type === "BENAR").length,
-      bohong: v.votes.filter(vote => vote.type === "BOHONG").length,
+      benar: v.votes.filter((vote) => vote.type === "BENAR").length,
+      bohong: v.votes.filter((vote) => vote.type === "BOHONG").length,
     },
-    status:     v.status === "OPEN" ? "open" : v.status === "IN_PROGRESS" ? "in_progress" : "resolved",
+    status: v.status === "OPEN" ? "open" : v.status === "IN_PROGRESS" ? "in_progress" : "resolved",
     resolvedAt: v.resolvedAt ?? undefined,
-    replies: v.replies.map(r => ({
-      id:             r.id,
-      voiceId:        v.id,
-      author:         r.isAnon ? "Anonim" : (r.author?.nama ?? r.author?.username ?? "Anonim"),
-      isAnon:         r.isAnon,
+    replies: v.replies.map((r) => ({
+      id: r.id,
+      voiceId: v.id,
+      author: r.isAnon ? "Anonim" : displayName(r.author),
+      isAnon: r.isAnon,
       isOfficialDesa: r.isOfficialDesa,
-      text:           r.text,
-      createdAt:      r.createdAt,
+      text: r.text,
+      createdAt: r.createdAt,
     })),
   } as const;
 }
 
 const VOICE_INCLUDE = {
-  author:   { select: { id: true, nama: true, username: true, avatarUrl: true } },
-  votes:    { select: { type: true } },
+  author: { select: { id: true, nama: true, username: true, email: true, avatarUrl: true } },
+  votes: { select: { userId: true, type: true } },
   helpfuls: { select: { userId: true } },
   replies: {
     orderBy: { createdAt: "asc" as const },
-    include: { author: { select: { id: true, nama: true, username: true, avatarUrl: true } } },
+    include: { author: { select: { id: true, nama: true, username: true, email: true, avatarUrl: true } } },
   },
 };
+
+async function resolveDesaFilter(desaId: string | null) {
+  if (!desaId) return { where: undefined, desaMap: new Map<string, { id: string; nama: string; kabupaten: string; slug: string }>() };
+
+  const desa = await db.desa.findFirst({
+    where: { OR: [{ id: desaId }, { slug: desaId }] },
+    select: { id: true, slug: true, nama: true, kabupaten: true },
+  });
+
+  if (!desa) {
+    return { where: { desaId }, desaMap: new Map<string, { id: string; nama: string; kabupaten: string; slug: string }>() };
+  }
+
+  const value = { id: desa.id, nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug };
+  const desaMap = new Map<string, { id: string; nama: string; kabupaten: string; slug: string }>([
+    [desa.id, value],
+    [desa.slug, value],
+  ]);
+  return { where: { desaId: { in: [desa.id, desa.slug] } }, desaMap };
+}
+
+async function notifyActiveAdmins(input: {
+  desaId: string;
+  actorUserId?: string;
+  type: typeof NOTIF_TYPE.VOICE_CREATED;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+}) {
+  const admins = await db.desaAdminMember.findMany({
+    where: {
+      desaId: input.desaId,
+      status: { in: [...ACTIVE_ADMIN_STATUSES] },
+      ...(input.actorUserId ? { userId: { not: input.actorUserId } } : {}),
+    },
+    select: { userId: true },
+  });
+
+  await createNotifications(admins.map((admin) => ({
+    userId: admin.userId,
+    desaId: input.desaId,
+    type: input.type,
+    title: input.title,
+    body: input.body,
+    metadata: input.metadata,
+  })));
+}
 
 // ─── GET /api/voices?desaId=&limit=&cursor= ───────────────────────────────────
 
@@ -94,53 +149,56 @@ export async function GET(req: Request) {
   try {
     if (!db) return NextResponse.json([]);
 
+    const session = await auth();
     const { searchParams } = new URL(req.url);
     const desaId = searchParams.get("desaId");
-    const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
+    const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
     const cursor = searchParams.get("cursor") ?? undefined;
+    const resolved = await resolveDesaFilter(desaId);
 
     const voices = await db.voice.findMany({
-      where:   desaId ? { desaId } : undefined,
+      where: resolved.where,
       orderBy: { createdAt: "desc" },
-      take:    limit,
+      take: limit,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: VOICE_INCLUDE,
     });
 
-    // Resolve desa info
-    const desaIds = [...new Set(voices.map((voice) => voice.desaId))];
+    const desaIds = [...new Set(voices.flatMap((voice) => {
+      const known = resolved.desaMap.get(voice.desaId);
+      return known ? [known.id, known.slug] : [voice.desaId];
+    }))];
+
     const desaRows = desaIds.length > 0
       ? await db.desa.findMany({
-        where: { OR: [{ id: { in: desaIds } }, { slug: { in: desaIds } }] },
-        select: { id: true, slug: true, nama: true, kabupaten: true },
-      })
+          where: { OR: [{ id: { in: desaIds } }, { slug: { in: desaIds } }] },
+          select: { id: true, slug: true, nama: true, kabupaten: true },
+        })
       : [];
-    const desaMap = new Map<string, { nama: string; kabupaten: string; slug: string }>();
+
+    const desaMap = new Map(resolved.desaMap);
     desaRows.forEach((desa) => {
-      const value = { nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug };
+      const value = { id: desa.id, nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug };
       desaMap.set(desa.id, value);
       desaMap.set(desa.slug, value);
     });
 
-    // Batch-check which (authorId, desaId) pairs have an active admin membership
     const authorDesaPairs = voices
-      .filter(v => !v.isAnon && v.authorId)
-      .map(v => ({ authorId: v.authorId!, desaId: v.desaId }));
+      .filter((v) => !v.isAnon && v.authorId)
+      .map((v) => ({ authorId: v.authorId!, desaId: desaMap.get(v.desaId)?.id ?? v.desaId }));
 
     const adminMembers = authorDesaPairs.length > 0
       ? await db.desaAdminMember.findMany({
           where: {
-            OR: authorDesaPairs.map(p => ({ userId: p.authorId, desaId: p.desaId })),
-            status: { in: ["VERIFIED", "LIMITED"] },
+            OR: authorDesaPairs.map((p) => ({ userId: p.authorId, desaId: p.desaId })),
+            status: { in: [...ACTIVE_ADMIN_STATUSES] },
           },
-          select: { userId: true, desaId: true },
+          select: { userId: true, desaId: true, status: true },
         })
       : [];
 
-    const adminSet = new Set(adminMembers.map(m => `${m.userId}:${m.desaId}`));
-
-    // Batch-compute trust tiers for non-anon authors
-    const authorIds = [...new Set(voices.filter(v => !v.isAnon && v.authorId).map(v => v.authorId!))];
+    const adminStatusMap = new Map(adminMembers.map((m) => [`${m.userId}:${m.desaId}`, m.status as "VERIFIED" | "LIMITED"]));
+    const authorIds = [...new Set(voices.filter((v) => !v.isAnon && v.authorId).map((v) => v.authorId!))];
 
     const [voiceCounts, helpfulCounts, resolvedCounts] = authorIds.length > 0
       ? await Promise.all([
@@ -150,15 +208,15 @@ export async function GET(req: Request) {
         ])
       : [[], [], []] as const;
 
-    const voiceCountMap = new Map<string, number>(voiceCounts.map(r => [r.authorId as string, r._count.id]));
-    const helpfulCountMap = new Map<string, number>(helpfulCounts.map(r => [r.userId as string, r._count.id]));
-    const resolvedCountMap = new Map<string, number>(resolvedCounts.map(r => [r.authorId as string, r._count.id]));
+    const voiceCountMap = new Map<string, number>(voiceCounts.map((r) => [r.authorId as string, r._count.id]));
+    const helpfulCountMap = new Map<string, number>(helpfulCounts.map((r) => [r.userId as string, r._count.id]));
+    const resolvedCountMap = new Map<string, number>(resolvedCounts.map((r) => [r.authorId as string, r._count.id]));
 
     return NextResponse.json(voices.map((voice) => {
-      const isAdminDesa = !voice.isAnon && voice.authorId
-        ? adminSet.has(`${voice.authorId}:${voice.desaId}`)
-        : false;
-
+      const canonicalDesaId = desaMap.get(voice.desaId)?.id ?? voice.desaId;
+      const authorAdminStatus = !voice.isAnon && voice.authorId
+        ? adminStatusMap.get(`${voice.authorId}:${canonicalDesaId}`)
+        : undefined;
       const trustTier = !voice.isAnon && voice.authorId
         ? computeTrustTier(
             voiceCountMap.get(voice.authorId) ?? 0,
@@ -167,7 +225,13 @@ export async function GET(req: Request) {
           )
         : undefined;
 
-      return shapeVoice(voice, desaMap.get(voice.desaId), isAdminDesa, trustTier);
+      return shapeVoice(voice, {
+        desa: desaMap.get(voice.desaId),
+        canonicalDesaId,
+        authorAdminStatus,
+        authorTrustTier: trustTier,
+        viewerUserId: session?.user?.id,
+      });
     }));
   } catch (error) {
     return handleApiError(error, "GET /api/voices");
@@ -178,59 +242,69 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    if (!db) {
-      return NextResponse.json({ error: "Layanan penyimpanan belum siap" }, { status: 503 });
-    }
+    if (!db) return NextResponse.json({ error: "Layanan penyimpanan belum siap" }, { status: 503 });
 
     const session = await auth();
-
     const body = await req.json();
-    const { desaId, category, text, isAnon } = body;
+    const { desaId, category, text, photos } = body;
 
     if (!desaId || !category || !text?.trim()) {
       return NextResponse.json({ error: "desaId, category, dan text wajib diisi" }, { status: 400 });
     }
-    if (!VALID_CATEGORIES.includes(category)) {
-      return NextResponse.json({ error: "Kategori tidak valid" }, { status: 400 });
-    }
-    if (text.trim().length < 10) {
-      return NextResponse.json({ error: "Cerita terlalu pendek (minimal 10 karakter)" }, { status: 400 });
-    }
-    if (text.trim().length > 400) {
-      return NextResponse.json({ error: "Cerita terlalu panjang (maksimal 400 karakter)" }, { status: 400 });
-    }
+    if (!VALID_CATEGORIES.includes(category)) return NextResponse.json({ error: "Kategori tidak valid" }, { status: 400 });
+    if (text.trim().length < 10) return NextResponse.json({ error: "Cerita terlalu pendek (minimal 10 karakter)" }, { status: 400 });
+    if (text.trim().length > 400) return NextResponse.json({ error: "Cerita terlalu panjang (maksimal 400 karakter)" }, { status: 400 });
 
-    const effectiveIsAnon = isAnon ?? !session?.user?.id;
+    const desa = await db.desa.findFirst({
+      where: { OR: [{ id: desaId }, { slug: desaId }] },
+      select: { id: true, slug: true, nama: true, kabupaten: true },
+    });
+    const canonicalDesaId = desa?.id ?? desaId;
+    const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === "string").slice(0, 3) : [];
+    const effectiveIsAnon = session?.user?.id ? false : true;
+
     const voice = await db.voice.create({
       data: {
-        desaId,
+        desaId: canonicalDesaId,
         category,
-        text:     text.trim(),
-        isAnon:   effectiveIsAnon,
+        text: text.trim(),
+        isAnon: effectiveIsAnon,
         authorId: session?.user?.id ?? null,
+        photos: photoList,
       },
       include: VOICE_INCLUDE,
     });
 
-    // For the POST response, check admin and trust for the single author
-    let isAdminDesa = false;
+    let authorAdminStatus: "VERIFIED" | "LIMITED" | undefined;
     let trustTier: 1 | 2 | 3 | 4 | 5 | undefined;
 
     if (!effectiveIsAnon && session?.user?.id) {
       const [adminMember, vcCount, hlCount, rvCount] = await Promise.all([
-        db.desaAdminMember.findFirst({
-          where: { userId: session.user.id, desaId, status: { in: ["VERIFIED", "LIMITED"] } },
-          select: { id: true },
-        }),
+        db.desaAdminMember.findFirst({ where: { userId: session.user.id, desaId: canonicalDesaId, status: { in: [...ACTIVE_ADMIN_STATUSES] } }, select: { status: true } }),
         db.voice.count({ where: { authorId: session.user.id, isAnon: false } }),
         db.voiceHelpful.count({ where: { voice: { authorId: session.user.id, isAnon: false } } }),
         db.voice.count({ where: { authorId: session.user.id, isAnon: false, status: "RESOLVED" } }),
       ]);
-      isAdminDesa = !!adminMember;
+      authorAdminStatus = adminMember?.status as "VERIFIED" | "LIMITED" | undefined;
       trustTier = computeTrustTier(vcCount, hlCount, rvCount);
     }
 
-    return NextResponse.json(shapeVoice(voice, undefined, isAdminDesa, trustTier), { status: 201 });
+    void notifyActiveAdmins({
+      desaId: canonicalDesaId,
+      actorUserId: session?.user?.id,
+      type: NOTIF_TYPE.VOICE_CREATED,
+      title: "Ada suara warga baru",
+      body: `${displayName(voice.author)} menulis suara warga untuk desa ini.`,
+      metadata: { voiceId: voice.id, category },
+    });
+
+    return NextResponse.json(shapeVoice(voice, {
+      desa: desa ? { id: desa.id, nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug } : undefined,
+      canonicalDesaId,
+      authorAdminStatus,
+      authorTrustTier: trustTier,
+      viewerUserId: session?.user?.id,
+    }), { status: 201 });
   } catch (error) {
     return handleApiError(error, "POST /api/voices");
   }
