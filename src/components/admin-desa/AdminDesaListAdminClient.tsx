@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import type { DesaAdminRoster, DesaAdminRow } from "@/lib/data/desa-admins";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
+import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+
+const COPY = BACK_OFFICE_COPY.adminDesa.listAdmin;
+const COMMON_COPY = BACK_OFFICE_COPY.adminDesa.common;
 
 interface Props {
   currentUserId: string;
@@ -28,21 +32,16 @@ interface Props {
 
 function StatusPill({ status }: { status: DesaAdminRow["status"] }) {
   const map: Record<DesaAdminRow["status"], { label: string; cls: string }> = {
-    VERIFIED: { label: "Admin terverifikasi", cls: "pill-ok" },
-    LIMITED: { label: "Admin terbatas", cls: "pill-warn" },
-    REVOKED: { label: "Akses dicabut", cls: "pill-danger" },
-    EXPIRED: { label: "Masa aktif berakhir", cls: "pill-info" },
+    VERIFIED: { label: COPY.roleStatus.VERIFIED, cls: "pill-ok" },
+    LIMITED: { label: COPY.roleStatus.LIMITED, cls: "pill-warn" },
+    REVOKED: { label: COPY.roleStatus.REVOKED, cls: "pill-danger" },
+    EXPIRED: { label: COPY.roleStatus.EXPIRED, cls: "pill-info" },
   };
   const m = map[status];
   return <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${m.cls}`}>{m.label}</span>;
 }
 
-function AdminRow({
-  row,
-  canManage,
-  isSelf,
-  onRevoke,
-}: {
+function AdminRow({ row, canManage, isSelf, onRevoke }: {
   row: DesaAdminRow;
   canManage: boolean;
   isSelf: boolean;
@@ -65,11 +64,7 @@ function AdminRow({
           )}
         </span>
         {(isVerified || row.status === "LIMITED") && (
-          <span
-            className={`absolute -bottom-0.5 -right-0.5 z-10 w-[20px] h-[20px] rounded-full ${
-              isVerified ? "bg-emerald-500" : "bg-amber-500"
-            } flex items-center justify-center border-2 border-white shadow-[0_6px_14px_rgba(15,23,42,0.2)] ring-1 ring-black/5`}
-          >
+          <span className={`absolute -bottom-0.5 -right-0.5 z-10 w-[20px] h-[20px] rounded-full ${isVerified ? "bg-emerald-500" : "bg-amber-500"} flex items-center justify-center border-2 border-white shadow-[0_6px_14px_rgba(15,23,42,0.2)] ring-1 ring-black/5`}>
             {isVerified ? <ShieldCheck size={10} className="text-white" /> : <BadgeCheck size={10} className="text-white" />}
           </span>
         )}
@@ -79,9 +74,7 @@ function AdminRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-slate-900 truncate">{displayName}</p>
           <StatusPill status={row.status} />
-          {isSelf && (
-            <span className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-full">Kamu</span>
-          )}
+          {isSelf && <span className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-full">{COMMON_COPY.you}</span>}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -90,19 +83,12 @@ function AdminRow({
         </div>
 
         {row.revokedAt && row.revokedReason && (
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Dicabut pada {new Date(row.revokedAt).toLocaleDateString("id-ID")} karena {row.revokedReason}
-          </p>
+          <p className="text-xs text-slate-500 leading-relaxed">{COPY.historySection.revokedWithReason(new Date(row.revokedAt).toLocaleDateString("id-ID"), row.revokedReason)}</p>
         )}
       </div>
 
       {canRevokeThis && (
-        <button
-          type="button"
-          onClick={() => onRevoke(row)}
-          className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
-          aria-label={`Hapus akses ${displayName}`}
-        >
+        <button type="button" onClick={() => onRevoke(row)} className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2" aria-label={COPY.actions.revokeAriaLabel(displayName)}>
           <MoreVertical size={16} aria-hidden />
         </button>
       )}
@@ -110,27 +96,17 @@ function AdminRow({
   );
 }
 
-function ModalFrame({
-  title,
-  subtitle,
-  children,
-  onClose,
-}: {
-  title: string;
-  subtitle: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
+function ModalFrame({ title, subtitle, children, onClose }: { title: string; subtitle: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="lux-panel max-w-md w-full p-5 sm:p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="eyebrow text-[10px]">Aksi admin</p>
+            <p className="eyebrow text-[10px]">{COPY.modal.eyebrow}</p>
             <h2 className="text-[20px] font-semibold text-slate-900 mt-1">{title}</h2>
             <p className="text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>
           </div>
-          <button onClick={onClose} className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0" aria-label="Tutup">
+          <button onClick={onClose} className="btn-lux btn-lux-secondary !min-h-[40px] !w-[40px] !p-0" aria-label={COMMON_COPY.close}>
             <X size={18} aria-hidden />
           </button>
         </div>
@@ -140,13 +116,7 @@ function ModalFrame({
   );
 }
 
-function InviteModal({
-  desaId,
-  desaName,
-  onClose,
-  onDone,
-  onNotify,
-}: {
+function InviteModal({ desaId, desaName, onClose, onDone, onNotify }: {
   desaId: string;
   desaName: string;
   onClose: () => void;
@@ -158,10 +128,7 @@ function InviteModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) {
-      onNotify("Email wajib diisi.", "error");
-      return;
-    }
+    if (!email.trim()) { onNotify(COPY.modal.emailRequired, "error"); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/admin-claim/invite", {
@@ -170,66 +137,32 @@ function InviteModal({
         body: JSON.stringify({ desaId, email: email.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        onNotify(data.error ?? "Gagal mengirim undangan.", "error");
-        return;
-      }
-      onNotify("Undangan berhasil dikirim. Calon admin akan menerima tautan untuk menerima undangan.", "success");
+      if (!res.ok) { onNotify(data.error ?? COPY.modal.inviteFailed, "error"); return; }
+      onNotify(COPY.modal.inviteSuccess, "success");
       setEmail("");
       setTimeout(() => onDone(), 250);
-    } catch {
-      onNotify("Koneksi bermasalah. Coba lagi.", "error");
-    } finally {
-      setLoading(false);
-    }
+    } catch { onNotify(COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
   }
 
   return (
-    <ModalFrame
-      title="Undang Admin Desa"
-      subtitle={`Undangan baru untuk ${desaName}`}
-      onClose={onClose}
-    >
-      <div className="notice-card notice-warn text-sm leading-relaxed">
-        Undangan ini memberi akses awal sebagai <strong>admin terbatas</strong>. Setelah itu, pengguna tetap perlu melalui verifikasi lanjutan.
-      </div>
-
+    <ModalFrame title={COPY.modal.inviteTitle} subtitle={COPY.modal.inviteSubtitle(desaName)} onClose={onClose}>
+      <div className="notice-card notice-warn text-sm leading-relaxed">{COPY.modal.inviteNotice}</div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="field-label">Email invitee</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@desa.id"
-            className="field-lux"
-            required
-            autoFocus
-          />
-          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-            Sistem akan memblokir undangan jika email ini sudah aktif sebagai Admin Desa di desa lain.
-          </p>
+          <label className="field-label">{COPY.modal.inviteEmailLabel}</label>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={COPY.modal.inviteEmailPlaceholder} className="field-lux" required autoFocus />
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">{COPY.modal.inviteHelper}</p>
         </div>
-
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
-            Batal
-          </button>
-          <button type="submit" disabled={loading} className="btn-lux btn-lux-primary flex-1">
-            {loading ? "Mengirim..." : "Kirim Undangan"}
-          </button>
+          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">{COMMON_COPY.cancel}</button>
+          <button type="submit" disabled={loading} className="btn-lux btn-lux-primary flex-1">{loading ? COPY.modal.sendingInvite : COPY.modal.sendInvite}</button>
         </div>
       </form>
     </ModalFrame>
   );
 }
 
-function RevokeModal({
-  member,
-  onClose,
-  onDone,
-  onNotify,
-}: {
+function RevokeModal({ member, onClose, onDone, onNotify }: {
   member: DesaAdminRow;
   onClose: () => void;
   onDone: () => void;
@@ -249,62 +182,30 @@ function RevokeModal({
         body: JSON.stringify({ reason: reason.trim() || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        onNotify(data.error ?? "Gagal mencabut akses.", "error");
-        return;
-      }
-      onNotify("Akses admin berhasil dicabut.", "success");
+      if (!res.ok) { onNotify(data.error ?? COPY.modal.revokeFailed, "error"); return; }
+      onNotify(COPY.modal.revokeSuccess, "success");
       onDone();
-    } catch {
-      onNotify("Koneksi bermasalah. Coba lagi.", "error");
-    } finally {
-      setLoading(false);
-    }
+    } catch { onNotify(COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
   }
 
   return (
-    <ModalFrame
-      title="Cabut akses admin"
-      subtitle={displayName}
-      onClose={onClose}
-    >
-      <div className="notice-card notice-danger text-sm leading-relaxed">
-        Akses akan diubah menjadi <strong>REVOKED</strong>. Riwayat audit dan dokumen yang pernah diunggah tetap tersimpan.
-      </div>
-
+    <ModalFrame title={COPY.modal.revokeTitle} subtitle={displayName} onClose={onClose}>
+      <div className="notice-card notice-danger text-sm leading-relaxed">{COPY.modal.revokeNotice}</div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="field-label">Alasan pencabutan</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={4}
-            placeholder="Contoh: Tidak lagi bertugas sebagai pengelola data desa."
-            className="textarea-lux"
-          />
+          <label className="field-label">{COPY.modal.revokeReasonLabel}</label>
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder={COPY.modal.revokeReasonPlaceholder} className="textarea-lux" />
         </div>
-
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">
-            Batal
-          </button>
-          <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">
-            {loading ? "Memproses..." : "Hapus Akses"}
-          </button>
+          <button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">{COMMON_COPY.cancel}</button>
+          <button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">{loading ? COPY.modal.revokeLoading : COPY.modal.revokeButton}</button>
         </div>
       </form>
     </ModalFrame>
   );
 }
 
-export default function AdminDesaListAdminClient({
-  currentUserId,
-  desaId,
-  desaName,
-  canManage,
-  roster,
-  maxAdmins,
-}: Props) {
+export default function AdminDesaListAdminClient({ currentUserId, desaId, desaName, canManage, roster, maxAdmins }: Props) {
   const router = useRouter();
   const { toasts, toast, removeToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
@@ -314,178 +215,36 @@ export default function AdminDesaListAdminClient({
   const totalActive = roster.verifiedCount + roster.limitedCount;
   const inviteLimitReached = totalActive >= maxAdmins;
 
-  function refresh() {
-    router.refresh();
-  }
+  function refresh() { router.refresh(); }
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1">
-          <p className="eyebrow text-[10px]">Kelola anggota</p>
-          <h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">
-            Tim Admin Desa
-          </h1>
-        </div>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setShowInvite(true)}
-            disabled={inviteLimitReached}
-            className="btn-lux btn-lux-primary w-full sm:w-auto text-sm"
-          >
-            <UserPlus size={14} aria-hidden /> Undang Admin
-          </button>
-        )}
+        <div className="space-y-1"><p className="eyebrow text-[10px]">{COPY.headingEyebrow}</p><h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">{COPY.headingTitle}</h1></div>
+        {canManage && <button type="button" onClick={() => setShowInvite(true)} disabled={inviteLimitReached} className="btn-lux btn-lux-primary w-full sm:w-auto text-sm"><UserPlus size={14} aria-hidden /> {COPY.inviteButton}</button>}
       </div>
 
-      {/* Compact summary */}
       <div className="flex flex-wrap gap-2 text-[11px]">
-        <span className="lux-card px-3 py-1.5">
-          <span className="text-slate-500">Admin aktif: </span>
-          <span className="font-semibold text-slate-900">{totalActive}/{maxAdmins}</span>
-        </span>
-        <span className="lux-card px-3 py-1.5">
-          <span className="text-slate-500">Verified: </span>
-          <span className="font-semibold text-slate-900">{roster.verifiedCount}</span>
-        </span>
-        <span className="lux-card px-3 py-1.5">
-          <span className="text-slate-500">Terbatas: </span>
-          <span className="font-semibold text-slate-900">{roster.limitedCount}</span>
-        </span>
-        {roster.pendingInvites.length > 0 && (
-          <span className="lux-card px-3 py-1.5">
-            <span className="text-slate-500">Undangan: </span>
-            <span className="font-semibold text-slate-900">{roster.pendingInvites.length}</span>
-          </span>
-        )}
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">{COPY.summary.active}: </span><span className="font-semibold text-slate-900">{totalActive}/{maxAdmins}</span></span>
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">{COPY.summary.verified}: </span><span className="font-semibold text-slate-900">{roster.verifiedCount}</span></span>
+        <span className="lux-card px-3 py-1.5"><span className="text-slate-500">{COPY.summary.limited}: </span><span className="font-semibold text-slate-900">{roster.limitedCount}</span></span>
+        {roster.pendingInvites.length > 0 && <span className="lux-card px-3 py-1.5"><span className="text-slate-500">{COPY.summary.invites}: </span><span className="font-semibold text-slate-900">{roster.pendingInvites.length}</span></span>}
       </div>
 
-      {!canManage && (
-        <div className="notice-card notice-info text-sm leading-relaxed">
-          Hanya admin utama desa yang dapat mengundang atau mencabut akses admin lain.
-        </div>
-      )}
-
-      {inviteLimitReached && canManage && (
-        <div className="notice-card notice-warn text-sm leading-relaxed">
-          Batas {maxAdmins} admin aktif sudah tercapai. Cabut salah satu admin terbatas jika ingin membuka slot baru.
-        </div>
-      )}
+      {!canManage && <div className="notice-card notice-info text-sm leading-relaxed">{COPY.notices.onlyMainAdminCanManage}</div>}
+      {inviteLimitReached && canManage && <div className="notice-card notice-warn text-sm leading-relaxed">{COPY.notices.inviteLimitReached(maxAdmins)}</div>}
 
       <section className="lux-panel p-5 sm:p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
-            <Users size={18} aria-hidden />
-          </span>
-          <div>
-            <p className="eyebrow text-[10px]">Anggota aktif</p>
-            <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Struktur tim yang sedang bekerja</h2>
-          </div>
-        </div>
-
-        {roster.active.length === 0 ? (
-          <div className="lux-card p-10 text-center">
-            <p className="text-sm text-slate-500">Belum ada admin aktif.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {roster.active.map((row) => (
-              <AdminRow
-                key={row.id}
-                row={row}
-                canManage={canManage}
-                isSelf={row.userId === currentUserId}
-                onRevoke={setRevokeTarget}
-              />
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-3"><span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700"><Users size={18} aria-hidden /></span><div><p className="eyebrow text-[10px]">{COPY.activeSection.eyebrow}</p><h2 className="text-[18px] font-semibold text-slate-900 mt-1">{COPY.activeSection.title}</h2></div></div>
+        {roster.active.length === 0 ? <div className="lux-card p-10 text-center"><p className="text-sm text-slate-500">{COPY.activeSection.empty}</p></div> : <div className="space-y-3">{roster.active.map((row) => <AdminRow key={row.id} row={row} canManage={canManage} isSelf={row.userId === currentUserId} onRevoke={setRevokeTarget} />)}</div>}
       </section>
 
-      {canManage && roster.pendingInvites.length > 0 && (
-        <section className="lux-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-              <Clock size={18} aria-hidden />
-            </span>
-            <div>
-              <p className="eyebrow text-[10px]">Undangan</p>
-              <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Undangan yang masih menunggu</h2>
-            </div>
-          </div>
+      {canManage && roster.pendingInvites.length > 0 && <section className="lux-card p-5 sm:p-6 space-y-4"><div className="flex items-center gap-3"><span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Clock size={18} aria-hidden /></span><div><p className="eyebrow text-[10px]">{COPY.inviteSection.eyebrow}</p><h2 className="text-[18px] font-semibold text-slate-900 mt-1">{COPY.inviteSection.title}</h2></div></div><div className="space-y-3">{roster.pendingInvites.map((inv) => { const expired = new Date(inv.expiresAt).getTime() < nowMs; const created = new Date(inv.createdAt).toLocaleDateString("id-ID"); const expires = new Date(inv.expiresAt).toLocaleDateString("id-ID"); return <div key={inv.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]"><div className="space-y-1"><p className="font-semibold text-slate-900">{inv.email}</p><p className={`text-xs ${expired ? "text-rose-600" : "text-slate-500"}`}>{COPY.inviteSection.sentAt(created)} · {expired ? COPY.inviteSection.expired : COPY.inviteSection.validUntil(expires)}</p></div><span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${expired ? "pill-danger" : "pill-warn"}`}>{expired ? COPY.inviteSection.expiredShort : COPY.inviteSection.pending}</span></div>; })}</div></section>}
 
-          <div className="space-y-3">
-            {roster.pendingInvites.map((inv) => {
-              const expired = new Date(inv.expiresAt).getTime() < nowMs;
-              return (
-                <div key={inv.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] bg-slate-50 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-slate-900">{inv.email}</p>
-                    <p className={`text-xs ${expired ? "text-rose-600" : "text-slate-500"}`}>
-                      Dikirim {new Date(inv.createdAt).toLocaleDateString("id-ID")} · {expired ? "Sudah kedaluwarsa" : `Berlaku sampai ${new Date(inv.expiresAt).toLocaleDateString("id-ID")}`}
-                    </p>
-                  </div>
-                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${expired ? "pill-danger" : "pill-warn"}`}>
-                    {expired ? "Expired" : "Pending"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {roster.history.length > 0 && <section className="lux-card p-5 sm:p-6 space-y-4"><div className="flex items-center gap-3"><span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><AlertTriangle size={18} aria-hidden /></span><div><p className="eyebrow text-[10px]">{COPY.historySection.eyebrow}</p><h2 className="text-[18px] font-semibold text-slate-900 mt-1">{COPY.historySection.title}</h2></div></div><div className="space-y-3">{roster.history.map((row) => <AdminRow key={row.id} row={row} canManage={false} isSelf={row.userId === currentUserId} onRevoke={() => {}} />)}</div></section>}
 
-      {roster.history.length > 0 && (
-        <section className="lux-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-              <AlertTriangle size={18} aria-hidden />
-            </span>
-            <div>
-              <p className="eyebrow text-[10px]">Riwayat</p>
-              <h2 className="text-[18px] font-semibold text-slate-900 mt-1">Akses yang sudah berakhir</h2>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {roster.history.map((row) => (
-              <AdminRow
-                key={row.id}
-                row={row}
-                canManage={false}
-                isSelf={row.userId === currentUserId}
-                onRevoke={() => {}}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {showInvite && (
-        <InviteModal
-          desaId={desaId}
-          desaName={desaName}
-          onNotify={toast}
-          onClose={() => setShowInvite(false)}
-          onDone={() => {
-            setShowInvite(false);
-            refresh();
-          }}
-        />
-      )}
-      {revokeTarget && (
-        <RevokeModal
-          member={revokeTarget}
-          onNotify={toast}
-          onClose={() => setRevokeTarget(null)}
-          onDone={() => {
-            setRevokeTarget(null);
-            refresh();
-          }}
-        />
-      )}
-
+      {showInvite && <InviteModal desaId={desaId} desaName={desaName} onNotify={toast} onClose={() => setShowInvite(false)} onDone={() => { setShowInvite(false); refresh(); }} />}
+      {revokeTarget && <RevokeModal member={revokeTarget} onNotify={toast} onClose={() => setRevokeTarget(null)} onDone={() => { setRevokeTarget(null); refresh(); }} />}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
