@@ -1,7 +1,7 @@
 /**
  * Dev-only / opt-in performance logger for back office route audit.
  *
- * Sprint 04-008H — Prisma/runtime latency audit.
+ * Sprint 04-008H - Prisma/runtime latency audit.
  * Detects the gap between app-level timing and raw DB execution.
  *
  * Activation rules (any one is enough):
@@ -82,8 +82,13 @@ export async function perfTime<T>(
  *
  * Privacy: does NOT log query text, params, or any user/desa identifiers.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 type PrismaClientLike = { $on: (event: string, callback: (...args: unknown[]) => void) => void };
+
+type PrismaQueryEventLike = {
+  duration?: unknown;
+  model?: unknown;
+  action?: unknown;
+};
 
 let _prismaPerfAttached = false;
 
@@ -92,13 +97,13 @@ export function attachPrismaPerfLogging(prismaClient: unknown): void {
   if (_prismaPerfAttached) return;
   _prismaPerfAttached = true;
   const client = prismaClient as PrismaClientLike;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client.$on("query", (event: any) => {
-    if (typeof event?.duration === "number") {
-      const ms = Math.round(event.duration / 1_000_000); // nanoseconds → ms
-      console.info(
-        `[perf][prisma] model=${event.model ?? "unknown"} action=${event.action ?? "query"} durationMs=${ms}`,
-      );
+  client.$on("query", (event: unknown) => {
+    const queryEvent = event as PrismaQueryEventLike;
+    if (typeof queryEvent.duration === "number") {
+      const ms = Math.round(queryEvent.duration / 1_000_000); // nanoseconds -> ms
+      const model = typeof queryEvent.model === "string" ? queryEvent.model : "unknown";
+      const action = typeof queryEvent.action === "string" ? queryEvent.action : "query";
+      console.info(`[perf][prisma] model=${model} action=${action} durationMs=${ms}`);
     }
   });
 }
