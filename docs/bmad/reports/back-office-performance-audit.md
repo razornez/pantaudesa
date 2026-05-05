@@ -185,7 +185,86 @@ Status: Best match for the current documents tab. Revisit after Prisma boundary 
 
 ---
 
-## 7. Acceptance Checklist
+## 7. DATABASE_URL vs DIRECT_URL Test — Sprint 04-008I
+
+**Date:** 2026-05-05
+**Run by:** CI agent (browser measurements by owner)
+**Branch:** `fix/mobile-suara-profile-admin-access-polish`
+
+### 7.1 Method
+
+| Step | Action |
+|---|---|
+| 1 | Restart dev server with current `DATABASE_URL` (pooler port 6543, `pgbouncer=true`) |
+| 2 | Owner measures 3× page load on `/profil/admin-desa/dokumen` (1 cold + 2 hard refresh) |
+| 3 | Kill dev server, swap `DATABASE_URL` = `DIRECT_URL` (direct session pooler port 5432) |
+| 4 | Restart dev server, owner repeats 3× measurement |
+| 5 | Restore original `.env.local`, parse perf logs |
+
+Env vars:
+- **Baseline:** `DATABASE_URL` → pooler port **6543** (transaction pooler / PgBouncer)
+- **Direct:** `DATABASE_URL` → port **5432** (session pooler, bypasses transaction pooler)
+- `DIRECT_URL` in this project actually points to the session pooler (port 5432), not a raw Postgres IP. True direct (no pooler) would need a raw IP connection. See Section 7.4.
+
+### 7.2 Raw Results
+
+**BASELINE — pooler:6543 (PgBouncer / transaction pooler)**
+
+| Run | Context dbQuery | Dokumen dbQuery | Notes |
+|---|---|---|---|
+| Cold load #1 | 3772ms | 1697ms | First request after restart |
+| Warm #2 | 2032ms | 1484ms | Hard refresh |
+| Warm #3 | 1821ms | 1418ms | Hard refresh |
+| Warm #4 | 2035ms | 1424ms | Hard refresh |
+
+**DIRECT — session pooler:5432 (bypasses transaction pooler)**
+
+| Run | Context dbQuery | Dokumen dbQuery | Notes |
+|---|---|---|---|
+| Cold load #1 | 3185ms | 1781ms | First request after restart |
+| Warm #2 | 839ms | 465ms | Hard refresh |
+| Warm #3 | 595ms | 447ms | Hard refresh |
+| Warm #4 | 614ms | 459ms | Hard refresh |
+
+### 7.3 Summary Table
+
+| Test | Context dbQuery | Dokumen dbQuery | Notes |
+|---|---|---|---|
+| **DATABASE_URL (pooler:6543) — avg cold** | 3772ms | 1697ms | Transaction pooler, cold start |
+| **DATABASE_URL (pooler:6543) — avg warm** | 1963ms | 1442ms | Warm, still high |
+| **DIRECT_URL path (pooler:5432) — cold** | 3185ms | 1781ms | Session pooler, cold start |
+| **DIRECT_URL path (pooler:5432) — avg warm** | **683ms** | **457ms** | 65–70% faster on warm |
+| **Improvement (warm avg)** | **−65%** | **−68%** | Context: 1963→683ms, Dokumen: 1442→457ms |
+
+### 7.4 Interpretation
+
+**Verdict: Case B + partial Case A**
+
+1. **Transaction pooler (6543) is not the sole cause** — both cold loads are similarly slow (~3–4s). The transaction pooler overhead alone does not explain the 3s gap vs. raw SQL.
+
+2. **Session pooler (5432) warm queries are ~3× faster** (683ms / 457ms vs. 1963ms / 1442ms with the transaction pooler). After the connection is established, Prisma gets ~65% less overhead through the session pooler than the transaction pooler.
+
+3. **Cold connection cost is still ~3s on both paths** — the first request is slow regardless of pooler type. This confirms **cold connection overhead** (TLS handshake + pooler authentication + Prisma engine initialization) as a major contributor. This is the dominant factor in both scenarios.
+
+4. **`DIRECT_URL` here is still a pooler (port 5432 session pooler)** — not a raw Postgres connection. A true direct path (bypassing ALL poolers) would need a raw IP address from the Supabase connection string. The improvement from session→transaction pooler (65% warm) vs. the remaining 3s cold cost suggests the bottleneck is:
+   - Prisma engine initialization / query engine startup
+   - TLS + auth handshake to Supabase infrastructure
+   - Network roundtrip to Supabase AP South Asia (Mumbai region)
+
+### 7.5 Recommendations
+
+**Owner action items (no code change required):**
+
+1. **Check Supabase connection pooling settings** — Supabase Pro/Enterprise plans allow connection pooler configuration. Reducing pooler settings or using a direct connection (raw IP) may help.
+2. **Check Supabase project region** — `aws-1-ap-south-1` is Mumbai, India. For Indonesian users, Southeast Asia (Singapore `aws-1-ap-southeast-1`) would be significantly faster.
+3. **Investigate Prisma engine warm-up** — Prisma generates a query engine binary. In Next.js dev mode, this may be re-initialized per request. Consider Prisma Accelerate for connection pooling + edge caching.
+4. **For production: use `pool_timeout` and `connection_limit` tuning** in the connection string to manage pooler behavior under load.
+
+**Do NOT change production `DATABASE_URL` without Supabase owner approval.**
+
+---
+
+## 8. Acceptance Checklist
 
 - [x] `dbQuery` timing added to context and documents page
 - [x] `serializeRows` timing confirms no serialization overhead
@@ -193,8 +272,10 @@ Status: Best match for the current documents tab. Revisit after Prisma boundary 
 - [x] No migration added
 - [x] No business logic change
 - [x] No third-party package
-- [x] `npm run lint` — 0 errors
+- [x] Local `.env.local` includes both `DATABASE_URL` and `DIRECT_URL` (values intentionally not logged)
+- [x] `npm run lint` — passed with 0 errors, 1 warning in `src/lib/perf.ts` (`unused eslint-disable`)
 - [x] `npx tsc --noEmit` — passed
-- [x] `npm run build` — passed earlier in session
-- [ ] Owner to test `DIRECT_URL` vs `DATABASE_URL`
-- [ ] Owner to run warm-up test (second browser refresh)
+- [x] `npm run build` — completed with exit 0 on 2026-05-05 after rerun outside sandbox; emitted 1 Turbopack NFT warning plus Prisma connectivity errors while revalidating public cache paths
+- [x] Owner to test `DIRECT_URL` vs `DATABASE_URL` — **done: sprint-04-008I**
+- [x] Warm-up test (second browser refresh) — **done: sprint-04-008I**
+- [x] Sprint 04-008I test completed and documented
