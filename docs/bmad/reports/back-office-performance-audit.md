@@ -331,7 +331,68 @@ Therefore, **staging or production-like validation is the next evidence gate** b
 3. **No region migration** based only on the current local audit.
 4. **No Prisma Accelerate adoption** as the first reaction before staging/production-like validation.
 
-## 9. Acceptance Checklist
+## 9. Production-like Latency Validation - Sprint 04-008K
+
+### 9.1 Method
+
+- Local production mode using `npm run build` + `npm run start`
+- Target route: `/profil/admin-desa/dokumen`
+- Authentication: QA admin login via existing `/api/auth/login` + NextAuth callback flow
+- Measurements: cold #1, warm #2, warm #3, warm #4
+- Runtime path A: normal `DATABASE_URL` from local env
+- Runtime path B: temporary process-only override `DATABASE_URL = DIRECT_URL`
+- No secrets, DB URLs, or host credentials written into the report
+
+### 9.2 Results
+
+| Runtime path | Run | Context dbQuery | Dokumen dbQuery | Notes |
+|---|---|---:|---:|---|
+| DATABASE_URL normal | Cold #1 | 3862ms | 1408ms | local production mode |
+| DATABASE_URL normal | Warm #2 | 2007ms | 1397ms | local production mode |
+| DATABASE_URL normal | Warm #3 | 1926ms | 1371ms | local production mode |
+| DATABASE_URL normal | Warm #4 | 1827ms | 1390ms | local production mode |
+| DIRECT_URL as runtime DATABASE_URL | Cold #1 | 3351ms | 780ms | local production mode |
+| DIRECT_URL as runtime DATABASE_URL | Warm #2 | 663ms | 415ms | local production mode |
+| DIRECT_URL as runtime DATABASE_URL | Warm #3 | 786ms | 411ms | local production mode |
+| DIRECT_URL as runtime DATABASE_URL | Warm #4 | 848ms | 395ms | local production mode |
+
+Warm-path averages:
+
+- `DATABASE_URL` normal: context **1920ms**, dokumen **1386ms**
+- `DIRECT_URL` as runtime `DATABASE_URL`: context **766ms**, dokumen **407ms**
+- warm improvement from session-pooler runtime path: context about **60% faster**, dokumen about **71% faster**
+
+### 9.3 Interpretation
+
+Local production mode **reproduces the same core pattern as Sprint 04-008I**.
+
+1. **Production-like local mode is not much faster than Next dev on the DB path.**
+   The normal `DATABASE_URL` path stayed slow on warm request at roughly `1.8-2.0s` for context and `1.37-1.40s` for dokumen, which is close to the dev-mode pattern.
+2. **Warm session-pooler runtime path remains materially faster.**
+   Using `DIRECT_URL` as runtime `DATABASE_URL` still improves warm requests substantially, down to roughly `663-848ms` for context and `395-415ms` for dokumen.
+3. **Cold-start remains dominant on both runtime paths.**
+   Cold request stayed high at `3862ms / 1408ms` on the normal path and `3351ms / 780ms` on the session-pooler runtime path.
+4. **Serialization is still not a meaningful contributor.**
+   `serializeRows` stayed at `0-1ms`.
+5. **Staging/preview validation was not available in this run.**
+   No existing preview/staging URL was present in local repo context, and this task does not authorize creating a new deployment just for measurement.
+
+Interpretation case:
+
+- **Case B**: session-pooler runtime path is still materially faster on warm request.
+- **Case C**: cold request remains slow while warm session-pooler behavior becomes more acceptable.
+- The result also supports the broader production-like concern from **Case D** on the normal runtime path, because warm normal-path latency remains high even outside Next dev mode.
+
+### 9.4 Owner Recommendation
+
+1. **Keep the current owner decision order from Sprint 04-008J.**
+2. **Connection/pooler strategy review remains the first technical candidate** because the production-like local run reproduced the same warm-path gap seen in Sprint 04-008I.
+3. **Do not change production `DATABASE_URL` in this step.**
+4. **Treat cold-start/runtime startup as a parallel concern** because cold request remains slow on both paths even when the warm path improves.
+5. **Validate deployed staging/preview runtime next when available.**
+6. **Only after deployed validation, evaluate Singapore migration or Prisma Accelerate** if connection/runtime overhead still remains materially high.
+
+## 10. Acceptance Checklist
 
 - [x] `dbQuery` timing added to context and documents page
 - [x] `serializeRows` timing confirms no serialization overhead
@@ -346,3 +407,6 @@ Therefore, **staging or production-like validation is the next evidence gate** b
 - [x] Owner tested `DIRECT_URL` vs `DATABASE_URL` - done in sprint-04-008I
 - [x] Warm-up test (second browser refresh) - done in sprint-04-008I
 - [x] Sprint 04-008I test completed and documented
+- [x] Local production mode baseline timings recorded - done in sprint-04-008K
+- [x] Local production mode session-pooler runtime timings recorded - done in sprint-04-008K
+- [x] Staging/preview availability documented - not available in this run
