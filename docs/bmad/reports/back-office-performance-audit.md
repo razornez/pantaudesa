@@ -468,7 +468,22 @@ This run falls under **Case D** from the task rules.
 - No migration/index/schema change.
 - No secret committed.
 
-## 11. Acceptance Checklist
+## 11. Fast Path Preview Candidate - Sprint 04-008O
+
+Implemented branch-preview-only Prisma datasource selection:
+
+- Vercel Preview on `fix/mobile-suara-profile-admin-access-polish` uses `DIRECT_URL` as Prisma runtime datasource.
+- Production keeps `DATABASE_URL`.
+- No Vercel env edit required.
+- No production env change.
+
+Next measurement:
+
+- open the Vercel Preview deployment for this branch
+- test `/profil/admin-desa/dokumen`
+- compare cold/warm timing against 04-008K target
+
+## 12. Acceptance Checklist
 
 - [x] `dbQuery` timing added to context and documents page
 - [x] `serializeRows` timing confirms no serialization overhead
@@ -488,3 +503,4 @@ This run falls under **Case D** from the task rules.
 - [x] Staging/preview availability documented - not available in this run
 - [x] Staging rollout runbook created - done in sprint-04-008M
 - [x] Main audit report records blocked staging/preview rollout status - done in sprint-04-008M
+- [x] Branch-preview-only Prisma datasource candidate implemented - done in sprint-04-008O
