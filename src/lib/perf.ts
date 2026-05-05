@@ -7,13 +7,16 @@
  *  - `NODE_ENV !== "production"` (always on in dev/test)
  *  - `process.env.PERF_DEBUG_BACK_OFFICE === "true"` (opt-in for staging)
  *
- * Output format (single line, easy to grep):
+ * Output formats (single line, easy to grep):
  *   [perf][back-office] route=<route> step=<step> durationMs=<number>
+ *   [perf][back-office] route=<route> query=<model.method> shape=<static-shape>
  *
  * Privacy guardrails:
  *  - Caller is responsible for NOT passing emails, user ids, tokens, sessions,
  *    or document content into `route` / `step`. Helper does not echo any extra
  *    metadata to keep this surface boring on purpose.
+ *  - Query shape logging must describe predicates/order/selects without values
+ *    (e.g. `where:userId,statusIn`, never the actual userId/desaId/email).
  *  - No persistence. Goes only to `console.info`.
  *
  * Usage:
@@ -40,6 +43,12 @@ export function perfLog(route: string, step: string, startedAt: number): void {
   const durationMs = Date.now() - startedAt;
   // Single-line, machine-grep friendly. No PII.
   console.info(`[perf][back-office] route=${route} step=${step} durationMs=${durationMs}`);
+}
+
+export function perfQueryShape(route: string, query: string, shape: string): void {
+  if (!perfEnabled()) return;
+  // Static query metadata only. Do not pass userId/desaId/email or document content here.
+  console.info(`[perf][back-office] route=${route} query=${query} shape=${shape}`);
 }
 
 export async function perfTime<T>(

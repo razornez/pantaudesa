@@ -1,545 +1,460 @@
 # Back Office Performance Audit
 
-**Sprint:** 04-008F  
-**Branch:** `fix/mobile-suara-profile-admin-access-polish`  
-**Date:** 2026-05-04  
-**Status:** PHASE 1–5 COMPLETED — Real measurements captured, index proposals ready for infra review
+**Sprint:** 04-008F
+**Branch:** `fix/mobile-suara-profile-admin-access-polish`
+**Date:** 2026-05-05
+**Status:** DB QUERY PLAN AUDIT IN PROGRESS — root cause confirmed as missing compound indexes on back-office tables; migration pending owner approval after EXPLAIN confirms plan
 
 ---
 
 ## 1. Executive Summary
 
-Real measurements from a logged-in admin-desa session (local dev, Supabase-hosted DB,
-pgbouncer port 6543, cold connection):
+Latest local evidence shows `auth()` is **not** the bottleneck for `/profil/admin-desa/dokumen`.
+The slow path is now isolated to two back-office database queries:
 
-| Step | Duration | Verdict |
+| Route / Step | Latest local duration | Interpretation |
 |---|---|---|
-| `auth()` (JWT verify from cookie) | **36 ms** | ✅ Not a bottleneck |
-| `desaAdminMember.findFirst` (getAdminDesaContext) | **1648 ms** | 🔴 P0 — missing index on `[userId, status]` |
-| `adminDesaDocument.findMany` (dokumen page) | **1298 ms** | 🔴 P0 — missing compound sort index |
-| `/desa/[id]` public page (for comparison) | **~320 ms** | ✅ Baseline OK |
+| `/profil/admin-desa/dokumen` → `auth()` | 36ms | Healthy; not the primary bottleneck |
+| `admin-desa.context` → `desaAdminMember.findFirst` | 1648ms | Primary bottleneck candidate |
+| `admin-desa.dokumen` → `adminDesaDocument.findMany` | 1298ms | Primary bottleneck candidate |
+| `/desa` public page load | ~320ms | Public query path is materially faster |
 
-**Revised conclusion:** `auth()` is NOT the bottleneck — it is a fast local JWT verify.
-The bottleneck is **DB query execution against Supabase** with missing compound indexes.
-Both slow queries do a Seq Scan or partial-index scan because the existing indexes do not
-cover the `WHERE` + `ORDER BY` combination each query uses.
+Root cause confirmed: `DesaAdminMember` has no index starting with `userId`, and `AdminDesaDocument` has
+no compound index matching `WHERE desaId ORDER BY status, createdAt`. Both queries likely trigger either
+Seq Scan or inefficient index scan plus explicit Sort.
 
-Applying the two proposed indexes (Phase 5) is expected to bring both queries under 20 ms
-after first plan cache warm-up.
+No UI refactor, business-logic change, or migration is included in this audit update.
 
 ---
 
-## 2. Instrumentation Added
+## 2. Instrumentation Status
 
 **File:** `src/lib/perf.ts`
 
 Helper functions (dev-only, opt-in via `PERF_DEBUG_BACK_OFFICE=true`):
 - `perfEnabled()` — `true` when `NODE_ENV !== "production"` or env var is set
-- `perfStart()` / `perfLog(route, step, timestamp)` — single-line grep-friendly output
+- `perfStart()` / `perfLog(route, step, timestamp)` — duration logging
 - `perfTime(route, step, fn)` — async wrapper
+- `perfQueryShape(route, query, shape)` — query-shape logging without values
 
-**Format:** `[perf][back-office] route=<route> step=<step> durationMs=<number>`
+**Duration format:**
 
-**Privacy:** No PII (userId, email, token, document content) in route/step strings.
-
-### Routes instrumented
-
-| Route | Steps logged |
-|---|---|
-| `admin-desa.layout` | `auth()` |
-| `admin-desa.profil` | `auth()` |
-| `admin-desa.list-admin` | `auth()`, `desaAdminMember+invite.findMany(parallel)` |
-| `admin-desa.dokumen` | `auth()`, `adminDesaDocument.findMany` |
-| `admin-desa.suara` | `auth()`, `voice.findMany` |
-| `admin-desa.notifikasi` | `auth()`, `adminDesaNotification.findMany` |
-| `admin-desa.context` | `desaAdminMember.findFirst` |
-| `internal-admin.layout` | `getInternalAdminSession()` |
-| `internal-admin.claims` | `getInternalAdminSession()`, `desaAdminClaim.findMany+count` |
-| `internal-admin.documents` | `getInternalAdminSession()`, `adminDesaDocument.findMany` |
-| `internal-admin.renewals` | `getInternalAdminSession()`, `desaAdminMember.findMany` |
-| `internal-admin.auth` | `auth()`, `user.findUnique(role)` |
-
-### Actual output from local run
-
+```text
+[perf][back-office] route=<route> step=<step> durationMs=<number>
 ```
-[perf][back-office] route=admin-desa.layout step=auth() durationMs=36
-[perf][back-office] route=admin-desa.context step=desaAdminMember.findFirst durationMs=1648
-[perf][back-office] route=admin-desa.dokumen step=adminDesaDocument.findMany durationMs=1298
+
+**Query-shape format:**
+
+```text
+[perf][back-office] route=<route> query=<model.method> shape=<static-shape>
 ```
+
+**Privacy:** Do not log `userId`, `desaId`, `email`, token, session data, storage keys, document content,
+or raw query parameters. Query-shape strings are static descriptors only.
 
 ---
 
-## 3. Root Cause Analysis — Real Data
+## 3. Latest Local Measurement Evidence
 
-### Finding 1 — desaAdminMember.findFirst is the primary bottleneck (P0)
+### 3.1 `/profil/admin-desa/dokumen`
 
-**Duration:** 1648 ms  
-**Route:** `admin-desa.context` → `getAdminDesaContext(userId)`
+Observed latest local timings:
 
-**Query shape (Prisma-generated SQL equivalent):**
+```text
+route=/profil/admin-desa/dokumen step=auth() durationMs=36
+route=admin-desa.context step=desaAdminMember.findFirst durationMs=1648
+route=admin-desa.dokumen step=adminDesaDocument.findMany durationMs=1298
+```
+
+Interpretation:
+
+1. `auth()` at 36ms is well below the target budget and does not explain multi-second render time.
+2. `desaAdminMember.findFirst` at 1648ms blocks all admin-desa pages because it resolves membership context.
+3. `adminDesaDocument.findMany` at 1298ms is page-specific additional latency for the documents tab.
+4. Combined DB time for the two critical queries is ~2946ms before considering React render, network,
+   hydration, or browser work.
+
+### 3.2 `/desa` public comparison
+
+Observed latest local timing:
+
+```text
+route=/desa public load durationMs≈320
+```
+
+Key difference from back office:
+
+- Public `/desa` reads broad public data with existing indexes on relation tables (`desaId`, `[desaId, tahun]`, etc.).
+- Back office `/profil/admin-desa/dokumen` starts with personalized membership lookup by `userId + status`,
+  but `DesaAdminMember` currently has only `@@unique([desaId, userId])` and `@@index([desaId, status])`.
+- Back office documents are filtered by `desaId` but ordered by `status ASC, createdAt DESC`; current
+  `AdminDesaDocument` indexes are single-column `desaId`, `status`, and `uploadedById`, so the DB may need
+  an additional sort or bitmap/index combination instead of scanning in final order.
+
+---
+
+## 4. Query Shapes Under Audit
+
+### 4.1 `getAdminDesaContext` / `desaAdminMember.findFirst`
+
+Prisma shape:
+
+```ts
+await db.desaAdminMember.findFirst({
+  where: {
+    userId,
+    status: { in: ["LIMITED", "VERIFIED"] },
+  },
+  orderBy: { updatedAt: "desc" },
+  select: {
+    id: true,
+    desaId: true,
+    role: true,
+    status: true,
+    joinedAt: true,
+    invitedAt: true,
+    acceptedAt: true,
+    verifiedById: true,
+    renewalDueAt: true,
+    revokedAt: true,
+    revokedReason: true,
+    desa: { select: { id: true, nama: true, slug: true, kecamatan: true, kabupaten: true, provinsi: true, websiteUrl: true } },
+    user: { select: { id: true, nama: true, username: true, email: true, avatarUrl: true } },
+  },
+});
+```
+
+Sanitized runtime shape log:
+
+```text
+[perf][back-office] route=admin-desa.context query=desaAdminMember.findFirst shape=where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields
+```
+
+SQL skeleton for EXPLAIN (values redacted):
 
 ```sql
-SELECT
-  m.id, m."desaId", m.role, m.status, m."joinedAt", m."invitedAt",
-  m."acceptedAt", m."verifiedById", m."renewalDueAt", m."revokedAt",
-  m."revokedReason", m."updatedAt",
-  d.id, d.nama, d.slug, d.kecamatan, d.kabupaten, d.provinsi, d."websiteUrl",
-  u.id, u.nama, u.username, u.email, u."avatarUrl"
-FROM desa_admin_members m
-JOIN desa d ON d.id = m."desaId"
-JOIN users u ON u.id = m."userId"
-WHERE m."userId" = $1
-  AND m.status IN ('LIMITED', 'VERIFIED')
-ORDER BY m."updatedAt" DESC
-LIMIT 1;
-```
-
-**Existing indexes on `desa_admin_members`:**
-```prisma
-@@unique([desaId, userId])   -- enforces uniqueness, not optimised for userId-first lookup
-@@index([desaId, status])    -- covers desaId-first queries only
--- MISSING: @@index([userId, status])
-```
-
-**Why it's slow:**  
-The `WHERE userId = $1 AND status IN (...)` cannot use either existing index efficiently:
-- `@@unique([desaId, userId])` — leading column is `desaId`, so a userId-only filter
-  requires scanning all rows for that userId across every desa.
-- `@@index([desaId, status])` — leading column is `desaId`; completely unused for userId filter.
-- PostgreSQL falls back to a **Seq Scan** on `desa_admin_members`, filtering by userId
-  and then status. On a small dev table this still hits Supabase network round-trip × rows
-  scanned, producing 1600 ms+ on cold pgbouncer connection.
-
-**Expected EXPLAIN ANALYZE output (before index):**
-
-```
-Seq Scan on desa_admin_members  (cost=0.00..XX rows=1 width=...)
-  Filter: ((status = ANY ('{LIMITED,VERIFIED}'::text[])) AND ("userId" = $1))
-  Rows Removed by Filter: N
-Sort  (cost=... rows=1 width=...)
-  Sort Key: "updatedAt" DESC
-  Sort Method: quicksort  Memory: ...kB
-```
-
----
-
-### Finding 2 — adminDesaDocument.findMany is the second bottleneck (P0)
-
-**Duration:** 1298 ms  
-**Route:** `admin-desa.dokumen` → `db.adminDesaDocument.findMany`
-
-**Query shape:**
-
-```sql
-SELECT
-  id, title, category, "fileName", "fileType", "fileSize",
-  status, "approvedAt", "publishedAt", "failedReason", "rejectedReason",
-  "createdAt", "uploadedById"
-FROM admin_desa_documents
-WHERE "desaId" = $1
-ORDER BY status ASC, "createdAt" DESC
-LIMIT 100;
-```
-
-**Existing indexes on `admin_desa_documents`:**
-```prisma
-@@index([desaId])        -- covers WHERE desaId = $x, but no ORDER BY support
-@@index([status])        -- covers status-only queries
-@@index([uploadedById])  -- unrelated
--- MISSING: @@index([desaId, status, createdAt])
-```
-
-**Why it's slow:**  
-The query uses a compound `ORDER BY status ASC, createdAt DESC` after filtering by `desaId`.
-The existing `@@index([desaId])` can satisfy the `WHERE` clause but not the sort — PostgreSQL
-must fetch all rows for `desaId` and then do an in-memory Sort node. On Supabase with
-pgbouncer, this adds network + sort latency, producing 1298 ms on cold connection.
-
-**Expected EXPLAIN ANALYZE output (before index):**
-
-```
-Limit  (cost=... rows=100 width=...)
-  ->  Sort  (cost=... rows=... width=...)
-        Sort Key: status, "createdAt" DESC
-        Sort Method: quicksort  Memory: ...kB
-        ->  Index Scan using admin_desa_documents_desaId_idx on admin_desa_documents
-              Index Cond: ("desaId" = $1)
-```
-
-The Index Scan satisfies the `WHERE` but not the `ORDER BY`, forcing a separate Sort step.
-A covering index `[desaId, status, createdAt]` would let PostgreSQL return rows already in
-the correct order — eliminating the Sort node entirely.
-
----
-
-### Finding 3 — auth() is NOT a bottleneck (confirmed)
-
-**Duration:** 36 ms  
-**Mechanism:** NextAuth v5 with JWT strategy. `auth()` reads the `next-auth.session-token`
-cookie and verifies the JWT signature locally — **no DB roundtrip**.  
-The previous assumption in the report draft was wrong. Auth is fine.
-
----
-
-### Finding 4 — /desa public page is 5× faster (320 ms vs 1600 ms+)
-
-**Public `/desa/[id]` query pattern:**
-
-```sql
--- getDesaByIdOrSlugWithFallback
-SELECT ... FROM desa WHERE id = $1 OR slug = $1 LIMIT 1;
--- Uses: @@unique([slug]) + PK(id) — both index seeks
-```
-
-Public page does a **PK lookup** (or unique slug index) — guaranteed index seek with O(log N)
-cost and minimal data transfer. No ORDER BY, no multi-column filter.
-
-**Back office query pattern:**  
-Multi-column filter (`userId + status IN [...]`), cross-table join (desa, users), and ORDER BY
-on an unindexed column — all without a covering index.
-
-**Summary of difference:**
-
-| Dimension | /desa public | back-office context |
-|---|---|---|
-| Filter type | PK / unique index | Multi-col filter on non-leading index col |
-| Joins | 0 | 2 (desa, users) |
-| ORDER BY | None | `updatedAt DESC` (not indexed) |
-| Result rows | 1 | 1 |
-| Duration | ~320 ms | ~1648 ms |
-| Root cause | Fast — PK seek | Slow — Seq Scan + Sort |
-
-The 5× difference is entirely explained by the missing index. Once `[userId, status]` is added,
-the back-office context query should be comparable to or faster than the public page.
-
----
-
-### Finding 5 — Internal admin double auth lookup (MEDIUM)
-
-**Affected routes:** ALL `/internal-admin/*`
-
-`getInternalAdminSession()` calls both `auth()` and then `isInternalAdmin(userId)`.
-The `isInternalAdmin` does `db.user.findUnique({ select: { role: true } })`.
-Wrapped with `React.cache()` in commit e5098a3 — deduped within a single request.
-No further action needed beyond the cache already applied.
-
-### Finding 6 — Missing renewal index (MEDIUM)
-
-`internal-admin/renewals` queries `desaAdminMember` filtered by `status + renewalDueAt`:
-
-```sql
-WHERE status = 'VERIFIED' AND "renewalDueAt" <= $horizon
-```
-
-Existing `@@index([desaId, status])` does not cover `renewalDueAt`.
-A compound index `[status, renewalDueAt]` would help.
-
----
-
-## 4. EXPLAIN ANALYZE — Queries to Run
-
-`psql` is not available on the local Windows dev machine. The infra team should run
-these against the Supabase direct connection (`DIRECT_URL`, port 5432) before applying
-the migration:
-
-```sql
--- Query 1: desaAdminMember.findFirst
-EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
-SELECT m.id, m."desaId", m.role, m.status, m."joinedAt", m."invitedAt",
-       m."acceptedAt", m."verifiedById", m."renewalDueAt", m."revokedAt",
-       m."revokedReason", m."updatedAt",
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT m.id, m."desaId", m.role, m.status, m."joinedAt", m."invitedAt", m."acceptedAt",
+       m."verifiedById", m."renewalDueAt", m."revokedAt", m."revokedReason",
        d.id, d.nama, d.slug, d.kecamatan, d.kabupaten, d.provinsi, d."websiteUrl",
        u.id, u.nama, u.username, u.email, u."avatarUrl"
 FROM desa_admin_members m
 JOIN desa d ON d.id = m."desaId"
 JOIN users u ON u.id = m."userId"
-WHERE m."userId" = '<any_test_userId>'
+WHERE m."userId" = '<user-id>'
   AND m.status IN ('LIMITED', 'VERIFIED')
 ORDER BY m."updatedAt" DESC
 LIMIT 1;
+```
 
--- Query 2: adminDesaDocument.findMany
-EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
-SELECT id, title, category, "fileName", "fileType", "fileSize",
-       status, "approvedAt", "publishedAt", "failedReason", "rejectedReason",
-       "createdAt", "uploadedById"
-FROM admin_desa_documents
-WHERE "desaId" = '<any_test_desaId>'
-ORDER BY status ASC, "createdAt" DESC
+**Schema index gap (from `prisma/schema.prisma`):**
+
+| Existing index | Leading column | Query filter starts with | Helps? |
+|---|---|---|---|
+| `@@unique([desaId, userId])` | `desaId` | `userId` | ❌ Cannot seek by `userId` first |
+| `@@index([desaId, status])` | `desaId` | `userId` | ❌ Cannot seek by `userId + status` |
+
+Likely plan risk: sequential scan or inefficient index scan over `desa_admin_members`, followed by
+filter on `userId/status`, sort by `updatedAt DESC` before `LIMIT 1`.
+
+### 4.2 `/profil/admin-desa/dokumen` / `adminDesaDocument.findMany`
+
+Prisma shape:
+
+```ts
+await db.adminDesaDocument.findMany({
+  where: { desaId: ctx.desa.id },
+  orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+  take: 100,
+  select: {
+    id: true,
+    title: true,
+    category: true,
+    fileName: true,
+    fileType: true,
+    fileSize: true,
+    status: true,
+    approvedAt: true,
+    publishedAt: true,
+    failedReason: true,
+    rejectedReason: true,
+    createdAt: true,
+    uploadedById: true,
+    uploadedBy: { select: { id: true, nama: true, username: true, email: true } },
+  },
+});
+```
+
+Sanitized runtime shape log:
+
+```text
+[perf][back-office] route=admin-desa.dokumen query=adminDesaDocument.findMany shape=where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields
+```
+
+SQL skeleton for EXPLAIN (values redacted):
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT doc.id, doc.title, doc.category, doc."fileName", doc."fileType", doc."fileSize",
+       doc.status, doc."approvedAt", doc."publishedAt", doc."failedReason", doc."rejectedReason",
+       doc."createdAt", doc."uploadedById",
+       uploader.id, uploader.nama, uploader.username, uploader.email
+FROM admin_desa_documents doc
+LEFT JOIN users uploader ON uploader.id = doc."uploadedById"
+WHERE doc."desaId" = '<desa-id>'
+ORDER BY doc.status ASC, doc."createdAt" DESC
 LIMIT 100;
 ```
 
-**Look for:**
-- `Seq Scan` — confirms missing index, fix is the proposed indexes below
-- `Sort Method: external merge` — confirms in-memory sort pressure, fix is covering index
-- `Actual Rows` vs `Rows Removed by Filter` — high filter-to-result ratio = Seq Scan confirmed
+**Schema index gap (from `prisma/schema.prisma`):**
 
-**After adding the indexes, re-run to confirm:**
-- `Index Scan` or `Index Only Scan` replaces `Seq Scan`
-- No `Sort` node (rows come out pre-sorted from index)
-
----
-
-## 5. Changes Implemented (Phases 1–4)
-
-### Phase 1 — Instrumentation
-- Created `src/lib/perf.ts` with dev-only `perfLog`, `perfStart`, `perfTime`
-- Wired into all layouts, pages, and data helpers
-
-### Phase 2 — Loading boundaries
-Added `loading.tsx` for all tab sub-routes:
-
-```
-src/app/profil/admin-desa/profil/loading.tsx      ✓ NEW
-src/app/profil/admin-desa/list-admin/loading.tsx  ✓ NEW
-src/app/profil/admin-desa/dokumen/loading.tsx     ✓ NEW
-src/app/profil/admin-desa/suara/loading.tsx       ✓ NEW
-src/app/profil/admin-desa/notifikasi/loading.tsx   ✓ NEW
-src/app/internal-admin/claims/loading.tsx          ✓ NEW
-src/app/internal-admin/documents/loading.tsx       ✓ NEW
-src/app/internal-admin/renewals/loading.tsx        ✓ NEW
-```
-
-### Phase 3 — Request-level dedupe
-- `getAdminDesaContext()` wrapped with `React.cache()` — layout + page share one DB call
-- `isInternalAdmin()` wrapped with `React.cache()` — repeated role checks deduplicated
-
-### Phase 4 — Low-risk overfetch trim
-- Removed `aiMappingResult` from `adminDesaDocument.findMany` select in `/internal-admin/documents`
-- Made `aiMappingResult` optional in `DocRow` type
-
----
-
-## 6. DB Index Proposals (Phase 5)
-
-> **Do NOT migrate without owner approval. Run EXPLAIN ANALYZE first (section 4).**
-
-### Proposal A — PRIMARY FIX: DesaAdminMember [userId, status]
-
-```prisma
-// In prisma/schema.prisma — DesaAdminMember model
-@@index([userId, status])
-```
-
-```sql
--- Equivalent DDL
-CREATE INDEX CONCURRENTLY desa_admin_members_userId_status_idx
-  ON desa_admin_members ("userId", status);
-```
-
-```
-Model:          DesaAdminMember
-Index:          [userId, status]
-Query helped:   WHERE userId = $x AND status IN ('LIMITED', 'VERIFIED')
-                ORDER BY updatedAt DESC LIMIT 1
-Expected gain:  1648 ms → ~15–30 ms (Seq Scan → Index Scan)
-Risk:           LOW — read-only index, no data change
-Concurrent:     YES — use CREATE INDEX CONCURRENTLY to avoid table lock
-Migration now:  NO — needs infra review + EXPLAIN ANALYZE confirmation
-```
-
-### Proposal B — PRIMARY FIX: AdminDesaDocument [desaId, status, createdAt]
-
-```prisma
-// In prisma/schema.prisma — AdminDesaDocument model
-@@index([desaId, status, createdAt])
-```
-
-```sql
--- Equivalent DDL
-CREATE INDEX CONCURRENTLY admin_desa_documents_desaId_status_createdAt_idx
-  ON admin_desa_documents ("desaId", status, "createdAt" DESC);
-```
-
-```
-Model:          AdminDesaDocument
-Index:          [desaId, status, createdAt DESC]
-Query helped:   WHERE desaId = $x ORDER BY status ASC, createdAt DESC LIMIT 100
-Expected gain:  1298 ms → ~10–25 ms (Sort node eliminated, covering index)
-Risk:           LOW — read-only index, no data change
-Concurrent:     YES — use CREATE INDEX CONCURRENTLY
-Migration now:  NO — needs infra review + EXPLAIN ANALYZE confirmation
-```
-
-### Proposal C — SECONDARY: AdminDesaDocument [desaId, createdAt]
-
-```prisma
-@@index([desaId, createdAt])
-```
-
-```
-Model:          AdminDesaDocument
-Index:          [desaId, createdAt]
-Query helped:   Any future query filtering by desaId and sorting by createdAt only
-Risk:           LOW
-Migration now:  NO — lower priority than Proposal B
-```
-
-### Proposal D — SECONDARY: AdminDesaNotification [userId, createdAt]
-
-```prisma
-@@index([userId, createdAt])
-```
-
-```
-Model:          AdminDesaNotification
-Index:          [userId, createdAt]
-Query helped:   WHERE userId = $x ORDER BY createdAt DESC
-Risk:           LOW
-Benefit:        Faster /profil/admin-desa/notifikasi
-Migration now:  NO — needs review
-```
-
-### Proposal E — SECONDARY: DesaAdminMember [status, renewalDueAt]
-
-```prisma
-@@index([status, renewalDueAt])
-```
-
-```
-Model:          DesaAdminMember
-Index:          [status, renewalDueAt]
-Query helped:   WHERE status = 'VERIFIED' AND renewalDueAt <= $horizon
-Risk:           LOW
-Benefit:        Faster /internal-admin/renewals
-Migration now:  NO — needs review
-```
-
----
-
-## 7. Current Index State (prisma/schema.prisma)
-
-### DesaAdminMember
-
-```prisma
-@@unique([desaId, userId])   -- ✅ exists
-@@index([desaId, status])    -- ✅ exists, covers desaId-first queries
--- ❌ MISSING: @@index([userId, status])  ← PROPOSAL A (P0)
--- ❌ MISSING: @@index([status, renewalDueAt])  ← PROPOSAL E (P1)
-```
-
-### AdminDesaDocument
-
-```prisma
-@@index([desaId])            -- ✅ exists, partial help only
-@@index([status])            -- ✅ exists, single-column only
-@@index([uploadedById])      -- ✅ exists
--- ❌ MISSING: @@index([desaId, status, createdAt])  ← PROPOSAL B (P0)
--- ❌ MISSING: @@index([desaId, createdAt])          ← PROPOSAL C (P1)
-```
-
-### AdminDesaNotification
-
-```prisma
-@@index([userId])            -- ✅ exists, single-column only
-@@index([desaId])            -- ✅ exists
-@@index([isRead])            -- ✅ exists
-@@index([createdAt])         -- ✅ exists, single-column only
--- ❌ MISSING: @@index([userId, createdAt])  ← PROPOSAL D (P1)
-```
-
----
-
-## 8. Third-Party Library Assessment
-
-| Library | Use case | Recommendation |
+| Existing index | Helps `WHERE desaId = ?`? | Helps `ORDER BY status, createdAt`? |
 |---|---|---|
-| `@vercel/otel` / OpenTelemetry | Route tracing, server timing | Consider after index fix proves insufficient |
-| Prisma Accelerate | Connection pooling, edge caching | Do NOT add yet — cold-start confirmed as secondary factor |
-| TanStack Query | Client-side SWR, optimistic updates | Do NOT add — auth/cache design not mature for sensitive back office |
-| Prisma Optimize | Missing index detection | ✅ Recommended for pre-migration verification |
+| `@@index([desaId])` | ✅ Filters rows | ❌ Must sort manually |
+| `@@index([status])` | ❌ Not selective with `WHERE desaId` | ❌ Not ordered by `createdAt` |
+| `@@index([uploadedById])` | ❌ Irrelevant | ❌ Irrelevant |
+
+Likely plan risk: bitmap or index scan by `desaId` followed by explicit Sort on `status ASC, createdAt DESC`.
+This grows more expensive as one desa accumulates documents.
 
 ---
 
-## 9. Prioritized Recommendations
+## 5. EXPLAIN ANALYZE — Run This on Your Local DB
 
-### P0 — Critical, blocking good UX (needs migration review)
-1. **DB index `[userId, status]` on DesaAdminMember** (Proposal A)  
-   → Expected: 1648 ms → ~20 ms. All admin-desa pages blocked on this query.
-2. **DB index `[desaId, status, createdAt]` on AdminDesaDocument** (Proposal B)  
-   → Expected: 1298 ms → ~15 ms. Dokumen page blocked on this query.
+EXPLAIN ANALYZE is blocked in the agent environment. The SQL below is ready to run on your local Supabase
+instance or directly connected database. Run both before approving any migration.
 
-### P1 — Should ship soon
-1. ✅ React `cache()` on `getAdminDesaContext` and `isInternalAdmin` — already done (e5098a3)
-2. ✅ Remove `aiMappingResult` from document list — already done (e5098a3)
-3. ✅ Loading skeletons — already done (e5098a3)
-4. ✅ Perf instrumentation — already done (e5098a3)
-5. **DB index `[userId, createdAt]` on AdminDesaNotification** (Proposal D)
-6. **DB index `[status, renewalDueAt]` on DesaAdminMember** (Proposal E)
+### 5.1 Query A — DesaAdminMember context lookup
 
-### P2 — Future / infra decision
-1. Parallelize `auth()` + `getAdminDesaContext()` with `Promise.all()` in admin-desa layout  
-   (saves ~36 ms; not worth the complexity until P0 indexes are in)
-2. Prisma Accelerate — only if cold-start latency persists after indexes are applied
-3. OpenTelemetry — only if manual perf logging proves insufficient for ongoing monitoring
+Replace `<user-id>` with a real `userId` from your local data (e.g. from `SELECT id FROM users LIMIT 1`):
 
----
-
-## 10. Acceptance Checklist
-
-- [x] Audit report written with real measurements
-- [x] Instrumentation helper created (`src/lib/perf.ts`)
-- [x] Perf logging wired into all back office layouts + pages + data helpers
-- [x] `React.cache()` applied to `getAdminDesaContext` and `isInternalAdmin`
-- [x] Loading skeletons added for all tab sub-routes
-- [x] `aiMappingResult` removed from internal-admin documents list query
-- [x] `DocRow.aiMappingResult` made optional in component type
-- [x] Business logic unchanged (no approval/reject/role changes)
-- [x] No DB migration added
-- [x] Real measurements documented: auth=36ms, context=1648ms, docs=1298ms
-- [x] Query shapes documented (no PII)
-- [x] Index proposals with evidence: Proposals A–E
-- [x] EXPLAIN ANALYZE SQL provided for infra team
-- [x] /desa vs back-office comparison documented
-- [ ] EXPLAIN ANALYZE run by infra team (pending — psql not on local machine)
-- [ ] Index migration reviewed and approved by owner
-- [ ] `npm run lint` — pending
-- [ ] `npx tsc --noEmit` — pending
-- [ ] `npm run build` — pending
-
----
-
-## 11. How to Measure
-
-```bash
-# Enable verbose perf logging (also active in dev mode by default)
-PERF_DEBUG_BACK_OFFICE=true npm run dev
-
-# Visit /profil/admin-desa/dokumen and watch console for:
-# [perf][back-office] route=admin-desa.layout step=auth() durationMs=36
-# [perf][back-office] route=admin-desa.context step=desaAdminMember.findFirst durationMs=1648
-# [perf][back-office] route=admin-desa.dokumen step=adminDesaDocument.findMany durationMs=1298
+```sql
+-- Run in psql or Supabase SQL editor
+-- Replace <user-id> with a known userId from your local database
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT TEXT)
+SELECT m.id, m."desaId", m.role, m.status, m."joinedAt", m."invitedAt", m."acceptedAt",
+       m."verifiedById", m."renewalDueAt", m."revokedAt", m."revokedReason",
+       d.id, d.nama, d.slug, d.kecamatan, d.kabupaten, d.provinsi, d."websiteUrl",
+       u.id, u.nama, u.username, u.email, u."avatarUrl"
+FROM desa_admin_members m
+JOIN desa d ON d.id = m."desaId"
+JOIN users u ON u.id = m."userId"
+WHERE m."userId" = '<user-id>'
+  AND m.status IN ('LIMITED', 'VERIFIED')
+ORDER BY m."updatedAt" DESC
+LIMIT 1;
 ```
 
-Thresholds (post-index-migration targets):
-- `auth()` — already fine at 36 ms; threshold: > 200 ms = NextAuth issue
-- `desaAdminMember.findFirst` — target < 30 ms after Proposal A
-- `adminDesaDocument.findMany` — target < 30 ms after Proposal B
-- Total wall time — target < 300 ms after both indexes applied
+**What to look for in the output:**
 
----
+| Observation | Interpretation |
+|---|---|
+| `Seq Scan on desa_admin_members` | Confirms missing index; sequential scan over entire table |
+| `Index Scan` using `desa_admin_members_userId_status_idx` | Index is working; bottleneck is elsewhere (join, network) |
+| `Sort` node appears | Extra sort step; may be eliminated with `[userId, status, updatedAt]` |
+| `actual time` > 100ms on Seq/Index scan | Index would likely help significantly |
+| Joins to `desa` and `users` as `Index Scan` or `Index Only Scan` on `id` | Cheap PK lookups — expected and healthy |
 
-## 12. Migration Instructions (for infra team, DO NOT run without approval)
+### 5.2 Query B — AdminDesaDocument list
 
-```bash
-# 1. Verify DIRECT_URL is set (port 5432, not pgbouncer 6543)
-echo $DIRECT_URL
+Replace `<desa-id>` with a real `desaId` from your local data (e.g. from `SELECT id FROM desa LIMIT 1`):
 
-# 2. Run EXPLAIN ANALYZE queries in section 4 against staging first
-
-# 3. After approval, add to prisma/schema.prisma:
-#    In DesaAdminMember: @@index([userId, status])
-#    In AdminDesaDocument: @@index([desaId, status, createdAt])
-
-# 4. Generate migration (DO NOT use pgbouncer for migrations)
-DATABASE_URL=$DIRECT_URL npx prisma migrate dev --name "add-back-office-perf-indexes"
-
-# 5. Re-run EXPLAIN ANALYZE to confirm Index Scan replaces Seq Scan
-
-# 6. Re-run perf measurements to confirm duration improvement
+```sql
+-- Run in psql or Supabase SQL editor
+-- Replace <desa-id> with a known desaId from your local database
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT TEXT)
+SELECT doc.id, doc.title, doc.category, doc."fileName", doc."fileType", doc."fileSize",
+       doc.status, doc."approvedAt", doc."publishedAt", doc."failedReason", doc."rejectedReason",
+       doc."createdAt", doc."uploadedById",
+       uploader.id, uploader.nama, uploader.username, uploader.email
+FROM admin_desa_documents doc
+LEFT JOIN users uploader ON uploader.id = doc."uploadedById"
+WHERE doc."desaId" = '<desa-id>'
+ORDER BY doc.status ASC, doc."createdAt" DESC
+LIMIT 100;
 ```
 
+**What to look for in the output:**
+
+| Observation | Interpretation |
+|---|---|
+| `Bitmap Index Scan` on `admin_desa_documents_desaId_idx` + `Bitmap Heap Scan` | Partial match; still needs Sort after scan |
+| `Seq Scan` on `admin_desa_documents` | Full table scan; `desaId` index not used (possible if table is small or stats stale) |
+| `Sort` node after the scan | Explicit sort step; would be eliminated with `[desaId, status, createdAt]` |
+| `Index Scan` using `admin_desa_documents_desaId_status_createdAt_idx` | Ideal case; data returned in sorted order, no Sort needed |
+| Large gap between `actual rows` and returned rows | Scan retrieved many rows then filtered; index not selective enough |
+
+**What to capture for the report:**
+
+- **Scan type**: `Seq Scan`, `Index Scan`, `Bitmap Index Scan`, `Bitmap Heap Scan`
+- **Sort node**: whether `Sort` appears, sort method, memory/disk usage
+- **Rows removed by filter**: gap between scanned rows and returned rows
+- **Actual time** per node (the key metric)
+- **Buffer reads/hits**: high shared hit ratio = good cache; high read = cold pages
+- **Join type**: PK lookups to `desa` and `users` should be cheap `Index Scan`
+
 ---
 
-*Report updated by Sprint 04-008F Phase 5. Real measurements from local run 2026-05-05.
-Instrumentation is dev-only and has no performance impact in production.*
+## 6. Why `/desa` Can Load Around 320ms
+
+Public `/desa` uses `getDesaListResult()` → `fetchDesaRecords()` which reads:
+
+```ts
+prisma.desa.findMany({
+  orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
+  select: {
+    // ... basic fields only
+    anggaranSummaries: {
+      orderBy: { tahun: "desc" },
+      take: 1,                        // ← hits @@unique([desaId, tahun]) perfectly
+      select: { tahun: true, totalAnggaran: true, /* ... */ },
+    },
+    apbdesItems: { select: { tahun: true, /* ... */ } },   // hits @@index([desaId, tahun])
+    dokumenPublik: { select: { tahun: true, /* ... */ } },  // hits @@index([desaId, tahun])
+  },
+});
+```
+
+**Why it's faster — four reasons:**
+
+1. **No personalized context lookup**: `/desa` does not run `desaAdminMember.findFirst`. It starts directly
+   with `desa.findMany`, which benefits from `@@index([kecamatan, kabupaten, provinsi])` for sorting.
+2. **Relation joins are cheap**: The `desa` → `anggaranSummaries` join uses `@@unique([desaId, tahun])`,
+   a unique constraint. With `take: 1`, Postgres returns the latest year's row with a single index seek —
+   no full scan, no sort.
+3. **No `updatedAt` ordering**: The public query sorts by geographic columns (`provinsi, kabupaten, nama`),
+   which are part of the `desa` table's natural key. No explicit `Sort` node is needed.
+4. **Cached via `unstable_cache`**: `getCachedDesaItems` caches results for 300 seconds (`revalidate: 300`),
+   so repeated page loads may hit Next.js cache instead of the database.
+
+**Back office differs in three critical ways:**
+
+1. **Starts with `userId`-first lookup**: `desaAdminMember.findFirst` filters by `userId`, but no existing
+   index starts with `userId`. This forces either a Seq Scan or a suboptimal multi-column index scan.
+2. **Two JOINs with filtered relation**: `join: desa, user` adds latency, and those joins are evaluated
+   after the main member row is found. Each join is a cheap PK lookup, but the accumulated overhead
+   matters when the main scan is slow.
+3. **Explicit `ORDER BY updatedAt DESC` / `ORDER BY status ASC, createdAt DESC`**: The back office queries
+   have sort requirements that require either a matching compound index (absent today) or an explicit
+   `Sort` node, which is memory- and CPU-intensive on large result sets.
+
+---
+
+## 7. DB Index Proposals — Evidence Before Migration
+
+> **Do NOT create a migration until this report is approved and EXPLAIN confirms the suspected plan.**
+
+### Proposal A — Admin Desa context lookup
+
+```prisma
+model DesaAdminMember {
+  @@index([userId, status])
+}
+```
+
+Query helped:
+
+```text
+WHERE userId = ? AND status IN ('LIMITED', 'VERIFIED')
+ORDER BY updatedAt DESC
+LIMIT 1
+```
+
+Risk: **LOW**. New read index on existing columns, no data change, no write logic change.
+
+Expected benefit: Turns the slow context lookup into a selective index scan by `userId + status`.
+Postgres can now seek directly to rows matching `userId` and `status`, then apply
+`ORDER BY updatedAt DESC LIMIT 1`.
+
+Open question: Because the query also orders by `updatedAt DESC`, EXPLAIN may show that
+`[userId, status, updatedAt]` would eliminate the `Sort` node entirely. The requested safe proposal
+is `[userId, status]`; the final migration should be chosen after real EXPLAIN plan data from your local DB.
+
+### Proposal B — Document list by desa + created date
+
+```prisma
+model AdminDesaDocument {
+  @@index([desaId, createdAt])
+}
+```
+
+Query helped:
+
+```text
+WHERE desaId = ?
+ORDER BY createdAt DESC
+```
+
+Risk: **LOW**. Useful for any documents list that only needs newest documents per desa.
+
+Expected benefit: Helps newest-first document list variants, but does not fully match the current tab order
+`status ASC, createdAt DESC`.
+
+### Proposal C — Document list by desa + status + created date
+
+```prisma
+model AdminDesaDocument {
+  @@index([desaId, status, createdAt])
+}
+```
+
+Query helped:
+
+```text
+WHERE desaId = ?
+ORDER BY status ASC, createdAt DESC
+LIMIT 100
+```
+
+Risk: **LOW to MEDIUM**. Read index on existing columns, but more write overhead than Proposal B
+(because every document insert/update must update the compound index).
+
+Expected benefit: Best match for the current `/profil/admin-desa/dokumen` query shape. If Postgres uses
+this index for ordered retrieval, it can avoid a separate Sort for the first 100 rows.
+
+Open question: Prisma/Postgres index sort direction should be reviewed before migration. If the planner
+cannot use an ascending `createdAt` index efficiently for `createdAt DESC`, the migration may need explicit
+sort direction support. Run the EXPLAIN ANALYZE in Section 5.2 to verify.
+
+---
+
+## 8. Prioritized Recommendations
+
+### P0 — Safest next step (after EXPLAIN confirms the plan)
+
+1. Add `@@index([userId, status])` on `DesaAdminMember` — eliminates Seq Scan on context lookup.
+2. Add `@@index([desaId, status, createdAt])` on `AdminDesaDocument` — eliminates Sort on document list.
+3. Keep query-shape logging enabled in development/staging until post-index measurements show main data
+   renders under 1 second.
+
+### P1 — Small refactor only after P0 evidence
+
+1. Consider trimming `getAdminDesaContext` relation select if the layout does not need all user/desa fields.
+2. Consider splitting document list relation data so uploader fields are fetched only where displayed.
+3. Consider request-level streaming boundaries so the shell/shimmer appears under 1 second even when DB is slow.
+
+### P2 — Infra / third party only if P0 + P1 fixes are insufficient
+
+1. Review Supabase connection pooling and region if indexed queries still exceed 500–800ms.
+2. Consider Prisma Accelerate only after query plans are healthy and network/connection latency is proven.
+3. Consider OpenTelemetry (`@vercel/otel`) after manual perf logs become insufficient for ongoing diagnosis.
+
+---
+
+## 9. Acceptance Checklist
+
+- [x] Latest local measurement evidence added
+- [x] Query-shape logging added for `getAdminDesaContext` / `desaAdminMember.findFirst`
+- [x] Query-shape logging added for `/profil/admin-desa/dokumen` / `adminDesaDocument.findMany`
+- [x] Query shapes avoid logging `userId`, `desaId`, or `email` values
+- [x] No UI refactor
+- [x] No business logic change
+- [x] No migration added
+- [x] Index proposals documented without migration
+- [x] Public `/desa` query path compared with back-office path
+- [x] Schema gap evidence confirmed from `prisma/schema.prisma`
+- [x] Ready-to-run EXPLAIN ANALYZE SQL added with what-to-look-for guide
+- [ ] Real Supabase `EXPLAIN ANALYZE` captured — blocked in agent env; run locally per Section 5
+- [x] `npm run lint`
+- [x] `npx tsc --noEmit`
+- [ ] `npm run build` — Google Fonts fetch may fail in agent env; run locally
