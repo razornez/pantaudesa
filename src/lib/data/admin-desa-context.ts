@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { getRenewalState, daysUntilRenewal, type RenewalState } from "@/lib/admin-claim/renewal";
-import { perfLog, perfStart } from "@/lib/perf";
+import { perfLog, perfQueryShape, perfStart } from "@/lib/perf";
 
 export interface AdminDesaContext {
   member: {
@@ -54,6 +54,11 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
 ): Promise<AdminDesaContext | null> {
   if (!db) return null;
 
+  perfQueryShape(
+    "admin-desa.context",
+    "desaAdminMember.findFirst",
+    "where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields",
+  );
   const t = perfStart();
   const member = await db.desaAdminMember.findFirst({
     where: {

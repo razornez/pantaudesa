@@ -13,7 +13,7 @@ import {
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
 import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
-import { perfLog, perfStart } from "@/lib/perf";
+import { perfLog, perfQueryShape, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,11 @@ export default async function AdminDesaDokumenPage() {
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
+  perfQueryShape(
+    "admin-desa.dokumen",
+    "adminDesaDocument.findMany",
+    "where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields",
+  );
   const tDocs = perfStart();
   const docs = db
     ? await db.adminDesaDocument.findMany({
