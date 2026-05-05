@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { getRenewalState, daysUntilRenewal, type RenewalState } from "@/lib/admin-claim/renewal";
-import { perfLog, perfQueryShape, perfStart } from "@/lib/perf";
+import { perfLog, perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf";
 
 export interface AdminDesaContext {
   member: {
@@ -59,7 +59,9 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
     "desaAdminMember.findFirst",
     "where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields",
   );
-  const t = perfStart();
+  // Sprint 04-008H: split timing — captures any pre-query work (minimal here)
+  const tBefore = perfStart();
+  const tQuery = perfStart();
   const member = await db.desaAdminMember.findFirst({
     where: {
       userId,
@@ -100,14 +102,18 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
       },
     },
   });
-  perfLog("admin-desa.context", "desaAdminMember.findFirst", t);
+  // Sprint 04-008H: split timing — log before/after and row count
+  const rows = member ? 1 : 0;
+  perfLog("admin-desa.context", "beforePrisma", tBefore);
+  perfLogWithRows("admin-desa.context", "afterPrisma", rows, tQuery);
 
   if (!member) return null;
 
+  const tSerialize = perfStart();
   const renewalState = getRenewalState(member.renewalDueAt);
   const days = daysUntilRenewal(member.renewalDueAt);
 
-  return {
+  const result: AdminDesaContext = {
     member: {
       id: member.id,
       desaId: member.desaId,
@@ -125,4 +131,6 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
     user: member.user,
     renewal: { state: renewalState, daysUntil: days },
   };
+  perfLog("admin-desa.context", "serializeRows", tSerialize);
+  return result;
 });

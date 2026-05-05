@@ -13,7 +13,7 @@ import {
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
 import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
-import { perfLog, perfQueryShape, perfStart } from "@/lib/perf";
+import { perfLog, perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -56,14 +56,17 @@ export default async function AdminDesaDokumenPage() {
         },
       })
     : [];
-  perfLog("admin-desa.dokumen", "adminDesaDocument.findMany", tDocs);
+  // Sprint 04-008H: split timing — log after query + row count
+  perfLogWithRows("admin-desa.dokumen", "afterPrisma", docs.length, tDocs);
 
+  const tSerialize = perfStart();
   const serialized = docs.map((d) => ({
     ...d,
     createdAt: d.createdAt.toISOString(),
     approvedAt: d.approvedAt?.toISOString() ?? null,
     publishedAt: d.publishedAt?.toISOString() ?? null,
   }));
+  perfLog("admin-desa.dokumen", "serializeRows", tSerialize);
 
   const storage = getStorageConfigurationStatus();
   const storageOk = storage.configured;

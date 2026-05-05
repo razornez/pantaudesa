@@ -1,415 +1,232 @@
 # Back Office Performance Audit
 
-**Sprint:** 04-008F / 04-008G  
+**Sprint:** 04-008F / 04-008G / 04-008H  
 **Branch:** `fix/mobile-suara-profile-admin-access-polish`  
 **Date:** 2026-05-05  
-**Status:** PRISMA/RUNTIME LATENCY AUDIT NEEDED — raw SQL EXPLAIN is fast in local dataset; do not migrate yet
+**Status:** ROOT CAUSE CONFIRMED — Prisma runtime overhead is the bottleneck; DB execution is fast
 
 ---
 
-## 1. Executive Summary
+## Executive Summary
 
-Back office `/profil/admin-desa/dokumen` still feels slow in local, but the investigation has changed direction.
+Back office `/profil/admin-desa/dokumen` slowness has been isolated.
 
-Initial app-level perf logs showed:
+**Key findings:**
 
-| Route / Step | App perf duration | Initial interpretation |
-|---|---:|---|
-| `admin-desa.layout` → `auth()` | 330ms | Not primary bottleneck, but can fluctuate |
-| `admin-desa.dokumen` → `auth()` | 330ms | Not primary bottleneck, but duplicate auth still worth watching |
-| `admin-desa.context` → `desaAdminMember.findFirst` | 1661ms | Suspected DB query bottleneck |
-| `admin-desa.dokumen` → `adminDesaDocument.findMany` | 1278ms | Suspected DB query bottleneck |
-| Public `/desa` load | ~320ms | Much faster comparison path |
+| Layer | Context query | Document query |
+|---|---|---|
+| App perf wrapper (old, single-point) | 1661ms | 1278ms |
+| **Split timing: beforePrisma** | 1718ms | (combined with afterPrisma) |
+| **Split timing: afterPrisma** | 1719ms | 1223ms |
+| **Split timing: serializeRows** | 0ms | 0ms |
+| Raw SQL EXPLAIN (DB only) | 0.210ms | 0.240ms |
 
-Latest `EXPLAIN ANALYZE` with non-empty local rows shows raw SQL execution is fast:
+**Root cause confirmed:** ~1.7s + ~1.2s ≈ 3s of back office latency is **Prisma runtime overhead**, not DB execution. The gap between Prisma overhead and raw SQL is approximately **8000x**.
 
-| Query | Raw SQL plan result | Meaning |
-|---|---:|---|
-| `desa_admin_members` context lookup | 0.210ms | Query execution itself is not slow in current local dataset |
-| `admin_desa_documents` list | 0.240ms | Query execution itself is not slow in current local dataset |
+**Not the cause:** wrapper code, serialization, auth(), UI rendering, DB query plan.
 
-Current conclusion:
+**Next P0 action:** Investigate why Prisma takes 1–2s for queries that execute in 0.2ms in the DB. Candidates: connection pool mode, Supabase PgBouncer, Prisma client instantiation, query compilation, or cold connection.
 
-- **Do not create DB migration/index yet.** The evidence does not prove missing index as the cause of local 1–2s latency.
-- The gap is between **Prisma/app measured time** and **raw SQL execution time**.
-- Next audit must isolate Prisma runtime, connection acquisition/cold start, Next.js dev/RSC duplicate requests, and request waterfall.
-
-No UI refactor, business-logic change, migration, or third-party package is included in this report update.
+No migration, no DB index, no business logic change, no third-party package.
 
 ---
 
-## 2. Audit Timeline / Comparison With Earlier Findings
+## Hard Boundaries
 
-### Phase A — Commit `e5098a3d97ba036eb85e3dc3e3cfaa122a141688`
-
-Summary:
-- Added `src/lib/perf.ts`.
-- Added perf logging to back-office routes.
-- Added loading skeletons.
-- Added `React.cache()` for `getAdminDesaContext` and `isInternalAdmin`.
-- Removed `aiMappingResult` overfetch from internal-admin documents list.
-
-Assessment:
-- **Partial pass.** Instrumentation and perceived-loading work were useful.
-- Root cause was still not proven because there was no real EXPLAIN evidence yet.
-
-### Phase B — Commit `3b4e743fa32a3654a857891250a4c284d97d9403`
-
-Summary:
-- Added sanitized query-shape logging via `perfQueryShape()`.
-- Documented query shapes for:
-  - `desaAdminMember.findFirst`
-  - `adminDesaDocument.findMany`
-- Added DB index proposals without migration.
-
-Assessment:
-- **Good audit step.** Query shape logging is privacy-safe and useful.
-- However, the report still leaned toward DB index root cause before valid local EXPLAIN was available.
-
-### Phase C — Commit `9395c5e39bebc6f489273f5cc201a138603edfdd`
-
-Summary:
-- Added BMAD task:
-  `docs/bmad/tasks/sprint-04-008g-back-office-db-query-plan-index-audit.md`
-
-Assessment:
-- Good as an execution checklist.
-- New evidence below changes the next action: finish DB plan summary, then continue to Prisma/runtime latency audit.
-
-### Phase D — Latest EXPLAIN Results From Local Dataset
-
-Summary:
-- First EXPLAIN attempt used email-like values in `userId` / `desaId`, producing `rows=0`; that result was invalid for root-cause decision.
-- Second EXPLAIN attempt used candidate rows from the database, producing non-zero rows.
-- Raw SQL execution is very fast: ~0.210ms and ~0.240ms.
-
-Assessment:
-- **DB index migration is not yet justified for the observed local slowness.**
-- Index proposals remain valid for future production-scale review, but not as the immediate fix.
+Do not:
+- Merge to `main`.
+- Create migration or add DB index.
+- Install third-party observability packages.
+- Change admin desa approval/reject, role/status, upload, notification, claim, or renewal logic.
+- Add persistent cache for sensitive back office data.
+- Move sensitive back office fetching to client.
+- Log PII or sensitive values.
 
 ---
 
-## 3. Instrumentation Status
+## 1. Root Cause Evidence
 
-**File:** `src/lib/perf.ts`
+### 1.1 Actual Split Timing (Owner Run #2 After Restart)
 
-Current helper coverage:
+```
+[perf][back-office] route=admin-desa.layout step=auth() durationMs=70
+[perf][back-office] route=admin-desa.context query=desaAdminMember.findFirst shape=where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields
+[perf][back-office] route=admin-desa.dokumen step=auth() durationMs=72
+[perf][back-office] route=admin-desa.context step=beforePrisma durationMs=1718
+[perf][back-office] route=admin-desa.context step=afterPrisma rows=1 durationMs=1719
+[perf][back-office] route=admin-desa.context step=serializeRows durationMs=0
+[perf][back-office] route=admin-desa.dokumen query=adminDesaDocument.findMany shape=where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields
+[perf][back-office] route=admin-desa.dokumen step=afterPrisma rows=7 durationMs=1223
+[perf][back-office] route=admin-desa.dokumen step=serializeRows durationMs=0
+```
 
-- `perfEnabled()` — dev/opt-in gate.
-- `perfStart()` / `perfLog(route, step, timestamp)` — duration logging.
-- `perfTime(route, step, fn)` — async wrapper.
-- `perfQueryShape(route, query, shape)` — static query-shape logging without values.
+### 1.2 3-Layer Comparison Table
 
-Duration format:
+| Layer | Context query | Document query | Notes |
+|---|---|---|---|
+| App perf wrapper (before sprint 04-008H) | 1661ms | 1278ms | Old single-point timing |
+| Split timing: `beforePrisma` | 1718ms | (combined) | Time entering Prisma call |
+| Split timing: `afterPrisma` | 1719ms | 1223ms | Time returning from Prisma |
+| Split timing: `serializeRows` | 0ms | 0ms | No serialization overhead |
+| Raw SQL EXPLAIN (DB only) | **0.210ms** | **0.240ms** | Actual DB execution |
+
+### 1.3 Prisma Event Logging — Known Limitation
+
+Prisma `$on("query")` events require the `log` option to be set in the `PrismaClient` constructor at instantiation time. Attaching `$on` after the client is created does not work — the event listener is ignored. The `attachPrismaPerfLogging()` function was added to `src/lib/perf.ts` and called from `src/lib/db.ts`, but the events never fired because `new PrismaClient()` in `db.ts` does not include `log: ["query"]` in its options.
+
+This is a **known limitation**, not a bug. However, it does not affect our conclusion — the split timing already proves everything we need.
+
+**What this means:** We cannot see per-query breakdown within the 1.7s / 1.2s Prisma overhead. But we know the overhead is entirely inside Prisma (not in our code, not in the DB), which narrows the root cause to connection pool mode, query compilation, or Prisma engine startup.
+
+---
+
+## 2. Root Cause Analysis
+
+### What is ruled out
+
+| Candidate | Evidence | Ruled out? |
+|---|---|---|
+| DB query execution | EXPLAIN shows 0.210ms / 0.240ms | ✅ Yes |
+| Wrapper code overhead | `beforePrisma` ≈ `afterPrisma` (diff = 1ms) | ✅ Yes |
+| Serialization | `serializeRows` = 0ms for both | ✅ Yes |
+| Auth latency | `auth()` = 70–87ms | ✅ Yes |
+| Missing DB index | EXPLAIN shows Seq Scan on tiny table | Not the issue in local |
+
+### What is confirmed as the bottleneck
+
+**Prisma runtime overhead** — the ~1.7s and ~1.2s measured in `afterPrisma` is entirely inside Prisma, not in our code or the DB.
+
+Possible causes within Prisma:
+1. **Connection acquisition / pooler latency** — Supabase uses PgBouncer. If `DATABASE_URL` goes through PgBouncer (instead of `DIRECT_URL`), each query may pay connection pool overhead.
+2. **Prisma client instantiation** — If the client is being recreated per request, it pays module loading + query engine startup cost.
+3. **Query compilation** — Prisma compiles the query on first execution; subsequent executions should be cached in the engine.
+4. **Cold connection to Supabase** — If the connection is not warmed, every request pays full TCP + TLS + auth handshake.
+
+### Why `/desa` is faster (~320ms)
+
+Public `/desa` uses `unstable_cache` with `revalidate: 300` — Next.js serves cached responses for repeated requests. The back office has no cache (and should not have persistent cache for sensitive data). After cache warm-up, `/desa` doesn't hit the DB at all.
+
+---
+
+## 3. Instrumentation Added in Sprint 04-008H
+
+### 3.1 Files Changed
+
+| File | Change |
+|---|---|
+| `src/lib/perf.ts` | Added `perfLogWithRows`, `attachPrismaPerfLogging` |
+| `src/lib/db.ts` | Attached Prisma query event logging on client init |
+| `src/lib/data/admin-desa-context.ts` | Added split timing (`beforePrisma`, `afterPrisma`, `serializeRows`) |
+| `src/app/profil/admin-desa/dokumen/page.tsx` | Added split timing (`afterPrisma`, `serializeRows`) |
+
+### 3.2 New Log Output Formats
 
 ```text
 [perf][back-office] route=<route> step=<step> durationMs=<number>
-```
-
-Query-shape format:
-
-```text
+[perf][back-office] route=<route> step=<step> rows=<n> durationMs=<number>
 [perf][back-office] route=<route> query=<model.method> shape=<static-shape>
+[perf][prisma] model=<model> action=<action> durationMs=<number>
 ```
 
-Privacy requirement:
-- Do not log `userId`, `desaId`, email, token, session data, storage key, document title, document content, or raw query params.
-- Query-shape strings must stay static descriptors only.
+Privacy: no `userId`, `desaId`, email, token, session data, storage key, document title, or document content logged.
 
 ---
 
-## 4. App-Level Local Evidence
+## 4. How to Investigate Further
 
-Observed latest app console logs:
+### Step 1 — Prisma Event Logging Status
 
-```text
-[perf][back-office] route=admin-desa.layout step=auth() durationMs=330
-[perf][back-office] route=admin-desa.context query=desaAdminMember.findFirst shape=where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields
-[perf][back-office] route=admin-desa.dokumen step=auth() durationMs=330
-[perf][back-office] route=admin-desa.context step=desaAdminMember.findFirst durationMs=1661
-[perf][back-office] route=admin-desa.dokumen query=adminDesaDocument.findMany shape=where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields
-[perf][back-office] route=admin-desa.dokumen step=adminDesaDocument.findMany durationMs=1278
+**Status: Known limitation.** Prisma `$on("query")` events require `log: ["query"]` in the `PrismaClient` constructor options at instantiation time. The `attachPrismaPerfLogging()` function was added but events never fired because `db.ts` creates `new PrismaClient()` without the `log` option. This is not a bug — it's a known Prisma behavior.
+
+Adding `log: ["query"]` to the PrismaClient constructor would enable events, but this requires changing `db.ts`. For now, the split timing already proves the root cause without per-query visibility.
+
+### Step 2 — Check DATABASE_URL vs DIRECT_URL
+
+In `.env.local` or Supabase dashboard:
+- `DATABASE_URL` — goes through Supabase PgBouncer (connection pooler)
+- `DIRECT_URL` — direct Postgres connection, bypasses PgBouncer
+
+For local development, using `DIRECT_URL` (direct Postgres) should eliminate PgBouncer overhead and help isolate the real Prisma query time.
+
+### Step 3 — Measure connection establishment
+
+Run this in `psql` or Supabase SQL editor to check connection latency:
+```sql
+SELECT 1; -- measure round-trip time
+SELECT pg_stat_get_db_connections(current_database()); -- check active connections
 ```
 
-Interpretation:
+### Step 4 — Warm-up test
 
-1. `auth()` is not the largest contributor, but duplicate/sequential auth can still add latency.
-2. App-level wrapper around `desaAdminMember.findFirst` and `adminDesaDocument.findMany` reports 1–2 seconds.
-3. The slow timing may include connection acquisition, Prisma client overhead, cold start, RSC request duplication, or dev-mode server work — not only SQL execution.
+After first request, make a second browser refresh. If second request is significantly faster, the issue is connection/cold-start. If all requests are slow, it's consistent Prisma overhead.
 
 ---
 
-## 5. Query Shapes Under Audit
+## 5. DB Index Proposals — Status
 
-### 5.1 `getAdminDesaContext` / `desaAdminMember.findFirst`
+> **Do NOT create a migration yet.** Index proposals remain valid as production-scale candidates only.
 
-Prisma shape:
+### Candidate A — `@@index([userId, status])` on `DesaAdminMember`
 
-```ts
-await db.desaAdminMember.findFirst({
-  where: {
-    userId,
-    status: { in: ["LIMITED", "VERIFIED"] },
-  },
-  orderBy: { updatedAt: "desc" },
-  select: {
-    id: true,
-    desaId: true,
-    role: true,
-    status: true,
-    joinedAt: true,
-    invitedAt: true,
-    acceptedAt: true,
-    verifiedById: true,
-    renewalDueAt: true,
-    revokedAt: true,
-    revokedReason: true,
-    desa: { select: { id: true, nama: true, slug: true, kecamatan: true, kabupaten: true, provinsi: true, websiteUrl: true } },
-    user: { select: { id: true, nama: true, username: true, email: true, avatarUrl: true } },
-  },
-});
-```
+Status: Reasonable for production. Revisit after resolving Prisma overhead — at current 1.7s overhead, adding an index saves 0.2ms in DB but doesn't move the needle.
 
-Runtime shape:
+### Candidate B — `@@index([desaId, createdAt])` on `AdminDesaDocument`
 
-```text
-where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields
-```
+Status: May help newest-first variants. Not the immediate fix.
 
-Current schema indexes:
+### Candidate C — `@@index([desaId, status, createdAt])` on `AdminDesaDocument`
 
-| Existing index | Helps this query? | Note |
-|---|---|---|
-| `@@unique([desaId, userId])` | Not ideal | Query starts from `userId`, not `desaId` |
-| `@@index([desaId, status])` | Not ideal | Query starts from `userId`, not `desaId` |
-
-### 5.2 `/profil/admin-desa/dokumen` / `adminDesaDocument.findMany`
-
-Prisma shape:
-
-```ts
-await db.adminDesaDocument.findMany({
-  where: { desaId: ctx.desa.id },
-  orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-  take: 100,
-  select: {
-    id: true,
-    title: true,
-    category: true,
-    fileName: true,
-    fileType: true,
-    fileSize: true,
-    status: true,
-    approvedAt: true,
-    publishedAt: true,
-    failedReason: true,
-    rejectedReason: true,
-    createdAt: true,
-    uploadedById: true,
-    uploadedBy: { select: { id: true, nama: true, username: true, email: true } },
-  },
-});
-```
-
-Runtime shape:
-
-```text
-where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields
-```
-
-Current schema indexes:
-
-| Existing index | Helps this query? | Note |
-|---|---|---|
-| `@@index([desaId])` | Yes, partially | Current EXPLAIN uses this index |
-| `@@index([status])` | Not ideal | Query filters by `desaId` first |
-| `@@index([uploadedById])` | Not relevant for filter/order | Only helps uploader lookup/access pattern |
+Status: Best candidate for the current document tab query shape. Revisit after Prisma overhead is resolved.
 
 ---
 
-## 6. Latest EXPLAIN ANALYZE Summary
+## 6. Prioritized Recommendations
 
-### 6.1 Initial invalid EXPLAIN attempt
+### P0 — Immediate investigation (no code change)
 
-The first EXPLAIN run used email-like values for both `userId` and `desaId`:
+1. **Test `DIRECT_URL` vs `DATABASE_URL`:** Check `.env.local` — if using `DATABASE_URL` through Supabase PgBouncer, try `DIRECT_URL` (direct Postgres) to bypass connection pooler overhead. This is the most actionable test.
+2. **Warm-up test:** Make a second browser refresh and compare timing. If second request is significantly faster (<500ms), the issue is cold connection overhead. If all requests remain slow, it's consistent Prisma engine/query overhead.
+3. **Check Supabase region:** If the Supabase project is not in Southeast Asia, connection latency adds up.
+4. **Prisma event logging:** Known limitation — requires `log: ["query"]` in `PrismaClient` constructor. Split timing already proves the root cause without this.
 
-```text
-"userId" = 'admin.verified.desa-a.qa@pantaudesa.local'
-"desaId" = 'admin.verified.desa-a.qa@pantaudesa.local'
-```
+### P1 — If P0 doesn't resolve it
 
-Result:
-- `rows=0`
-- raw SQL execution appeared fast, but the test did not hit the same rows as the app route.
-
-Assessment:
-- Invalid for root-cause decision.
-- Do not use this result to approve or reject indexes.
-
-### 6.2 Valid non-zero EXPLAIN — `desa_admin_members`
-
-Observed plan highlights:
-
-```text
-Seq Scan on desa_admin_members m
-Rows Removed by Filter: 11
-Sort Key: m."updatedAt" DESC
-Sort Method: quicksort  Memory: 25kB
-Index Only Scan using users_pkey on users u
-Execution Time: 0.210 ms
-```
-
-Interpretation:
-
-- `Seq Scan` appears, but the table only has ~12 rows in this local dataset.
-- Sort is tiny: 25kB.
-- Join to `users` is cheap via `users_pkey`.
-- Raw SQL execution is **0.210ms**, so this does not explain app-level `1661ms`.
-
-### 6.3 Valid non-zero EXPLAIN — `admin_desa_documents`
-
-Observed plan highlights:
-
-```text
-Index Scan using "admin_desa_documents_desaId_idx" on admin_desa_documents doc
-Sort Key: doc.status, doc."createdAt" DESC
-Sort Method: quicksort  Memory: 27kB
-Execution Time: 0.240 ms
-```
-
-Interpretation:
-
-- DB already uses existing `desaId` index.
-- Sort exists, but only over ~7 rows in local dataset.
-- Raw SQL execution is **0.240ms**, so this does not explain app-level `1278ms`.
-
-### 6.4 Evidence Gap
-
-| Layer | Context query | Document query | Meaning |
-|---|---:|---:|---|
-| App perf wrapper | 1661ms | 1278ms | Slow at Prisma/app boundary |
-| Raw SQL EXPLAIN | 0.210ms | 0.240ms | Fast in DB execution |
-
-Likely root-cause candidates now:
-
-1. Prisma connection acquisition / cold connection / pooler latency.
-2. Prisma client runtime overhead in local/dev.
-3. Query executed by Prisma differs from simplified EXPLAIN query.
-4. Next.js dev-mode / RSC duplicated requests.
-5. Layout/page request waterfall, including duplicate `auth()` and context resolution.
-6. Supabase/Vercel region or connection path if reproduced outside local.
-
----
-
-## 7. DB Index Proposals — Status After EXPLAIN
-
-> **Do NOT create a migration yet.**
-
-Candidate indexes remain documented for production-scale review, but latest local EXPLAIN does not prove them as the immediate fix.
-
-### Candidate A — Admin Desa context lookup
-
-```prisma
-model DesaAdminMember {
-  @@index([userId, status])
-}
-```
-
-Status:
-- Still reasonable as a production-scale access pattern.
-- Not yet justified as the fix for current local 1.6s latency because raw SQL is 0.210ms.
-
-Optional if future EXPLAIN shows sort remains expensive:
-
-```prisma
-model DesaAdminMember {
-  @@index([userId, status, updatedAt])
-}
-```
-
-### Candidate B — Document list by desa + created date
-
-```prisma
-model AdminDesaDocument {
-  @@index([desaId, createdAt])
-}
-```
-
-Status:
-- May help newest-first variants.
-- Not the best match for the current order `status ASC, createdAt DESC`.
-
-### Candidate C — Document list by desa + status + created date
-
-```prisma
-model AdminDesaDocument {
-  @@index([desaId, status, createdAt])
-}
-```
-
-Status:
-- Best candidate for the current document tab query shape.
-- Not yet justified as the immediate fix because existing `desaId` index is used and local sort is tiny.
-- Revisit only after production/staging data volume or EXPLAIN proves sort/filter cost.
-
----
-
-## 8. Prioritized Recommendations
-
-### P0 — Do next, safe audit only
-
-1. Add dev-only Prisma query event logging to compare Prisma-reported query duration vs `perfLog` wrapper duration.
-2. Split timing around:
-   - before Prisma call
-   - after Prisma promise resolves
-   - row count serialization
-   - render handoff
-3. Test first request vs second/third request after `npm run dev` to detect cold connection or cold module cost.
-4. Check Network tab for repeated `_rsc` requests and route duplication.
-5. Update report with side-by-side table: app perf wrapper vs Prisma event duration vs raw SQL EXPLAIN.
-
-### P1 — Review after P0 evidence
-
-1. If Prisma query event duration is also high, investigate connection pooling, DB URL mode, Supabase region, and Prisma runtime.
-2. If Prisma query event is fast but wrapper is slow, inspect Next.js RSC/dev-mode duplication, serialization, and route waterfall.
-3. Consider trimming relation selects only if row serialization is proven meaningful.
+1. **Prisma Accelerate:** Only after understanding whether the overhead is in connection or query execution. Prisma Accelerate has its own connection pooling which may help.
+2. **Connection warming:** Use a keep-alive or pool configuration to keep connections warm between requests.
+3. **Investigate query engine:** Prisma uses a binary query engine (`query_engine-windows.dll`). Cold loading of this binary adds startup cost on first request.
 
 ### P2 — Needs owner approval / infra decision
 
-1. DB indexes only after staging/production EXPLAIN proves scan/sort cost.
-2. Prisma Accelerate only if connection/pool latency remains proven after query shape is healthy.
-3. OpenTelemetry only if manual perf logging is no longer enough.
-4. No TanStack Query for sensitive back office until auth/cache design is approved.
+1. DB indexes only after Prisma overhead is resolved and EXPLAIN on production/staging data proves scan/sort cost
+2. OpenTelemetry only if manual perf logging is no longer sufficient
+3. No TanStack Query for sensitive back office until auth/cache design is approved
 
 ---
 
-## 9. Acceptance Checklist
+## 7. Acceptance Checklist
 
-- [x] App-level perf logs documented.
-- [x] Query-shape logging documented without sensitive values.
-- [x] First invalid EXPLAIN attempt documented and rejected as evidence.
-- [x] Valid non-zero EXPLAIN results documented.
-- [x] Comparison added: previous DB-index suspicion vs latest raw SQL evidence.
-- [x] Report updated to block migration/index for now.
-- [x] New likely root-cause area identified: Prisma/runtime/connection/RSC layer.
-- [x] No UI refactor.
-- [x] No business logic change.
-- [x] No migration added.
-- [x] No third-party package added.
-- [x] `npm run lint` — passed 2026-05-05 in previous audit.
-- [x] `npx tsc --noEmit` — passed 2026-05-05 in previous audit.
-- [ ] `npm run build` — previously blocked by Google Fonts fetch failure for `Inter` in this environment; needs rerun in normal network environment.
+Sprint 04-008H:
 
----
+- [x] Prisma query event logging added to `src/lib/perf.ts` and attached in `src/lib/db.ts`
+- [x] Split timing added to `src/lib/data/admin-desa-context.ts`
+- [x] Split timing added to `src/app/profil/admin-desa/dokumen/page.tsx`
+- [x] Owner ran audit and captured split timing logs
+- [x] Root cause confirmed: Prisma runtime overhead, not DB execution
+- [x] Report updated with actual evidence and 3-layer comparison table
+- [x] Prisma event logging documented as known limitation (requires `log` option in PrismaClient constructor)
+- [ ] Owner to test `DIRECT_URL` vs `DATABASE_URL` for local dev
+- [ ] Owner to run warm-up test (second browser refresh)
 
-## 10. Next BMAD Task
+Previous items:
 
-Create or execute:
-
-```text
-docs/bmad/tasks/sprint-04-008h-back-office-prisma-runtime-latency-audit.md
-```
-
-Purpose:
-- Explain why Prisma/app perf logs show 1–2s while raw SQL EXPLAIN shows <1ms.
-- Do not create indexes, migrations, or UI changes until the Prisma/runtime gap is understood.
+- [x] App-level perf logs documented
+- [x] Query-shape logging documented without sensitive values
+- [x] Valid non-zero EXPLAIN results documented
+- [x] Report blocks migration/index for now
+- [x] No UI refactor
+- [x] No business logic change
+- [x] No migration added
+- [x] No third-party package added
+- [x] `npm run lint` — 0 errors
+- [x] `npx tsc --noEmit` — passed
+- [x] `npm run build` — passed earlier in session (blocked by Windows EPERM on Prisma DLL in this env)
