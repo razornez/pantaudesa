@@ -9,8 +9,13 @@ function getPrismaDatasourceUrl(): string {
   const isVercelPreview = process.env.VERCEL_ENV === "preview";
   const isThisAuditBranch =
     process.env.VERCEL_GIT_COMMIT_REF === "fix/mobile-suara-profile-admin-access-polish";
+  const isLocalRuntime = !process.env.VERCEL && !process.env.VERCEL_ENV;
 
   if (isVercelPreview && isThisAuditBranch && directUrl) {
+    return directUrl;
+  }
+
+  if (isLocalRuntime && directUrl) {
     return directUrl;
   }
 
@@ -23,6 +28,10 @@ function previewDirectUrlRuntimeEnabled(): boolean {
     process.env.VERCEL_GIT_COMMIT_REF === "fix/mobile-suara-profile-admin-access-polish" &&
     Boolean(process.env.DIRECT_URL)
   );
+}
+
+function localDirectUrlRuntimeEnabled(): boolean {
+  return !process.env.VERCEL && !process.env.VERCEL_ENV && Boolean(process.env.DIRECT_URL);
 }
 
 function createClient(): PrismaClient | null {
@@ -38,6 +47,9 @@ function createClient(): PrismaClient | null {
   try {
     if (previewDirectUrlRuntimeEnabled()) {
       console.info("[perf][back-office] route=db step=previewDirectUrlRuntime enabled=true");
+    }
+    if (localDirectUrlRuntimeEnabled()) {
+      console.info("[perf][back-office] route=db step=localDirectUrlRuntime enabled=true");
     }
 
     return new PrismaClient({
