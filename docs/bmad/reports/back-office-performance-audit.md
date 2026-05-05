@@ -392,7 +392,83 @@ Interpretation case:
 5. **Validate deployed staging/preview runtime next when available.**
 6. **Only after deployed validation, evaluate Singapore migration or Prisma Accelerate** if connection/runtime overhead still remains materially high.
 
-## 10. Acceptance Checklist
+## 10. Connection Strategy Fix Rollout - Sprint 04-008M
+
+### 10.1 Status
+
+- **Blocked: no staging/preview access**
+
+This run did not have usable staging/preview environment access.
+
+Observed blockers:
+
+1. No local `.vercel/project.json` mapping was present in the repo.
+2. Vercel access available in this session returned **zero teams**, so there was no confirmed project/environment target to update.
+3. This task does not authorize a production fallback, so rollout execution stopped at the runbook/documentation boundary.
+
+### 10.2 Candidate Fix
+
+Staging/preview runtime `DATABASE_URL` should use the session-pooler path that was materially faster in local production validation.
+
+Local production evidence still supporting that candidate:
+
+- normal warm `DATABASE_URL`: context about **1920ms**, dokumen about **1386ms**
+- session-pooler runtime warm path: context about **766ms**, dokumen about **407ms**
+
+### 10.3 Results
+
+| Environment | Runtime path | Run | Context dbQuery | Dokumen dbQuery | Notes |
+|---|---|---|---:|---:|---|
+| staging/preview | baseline | cold #1 | blocked | blocked | no environment access in this run |
+| staging/preview | baseline | warm avg | blocked | blocked | no environment access in this run |
+| staging/preview | session-pooler candidate | cold #1 | blocked | blocked | no environment access in this run |
+| staging/preview | session-pooler candidate | warm avg | blocked | blocked | no environment access in this run |
+
+### 10.4 Owner Steps
+
+The staging rollout runbook is prepared here:
+
+`docs/bmad/runbooks/back-office-connection-strategy-staging-rollout.md`
+
+Owner or operator should execute these steps next:
+
+1. Open the existing staging/preview project env settings.
+2. Record the current staging/preview `DATABASE_URL` privately for rollback.
+3. Measure baseline on `/profil/admin-desa/dokumen`:
+   - cold #1
+   - warm #2
+   - warm #3
+   - warm #4
+4. Change **staging/preview only** runtime `DATABASE_URL` to the session-pooler path currently represented by `DIRECT_URL`.
+5. Redeploy/restart staging/preview runtime.
+6. Verify:
+   - QA admin login still works
+   - `/profil/admin-desa/dokumen` renders
+   - document list appears
+   - upload UI loads
+7. Measure candidate timing:
+   - cold #1
+   - warm #2
+   - warm #3
+   - warm #4
+8. If auth or rendering breaks, rollback immediately.
+9. Only after staging/preview evidence exists should an owner-approved production rollout task be opened.
+
+### 10.5 Recommendation
+
+This run falls under **Case D** from the task rules.
+
+- **No production change** should be made in this task.
+- The session-pooler runtime path remains the best first fix candidate based on local production evidence.
+- The next required step is staging/preview execution using the prepared runbook, either by the owner or by a future agent run with staging/preview access.
+
+### 10.6 Guardrails
+
+- No production `DATABASE_URL` change in this task.
+- No migration/index/schema change.
+- No secret committed.
+
+## 11. Acceptance Checklist
 
 - [x] `dbQuery` timing added to context and documents page
 - [x] `serializeRows` timing confirms no serialization overhead
@@ -410,3 +486,5 @@ Interpretation case:
 - [x] Local production mode baseline timings recorded - done in sprint-04-008K
 - [x] Local production mode session-pooler runtime timings recorded - done in sprint-04-008K
 - [x] Staging/preview availability documented - not available in this run
+- [x] Staging rollout runbook created - done in sprint-04-008M
+- [x] Main audit report records blocked staging/preview rollout status - done in sprint-04-008M
