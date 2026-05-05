@@ -59,9 +59,9 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
     "desaAdminMember.findFirst",
     "where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields",
   );
-  // Sprint 04-008H: split timing — captures any pre-query work (minimal here)
-  const tBefore = perfStart();
-  const tQuery = perfStart();
+  // Sprint 04-008H: timing label is "dbQuery" — the timer includes the full Prisma call
+  // (connection + query + response), not just the DB execution.
+  const t = perfStart();
   const member = await db.desaAdminMember.findFirst({
     where: {
       userId,
@@ -102,10 +102,8 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
       },
     },
   });
-  // Sprint 04-008H: split timing — log before/after and row count
   const rows = member ? 1 : 0;
-  perfLog("admin-desa.context", "beforePrisma", tBefore);
-  perfLogWithRows("admin-desa.context", "afterPrisma", rows, tQuery);
+  perfLogWithRows("admin-desa.context", "dbQuery", rows, t);
 
   if (!member) return null;
 

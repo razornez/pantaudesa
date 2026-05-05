@@ -56,8 +56,9 @@ export default async function AdminDesaDokumenPage() {
         },
       })
     : [];
-  // Sprint 04-008H: split timing — log after query + row count
-  perfLogWithRows("admin-desa.dokumen", "afterPrisma", docs.length, tDocs);
+  // Sprint 04-008H: timing label is "dbQuery" — the timer includes the full Prisma call
+  // (connection + query + response), not just DB execution.
+  perfLogWithRows("admin-desa.dokumen", "dbQuery", docs.length, tDocs);
 
   const tSerialize = perfStart();
   const serialized = docs.map((d) => ({

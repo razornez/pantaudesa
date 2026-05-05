@@ -2,7 +2,7 @@
  * Dev-only / opt-in performance logger for back office route audit.
  *
  * Sprint 04-008H — Prisma/runtime latency audit.
- * Detects the gap between app-level timing (perfLog) and raw DB execution.
+ * Detects the gap between app-level timing and raw DB execution.
  *
  * Activation rules (any one is enough):
  *  - `NODE_ENV !== "production"` (always on in dev/test)
@@ -22,15 +22,6 @@
  *    (e.g. `where:userId,statusIn`, never the actual userId/desaId/email).
  *  - Prisma event logging must NOT echo raw SQL params or query text.
  *  - No persistence. Goes only to `console.info`.
- *
- * Usage:
- *   const t = perfStart();
- *   // ... await something ...
- *   perfLog("admin-desa.layout", "getAdminDesaContext", t);
- *
- * Or single-shot wrap:
- *   const ctx = await perfTime("admin-desa.layout", "getAdminDesaContext",
- *     () => getAdminDesaContext(userId));
  */
 
 export function perfEnabled(): boolean {
@@ -45,7 +36,6 @@ export function perfStart(): number {
 export function perfLog(route: string, step: string, startedAt: number): void {
   if (!perfEnabled()) return;
   const durationMs = Date.now() - startedAt;
-  // Single-line, machine-grep friendly. No PII.
   console.info(`[perf][back-office] route=${route} step=${step} durationMs=${durationMs}`);
 }
 
@@ -64,7 +54,6 @@ export function perfLogWithRows(
 
 export function perfQueryShape(route: string, query: string, shape: string): void {
   if (!perfEnabled()) return;
-  // Static query metadata only. Do not pass userId/desaId/email or document content here.
   console.info(`[perf][back-office] route=${route} query=${query} shape=${shape}`);
 }
 
@@ -86,6 +75,7 @@ export async function perfTime<T>(
  * Dev-only Prisma query event duration logger.
  * Attaches to a PrismaClient to log per-query duration without raw SQL values.
  * Must be called once per Prisma client instance (before any query runs).
+ * Uses a module-level guard to prevent double attachment during HMR.
  *
  * Logs:
  *   [perf][prisma] model=<model> action=<action> durationMs=<number>
@@ -95,19 +85,15 @@ export async function perfTime<T>(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 type PrismaClientLike = { $on: (event: string, callback: (...args: unknown[]) => void) => void };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _prismaPerfAttached = false;
+
 export function attachPrismaPerfLogging(prismaClient: unknown): void {
-  // Sprint 04-008H: debug log to confirm attachment
-  console.info("[perf][prisma] attachPrismaPerfLogging called");
-  if (!perfEnabled()) {
-    console.info("[perf][prisma] perfEnabled() is false, skipping event attachment");
-    return;
-  }
+  if (!perfEnabled()) return;
+  if (_prismaPerfAttached) return;
+  _prismaPerfAttached = true;
   const client = prismaClient as PrismaClientLike;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client.$on("query", (event: any) => {
-    // Sprint 04-008H: debug — log every event to see what's firing
-    console.info("[perf][prisma] query event fired", typeof event?.duration);
     if (typeof event?.duration === "number") {
       const ms = Math.round(event.duration / 1_000_000); // nanoseconds → ms
       console.info(
