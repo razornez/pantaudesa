@@ -1,6 +1,6 @@
 # Back Office Performance Audit
 
-**Sprint:** 04-008F / 04-008G / 04-008H / 04-008I
+**Sprint:** 04-008F / 04-008G / 04-008H / 04-008I / 04-008J
 **Branch:** `fix/mobile-suara-profile-admin-access-polish`
 **Date:** 2026-05-05
 **Status:** ROOT CAUSE CONFIRMED - connection/runtime path overhead
@@ -31,7 +31,7 @@ The timing label `dbQuery` measures the full Prisma call boundary: connection po
 - session pooler `5432` is ~65-68% faster on warm refresh
 - cold request remains slow on both paths
 
-**Next owner decision:** check Supabase region, validate on staging/production-like, then only consider Prisma Accelerate or connection-strategy changes.
+**Next owner decision:** confirm the Mumbai region as the current baseline, validate the same pattern in staging/production-like runtime, then prioritize connection/pooler review before any region migration or Prisma Accelerate decision.
 
 No migration, no DB index, no business logic change, no third-party package.
 
@@ -271,7 +271,67 @@ Env vars:
 
 ---
 
-## 8. Acceptance Checklist
+## 8. Infra Region Runtime Validation - Sprint 04-008J
+
+### 8.1 Current Supabase Region Statement
+
+The currently active shared Supabase runtime is detected on host alias `aws-1-ap-south-1.pooler.supabase.com`, which maps to **AWS ap-south-1 / Mumbai, India**.
+
+This matches:
+
+- the active runtime host alias used by local env for `DATABASE_URL` and `DIRECT_URL`
+- the shared host documented in `docs/engineering/47-sprint-03-shared-supabase-migration-apply-report.md`
+- the earlier separation from the temporary validation DB host `aws-1-ap-northeast-1.pooler.supabase.com`
+
+Conclusion:
+
+1. **Supabase is currently in ap-south-1 / Mumbai.**
+2. **This is not the temporary validation DB region.**
+3. **Mumbai is functional, but it is not the closest major AWS region for Indonesia-facing traffic.**
+
+### 8.2 Why Local Dev Is Not Enough For A Production Decision
+
+The local audit is strong enough to prove that the current bottleneck is in the connection/runtime path, but it is **not** enough to justify a production infra change by itself.
+
+Reasons:
+
+1. Local dev includes **Next dev server overhead** that does not represent production serving behavior.
+2. Local measurements include **machine-specific cold start and module reload cost**.
+3. Local results include **developer network variability** that may exaggerate or distort geographic latency.
+4. The current evidence proves a **directional pattern**, but it does not isolate how much of the production experience is caused by:
+   - region distance
+   - connection/pooler behavior
+   - Prisma startup/runtime cost
+   - deployment cold-start behavior
+
+Therefore, **staging or production-like validation is the next evidence gate** before any owner decision changes live infra.
+
+### 8.3 Owner Option Comparison
+
+| Option | Expected benefit | Main risk/cost | What it solves well | What it does not prove/solve | Owner recommendation |
+|---|---|---|---|---|---|
+| Stay in Mumbai (`ap-south-1`) | Zero migration risk, zero data-move effort, safest immediate operations | Keeps longer network distance for Indonesia users | Stability while gathering better evidence | Does not reduce regional roundtrip by itself | **Valid as the current short-term default** until staging/production-like evidence is collected |
+| Migrate to Singapore (`ap-southeast-1`) | Best geography for Indonesia traffic, likely lower roundtrip and TLS/auth travel time | Highest operational risk; requires infra/data migration planning and execution | Solves regional distance better than any app-layer tweak | Does not by itself prove whether pooler/runtime overhead is still the dominant bottleneck | **Do not do first**; evaluate only if production-like validation still suggests region distance materially contributes after runtime factors are isolated |
+| Prisma Accelerate | May improve connection management and help when connection/runtime overhead remains material | Added infra/vendor complexity and ongoing cost | Useful when connection orchestration is the recurring bottleneck | Can mask root-cause uncertainty if adopted too early; not a proof that region is wrong | **Not first-line**; consider only after staging/production-like validation confirms the same pattern outside local dev |
+| Tune connection/pooler strategy | Lowest-risk technical lever; directly matches current evidence that warm session-style path is much faster than transaction pooler path | May not fix cold-start penalty completely; still needs careful runtime validation | Best fit for the warm-path gap already observed in Sprint 04-008I | Does not remove region distance by itself and does not guarantee cold-start improvement | **Best next technical candidate** if staging/production-like validation reproduces the same warm-path pattern |
+
+### 8.4 Recommended Owner Sequence
+
+1. **Keep the current Supabase region as-is for now** and explicitly treat `ap-south-1 / Mumbai` as the current production baseline.
+2. **Do not change production `DATABASE_URL` yet.**
+3. **Validate the same route in staging or production-like runtime** and record cold-hit vs warm-hit behavior on `/profil/admin-desa/dokumen`.
+4. **If the warm-path gap still points to pooler behavior, review connection/pooler strategy first** because that is the lowest-risk lever and best matches current evidence.
+5. **If production-like validation still shows meaningful geographic/network drag after runtime factors are isolated, evaluate a Singapore migration next.**
+6. **Only after those checks, consider Prisma Accelerate** if connection/runtime overhead remains material and operationally hard to solve with the current path.
+
+### 8.5 Explicit Non-Recommendations In This Audit Step
+
+1. **No migration or DB index work** as a fix for this decision point.
+2. **No production `DATABASE_URL` change** based only on local dev measurements.
+3. **No region migration** based only on the current local audit.
+4. **No Prisma Accelerate adoption** as the first reaction before staging/production-like validation.
+
+## 9. Acceptance Checklist
 
 - [x] `dbQuery` timing added to context and documents page
 - [x] `serializeRows` timing confirms no serialization overhead
