@@ -34,6 +34,34 @@ function localDirectUrlRuntimeEnabled(): boolean {
   return !process.env.VERCEL && !process.env.VERCEL_ENV && Boolean(process.env.DIRECT_URL);
 }
 
+function getUrlDebugParts(url: string): { host: string | null; port: string | null } {
+  if (!url) return { host: null, port: null };
+
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname || null,
+      port: parsed.port || null,
+    };
+  } catch {
+    return { host: "invalid", port: null };
+  }
+}
+
+export function getPrismaRuntimeDebugInfo() {
+  const selectedUrl = getPrismaDatasourceUrl();
+  const selected = getUrlDebugParts(selectedUrl);
+
+  return {
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    gitBranch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+    usingPreviewDirect: previewDirectUrlRuntimeEnabled(),
+    usingLocalDirect: localDirectUrlRuntimeEnabled(),
+    selectedHost: selected.host,
+    selectedPort: selected.port,
+  };
+}
+
 function createClient(): PrismaClient | null {
   const url = getPrismaDatasourceUrl();
   const valid =
