@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import InternalDocumentReviewQueue from "@/components/internal-admin/InternalDocumentReviewQueue";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +11,6 @@ export default async function InternalDocumentsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const session = await getInternalAdminSession();
-  if (!session) redirect("/login?error=unauthorized");
-
   const params = await searchParams;
   const filter = params.status && (ALLOWED as readonly string[]).includes(params.status)
     ? (params.status as typeof ALLOWED[number])
@@ -28,6 +24,7 @@ export default async function InternalDocumentsPage({
     );
   }
 
+  const tQuery = perfStart();
   const docs = await db.adminDesaDocument.findMany({
     where: filter ? { status: filter } : undefined,
     orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
@@ -44,13 +41,13 @@ export default async function InternalDocumentsPage({
       publishedAt: true,
       failedReason: true,
       aiMappingStatus: true,
-      aiMappingResult: true,
       createdAt: true,
       updatedAt: true,
       desa: { select: { id: true, nama: true, kecamatan: true, kabupaten: true } },
       uploadedBy: { select: { id: true, nama: true, username: true, email: true } },
     },
   });
+  perfLog("internal-admin.documents", "adminDesaDocument.findMany", tQuery);
 
   const serialized = docs.map((d) => ({
     ...d,

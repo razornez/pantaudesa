@@ -13,15 +13,24 @@ import {
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
 import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
+import { perfLog, perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDesaDokumenPage() {
+  const tAuth = perfStart();
   const session = await auth();
+  perfLog("admin-desa.dokumen", "auth()", tAuth);
   if (!session?.user?.id) redirect("/login");
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
+  perfQueryShape(
+    "admin-desa.dokumen",
+    "adminDesaDocument.findMany",
+    "where:desaId;orderBy:statusAsc,createdAtDesc;take:100;join:uploadedBy;select:listFields",
+  );
+  const tDocs = perfStart();
   const docs = db
     ? await db.adminDesaDocument.findMany({
         where: { desaId: ctx.desa.id },
@@ -47,13 +56,18 @@ export default async function AdminDesaDokumenPage() {
         },
       })
     : [];
+  // Sprint 04-008H: timing label is "dbQuery" — the timer includes the full Prisma call
+  // (connection + query + response), not just DB execution.
+  perfLogWithRows("admin-desa.dokumen", "dbQuery", docs.length, tDocs);
 
+  const tSerialize = perfStart();
   const serialized = docs.map((d) => ({
     ...d,
     createdAt: d.createdAt.toISOString(),
     approvedAt: d.approvedAt?.toISOString() ?? null,
     publishedAt: d.publishedAt?.toISOString() ?? null,
   }));
+  perfLog("admin-desa.dokumen", "serializeRows", tSerialize);
 
   const storage = getStorageConfigurationStatus();
   const storageOk = storage.configured;

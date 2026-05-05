@@ -17,6 +17,7 @@ export default function AdminDesaTabNav({ tabs }: { tabs: AdminDesaTab[] }) {
               <Link
                 key={tab.key}
                 href={tab.href}
+                prefetch={false}
                 className={`relative px-1.5 py-3 text-sm font-semibold whitespace-nowrap t-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                   active ? "text-[#1E1B4B]" : "text-slate-500 hover:text-slate-900"
                 }`}

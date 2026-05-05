@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ShieldCheck, FileText, RefreshCcw, UserCog } from "lucide-react";
+import { House, ShieldCheck, FileText, RefreshCcw, UserCog } from "lucide-react";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export default async function InternalAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = perfStart();
   const session = await getInternalAdminSession();
+  perfLog("internal-admin.layout", "getInternalAdminSession()", t);
   if (!session) {
     redirect("/masuk?error=unauthorized");
   }
@@ -48,11 +51,19 @@ export default async function InternalAdminLayout({
                 </div>
 
                 {/* Right: compact summary */}
-                <div className="flex flex-wrap gap-3 text-[11px]">
+                <div className="flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="lux-card px-3 py-1.5">
                     <span className="text-slate-500">3 area: </span>
                     <span className="font-semibold text-slate-900">klaim, dokumen, perpanjangan</span>
                   </span>
+                  <Link
+                    href="/"
+                    prefetch={false}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 t-spring hover:border-slate-300 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                  >
+                    <House size={13} aria-hidden />
+                    Beranda
+                  </Link>
                 </div>
               </div>
             </div>
@@ -68,6 +79,7 @@ export default async function InternalAdminLayout({
                     <Link
                       key={href}
                       href={href}
+                      prefetch={false}
                       className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-600 t-spring hover:bg-white/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     >
                       <Icon size={14} aria-hidden />

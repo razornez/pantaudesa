@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
-import { getInternalAdminSession } from "@/lib/auth/internal-admin";
-import { redirect } from "next/navigation";
 import ClaimReviewQueue from "@/components/internal-admin/ClaimReviewQueue";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +9,6 @@ export default async function InternalAdminClaimsPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string; desaId?: string }>;
 }) {
-  const session = await getInternalAdminSession();
-  if (!session) redirect("/masuk?error=unauthorized");
-
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const statusFilter = params.status ?? "";
@@ -37,6 +33,7 @@ export default async function InternalAdminClaimsPage({
     ...(desaId ? { desaId } : {}),
   };
 
+  const tQuery = perfStart();
   const [claims, total] = await Promise.all([
     db.desaAdminClaim.findMany({
       where,
@@ -68,6 +65,7 @@ export default async function InternalAdminClaimsPage({
     }),
     db.desaAdminClaim.count({ where }),
   ]);
+  perfLog("internal-admin.claims", "desaAdminClaim.findMany+count", tQuery);
 
   const serialized = claims.map((c) => ({
     ...c,

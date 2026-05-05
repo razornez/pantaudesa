@@ -79,6 +79,7 @@ export default function Navbar() {
           )}
           <Link
             href="/login"
+            prefetch={false}
             className="t-spring inline-flex items-center gap-1.5 text-xs font-semibold text-white px-5 py-2.5 rounded-2xl shadow-lux-2 hover:shadow-lux-hover hover:-translate-y-0.5 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             style={{ background: "#1E1B4B" }}
           >
@@ -94,6 +95,7 @@ export default function Navbar() {
         {user.role === "INTERNAL_ADMIN" && (
           <Link
             href="/internal-admin"
+            prefetch={false}
             aria-label="Buka panel internal admin"
             className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-xl transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
           >
@@ -103,6 +105,7 @@ export default function Navbar() {
         {/* Notif bell */}
         <Link
           href={notifTargetFor(user.role)}
+          prefetch={false}
           aria-label={unread > 0 ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"}
           className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
         >
@@ -114,7 +117,7 @@ export default function Navbar() {
           )}
         </Link>
         {/* Account — name + avatar, always points to /profil */}
-        <Link data-testid="navbar-account-link" href="/profil" className="flex items-center gap-2 hover:bg-slate-50 px-2 py-1.5 rounded-xl transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+        <Link data-testid="navbar-account-link" href="/profil" prefetch={false} className="flex items-center gap-2 hover:bg-slate-50 px-2 py-1.5 rounded-xl transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
           <NavAvatar nama={user.nama} avatarUrl={user.avatarUrl} />
           <span className="text-xs font-semibold text-slate-700 max-w-[80px] truncate hidden sm:block">
             {displayName}
@@ -137,7 +140,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between gap-4 h-16">
 
           {/* Brand */}
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+          <Link href="/" prefetch={false} className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-8 h-8 rounded-xl overflow-hidden shadow-[0_10px_22px_-14px_rgba(30,27,75,0.55)]">
               <Image src={ASSETS.logo} alt="PantauDesa" width={28} height={28} className="w-full h-full object-cover" priority />
             </div>
@@ -150,6 +153,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                   pathname === link.href
                     ? "bg-white text-[#1E1B4B] shadow-[inset_0_0_0_1px_rgba(79,70,229,0.12),0_14px_24px_-22px_rgba(30,27,75,0.55)]"
@@ -183,6 +187,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch={false}
               onClick={() => setOpen(false)}
               className={`block px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors ${
                 pathname === link.href ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-50"
@@ -193,22 +198,22 @@ export default function Navbar() {
           ))}
           <div className="mt-2 pt-2 border-t border-slate-100">
             {!user && (
-              <Link href="/login" onClick={() => setOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-indigo-600">
+              <Link href="/login" prefetch={false} onClick={() => setOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-indigo-600">
                 Masuk
               </Link>
             )}
             {user && (
               <>
-                <Link href="/profil" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-700">
+                <Link href="/profil" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-700">
                   <NavAvatar nama={user.nama} avatarUrl={user.avatarUrl} />
                   {displayName}
                   {unread > 0 && <span className="ml-auto bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{unread}</span>}
                 </Link>
-                <Link href={notifTargetFor(user.role)} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700">
+                <Link href={notifTargetFor(user.role)} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700">
                   <Bell size={14} /> Notifikasi
                 </Link>
                 {user.role === "INTERNAL_ADMIN" && (
-                  <Link href="/internal-admin" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-amber-700">
+                  <Link href="/internal-admin" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-amber-700">
                     <ShieldCheck size={14} /> Panel Internal Admin
                   </Link>
                 )}

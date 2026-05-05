@@ -6,6 +6,7 @@ import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 import AdminDesaSuaraStatusAction from "@/components/admin-desa/AdminDesaSuaraStatusAction";
 import { ExternalLink, MessageSquare, MessagesSquare, ThumbsDown, ThumbsUp } from "lucide-react";
+import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,14 @@ function FooterStat({ icon, value, label }: { icon: React.ReactNode; value: numb
 }
 
 export default async function AdminDesaSuaraPage() {
+  const tAuth = perfStart();
   const session = await auth();
+  perfLog("admin-desa.suara", "auth()", tAuth);
   if (!session?.user?.id) redirect("/login");
   const ctx = await getAdminDesaContext(session.user.id);
   if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
 
+  const tVoices = perfStart();
   const voiceDesaKeys = [ctx.desa.id, ctx.desa.slug].filter(Boolean);
   const voices = db
     ? await db.voice.findMany({
@@ -54,6 +58,7 @@ export default async function AdminDesaSuaraPage() {
         },
       })
     : [];
+  perfLog("admin-desa.suara", "voice.findMany", tVoices);
 
   const summary = voices.reduce((acc, voice) => {
     acc.total += 1;

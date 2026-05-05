@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
+import { perfLog, perfStart } from "@/lib/perf";
 import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
 import DownloadButton from "@/components/desa/DownloadButton";
@@ -48,11 +49,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DesaDetailPage({ params }: Props) {
   const { id } = await params;
+  const desaTimer = perfStart();
   const desa = await getDesaByIdOrSlugWithFallback(id);
+  perfLog("public.desa-detail", "getDesaByIdOrSlugWithFallback()", desaTimer);
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
+  const voiceTimer = perfStart();
   const voiceSummary = await getVoicePreviewForDesaFromDb(desa.id);
+  perfLog("public.desa-detail", "getVoicePreviewForDesaFromDb()", voiceTimer);
   const voicePreview = voiceSummary.preview;
   const profil       = desa.profil;
 
@@ -91,7 +96,7 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <Link href="/desa" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg">
+        <Link href="/desa" prefetch={false} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg">
           <ArrowLeft size={15} aria-hidden /> Kembali ke Daftar Desa
         </Link>
         <DownloadButton desa={desa} />
@@ -247,6 +252,7 @@ export default async function DesaDetailPage({ params }: Props) {
         {/* Suara warga preview */}
         <Link
           href={`/desa/${desa.id}/suara`}
+          prefetch={false}
           className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           aria-label={`Suara warga untuk ${desa.nama}`}
         >
