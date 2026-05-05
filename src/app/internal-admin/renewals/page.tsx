@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import {
   RENEWAL_REMINDER_DAYS,
   daysUntilRenewal,
@@ -16,11 +14,6 @@ export default async function InternalAdminRenewalsPage({
 }: {
   searchParams: Promise<{ state?: string }>;
 }) {
-  const tSession = perfStart();
-  const session = await getInternalAdminSession();
-  perfLog("internal-admin.renewals", "getInternalAdminSession()", tSession);
-  if (!session) redirect("/masuk?error=unauthorized");
-
   const params = await searchParams;
   const state = params.state === "OVERDUE" || params.state === "DUE_SOON" ? params.state : "ALL";
 

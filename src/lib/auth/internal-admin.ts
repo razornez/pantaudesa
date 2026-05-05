@@ -31,7 +31,7 @@ export const isInternalAdmin = cache(async function isInternalAdmin(
 
 // Get the current session and validate internal admin role server-side.
 // Returns session data if valid, null if not authenticated or not internal admin.
-export async function getInternalAdminSession(): Promise<InternalAdminSession | null> {
+export const getInternalAdminSession = cache(async function getInternalAdminSession(): Promise<InternalAdminSession | null> {
   const tAuth = perfStart();
   const session = await auth();
   perfLog("internal-admin.auth", "auth()", tAuth);
@@ -39,7 +39,7 @@ export async function getInternalAdminSession(): Promise<InternalAdminSession | 
   const admin = await isInternalAdmin(session.user.id);
   if (!admin) return null;
   return { userId: session.user.id, email: session.user.email };
-}
+});
 
 // Standard 403 response for unauthorized internal admin access.
 export function unauthorizedInternalAdmin(): NextResponse {

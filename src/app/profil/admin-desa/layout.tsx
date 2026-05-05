@@ -88,7 +88,7 @@ export default async function AdminDesaLayout({ children }: { children: React.Re
                     </div>
                   </div>
 
-                  <Link href="/profil/saya" className="btn-lux btn-lux-secondary w-full lg:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+                  <Link prefetch={false} href="/profil/saya" className="btn-lux btn-lux-secondary w-full lg:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
                     {COPY.backToProfile}
                   </Link>
                 </div>

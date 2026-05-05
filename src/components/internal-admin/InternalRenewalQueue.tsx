@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CalendarClock, CheckCircle2 } from "lucide-react";
@@ -103,7 +104,7 @@ export default function InternalRenewalQueue({ members, stateFilter }: { members
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"><div className="space-y-1"><p className="eyebrow text-[10px]">Perpanjangan admin desa</p><h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">Masa aktif admin</h1></div><div className="flex flex-wrap gap-1.5"><span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.total} total</span>{summary.soon > 0 && <span className="pill-warn rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.soon} perlu disiapkan</span>}{summary.overdue > 0 && <span className="pill-danger rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.overdue} lewat batas</span>}</div></div>
-      <div className="flex flex-wrap gap-1.5">{FILTERS.map((filter) => <a key={filter.value} href={buildUrl(filter.value)} className={`btn-lux ${stateFilter === filter.value || (filter.value === "ALL" && !stateFilter) ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] sm:!min-h-[40px] text-[11px] sm:text-xs`}>{filter.label}</a>)}</div>
+      <div className="flex flex-wrap gap-1.5">{FILTERS.map((filter) => <Link key={filter.value} href={buildUrl(filter.value)} prefetch={false} className={`btn-lux ${stateFilter === filter.value || (filter.value === "ALL" && !stateFilter) ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] sm:!min-h-[40px] text-[11px] sm:text-xs`}>{filter.label}</Link>)}</div>
       {members.length === 0 ? <div className="lux-card p-8 text-center space-y-2"><CalendarClock size={24} className="mx-auto text-slate-300" aria-hidden /><p className="text-sm text-slate-500">Tidak ada data pada filter ini.</p></div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{members.map((item) => <RenewalCard key={item.id} item={item} onApprove={setApproveTarget} onReject={setRejectTarget} />)}</div>}
       {approveTarget && <DecisionModal target={approveTarget} mode="approve" onNotify={toast} onClose={() => setApproveTarget(null)} onDone={() => { setApproveTarget(null); refresh(); }} />}
       {rejectTarget && <DecisionModal target={rejectTarget} mode="reject" onNotify={toast} onClose={() => setRejectTarget(null)} onDone={() => { setRejectTarget(null); refresh(); }} />}

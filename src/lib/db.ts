@@ -34,56 +34,6 @@ function localDirectUrlRuntimeEnabled(): boolean {
   return !process.env.VERCEL && !process.env.VERCEL_ENV && Boolean(process.env.DIRECT_URL);
 }
 
-function getUrlDebugParts(
-  url: string,
-): { host: string | null; port: string | null; projectHint: string | null; databaseName: string | null } {
-  if (!url) return { host: null, port: null, projectHint: null, databaseName: null };
-
-  try {
-    const parsed = new URL(url);
-    const username = parsed.username || "";
-    const projectHint = username.includes(".") ? username.split(".")[1] || null : null;
-    const databaseName = parsed.pathname.replace(/^\/+/, "") || null;
-
-    return {
-      host: parsed.hostname || null,
-      port: parsed.port || null,
-      projectHint,
-      databaseName,
-    };
-  } catch {
-    return { host: "invalid", port: null, projectHint: null, databaseName: null };
-  }
-}
-
-export function getPrismaRuntimeDebugInfo() {
-  const databaseUrl = process.env.DATABASE_URL ?? "";
-  const directUrl = process.env.DIRECT_URL ?? "";
-  const selectedUrl = getPrismaDatasourceUrl();
-  const database = getUrlDebugParts(databaseUrl);
-  const direct = getUrlDebugParts(directUrl);
-  const selected = getUrlDebugParts(selectedUrl);
-
-  return {
-    vercelEnv: process.env.VERCEL_ENV ?? null,
-    gitBranch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
-    usingPreviewDirect: previewDirectUrlRuntimeEnabled(),
-    usingLocalDirect: localDirectUrlRuntimeEnabled(),
-    databaseUrlHost: database.host,
-    databaseUrlPort: database.port,
-    databaseUrlProjectHint: database.projectHint,
-    databaseUrlDatabaseName: database.databaseName,
-    directUrlHost: direct.host,
-    directUrlPort: direct.port,
-    directUrlProjectHint: direct.projectHint,
-    directUrlDatabaseName: direct.databaseName,
-    selectedHost: selected.host,
-    selectedPort: selected.port,
-    selectedProjectHint: selected.projectHint,
-    selectedDatabaseName: selected.databaseName,
-  };
-}
-
 function createClient(): PrismaClient | null {
   const url = getPrismaDatasourceUrl();
   const valid =

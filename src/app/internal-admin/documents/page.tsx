@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import InternalDocumentReviewQueue from "@/components/internal-admin/InternalDocumentReviewQueue";
 import { perfLog, perfStart } from "@/lib/perf";
 
@@ -13,11 +11,6 @@ export default async function InternalDocumentsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const tSession = perfStart();
-  const session = await getInternalAdminSession();
-  perfLog("internal-admin.documents", "getInternalAdminSession()", tSession);
-  if (!session) redirect("/login?error=unauthorized");
-
   const params = await searchParams;
   const filter = params.status && (ALLOWED as readonly string[]).includes(params.status)
     ? (params.status as typeof ALLOWED[number])

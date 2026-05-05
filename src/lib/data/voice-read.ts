@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import type { CitizenVoice, VoiceStatus } from "@/lib/citizen-voice";
 
@@ -7,20 +9,38 @@ function mapStatus(status: string): VoiceStatus {
   return "open";
 }
 
-type VoiceRecord = Awaited<ReturnType<typeof fetchVoiceRecords>>[number];
+type VoiceRecord = Prisma.VoiceGetPayload<{
+  include: {
+    author: { select: { nama: true; name: true; username: true } };
+    replies: {
+      include: { author: { select: { nama: true; name: true; username: true } } };
+    };
+    votes: { select: { type: true } };
+    helpfuls: { select: { id: true } };
+  };
+}>;
+
+type DesaLookup = {
+  nama: string;
+  kabupaten: string;
+  slug: string;
+};
 
 function authorName(author: VoiceRecord["author"], isAnon: boolean) {
   if (isAnon || !author) return "Anonim";
   return author.nama ?? author.name ?? author.username ?? "Warga";
 }
 
-function mapVoice(record: VoiceRecord): CitizenVoice {
+function mapVoice(record: VoiceRecord, desa?: DesaLookup): CitizenVoice {
   const benar = record.votes.filter((vote) => vote.type === "BENAR").length;
   const bohong = record.votes.filter((vote) => vote.type === "BOHONG").length;
 
   return {
     id: record.id,
     desaId: record.desaId,
+    desaNama: desa?.nama,
+    desaKabupaten: desa?.kabupaten,
+    desaSlug: desa?.slug,
     category: record.category,
     text: record.text,
     author: authorName(record.author, record.isAnon),
@@ -61,9 +81,27 @@ async function fetchVoiceRecords(desaId?: string) {
   });
 }
 
+async function fetchAllVoicesMapped() {
+  const records = await fetchVoiceRecords();
+  const desaRows = prisma
+    ? await prisma.desa.findMany({
+        where: { id: { in: [...new Set(records.map((record) => record.desaId))] } },
+        select: { id: true, nama: true, kabupaten: true, slug: true },
+      })
+    : [];
+  const desaMap = new Map(desaRows.map((desa) => [desa.id, desa]));
+  return records.map((record) => mapVoice(record, desaMap.get(record.desaId)));
+}
+
+const getCachedAllVoices = unstable_cache(
+  fetchAllVoicesMapped,
+  ["pantau-desa-all-voices-v1"],
+  { revalidate: 120, tags: ["voices-public"] }
+);
+
 export async function getAllVoicesFromDb() {
   try {
-    return (await fetchVoiceRecords()).map(mapVoice);
+    return await getCachedAllVoices();
   } catch (error) {
     console.error("[voice-read] public voice read failed:", error);
     return [];
@@ -72,7 +110,16 @@ export async function getAllVoicesFromDb() {
 
 export async function getVoicesForDesaFromDb(desaId: string) {
   try {
-    return (await fetchVoiceRecords(desaId)).map(mapVoice);
+    const records = await fetchVoiceRecords(desaId);
+    const desa = prisma
+      ? await prisma.desa.findFirst({
+          where: { OR: [{ id: desaId }, { slug: desaId }] },
+          select: { id: true, nama: true, kabupaten: true, slug: true },
+        })
+      : null;
+    const canonicalDesa =
+      desa && records.length > 0 ? { nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug } : undefined;
+    return records.map((record) => mapVoice(record, canonicalDesa));
   } catch (error) {
     console.error("[voice-read] public desa voice read failed:", error);
     return [];
@@ -84,7 +131,7 @@ export type DesaVoicePreview = {
   preview: Array<Pick<CitizenVoice, "id" | "category" | "text" | "author">>;
 };
 
-export async function getVoicePreviewForDesaFromDb(desaId: string): Promise<DesaVoicePreview> {
+async function fetchVoicePreviewForDesa(desaId: string): Promise<DesaVoicePreview> {
   if (!prisma) return { total: 0, preview: [] };
 
   try {
@@ -117,6 +164,16 @@ export async function getVoicePreviewForDesaFromDb(desaId: string): Promise<Desa
     console.error("[voice-read] public desa voice preview read failed:", error);
     return { total: 0, preview: [] };
   }
+}
+
+const getCachedVoicePreviewForDesa = unstable_cache(
+  fetchVoicePreviewForDesa,
+  ["pantau-desa-voice-preview-v1"],
+  { revalidate: 120, tags: ["voices-public"] }
+);
+
+export async function getVoicePreviewForDesaFromDb(desaId: string): Promise<DesaVoicePreview> {
+  return getCachedVoicePreviewForDesa(desaId);
 }
 
 export function getVoiceStatsFromVoices(voices: CitizenVoice[]) {

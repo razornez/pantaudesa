@@ -380,15 +380,23 @@ function ChangePinCard({ onSuccess, onError }: { onSuccess: () => void; onError:
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function SayaProfilePage() {
+export default function SayaProfilePage({
+  initialProfile,
+}: {
+  initialProfile: {
+    nama: string;
+    bio: string;
+    avatarUrl?: string;
+  };
+}) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toasts, toast, removeToast } = useToast();
 
   const [tab,       setTab]       = useState<Tab>("profil");
-  const [nama,      setNama]      = useState("");
-  const [bio,       setBio]       = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [nama,      setNama]      = useState(initialProfile.nama);
+  const [bio,       setBio]       = useState(initialProfile.bio);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(initialProfile.avatarUrl);
   const [saving,    setSaving]    = useState(false);
   const [notifs,    setNotifs]    = useState<UserNotification[]>([]);
   const dataFetched = useRef(false);
@@ -397,18 +405,10 @@ export default function SayaProfilePage() {
     if (!user || dataFetched.current) return;
     dataFetched.current = true;
     setNotifs(getNotifications(user.nama));
-    fetch("/api/users/me")
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        setNama(data?.nama ?? user.nama);
-        setBio(data?.bio ?? "");
-        setAvatarUrl(data?.avatarUrl ?? user.avatarUrl);
-      })
-      .catch(() => {
-        setNama(user.nama);
-        setAvatarUrl(user.avatarUrl);
-      });
-  }, [user]);
+    setNama(initialProfile.nama || user.nama);
+    setBio(initialProfile.bio);
+    setAvatarUrl(initialProfile.avatarUrl ?? user.avatarUrl);
+  }, [initialProfile.avatarUrl, initialProfile.bio, initialProfile.nama, user]);
 
   if (!loading && !user) {
     redirect("/login");

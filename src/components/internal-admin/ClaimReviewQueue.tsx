@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -208,9 +209,9 @@ export default function ClaimReviewQueue({ claims, total, page, pageSize, status
   return (
     <div className="space-y-7" data-testid="internal-claims-queue">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div className="space-y-2"><p className="eyebrow text-[10px]">Review pengajuan admin desa</p><h1 className="display text-[30px] sm:text-[34px] font-semibold text-slate-900 tracking-tight leading-tight">Antrean keputusan yang perlu ditangani</h1><p className="text-sm text-slate-500 leading-relaxed max-w-2xl">Periksa bukti pengajuan, putuskan dengan jelas, dan pastikan pengaju memahami langkah berikutnya.</p></div><div className="flex flex-wrap gap-2"><span className="pill-info rounded-full px-3 py-1 text-[11px] font-semibold">{total} total klaim</span>{summary.review > 0 && <span className="pill-warn rounded-full px-3 py-1 text-[11px] font-semibold">{summary.review} sedang diperiksa</span>}{summary.rejected > 0 && <span className="pill-danger rounded-full px-3 py-1 text-[11px] font-semibold">{summary.rejected} ditolak</span>}</div></header>
-      <div className="flex flex-wrap gap-2">{STATUS_TABS.map((tab) => <a key={tab.value} href={buildUrl({ status: tab.value, page: "1" })} className={`btn-lux ${statusFilter === tab.value ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[40px] text-xs`}>{tab.label}</a>)}</div>
+      <div className="flex flex-wrap gap-2">{STATUS_TABS.map((tab) => <Link key={tab.value} href={buildUrl({ status: tab.value, page: "1" })} prefetch={false} className={`btn-lux ${statusFilter === tab.value ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[40px] text-xs`}>{tab.label}</Link>)}</div>
       {claims.length === 0 ? <div className="lux-card p-10 text-center space-y-3"><Clock3 size={28} className="mx-auto text-slate-300" aria-hidden /><p className="text-sm text-slate-500">Tidak ada pengajuan pada filter ini.</p></div> : <div className="grid gap-4 sm:grid-cols-2">{claims.map((claim) => <ClaimCard key={claim.id} claim={claim} onRefresh={refresh} onReject={setRejectTarget} onNotify={toast} />)}</div>}
-      {totalPages > 1 && <div className="flex justify-center gap-2 pt-2">{Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => <a key={p} href={buildUrl({ page: String(p) })} className={`btn-lux ${p === page ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] !w-[36px] !px-0 text-xs`}>{p}</a>)}</div>}
+      {totalPages > 1 && <div className="flex justify-center gap-2 pt-2">{Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => <Link key={p} href={buildUrl({ page: String(p) })} prefetch={false} className={`btn-lux ${p === page ? "btn-lux-primary" : "btn-lux-ghost"} !min-h-[36px] !w-[36px] !px-0 text-xs`}>{p}</Link>)}</div>}
       {rejectTarget && <RejectModal claim={rejectTarget} onNotify={toast} onClose={() => setRejectTarget(null)} onDone={() => { setRejectTarget(null); refresh(); }} />}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

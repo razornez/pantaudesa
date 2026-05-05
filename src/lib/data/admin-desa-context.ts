@@ -56,56 +56,77 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
 
   perfQueryShape(
     "admin-desa.context",
-    "desaAdminMember.findFirst",
-    "where:userId,statusIn(LIMITED,VERIFIED);orderBy:updatedAtDesc;take:1;join:desa,user;select:memberContextFields",
+    "desaAdminMember.findMany",
+    "where:userId,statusIn(LIMITED,VERIFIED);select:memberContextFields+desa;sortInApp:updatedAtDesc",
   );
-  // Sprint 04-008H: timing label is "dbQuery" — the timer includes the full Prisma call
-  // (connection + query + response), not just the DB execution.
-  const t = perfStart();
-  const member = await db.desaAdminMember.findFirst({
-    where: {
-      userId,
-      status: { in: ["LIMITED", "VERIFIED"] },
-    },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      desaId: true,
-      role: true,
-      status: true,
-      joinedAt: true,
-      invitedAt: true,
-      acceptedAt: true,
-      verifiedById: true,
-      renewalDueAt: true,
-      revokedAt: true,
-      revokedReason: true,
-      desa: {
-        select: {
-          id: true,
-          nama: true,
-          slug: true,
-          kecamatan: true,
-          kabupaten: true,
-          provinsi: true,
-          websiteUrl: true,
-        },
-      },
-      user: {
-        select: {
-          id: true,
-          nama: true,
-          username: true,
-          email: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
-  const rows = member ? 1 : 0;
-  perfLogWithRows("admin-desa.context", "dbQuery", rows, t);
+  perfQueryShape(
+    "admin-desa.context",
+    "user.findUnique",
+    "where:id;select:userContextFields",
+  );
 
-  if (!member) return null;
+  const tMembers = perfStart();
+  const membersPromise = db.desaAdminMember
+    .findMany({
+      where: {
+        userId,
+        status: { in: ["LIMITED", "VERIFIED"] },
+      },
+      select: {
+        id: true,
+        desaId: true,
+        role: true,
+        status: true,
+        joinedAt: true,
+        invitedAt: true,
+        acceptedAt: true,
+        verifiedById: true,
+        renewalDueAt: true,
+        revokedAt: true,
+        revokedReason: true,
+        updatedAt: true,
+        desa: {
+          select: {
+            id: true,
+            nama: true,
+            slug: true,
+            kecamatan: true,
+            kabupaten: true,
+            provinsi: true,
+            websiteUrl: true,
+          },
+        },
+      },
+    })
+    .then((members) => {
+      perfLogWithRows("admin-desa.context", "desaAdminMember.findMany", members.length, tMembers);
+      return members;
+    });
+
+  const tUser = perfStart();
+  const userPromise = db.user
+    .findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        nama: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+      },
+    })
+    .then((user) => {
+      perfLogWithRows("admin-desa.context", "user.findUnique", user ? 1 : 0, tUser);
+      return user;
+    });
+
+  const t = perfStart();
+  const [members, user] = await Promise.all([membersPromise, userPromise]);
+  perfLogWithRows("admin-desa.context", "dbQuery", members.length, t);
+
+  const member = [...members].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0] ?? null;
+
+  if (!member || !user) return null;
 
   const tSerialize = perfStart();
   const renewalState = getRenewalState(member.renewalDueAt);
@@ -126,7 +147,7 @@ export const getAdminDesaContext = cache(async function getAdminDesaContext(
       revokedReason: member.revokedReason,
     },
     desa: member.desa,
-    user: member.user,
+    user,
     renewal: { state: renewalState, daysUntil: days },
   };
   perfLog("admin-desa.context", "serializeRows", tSerialize);
