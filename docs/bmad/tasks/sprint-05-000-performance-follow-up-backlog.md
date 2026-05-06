@@ -1,239 +1,296 @@
-# Sprint 05 - Prioritized Backlog
+# Sprint 05 - Final Execution Backlog
 
 ## Status
-READY FOR OWNER REVIEW — ordered backlog only, no implementation in this file.
+FINALIZED FOR SPRINT PLANNING — do not execute until owner gives the handoff.
 
 ## Source Inputs
 This backlog is based on:
 
 - `docs/engineering/54-sprint-04-performance-closeout-report.md`
 - `docs/bmad/reports/back-office-performance-audit.md`
-- latest `main` closeout commit: `cf69f0c019183099296b6dca92694a5067803ad7` / `merge: close out sprint 04 performance hardening`
+- current `main` code and Prisma schema
+- existing Sprint 04-008 Admin Desa / Internal Admin document flow
 
-## Sprint 05 Direction
-Sprint 05 has two goals:
+## Sprint 05 Theme
+Sprint 05 is a single sprint with one product direction:
 
-1. Keep PantauDesa fast and stable enough for larger data workflows.
-2. Start the **Data Foundation & Village Data Quality** epic in the right dependency order.
+> Upgrade PantauDesa from a document/back-office workflow into a credible village data management foundation with source tracking, review, versioning, audit trail, mapping, diff/conflict handling, and latest-published public rendering.
 
-Sprint 05 must not become one large refactor. Each task should be narrow, reviewable, and able to finish independently.
+Sprint 05 must reuse the existing Sprint 04-008 flow. Do not rewrite from zero.
 
-## Important Sprint 05 Rules
+Existing foundations to respect:
+
+- `AdminDesaDocument` already stores uploaded document metadata, status, `aiMappingStatus`, and `aiMappingResult`.
+- Admin Desa LIMITED uploads document.
+- Admin Desa VERIFIED approves LIMITED-uploaded document into `PROCESSING`.
+- Internal Admin reviews, publishes, or marks failed.
+- Existing `draft-mapping` route currently creates manual mapping draft.
+- Existing `publish` route can apply mapping fields to `Desa` and write audit metadata.
+- Existing `DataSource` model exists and should be upgraded/reused where possible.
+- Existing `AdminClaimAudit` exists but is claim/admin-flow oriented; Sprint 05 needs general village data audit coverage.
+
+## Business Rules Finalized For Sprint 05
+
+### Source priority
+
+Initial trust order:
+
+1. Official village/government website or official public source.
+2. Partner government/province source if PantauDesa has cooperation/data access.
+3. Admin Desa direct submission.
+4. Internal admin manual input, but it should still reference a source when possible.
+5. Citizen voice is a signal/report only, not final source of truth.
+
+### Publish authority
+
+- Only Internal Admin can publish final village data to public pages.
+- AI mapping must never auto-publish.
+- Public pages show only latest `PUBLISHED` data.
+
+### Admin Desa document authority
+
+- Admin Desa VERIFIED may approve or reject/return documents uploaded by Admin Desa LIMITED before they enter internal processing.
+- This is not the same as final data publish authority.
+- Internal Admin remains final reviewer/publisher for public village data.
+
+### Correction flow
+
+- Admin Desa can submit correction/upload replacement when data is wrong.
+- If Admin Desa disagrees with a more trusted source, the correction should be handled as a source/correction workflow, not automatic override.
+
+### Public data rules
+
+- Do not show draft, rejected, in-review, or conflicted data as final public data.
+- Do not use dummy data as public real data.
+- Use honest empty states when reviewed/published data is unavailable.
+
+## Global Guardrails
 
 Do not:
 
 - merge unfinished work to `main`
 - change Sprint 04-008 business logic without strong reason and owner approval
-- create DB migration/index without evidence and owner approval
 - change production `DATABASE_URL`
-- install Prisma Accelerate or observability packages without a separate owner decision
+- install paid/complex third-party tooling without owner approval
 - bypass auth/permission for performance
 - add persistent cache for sensitive back-office data
 - move sensitive back-office fetching to client
-- log PII, credentials, document content, DB URLs, or tokens
-- show dummy data as if it were real public data
-- publish admin-desa input automatically just because it came from an admin desa
+- log PII, credentials, document content, DB URLs, tokens, or storage keys
+- auto-publish AI/admin-desa data
+- hard-delete data versions or audit logs
 
-Rules for public data:
+Schema/migration rule:
 
-- public data must come from reviewed/published data
-- public pages must not show draft, rejected, in-review, or conflicted data as final data
-- admin desa input remains reviewable and rejectable
-- if admin desa data conflicts with a more credible source, internal admin may select the more credible source
-- if admin desa disagrees, direct them to correction/objection flow, not automatic override
-- MVP public pages show only the latest published version
-- version history remains available for audit/internal review
-- important actions must have audit trail
+- Schema proposals are allowed.
+- Draft migrations are allowed only if explicitly marked as proposal/dev-only.
+- Do not apply production/shared DB migration until owner review and approval.
+- Existing temp migration work can be reviewed as input, but not blindly applied.
+
+Third-party/library rule:
+
+- Free/open-source libraries may be evaluated for extraction, mapping, diff, and observability.
+- Before adopting a package, verify license, maintenance, bundle/runtime fit, Vercel compatibility, Windows local compatibility, and security risk.
+- Prefer adapter boundaries so libraries/providers can be replaced later.
 
 ---
 
 # Priority Map
 
-## P0 — Must do before heavy Sprint 05 implementation
-
-These reduce risk before new data workflows add more back-office volume.
+## P0 — Sprint setup and risk reduction
 
 | Order | Task | Why first | Blocks |
 |---:|---|---|---|
-| 1 | S05-001 Perf Trace Lifecycle / Guarded Diagnostics Decision | Prevents noisy/unsafe tracing before more perf work | safer diagnostics for all later perf tasks |
-| 2 | S05-002 Homepage Read-path Follow-up | Homepage is the next public performance unknown from Sprint 04 closeout | informs public read-path cleanup |
-| 3 | S05-003 Windows Local Runtime / Build Stability | Prevents false build/runtime regressions during Sprint 05 | improves QA reliability |
-| 4 | S05-004 Back-office Warm-path Watch | Ensures new data workflow will not worsen 5–10s back-office loads | gate before large internal queues |
+| 1 | S05-001 Observability Strategy & OTel Spike | Manual source logs are not enough for traffic/cold/warm/RSC tracing | monitoring decision for Sprint 05 |
+| 2 | S05-002 Homepage/Public Read-path Monitoring | Homepage/public routes need real trace visibility, not only console logs | public read-path cleanup |
+| 3 | S05-003 Type Safety Cleanup for Mapping/Perf Runtime | Auto mapping needs safe JSON/file/AI result boundaries | mapping, diff, publish safety |
 
-## P1 — Data foundation design, no migration yet
-
-These are schema/product architecture tasks and should be finished before implementation.
+## P1 — Product/data governance foundation
 
 | Order | Task | Why here | Blocks |
 |---:|---|---|---|
-| 5 | S05-005 MVP Village Data Field Catalog | Defines what data Sprint 05 manages | all data model work |
-| 6 | S05-006 Data Source Registry Proposal | Defines traceable source identity and source credibility | versioning, conflict, mapping |
-| 7 | S05-007 Data Quality Rules Proposal | Defines valid data before review/publish | mapping, review, public rendering |
-| 8 | S05-008 Village Data Versioning Proposal | Defines draft/review/published history | public rendering, audit trail |
-| 9 | S05-009 Data Audit Trail Proposal | Defines required logging for important actions | mapping/review/publish implementation |
+| 4 | S05-004 Data Governance & Permission Matrix | Locks source priority, publish authority, admin desa verified authority | all data workflow tasks |
+| 5 | S05-005 MVP Village Data Field Catalog | Defines what fields Sprint 05 manages | source/version/quality/mapping |
+| 6 | S05-006 Data Source Registry Upgrade Plan | Reuses/upgrades existing `DataSource` for traceability | versioning, diff, conflict |
+| 7 | S05-007 Data Quality Rules | Defines valid data before review/publish | mapping and public rendering |
+| 8 | S05-008 Village Data Versioning Proposal | Prevents direct overwrite of public data without history | public latest rendering |
+| 9 | S05-009 General Data Audit Trail Proposal | Makes important data actions traceable | publish/conflict/manual override |
 
-## P2 — Workflow implementation planning
-
-These depend on P1 outputs. Do not implement before the foundation is accepted.
-
-| Order | Task | Depends on | Blocks |
-|---:|---|---|---|
-| 10 | S05-010 Document-to-Data Mapping Pipeline Plan | S05-005, S05-006, S05-007, S05-008, S05-009 | review queue, conflict handling |
-| 11 | S05-011 Data Conflict Resolution Plan | S05-006, S05-007, S05-008, S05-009 | public data correctness |
-| 12 | S05-012 Internal Data Review Queue Plan | S05-010, S05-011 | internal-admin execution UX |
-
-## P3 — Public rendering and QA
-
-These should happen after data states, versions, source rules, and review workflow are clear.
+## P2 — Core workflow MVP
 
 | Order | Task | Depends on | Blocks |
 |---:|---|---|---|
-| 13 | S05-013 Public Data Completeness & Quality UX | S05-005, S05-007, S05-008 | public village rendering |
-| 14 | S05-014 Public Village Data Rendering | S05-008, S05-011, S05-013 | public release readiness |
-| 15 | S05-015 Public Page Server-first Cleanup Continuation | S05-014 where data pages overlap | public performance polish |
-| 16 | S05-016 QA Seed Data for Data Workflow | S05-010, S05-011, S05-014 | regression testing |
-| 17 | S05-017 QA, Regression, and Documentation | all implementation tasks | sprint closeout |
+| 10 | S05-010 Document Intake & Auto Mapping Adapter | S05-004 to S05-009 | diff/review workbench |
+| 11 | S05-011 Structured Value Diff / Conflict Engine | S05-005 to S05-010 | review and public correctness |
+| 12 | S05-012 Internal Data Review Workbench | S05-010, S05-011 | publish/reject workflow |
 
-## P4 — Owner decision only
+## P3 — Public output and QA
 
-| Order | Task | When to do |
-|---:|---|---|
-| 18 | S05-018 Back-office Connection Strategy Decision Gate | only if Preview/Staging evidence becomes available |
+| Order | Task | Depends on | Blocks |
+|---:|---|---|---|
+| 13 | S05-013 Public Data Completeness & Empty State | S05-005, S05-007, S05-008 | public rendering UX |
+| 14 | S05-014 Public Latest Published Rendering | S05-008, S05-011, S05-013 | public release readiness |
+| 15 | S05-015 QA Seed Data for Data Workflow | S05-010 to S05-014 | regression testing |
+| 16 | S05-016 QA, Regression, and Documentation | all Sprint 05 implementation tasks | sprint closeout |
+
+## Explicitly excluded from active Sprint 05
+
+- Back-office Warm-path Watch is excluded from active Sprint 05 unless a clear regression appears.
+- Back-office connection strategy/production `DATABASE_URL` decision is excluded unless deployed Preview/Staging evidence becomes available.
+- Large analytics dashboard is excluded. Sprint 05 needs work queues and review workflows.
 
 ---
 
 # Ordered Sprint 05 Task Details
 
-## S05-001 — Perf Trace Lifecycle / Guarded Diagnostics Decision
+## S05-001 — Observability Strategy & OTel Spike
 
 **Priority:** P0  
-**Type:** docs + small cleanup if needed  
+**Type:** spike + architecture decision  
 **Dependency:** none
 
 **Goal**  
-Decide which Sprint 04 perf traces remain as guarded diagnostics and which should be removed before Sprint 05 adds more work.
+Decide how PantauDesa will observe real route/server performance beyond source-code console logs.
+
+**Rationale**  
+Sprint 04 showed console perf logs are useful but not enough. Sprint 05 needs visibility into request traces, route timings, server spans, cold/warm behavior, and public/back-office read paths.
 
 **Scope**
 
-- Inventory current perf logs in:
-  - `src/lib/perf.ts`
-  - admin-desa routes/data readers
-  - internal-admin routes/data readers
-  - public suara/desa detail reads
-  - homepage if later tracing is added
-- Classify each trace:
-  - keep permanently guarded
-  - keep temporarily until task closure
-  - remove now
-- Ensure retained logs are gated by development mode or explicit env flag.
-- Ensure no log emits PII, document content, DB URL, token, or raw query params.
+- Evaluate OpenTelemetry for Next.js as the primary instrumentation path.
+- Evaluate a low-cost/free backend option such as New Relic, Sentry Performance, Vercel Observability, Grafana/OTel collector, or another viable provider.
+- Do not assume current free tier details; verify before adoption.
+- Compare options by:
+  - free tier availability
+  - ease of setup
+  - Vercel compatibility
+  - Next.js route/server span support
+  - DB/request trace usefulness
+  - whether Codex/Claude can inspect exported traces/logs from reports or artifacts
+  - risk of leaking sensitive data
+- Recommend one minimal path for Sprint 05.
+
+**Out of scope**
+
+- paid Datadog/New Relic adoption without owner approval
+- broad observability platform migration
+- logging secrets or raw DB URLs
 
 **Acceptance Criteria**
 
-- trace inventory documented
-- removal/keep list agreed in BMAD
-- no long-lived production-facing debug endpoint
-- QA commands recorded if code changes occur
+- observability recommendation exists
+- OTel feasibility is documented
+- provider choice or defer decision is documented
+- no third-party package installed unless owner approves within the task
+- no sensitive data logged
 
 ---
 
-## S05-002 — Homepage Read-path Follow-up
+## S05-002 — Homepage/Public Read-path Monitoring
 
 **Priority:** P0  
 **Type:** instrumentation + evidence  
 **Dependency:** S05-001 recommended
 
 **Goal**  
-Split homepage timing so we know whether the cost is from `getDesaListResult()`, aggregation/composition, cache behavior, or render work.
+Measure homepage and key public route read paths using the selected observability approach, with guarded source-code logs only as fallback.
 
 **Scope**
 
-- Inspect homepage route and related data readers.
-- Add/reuse guarded perf timings for:
-  - homepage route start/end
+- Target routes:
+  - `/`
+  - `/desa`
+  - `/desa/[id]`
+  - `/suara-warga` if relevant
+- Trace or measure:
+  - route start/end
   - `getDesaListResult()`
   - homepage aggregation/composition
+  - public cache hit/miss behavior where visible
   - serialization/mapping if present
-- Measure cold and warm local production mode.
-- Recommend server-first/cache cleanup only if evidence supports it.
+- Record cold/warm local production mode if deployed traces are unavailable.
 
 **Acceptance Criteria**
 
-- homepage timing breakdown documented
-- bottleneck classified as query/read, aggregation, render, cache, or inconclusive
-- no PII in logs
+- homepage/public timing breakdown exists
+- bottleneck classified as query/read, aggregation, render, cache, network/runtime, or inconclusive
+- no PII in traces/logs
+- QA commands recorded if code changes occur
+
+---
+
+## S05-003 — Type Safety Cleanup for Mapping/Perf Runtime
+
+**Priority:** P0  
+**Type:** code cleanup + safety  
+**Dependency:** none
+
+**Goal**  
+Make runtime boundaries safer before auto mapping handles file extraction, JSON, AI results, and diff payloads.
+
+**Important interpretation**  
+Do not blindly remove all `unknown`. `unknown` is acceptable at external boundaries if it is narrowed safely. The target is unsafe `unknown`/`any` usage, weak casts, and untyped JSON payloads that can leak into publish/update logic.
+
+**Scope**
+
+- Review mapping/perf/runtime files, especially:
+  - `src/lib/admin-claim/ai-mapping.ts`
+  - internal-admin document publish/draft mapping routes
+  - perf/Prisma event helper payloads
+  - JSON parsing around `aiMappingResult`
+- Replace unsafe casts with explicit guards or typed validators.
+- Define stable types for mapping draft/result/diff payload.
+- Keep behavior unchanged unless a type bug is found.
+
+**Out of scope**
+
+- business logic changes
+- schema change
+- AI provider integration
+
+**Acceptance Criteria**
+
+- unsafe type boundaries documented/fixed
+- no broad `as any` or weak `unknown` cast in mapping publish path without guard
 - `npm run lint`, `npx tsc --noEmit`, `npm run build` recorded
 
 ---
 
-## S05-003 — Windows Local Runtime / Build Stability
+## S05-004 — Data Governance & Permission Matrix
 
-**Priority:** P0  
-**Type:** DX/runbook  
+**Priority:** P1  
+**Type:** product/business rules + technical policy  
 **Dependency:** none
 
 **Goal**  
-Separate Windows local operational failures from actual app/build failures and create a reliable local DX runbook.
+Lock the business rules before data model/workflow implementation.
 
 **Scope**
 
-- Collect/classify exact failure signatures:
-  - `EPERM`
-  - `spawn EPERM`
-  - Prisma query engine / DLL lock issues
-  - Turbopack NFT warnings if still present
-- Document safe cleanup steps:
-  - stop Node/Next processes
-  - clear `.next` only when safe
-  - regenerate Prisma client only when needed
-  - restart terminal/IDE when locks persist
-- Do not hide real build failures as Windows-only noise.
+Document the matrix for:
+
+- source priority:
+  1. official website/public official source
+  2. partner government/province source
+  3. admin desa submission
+  4. internal admin manual input with source reference
+  5. citizen voice as signal only
+- role permissions:
+  - Internal Admin can publish final village data.
+  - Internal Admin can reject final data/mapping and resolve conflicts.
+  - Admin Desa VERIFIED can approve/reject or return documents uploaded by Admin Desa LIMITED before internal processing.
+  - Admin Desa can submit correction/upload replacement, not directly publish public data.
+  - Citizen voice can signal potential issue, not publish data.
+- correction flow:
+  - upload ulang / submit correction
+  - clear rejection reason
+  - source/correction trail retained
 
 **Acceptance Criteria**
 
-- Windows build/runtime runbook exists
-- known operational failures classified
-- QA guidance explains pass/fail vs blocked
-
----
-
-## S05-004 — Back-office Warm-path Watch
-
-**Priority:** P0  
-**Type:** measurement + small safe cleanup only  
-**Dependency:** S05-001 recommended
-
-**Goal**  
-Keep back-office warm-path cost visible before new Sprint 05 data workflows add more internal admin load.
-
-**Priority targets**
-
-1. Admin Desa `list-admin`
-2. Admin Desa `dokumen`
-3. Internal Admin `claims/documents/renewals`
-4. Admin Desa shell/layout context reuse
-
-**Scope**
-
-- Confirm current warm timings after Sprint 04 closeout.
-- Keep/refine request-level dedupe where safe.
-- Remove eager prefetch only where measurable noise remains.
-- Ensure pages do not duplicate `auth()` / context work unnecessarily.
-
-**Out of scope**
-
-- production `DATABASE_URL` change
-- Prisma Accelerate
-- region migration
-- DB index/migration
-- business-flow changes: approval/reject, admin role/status, upload, notification, claim verification, renewal
-
-**Acceptance Criteria**
-
-- before/after timing table for target pages
-- no business logic diff
-- mobile back-office layout remains intact
-- QA commands recorded
+- permission matrix exists
+- source priority exists
+- existing Sprint 04-008 document approval flow is respected
+- no business logic change in this task unless explicitly scoped
 
 ---
 
@@ -241,14 +298,14 @@ Keep back-office warm-path cost visible before new Sprint 05 data workflows add 
 
 **Priority:** P1  
 **Type:** product/data design  
-**Dependency:** none
+**Dependency:** S05-004 recommended
 
 **Goal**  
 Define exactly which village data fields Sprint 05 will manage first.
 
 **Scope**
 
-- Review existing village/desa data models.
+- Review existing `Desa`, `DataSource`, `AnggaranDesaSummary`, `APBDesItem`, `DokumenPublik`, and `PerangkatDesa` models.
 - Define MVP fields by category:
   - Profil desa
   - Wilayah
@@ -259,73 +316,68 @@ Define exactly which village data fields Sprint 05 will manage first.
   - Fasilitas
   - Potensi desa
   - Kontak/kanal resmi
-- Mark each field as public/private, required/optional, and time-sensitive/non-time-sensitive.
-- Define which fields are allowed in MVP public rendering.
+- Mark each field as:
+  - public/private
+  - required/optional
+  - time-sensitive/non-time-sensitive
+  - mappable from document or manual only
+  - source required or optional
 
 **Acceptance Criteria**
 
 - MVP village data field list exists
-- each field has category, visibility, required/optional, and owner/reviewer note
+- each field has category, visibility, required/optional, and source requirement
 - no migration in this task
 
 ---
 
-## S05-006 — Data Source Registry Proposal
+## S05-006 — Data Source Registry Upgrade Plan
 
 **Priority:** P1  
 **Type:** data model proposal  
-**Dependency:** S05-005
+**Dependency:** S05-004, S05-005
 
 **Goal**  
-Create a source registry concept so every important village data point can be traced to its origin.
+Upgrade/reuse the existing `DataSource` concept so every important village data point can be traced to its origin.
 
 **Scope**
 
-- Propose `DataSource` model/concept.
-- Support source origins:
-  - uploaded document
+- Review existing `DataSource` model before proposing new fields.
+- Propose whether to extend existing fields or add related source-detail tables.
+- Support origins:
+  - document upload
   - admin desa input
-  - manual internal-admin input
+  - internal admin input
   - official website
-  - government source
-  - citizen voice if relevant
-  - system-generated source
-- Store source metadata:
+  - government/partner source
+  - citizen voice signal
+  - system generated
+- Define source metadata:
   - source type
   - source URL/file reference
   - uploader/inputter
   - source date
   - confidence/credibility
   - review status
-  - internal-admin note
-
-**Suggested `sourceType`**
-
-- `DOCUMENT_UPLOAD`
-- `ADMIN_DESA_INPUT`
-- `INTERNAL_ADMIN_INPUT`
-- `OFFICIAL_WEBSITE`
-- `GOVERNMENT_SOURCE`
-- `CITIZEN_VOICE`
-- `SYSTEM_GENERATED`
+  - internal admin note
 
 **Acceptance Criteria**
 
-- `DataSource` proposal exists
-- relationship proposal between `DataSource` and village data exists
-- initial source priority rules exist
-- admin desa data is not automatically final/published
+- source registry upgrade plan exists
+- relationship between data source and village data/version is clear
+- admin desa source is not automatically final/published
+- migration remains proposal only unless owner approves
 
 ---
 
-## S05-007 — Data Quality Rules Proposal
+## S05-007 — Data Quality Rules
 
 **Priority:** P1  
 **Type:** validation design  
 **Dependency:** S05-005, S05-006
 
 **Goal**  
-Define validation rules so manual input and AI mapping cannot publish arbitrary data.
+Define validation rules so manual input and auto mapping cannot publish arbitrary data.
 
 **Scope**
 
@@ -336,8 +388,12 @@ Define validation rules so manual input and AI mapping cannot publish arbitrary 
   - format
   - stale threshold if relevant
   - allowed source type
-- Cover admin desa input, AI mapping result, and internal-admin input.
-- Define clear error message style.
+- Cover:
+  - admin desa input
+  - extracted/mapped data
+  - internal-admin manual input
+  - published version validation
+- Define user-safe error messages.
 
 **Examples**
 
@@ -359,7 +415,7 @@ Define validation rules so manual input and AI mapping cannot publish arbitrary 
 
 **Priority:** P1  
 **Type:** data model proposal  
-**Dependency:** S05-005, S05-006
+**Dependency:** S05-005, S05-006, S05-007
 
 **Goal**  
 Store village data change history so every change is auditable and public pages only show the latest published version.
@@ -367,15 +423,16 @@ Store village data change history so every change is auditable and public pages 
 **Scope**
 
 - Propose versioning concept for village data.
-- Every update creates a new version.
+- Avoid direct overwrite-only publish flow for public data.
+- Every update creates a new version or revision record.
 - Old versions are not deleted.
-- Public pages only display latest published version.
+- Public pages only display latest `PUBLISHED` version.
 - Internal admin can inspect change history.
-- Admin desa can see if their input was rejected or replaced by a more credible source.
+- Admin desa can see if submitted data was rejected/replaced.
 
 **Suggested fields**
 
-- `villageId` / `desaId`
+- `desaId`
 - `versionNumber`
 - `status`: `DRAFT` / `IN_REVIEW` / `PUBLISHED` / `REJECTED` / `ARCHIVED`
 - `sourceId`
@@ -390,21 +447,21 @@ Store village data change history so every change is auditable and public pages 
 
 **Acceptance Criteria**
 
-- data version concept exists
+- versioning proposal exists
 - latest published can be distinguished from draft/rejected
-- history remains stored
 - no hard delete for old versions
+- relationship to existing `Desa` fields is clear
 
 ---
 
-## S05-009 — Data Audit Trail Proposal
+## S05-009 — General Data Audit Trail Proposal
 
 **Priority:** P1  
 **Type:** data governance proposal  
-**Dependency:** S05-006, S05-008
+**Dependency:** S05-004, S05-008
 
 **Goal**  
-Record every important action related to village data.
+Define a general audit trail for village data actions, beyond the current admin-claim-oriented audit log.
 
 **Scope**
 
@@ -417,8 +474,9 @@ Audit trail for:
 - publish data
 - archive data
 - resolve conflict
-- AI mapping result
+- auto mapping result
 - manual internal-admin override
+- verified-admin document approve/reject for limited uploads
 
 Audit metadata:
 
@@ -437,134 +495,157 @@ Audit metadata:
 
 **Acceptance Criteria**
 
-- important actions are recorded in proposal
-- audit trail is not hard-deleted casually
+- general data audit proposal exists
+- important actions are covered
+- audit log is not hard-deleted casually
 - data version and audit log can be cross-referenced
 
 ---
 
-## S05-010 — Document-to-Data Mapping Pipeline Plan
+## S05-010 — Document Intake & Auto Mapping Adapter
 
 **Priority:** P2  
-**Type:** workflow design  
-**Dependency:** S05-005, S05-006, S05-007, S05-008, S05-009
+**Type:** implementation plan + MVP implementation if approved  
+**Dependency:** S05-004 to S05-009
 
 **Goal**  
-Define the flow for turning uploaded village documents into structured data that is reviewed before publish.
+Upgrade the existing manual `draft-mapping` flow into an adapter-based intake and auto-mapping draft pipeline.
+
+**Supported MVP inputs**
+
+- TXT
+- DOCX
+- Excel/XLSX
+- PDF text-based
+- manual internal-admin paste/input
+
+**Defer**
+
+- scanned PDF OCR
+- fully automatic government crawling
+- auto-publish
+- complex semantic conflict resolution without human review
+
+**Candidate free/open-source libraries to evaluate**
+
+- PDF text extraction: `pdf-parse` or `pdfjs-dist`
+- DOCX extraction: `mammoth`
+- Excel extraction: `xlsx`
+- CSV if needed: `papaparse`
+- TXT: native parsing
+
+Package adoption must pass license, maintenance, runtime, Windows, Vercel, and security checks.
 
 **Target flow**
 
 ```text
-Upload document -> processing -> AI mapping draft -> internal admin review -> approve/publish data version -> public page
+source file/input
+-> extract text/table
+-> normalize to candidate fields
+-> validate with data quality rules
+-> save mapping draft
+-> do not publish automatically
 ```
 
-**Scope**
-
-- Map documents to MVP village data fields.
-- AI may create draft mapping.
-- Internal admin remains final decision maker.
-- Failed mapping must have clear reason.
-- Data conflict enters conflict review.
-- AI result must not auto-publish.
-
-**Statuses**
-
-- `PROCESSING`
-- `AI_DRAFT_READY`
-- `NEEDS_REVIEW`
-- `PUBLISHED`
-- `FAILED`
-- `REJECTED`
-
 **Acceptance Criteria**
 
-- documents can produce structured data drafts in the plan
-- AI mapping result does not auto-publish
-- internal-admin review/correction is defined
-- published data creates a new version
+- adapter interface is defined
+- at least one low-risk input path is proven or planned clearly
+- mapping result uses typed payload
+- failed extraction/mapping has clear reason
+- AI/auto mapping result remains draft only
 
 ---
 
-## S05-011 — Data Conflict Resolution Plan
+## S05-011 — Structured Value Diff / Conflict Engine
 
 **Priority:** P2  
-**Type:** workflow/business rule design  
-**Dependency:** S05-006, S05-007, S05-008, S05-009
+**Type:** implementation plan + MVP implementation if approved  
+**Dependency:** S05-005 to S05-010
 
 **Goal**  
-Handle conflicting data from multiple sources so PantauDesa chooses the most credible data.
+Compare incoming mapped values against existing latest published values and identify identical/changed/conflicting fields like a structured git diff.
 
-**Business rule**  
-Admin desa can be wrong. If admin desa data is inaccurate, internal admin may reject it and choose a more trusted source. If admin desa disagrees, direct them to submit correction/objection to the relevant source or correction flow.
+**Diff statuses**
+
+- `IDENTICAL`
+- `NEW_FIELD`
+- `UPDATED`
+- `CONFLICT`
+- `MISSING_IN_NEW_SOURCE`
+- `INVALID`
 
 **Scope**
 
-- Detect conflicts:
-  - different values for the same field
-  - different sources
-  - different source dates
-  - different confidence levels
-- Define conflict statuses:
-  - `NO_CONFLICT`
-  - `CONFLICT_DETECTED`
-  - `UNDER_REVIEW`
-  - `RESOLVED`
-  - `REJECTED`
-- Internal admin can choose the data to use.
-- Rejection must include clear reason.
-- Store the reason for selected source/value.
+- Compare field-by-field values.
+- Compare source type/priority.
+- Compare source date/freshness when available.
+- Compare confidence/quality result.
+- Produce review-friendly diff output for internal admin.
+- Do not auto-resolve conflict.
+
+**Candidate free/open-source libraries to evaluate**
+
+- `jsondiffpatch`
+- `fast-json-patch`
+- `deep-diff`
+
+Library adoption must remain replaceable behind internal adapter/helper.
 
 **Acceptance Criteria**
 
-- conflicting data is not auto-published
-- internal admin can select the most valid source
-- conflict resolution reason is stored
-- admin desa receives clear information if their input is rejected
+- diff payload type is defined
+- identical vs changed vs conflict can be shown clearly
+- conflict is not auto-published
+- reason/context for conflict is retained
 
 ---
 
-## S05-012 — Internal Data Review Queue Plan
+## S05-012 — Internal Data Review Workbench
 
 **Priority:** P2  
-**Type:** internal-admin UX/workflow design  
+**Type:** internal-admin UX/workflow implementation plan + MVP if approved  
 **Dependency:** S05-010, S05-011
 
 **Goal**  
-Create a focused internal-admin work queue for data review. This is not a large analytics dashboard.
+Create a focused internal-admin workbench for mapping drafts, diffs, conflicts, approve/reject, and publish. This is not a large analytics dashboard.
 
 **Scope**
 
 Internal admin can see:
 
-- newly submitted data
-- AI mapping results
-- data conflicts
-- data needing approve/reject
-- data ready to publish
-- failed mapping data
+- mapped draft data
+- extraction/mapping failure reason
+- source metadata
+- field-level diff
+- conflict status
+- approve/publish action
+- reject/fail action with reason
+- request correction/upload replacement path if applicable
 
 Filters:
 
 - source type
 - status
 - desa
-- confidence
+- confidence/quality status
 - conflict status
 - created date
 
 **Acceptance Criteria**
 
-- internal admin has a clear data work queue plan
-- approve/reject paths are defined
-- source and reason visibility is defined
-- no large analytics dashboard required
+- internal admin has clear workbench plan or MVP
+- approve/reject/publish paths are defined
+- diff and source visibility are defined
+- no broad analytics dashboard required
+- mobile-friendly back-office standard remains respected
 
 ---
 
-## S05-013 — Public Data Completeness & Quality UX
+## S05-013 — Public Data Completeness & Empty State
 
 **Priority:** P3  
-**Type:** public UX/data quality design  
+**Type:** public UX/data quality  
 **Dependency:** S05-005, S05-007, S05-008
 
 **Goal**  
@@ -572,10 +653,11 @@ Track village data completeness and prevent public pages from showing fake/dummy
 
 **Scope**
 
-- Calculate data completeness per village.
+- Calculate completeness per village/category.
 - Mark empty fields.
 - Show honest empty states when data is unavailable.
 - Prioritize important fields for completion.
+- Do not expose confusing internal confidence details to public users unless copy is approved.
 
 **Initial completeness categories**
 
@@ -591,14 +673,14 @@ Track village data completeness and prevent public pages from showing fake/dummy
 
 **Acceptance Criteria**
 
-- data completeness indicator is defined
+- data completeness indicator is defined or implemented
 - empty state is honest and clear
-- public data only comes from valid/reviewed sources
+- public data only comes from valid/reviewed/published source
 - no dummy data appears as real public data
 
 ---
 
-## S05-014 — Public Village Data Rendering
+## S05-014 — Public Latest Published Rendering
 
 **Priority:** P3  
 **Type:** public rendering implementation plan / implementation if approved  
@@ -611,7 +693,7 @@ Public village pages render only the latest published village data version.
 
 - Read latest published village data version.
 - Render public data by category.
-- Show data source if needed.
+- Show source attribution where useful and understandable.
 - Do not show draft/in-review/rejected data.
 - Show honest empty state if data is incomplete.
 - Do not show conflicted data as final.
@@ -625,48 +707,13 @@ Public village pages render only the latest published village data version.
 **Acceptance Criteria**
 
 - public page does not use dummy data
-- rendered data can be traced to source/version
+- rendered data can be traced to source/version internally
 - latest published data renders consistently
-- draft/rejected data does not leak to public pages
+- draft/rejected/conflicted data does not leak to public pages
 
 ---
 
-## S05-015 — Public Page Server-first Cleanup Continuation
-
-**Priority:** P3  
-**Type:** public performance cleanup  
-**Dependency:** S05-014 where public village data overlaps
-
-**Goal**  
-Continue Sprint 04 server-first/cached treatment for public surfaces that still depend on client-first or heavy dynamic reads.
-
-**Candidate surfaces**
-
-- `/`
-- `/desa`
-- `/desa/[id]`
-- `/suara`
-- `/suara-warga`
-- any public profile/detail pages that fetch immediately after mount
-
-**Scope**
-
-- Inventory public pages that perform client fetch on mount for first render.
-- Separate public-safe data from user/session-sensitive data.
-- Convert only public-safe first-render data to server-first reads.
-- Use existing cache patterns where appropriate.
-- Keep interactive client behavior after first render.
-
-**Acceptance Criteria**
-
-- public page inventory documented
-- 1–3 small implementation tasks proposed or completed
-- sensitive/private data boundaries documented
-- QA commands recorded for any implementation
-
----
-
-## S05-016 — QA Seed Data for Data Workflow
+## S05-015 — QA Seed Data for Data Workflow
 
 **Priority:** P3  
 **Type:** QA data plan / seed implementation if approved  
@@ -684,7 +731,8 @@ Seed data for:
 - village with conflicting data
 - document with successful mapping
 - document with failed mapping
-- rejected admin desa input
+- rejected/returned limited-admin document
+- rejected admin desa submitted correction
 - old and new published versions
 - QA-only government/official source
 - sample audit trail
@@ -704,22 +752,23 @@ Seed data for:
 
 ---
 
-## S05-017 — QA, Regression, and Documentation
+## S05-016 — QA, Regression, and Documentation
 
 **Priority:** P3  
 **Type:** QA closeout  
-**Dependency:** all implementation tasks
+**Dependency:** all Sprint 05 implementation tasks
 
 **Goal**  
 Verify the data foundation flow without regressing Sprint 04-008 admin flows.
 
 **Scope**
 
-- Test upload document -> mapping -> review -> publish.
-- Test conflict resolution.
+- Test limited admin upload -> verified admin approve/reject/return.
+- Test document intake -> mapping draft -> diff -> internal review -> publish.
+- Test conflict detection and manual resolution path.
 - Test versioning.
 - Test public latest published rendering.
-- Test rejection reason.
+- Test rejection/failure reason.
 - Test audit trail.
 - Test empty state.
 - Test mobile back office.
@@ -736,104 +785,72 @@ Verify the data foundation flow without regressing Sprint 04-008 admin flows.
 **Acceptance Criteria**
 
 - no regression to existing admin desa/internal-admin flows
-- public data does not leak draft/rejected data
+- public data does not leak draft/rejected/conflicted data
 - audit trail records important actions
 - versioning works
 - BMAD documentation updated
 
 ---
 
-## S05-018 — Back-office Connection Strategy Decision Gate
-
-**Priority:** P4  
-**Type:** owner decision gate  
-**Dependency:** Preview/Staging evidence availability
-
-**Goal**  
-Turn connection strategy into an owner decision only after deployed evidence exists.
-
-**Scope**
-
-- Validate branch-preview fast-path candidate if Preview deployment is available.
-- Compare cold/warm target route timing against Sprint 04-008K local production baseline.
-- Prepare go/no-go recommendation for:
-  - production `DATABASE_URL` strategy change
-  - Prisma Accelerate evaluation
-  - Supabase Singapore migration evaluation
-
-**Out of scope**
-
-- changing production `DATABASE_URL` inside this task
-- Prisma Accelerate install
-- region migration
-- DB index/migration
-
-**Acceptance Criteria**
-
-- deployed evidence exists or blocker is documented
-- production rollout task is created only if owner approves
-- no secrets exposed
-
----
-
-# Execution Rules By Dependency
+# Dependency Rules
 
 ## Start here
 
-Start with **S05-001**, then **S05-002** and **S05-003**. These do not depend on the data model.
+Start with S05-001 to S05-003. These reduce instrumentation and runtime safety risk before data workflow work.
 
-## Do not start implementation before these are accepted
+## Do not start workflow implementation before these are accepted
 
-Do not implement mapping/review/public data rendering until these are owner-reviewed:
+Do not implement mapping/review/public rendering until these are owner-reviewed:
 
-1. S05-005 MVP Village Data Field Catalog
-2. S05-006 Data Source Registry Proposal
-3. S05-007 Data Quality Rules Proposal
-4. S05-008 Village Data Versioning Proposal
-5. S05-009 Data Audit Trail Proposal
+1. S05-004 Data Governance & Permission Matrix
+2. S05-005 MVP Village Data Field Catalog
+3. S05-006 Data Source Registry Upgrade Plan
+4. S05-007 Data Quality Rules
+5. S05-008 Village Data Versioning Proposal
+6. S05-009 General Data Audit Trail Proposal
 
-## Do not start public rendering before conflict rules exist
+## Do not start public rendering before conflict/diff rules exist
 
-S05-014 Public Village Data Rendering depends on S05-011 Conflict Resolution Plan. Public pages must not leak draft, rejected, or conflicted data.
+S05-014 Public Latest Published Rendering depends on S05-011 Structured Value Diff / Conflict Engine. Public pages must not leak draft, rejected, or conflicted data.
 
-## Do not start QA seed data before workflow statuses are clear
+## Do not start QA seed data before statuses are clear
 
-S05-016 QA Seed Data depends on S05-010/S05-011/S05-014 so seed cases match actual statuses and public rendering rules.
+S05-015 QA Seed Data depends on S05-010/S05-011/S05-014 so seed cases match actual statuses and public rendering rules.
 
 ---
 
 # Recommended Execution Order
 
-1. S05-001 Perf Trace Lifecycle / Guarded Diagnostics Decision
-2. S05-002 Homepage Read-path Follow-up
-3. S05-003 Windows Local Runtime / Build Stability
-4. S05-004 Back-office Warm-path Watch
+1. S05-001 Observability Strategy & OTel Spike
+2. S05-002 Homepage/Public Read-path Monitoring
+3. S05-003 Type Safety Cleanup for Mapping/Perf Runtime
+4. S05-004 Data Governance & Permission Matrix
 5. S05-005 MVP Village Data Field Catalog
-6. S05-006 Data Source Registry Proposal
-7. S05-007 Data Quality Rules Proposal
+6. S05-006 Data Source Registry Upgrade Plan
+7. S05-007 Data Quality Rules
 8. S05-008 Village Data Versioning Proposal
-9. S05-009 Data Audit Trail Proposal
-10. S05-010 Document-to-Data Mapping Pipeline Plan
-11. S05-011 Data Conflict Resolution Plan
-12. S05-012 Internal Data Review Queue Plan
-13. S05-013 Public Data Completeness & Quality UX
-14. S05-014 Public Village Data Rendering
-15. S05-015 Public Page Server-first Cleanup Continuation
-16. S05-016 QA Seed Data for Data Workflow
-17. S05-017 QA, Regression, and Documentation
-18. S05-018 Back-office Connection Strategy Decision Gate, only if Preview/Staging evidence becomes available
+9. S05-009 General Data Audit Trail Proposal
+10. S05-010 Document Intake & Auto Mapping Adapter
+11. S05-011 Structured Value Diff / Conflict Engine
+12. S05-012 Internal Data Review Workbench
+13. S05-013 Public Data Completeness & Empty State
+14. S05-014 Public Latest Published Rendering
+15. S05-015 QA Seed Data for Data Workflow
+16. S05-016 QA, Regression, and Documentation
 
-## Not Recommended For Sprint 05 Start
+## Deferred / Not Recommended For Sprint 05 Start
 
-- Starting with DB indexes for back-office performance. Current evidence does not support this as the primary fix.
-- Starting with Prisma Accelerate. It may be useful later, but not before deployed validation.
-- Starting with Supabase region migration. Too risky without staging/production-like evidence.
-- Starting with a large analytics dashboard. Sprint 05 needs work queues and data review, not a broad analytics product.
-- Publishing AI-mapped data automatically. Internal admin remains final reviewer.
+- Back-office Warm-path Watch unless a clear regression appears.
+- Production `DATABASE_URL`/connection strategy decision unless deployed Preview/Staging evidence becomes available.
+- DB indexes for back-office performance. Current evidence does not support this as the primary fix.
+- Prisma Accelerate as first reaction.
+- Supabase region migration.
+- Large analytics dashboard.
+- Auto-publish AI-mapped data.
 - Treating admin desa input as automatically credible.
-- Starting public rendering before version/source/conflict rules are designed.
+- Starting public rendering before version/source/diff/conflict rules are designed.
 
-# Handoff Prompt For Ujang
+# Handoff Prompt For Ujang — Do Not Use Until Owner Says Start
 
 ```text
 Ujang, pull main and read:
@@ -842,14 +859,21 @@ Ujang, pull main and read:
 - docs/bmad/reports/back-office-performance-audit.md
 - docs/bmad/tasks/sprint-05-000-performance-follow-up-backlog.md
 
-Sprint 05 backlog is now ordered by priority and dependency.
+Sprint 05 is finalized. Start from:
 
-Start from:
-S05-001 Perf Trace Lifecycle / Guarded Diagnostics Decision
+S05-001 Observability Strategy & OTel Spike
 
-Then continue in numeric order unless the task explicitly says it is blocked by missing evidence/access.
+Then continue in numeric order unless a task is explicitly blocked.
 
-Do not ask for a new decision unless a hard blocker appears. Keep scope narrow, no migration/index without owner review, no production DATABASE_URL change, no package install, no sensitive-data logging, and no public dummy data.
+Important:
+- Do not ask for new decisions unless there is a hard blocker.
+- No migration/index without owner review.
+- No production DATABASE_URL change.
+- No paid/complex third-party adoption without owner approval.
+- No sensitive-data logging.
+- No public dummy data.
+- Do not auto-publish AI/admin-desa data.
+- Respect existing Sprint 04-008 flow: LIMITED upload -> VERIFIED approve/reject/return -> Internal Admin review/publish/fail.
 
 Output: BMAD task/report update + QA + guardrails.
 ```
