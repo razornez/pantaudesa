@@ -199,6 +199,8 @@ model Desa {
   apbdesItems       APBDesItem[]
   dokumenPublik     DokumenPublik[]
   adminDocuments    AdminDesaDocument[]
+  villageDataVersions VillageDataVersion[]
+  dataAuditEvents   DesaDataAuditEvent[]
 
   @@index([kecamatan, kabupaten, provinsi])
   @@index([dataStatus])
@@ -455,11 +457,70 @@ model AdminDesaDocument {
 
   desa       Desa  @relation(fields: [desaId], references: [id], onDelete: Cascade)
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  villageDataVersions VillageDataVersion[]
+  dataAuditEvents     DesaDataAuditEvent[]
 
   @@index([desaId])
   @@index([status])
   @@index([uploadedById])
   @@map("admin_desa_documents")
+}
+
+model VillageDataVersion {
+  id                    String                   @id @default(cuid())
+  desaId                String
+  sourceDocumentId      String?
+  versionNumber         Int
+  status                VillageDataVersionStatus @default(REVIEW_READY)
+  title                 String
+  sourceLabel           String?
+  reviewNote            String?                  @db.Text
+  changedFields         String[]
+  proposedSnapshotJson  Json
+  beforeSnapshotJson    Json?
+  publishedSnapshotJson Json?
+  createdByUserId       String?
+  publishedByUserId     String?
+  publishedAt           DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  desa           Desa               @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  sourceDocument AdminDesaDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  dataAuditEvents DesaDataAuditEvent[]
+
+  @@unique([desaId, versionNumber])
+  @@index([desaId, status, createdAt])
+  @@index([sourceDocumentId])
+  @@index([publishedAt])
+  @@map("village_data_versions")
+}
+
+model DesaDataAuditEvent {
+  id                   String   @id @default(cuid())
+  desaId               String
+  sourceDocumentId     String?
+  villageDataVersionId String?
+  actorUserId          String?
+  actorRole            String?
+  eventType            String
+  eventLabel           String?
+  previousStatus       String?
+  nextStatus           String?
+  note                 String?  @db.Text
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  desa               Desa                @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  sourceDocument     AdminDesaDocument?  @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  villageDataVersion VillageDataVersion? @relation(fields: [villageDataVersionId], references: [id], onDelete: SetNull)
+
+  @@index([desaId, createdAt])
+  @@index([sourceDocumentId, createdAt])
+  @@index([villageDataVersionId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("desa_data_audit_events")
 }
 
 // ─── Admin Desa Notifications (Sprint 04-008) ─────────────────────────────────
@@ -588,6 +649,14 @@ enum DataStatus {
   verified
   outdated
   rejected
+}
+
+enum VillageDataVersionStatus {
+  REVIEW_READY
+  PUBLISHED
+  REPLACED
+  REJECTED
+  FAILED
 }
 
 enum SourceType {

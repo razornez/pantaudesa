@@ -23,6 +23,8 @@ export interface AuditPayload {
   userAgent?: string;
   location?: string;
   metadata?: Record<string, unknown>;
+  beforeSnapshotJson?: Record<string, unknown>;
+  afterSnapshotJson?: Record<string, unknown>;
 }
 
 export async function writeAuditEvent(payload: AuditPayload): Promise<void> {
@@ -53,6 +55,12 @@ export async function writeAuditEvent(payload: AuditPayload): Promise<void> {
         ipAddress:                payload.ipAddress,
         userAgent:                payload.userAgent,
         location:                 payload.location,
+        beforeSnapshotJson: payload.beforeSnapshotJson
+          ? JSON.parse(JSON.stringify(payload.beforeSnapshotJson))
+          : undefined,
+        afterSnapshotJson: payload.afterSnapshotJson
+          ? JSON.parse(JSON.stringify(payload.afterSnapshotJson))
+          : undefined,
         metadata: payload.metadata ? JSON.parse(JSON.stringify(payload.metadata)) : undefined,
       },
     });

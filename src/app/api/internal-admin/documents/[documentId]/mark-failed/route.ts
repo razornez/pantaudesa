@@ -5,6 +5,10 @@ import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
+import {
+  failVillageDataVersionForDocument,
+  writeDesaDataAuditEvent,
+} from "@/lib/versioning/village-data-persistence";
 
 // POST /api/internal-admin/documents/:documentId/mark-failed
 // Body: { reason: string }
@@ -64,6 +68,28 @@ export async function POST(
       metadata: { title: doc.title },
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
+    });
+
+    const failedVersion = await failVillageDataVersionForDocument({
+      sourceDocumentId: documentId,
+      reason,
+    });
+
+    await writeDesaDataAuditEvent({
+      desaId: doc.desaId,
+      sourceDocumentId: documentId,
+      villageDataVersionId: failedVersion.id ?? null,
+      actorUserId: session.userId,
+      actorRole: "INTERNAL_ADMIN",
+      eventType: AUDIT_EVENT.INTERNAL_DOCUMENT_FAILED,
+      eventLabel: "Ditandai gagal",
+      previousStatus: doc.status,
+      nextStatus: "FAILED",
+      note: reason,
+      metadata: {
+        title: doc.title,
+        versionNumber: failedVersion.versionNumber ?? null,
+      },
     });
 
     // Notify uploader of failure with the reason.

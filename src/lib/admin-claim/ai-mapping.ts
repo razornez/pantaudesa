@@ -102,12 +102,72 @@ export function sanitizeMappingFields(input: unknown): AiMappingFields {
   return out;
 }
 
+export function createAiMappingDraft(input: {
+  generatedAt?: string;
+  generator?: "manual" | "ai";
+  fields?: unknown;
+  notes?: string | undefined;
+}): AiMappingDraft {
+  const notes = typeof input.notes === "string" ? input.notes.trim().slice(0, 1000) : undefined;
+
+  return {
+    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    generator: input.generator === "ai" ? "ai" : "manual",
+    fields: sanitizeMappingFields(input.fields),
+    ...(notes ? { notes } : {}),
+  };
+}
+
 export function toAiMappingDraftJson(draft: AiMappingDraft): Prisma.InputJsonObject {
   return {
     generatedAt: draft.generatedAt,
     generator: draft.generator,
     fields: draft.fields,
     ...(draft.notes ? { notes: draft.notes } : {}),
+  };
+}
+
+export function readAiMappingDraft(input: unknown): AiMappingDraft | null {
+  if (!isRecord(input)) return null;
+
+  if (isRecord(input.mapping)) {
+    const fields = sanitizeMappingFields(input.mapping.fields);
+    const generatedAt =
+      typeof input.mapping.generatedAt === "string"
+        ? input.mapping.generatedAt
+        : new Date().toISOString();
+    const notes =
+      typeof input.notes === "string"
+        ? input.notes
+        : typeof input.guardrailNote === "string"
+        ? input.guardrailNote
+        : undefined;
+
+    if (Object.keys(fields).length > 0 || notes) {
+      return {
+        generatedAt,
+        generator: "manual",
+        fields,
+        ...(notes ? { notes } : {}),
+      };
+    }
+  }
+
+  const fields = sanitizeMappingFields(input.fields);
+  const generatedAt =
+    typeof input.generatedAt === "string" ? input.generatedAt : new Date().toISOString();
+  const generator = input.generator === "ai" ? "ai" : "manual";
+  const notes = typeof input.notes === "string" ? input.notes : undefined;
+
+  if (Object.keys(fields).length === 0 && !notes) {
+    return null;
+  }
+
+  return {
+    generatedAt,
+    generator,
+    fields,
+    ...(notes ? { notes } : {}),
   };
 }
 

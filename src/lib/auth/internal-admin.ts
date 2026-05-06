@@ -54,13 +54,21 @@ export function unauthorizedInternalAdmin(): NextResponse {
 //   const adminSession = await requireInternalAdminSession(req);
 //   if (adminSession instanceof NextResponse) return adminSession;
 export async function requireInternalAdminSession(): Promise<InternalAdminSession | NextResponse> {
-  const session = await auth();
-  if (!session?.user?.id || !session.user.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth();
+    if (!session?.user?.id || !session.user.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const admin = await isInternalAdmin(session.user.id);
+    if (!admin) {
+      return unauthorizedInternalAdmin();
+    }
+    return { userId: session.user.id, email: session.user.email };
+  } catch (error) {
+    console.error("[internal-admin.auth] require session failed", error);
+    return NextResponse.json(
+      { error: "Sesi login bermasalah. Silakan masuk ulang." },
+      { status: 401 },
+    );
   }
-  const admin = await isInternalAdmin(session.user.id);
-  if (!admin) {
-    return unauthorizedInternalAdmin();
-  }
-  return { userId: session.user.id, email: session.user.email };
 }

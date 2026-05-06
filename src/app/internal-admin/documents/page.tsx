@@ -9,12 +9,13 @@ const ALLOWED = ["WAITING_VERIFIED_APPROVAL", "PROCESSING", "PUBLISHED", "FAILED
 export default async function InternalDocumentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; focus?: string }>;
 }) {
   const params = await searchParams;
   const filter = params.status && (ALLOWED as readonly string[]).includes(params.status)
     ? (params.status as typeof ALLOWED[number])
     : null;
+  const focusDocumentId = typeof params.focus === "string" ? params.focus : "";
 
   if (!db) {
     return (
@@ -41,6 +42,7 @@ export default async function InternalDocumentsPage({
       publishedAt: true,
       failedReason: true,
       aiMappingStatus: true,
+      aiMappingResult: true,
       createdAt: true,
       updatedAt: true,
       desa: { select: { id: true, nama: true, kecamatan: true, kabupaten: true } },
@@ -57,5 +59,11 @@ export default async function InternalDocumentsPage({
     publishedAt: d.publishedAt?.toISOString() ?? null,
   }));
 
-  return <InternalDocumentReviewQueue documents={serialized} statusFilter={filter ?? ""} />;
+  return (
+    <InternalDocumentReviewQueue
+      documents={serialized}
+      statusFilter={filter ?? ""}
+      focusDocumentId={focusDocumentId}
+    />
+  );
 }

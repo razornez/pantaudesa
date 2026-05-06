@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { House, ShieldCheck, FileText, RefreshCcw, UserCog } from "lucide-react";
+import { House, ShieldCheck, FileText, RefreshCcw, UserCog, FileUp } from "lucide-react";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import { perfLog, perfStart } from "@/lib/perf";
 
@@ -19,6 +19,7 @@ export default async function InternalAdminLayout({
   const navItems = [
     { href: "/internal-admin/claims", label: "Pengajuan", icon: UserCog },
     { href: "/internal-admin/documents", label: "Dokumen", icon: FileText },
+    { href: "/internal-admin/intake", label: "Intake", icon: FileUp },
     { href: "/internal-admin/renewals", label: "Perpanjangan", icon: RefreshCcw },
   ];
 

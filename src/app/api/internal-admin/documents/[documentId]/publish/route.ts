@@ -8,9 +8,39 @@ import {
   AI_MAPPABLE_DESA_SELECT,
   createDesaMappingUpdateData,
   getMappingFieldKeys,
+  type AiMappingFieldValue,
   sanitizeMappingFields,
 } from "@/lib/admin-claim/ai-mapping";
 import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
+import {
+  getChangedVersionFields,
+  readVillageVersionCandidate,
+  type DesaVersionSnapshot,
+} from "@/lib/versioning/desa-versioning";
+import {
+  publishVillageDataVersion,
+  writeDesaDataAuditEvent,
+} from "@/lib/versioning/village-data-persistence";
+
+function toDesaVersionSnapshot(input: {
+  websiteUrl: string | null;
+  kategori: string | null;
+  tahunData: number | null;
+  jumlahPenduduk: number | null;
+  kecamatan: string;
+  kabupaten: string;
+  provinsi: string;
+}): DesaVersionSnapshot {
+  return {
+    websiteUrl: input.websiteUrl ?? null,
+    kategori: input.kategori ?? null,
+    tahunData: input.tahunData ?? null,
+    jumlahPenduduk: input.jumlahPenduduk ?? null,
+    kecamatan: input.kecamatan,
+    kabupaten: input.kabupaten,
+    provinsi: input.provinsi,
+  };
+}
 
 // POST /api/internal-admin/documents/:documentId/publish
 // Internal admin publishes a PROCESSING document. Optional body.fields applies
@@ -47,21 +77,30 @@ export async function POST(
     const dbClient = db;
     const result = await dbClient.$transaction(async (tx) => {
       const now = new Date();
+      const fallbackVersionNumber = await tx.adminClaimAudit.count({
+        where: {
+          desaId: doc.desaId,
+          eventType: AUDIT_EVENT.INTERNAL_DATA_PUBLISHED,
+        },
+      }).then((count) => count + 1);
 
       let beforeSnapshot: Record<string, string | number | null> | null = null;
       let afterSnapshot: Record<string, string | number | null> | null = null;
+      let fullBeforeSnapshot: DesaVersionSnapshot | null = null;
+      let publishedSnapshot: DesaVersionSnapshot | null = null;
 
-      // Always stamp dataSourceLabel + dataPublishedAt on publish.
-      // Optionally apply field updates to Desa if any field was provided.
       const fieldKeys = getMappingFieldKeys(requestedFields);
+      const desaBefore = await tx.desa.findUnique({
+        where: { id: doc.desaId },
+        select: AI_MAPPABLE_DESA_SELECT,
+      });
+      if (!desaBefore) {
+        return { kind: "error" as const, status: 404, body: { error: "Desa not found" } };
+      }
+      fullBeforeSnapshot = toDesaVersionSnapshot(desaBefore);
+      publishedSnapshot = { ...fullBeforeSnapshot };
+
       if (fieldKeys.length > 0) {
-        const desaBefore = await tx.desa.findUnique({
-          where: { id: doc.desaId },
-          select: AI_MAPPABLE_DESA_SELECT,
-        });
-        if (!desaBefore) {
-          return { kind: "error" as const, status: 404, body: { error: "Desa not found" } };
-        }
         beforeSnapshot = {};
         afterSnapshot = {};
         for (const key of fieldKeys) {
@@ -74,6 +113,7 @@ export async function POST(
               ? before
               : String(before);
           afterSnapshot[key] = after;
+          publishedSnapshot[key] = after as AiMappingFieldValue;
         }
       }
 
@@ -98,7 +138,39 @@ export async function POST(
         },
       });
 
-      return { kind: "ok" as const, beforeSnapshot, afterSnapshot, now };
+      const versionCandidate = readVillageVersionCandidate(doc.aiMappingResult);
+      const effectivePublishedSnapshot = publishedSnapshot ?? fullBeforeSnapshot;
+      const versionResult = effectivePublishedSnapshot
+        ? await publishVillageDataVersion(
+            {
+              desaId: doc.desaId,
+              sourceDocumentId: documentId,
+              title: doc.title,
+              sourceLabel: "Dokumen Admin Desa",
+              reviewNote: note,
+              changedFields: getChangedVersionFields({
+                before: fullBeforeSnapshot,
+                after: effectivePublishedSnapshot,
+              }),
+              proposedSnapshot: versionCandidate?.proposedSnapshot ?? effectivePublishedSnapshot,
+              beforeSnapshot: fullBeforeSnapshot,
+              publishedSnapshot: effectivePublishedSnapshot,
+              createdByUserId: session.userId,
+              publishedByUserId: session.userId,
+              publishedAt: now,
+            },
+            tx,
+          )
+        : { persisted: false as const };
+
+      return {
+        kind: "ok" as const,
+        beforeSnapshot,
+        afterSnapshot,
+        now,
+        fallbackVersionNumber,
+        versionResult,
+      };
     });
 
     if (result.kind === "error") {
@@ -115,14 +187,35 @@ export async function POST(
       previousStatus: "PROCESSING",
       nextStatus: "PUBLISHED",
       reasonText: note ?? undefined,
+      beforeSnapshotJson: result.beforeSnapshot ?? undefined,
+      afterSnapshotJson: result.afterSnapshot ?? undefined,
       metadata: {
         title: doc.title,
+        versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
         appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
         beforeSnapshot: result.beforeSnapshot,
         afterSnapshot: result.afterSnapshot,
       },
       ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
       userAgent: req.headers.get("user-agent") ?? undefined,
+    });
+
+    await writeDesaDataAuditEvent({
+      desaId: doc.desaId,
+      sourceDocumentId: documentId,
+      villageDataVersionId: result.versionResult.id ?? null,
+      actorUserId: session.userId,
+      actorRole: "INTERNAL_ADMIN",
+      eventType: AUDIT_EVENT.INTERNAL_DATA_PUBLISHED,
+      eventLabel: "Dipublikasikan ke data desa",
+      previousStatus: "PROCESSING",
+      nextStatus: "PUBLISHED",
+      note: note,
+      metadata: {
+        title: doc.title,
+        versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
+        appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
+      },
     });
 
     // Notify all active admins of the desa (uploader + verified admins).
@@ -147,6 +240,7 @@ export async function POST(
       ok: true,
       documentId,
       newStatus: "PUBLISHED",
+      versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
       appliedFields: result.beforeSnapshot ? Object.keys(result.beforeSnapshot) : [],
     });
   } catch (err) {
