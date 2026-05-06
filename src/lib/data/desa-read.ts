@@ -430,17 +430,18 @@ async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | nul
 }
 
 async function fetchDesaItems() {
-  const timer = perfStart();
-  const items = (await fetchDesaRecords()).map(mapDesaRecord);
-  publicPerfLogWithRows("public.desa-read", "mapDesaRecords(list)", items.length, timer);
+  const records = await fetchDesaRecords();
+  const mapTimer = perfStart();
+  const items = records.map(mapDesaRecord);
+  publicPerfLogWithRows("public.desa-read", "mapDesaRecords(list)", items.length, mapTimer);
   return items;
 }
 
 async function fetchDesaDetailItem(idOrSlug: string) {
-  const timer = perfStart();
   const record = await fetchDesaDetailRecord(idOrSlug);
+  const mapTimer = perfStart();
   const item = record ? mapDesaRecord(record) : null;
-  publicPerfLogWithRows("public.desa-read", "mapDesaRecord(detail)", item ? 1 : 0, timer);
+  publicPerfLogWithRows("public.desa-read", "mapDesaRecord(detail)", item ? 1 : 0, mapTimer);
   return item;
 }
 

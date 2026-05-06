@@ -85,6 +85,22 @@ Because public list/detail reads use `unstable_cache`, a cache hit should show o
 
 No identifiers are logged. Route labels are static. Row counts are aggregate counts only.
 
+### Owner validation notes
+
+Owner manual test observations after the Batch 1 rollout:
+
+- `/desa` `routeDataReady` around `1235ms`
+- `/desa/[id]` `routeDataReady` around `2169ms`
+- `/suara-warga` `routeDataReady` around `1281ms`
+
+Additional notes from the same check:
+
+- `[perf][public]` logs are active and visible on the targeted public routes.
+- The current public perf logs do not show PII, token, DB URL, document content, or storage key.
+- Follow-up public image performance cleanup is still needed for:
+  - Next Image `fill` usage without `sizes`
+  - mascot image aspect ratio warning
+
 ---
 
 ## S05-003 Type Safety Cleanup for Mapping/Perf Runtime
@@ -108,6 +124,11 @@ The draft-mapping route now stores the draft with `toAiMappingDraftJson()` inste
 ### Perf helper cleanup
 
 `src/lib/perf.ts` now narrows Prisma client/event shapes with explicit guards before attaching query logging. This keeps `unknown` at the external runtime boundary but narrows it before use.
+
+Minor follow-up after Batch 1:
+
+- Prisma query event `duration` is interpreted as milliseconds directly.
+- Public mapping timers were split so mapping-only labels do not include DB query time.
 
 ### Business flow
 

@@ -133,7 +133,7 @@ export function attachPrismaPerfLogging(prismaClient: unknown): void {
   _prismaPerfAttached = true;
   prismaClient.$on("query", (event: unknown) => {
     if (!isPrismaQueryEventLike(event)) return;
-    const ms = Math.round(event.duration / 1_000_000); // nanoseconds -> ms
+    const ms = Math.round(event.duration); // Prisma query event duration is already in milliseconds
     const model = event.model ?? "unknown";
     const action = event.action ?? "query";
     console.info(`[perf][prisma] model=${model} action=${action} durationMs=${ms}`);

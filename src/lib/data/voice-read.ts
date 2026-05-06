@@ -91,7 +91,6 @@ async function fetchVoiceRecords(desaId?: string) {
 }
 
 async function fetchAllVoicesMapped() {
-  const timer = perfStart();
   const records = await fetchVoiceRecords();
   const desaRows = prisma
     ? await prisma.desa.findMany({
@@ -100,8 +99,9 @@ async function fetchAllVoicesMapped() {
       })
     : [];
   const desaMap = new Map(desaRows.map((desa) => [desa.id, desa]));
+  const mapTimer = perfStart();
   const voices = records.map((record) => mapVoice(record, desaMap.get(record.desaId)));
-  publicPerfLogWithRows("public.voice-read", "mapAllVoices", voices.length, timer);
+  publicPerfLogWithRows("public.voice-read", "mapAllVoices", voices.length, mapTimer);
   return voices;
 }
 
