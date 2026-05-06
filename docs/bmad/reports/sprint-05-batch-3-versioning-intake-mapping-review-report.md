@@ -274,6 +274,36 @@ Interpretasi:
 - lint dan TypeScript menyatakan fitur Batch 3 ini compile-safe pada level source,
 - blocker build saat ini masih issue environment/file-lock Prisma di Windows, bukan error logic TypeScript pada feature intake.
 
+## Belum Complete dan Alasannya
+
+Hal-hal berikut masih belum bisa disebut selesai penuh pada Batch 3 ini:
+
+- `VillageDataVersion` belum aktif sebagai persistence nyata di database.
+  Alasan: saat ini baru tersedia dalam bentuk schema draft, migration draft, dan runtime fallback. Migration tidak di-apply ke DB aktif agar tetap mengikuti guardrail no-cost dan no shared DB change.
+- `DesaDataAuditEvent` dedicated table belum aktif di database.
+  Alasan: histori saat ini masih mengandalkan fallback yang aman ke audit lama karena migration dedicated audit juga belum di-apply.
+- versioning masih `fallback-backed`, belum full `table-backed immutable history`.
+  Alasan: jalur runtime sudah disiapkan, tetapi aktivasi penuh bergantung pada migration apply + Prisma client regenerate yang masih tertahan.
+- OCR untuk PDF scan/image belum diaktifkan.
+  Alasan: implementasi OCR akan butuh dependency atau service tambahan, pengujian akurasi, dan potensi biaya/infra baru. Batch ini sengaja hanya menampilkan failure message yang jelas.
+- status `build PASS` penuh belum tercapai.
+  Alasan: `npm run build` masih gagal di langkah `prisma generate` karena issue Windows `EPERM`, bukan karena source feature intake/review tidak type-safe.
+
+## Belum Bisa Dikerjakan Sekarang
+
+Hal-hal berikut belum bisa ditutup pada state project dan guardrail saat report ini dibuat:
+
+- aktivasi tabel `village_data_versions` dan `desa_data_audit_events` di DB aktif,
+- verifikasi end-to-end write ke tabel versioning dan audit baru,
+- OCR dokumen scan/image,
+- penutupan QA build production penuh sampai `PASS`.
+
+Alasan penahan utama:
+
+- owner meminta jalur no-cost 100%, jadi tidak boleh ada branch database berbayar atau perubahan schema ke shared DB aktif,
+- environment Windows saat ini masih memblokir `prisma generate` melalui error `EPERM`,
+- belum ada dependency atau service OCR yang disetujui untuk dipasang.
+
 ## Guardrails Check
 
 Guardrails tetap respected:
@@ -437,6 +467,7 @@ Fokus review:
 5. apakah diff desaId memang bekerja dan tidak lagi gagal karena request body dibaca dua kali
 6. apakah guardrail auth, no secret logging, no PII exposure tetap aman
 7. apakah gap versioning dan general audit trail masih didokumentasikan jujur sebagai carry-over
+8. apakah bagian report tentang item belum complete, item yang belum bisa dikerjakan, dan alasannya sudah konsisten dengan state code saat ini
 
 File utama:
 - src/app/api/internal-admin/intake/route.ts
@@ -456,6 +487,12 @@ QA status saat ini:
 - npm run lint: PASS
 - npx tsc --noEmit: PASS
 - prisma generate/build: blocked Windows Prisma EPERM rename/file-lock
+
+Catatan penting:
+- Batch 3 belum full-complete di layer persistence database.
+- `VillageDataVersion` dan `DesaDataAuditEvent` baru siap di code + schema/migration draft, tetapi belum diaktifkan ke DB karena guardrail no-cost dan tidak boleh menyentuh shared DB aktif.
+- OCR untuk scan/image belum dikerjakan karena belum ada jalur dependency/service yang disetujui.
+- build penuh masih terblokir oleh issue lokal Prisma Windows EPERM saat generate engine.
 
 Tolong kasih output:
 - findings dulu, urut severity
