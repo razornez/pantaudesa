@@ -111,26 +111,27 @@ Third-party/library rule:
 | 4 | S05-004 Data Governance & Permission Matrix | Locks source priority, publish authority, admin desa verified authority | all data workflow tasks |
 | 5 | S05-005 MVP Village Data Field Catalog | Defines what fields Sprint 05 manages | source/version/quality/mapping |
 | 6 | S05-006 Data Source Registry Upgrade Plan | Reuses/upgrades existing `DataSource` for traceability | versioning, diff, conflict |
-| 7 | S05-007 Data Quality Rules | Defines valid data before review/publish | mapping and public rendering |
-| 8 | S05-008 Village Data Versioning Proposal | Prevents direct overwrite of public data without history | public latest rendering |
-| 9 | S05-009 General Data Audit Trail Proposal | Makes important data actions traceable | publish/conflict/manual override |
+| 7 | S05-006A Government Village Data Source Feasibility | Validates which public/government sources are worth carrying into the registry | source selection and trust policy |
+| 8 | S05-007 Data Quality Rules | Defines valid data before review/publish | mapping and public rendering |
+| 9 | S05-008 Village Data Versioning Proposal | Prevents direct overwrite of public data without history | public latest rendering |
+| 10 | S05-009 General Data Audit Trail Proposal | Makes important data actions traceable | publish/conflict/manual override |
 
 ## P2 — Core workflow MVP
 
 | Order | Task | Depends on | Blocks |
 |---:|---|---|---|
-| 10 | S05-010 Document Intake & Auto Mapping Adapter | S05-004 to S05-009 | diff/review workbench |
-| 11 | S05-011 Structured Value Diff / Conflict Engine | S05-005 to S05-010 | review and public correctness |
-| 12 | S05-012 Internal Data Review Workbench | S05-010, S05-011 | publish/reject workflow |
+| 11 | S05-010 Document Intake & Auto Mapping Adapter | S05-004 to S05-009 | diff/review workbench |
+| 12 | S05-011 Structured Value Diff / Conflict Engine | S05-005 to S05-010 | review and public correctness |
+| 13 | S05-012 Internal Data Review Workbench | S05-010, S05-011 | publish/reject workflow |
 
 ## P3 — Public output and QA
 
 | Order | Task | Depends on | Blocks |
 |---:|---|---|---|
-| 13 | S05-013 Public Data Completeness & Empty State | S05-005, S05-007, S05-008 | public rendering UX |
-| 14 | S05-014 Public Latest Published Rendering | S05-008, S05-011, S05-013 | public release readiness |
-| 15 | S05-015 QA Seed Data for Data Workflow | S05-010 to S05-014 | regression testing |
-| 16 | S05-016 QA, Regression, and Documentation | all Sprint 05 implementation tasks | sprint closeout |
+| 14 | S05-013 Public Data Completeness & Empty State | S05-005, S05-007, S05-008 | public rendering UX |
+| 15 | S05-014 Public Latest Published Rendering | S05-008, S05-011, S05-013 | public release readiness |
+| 16 | S05-015 QA Seed Data for Data Workflow | S05-010 to S05-014 | regression testing |
+| 17 | S05-016 QA, Regression, and Documentation | all Sprint 05 implementation tasks | sprint closeout |
 
 ## Explicitly excluded from active Sprint 05
 
@@ -255,11 +256,13 @@ Do not blindly remove all `unknown`. `unknown` is acceptable at external boundar
 
 ---
 
-## S05-004 — Data Governance & Permission Matrix
+## S05-004 - Data Governance & Permission Matrix
 
 **Priority:** P1  
 **Type:** product/business rules + technical policy  
 **Dependency:** none
+
+**Batch 2 report:** `docs/bmad/reports/sprint-05-batch-2-data-governance-foundation-report.md`
 
 **Goal**  
 Lock the business rules before data model/workflow implementation.
@@ -294,11 +297,13 @@ Document the matrix for:
 
 ---
 
-## S05-005 — MVP Village Data Field Catalog
+## S05-005 - MVP Village Data Field Catalog
 
 **Priority:** P1  
 **Type:** product/data design  
 **Dependency:** S05-004 recommended
+
+**Batch 2 report:** `docs/bmad/reports/sprint-05-batch-2-data-governance-foundation-report.md`
 
 **Goal**  
 Define exactly which village data fields Sprint 05 will manage first.
@@ -331,11 +336,15 @@ Define exactly which village data fields Sprint 05 will manage first.
 
 ---
 
-## S05-006 — Data Source Registry Upgrade Plan
+## S05-006 - Data Source Registry Upgrade Plan
 
 **Priority:** P1  
 **Type:** data model proposal  
 **Dependency:** S05-004, S05-005
+
+**Batch 2 report:** `docs/bmad/reports/sprint-05-batch-2-data-governance-foundation-report.md`
+
+**Related feasibility task:** `docs/bmad/tasks/sprint-05-006a-government-data-source-feasibility.md`
 
 **Goal**  
 Upgrade/reuse the existing `DataSource` concept so every important village data point can be traced to its origin.
@@ -370,11 +379,44 @@ Upgrade/reuse the existing `DataSource` concept so every important village data 
 
 ---
 
-## S05-007 — Data Quality Rules
+## S05-006A - Government Village Data Source Feasibility
+
+**Priority:** P1
+**Type:** research + source policy input
+**Dependency:** S05-005, S05-006
+
+**Task file:** `docs/bmad/tasks/sprint-05-006a-government-data-source-feasibility.md`
+
+**Batch 2 report:** `docs/bmad/reports/sprint-05-batch-2-data-governance-foundation-report.md`
+
+**Goal**
+Validate which public or government village data sources are credible, sufficiently accessible, and realistic for MVP source registry use.
+
+**Scope**
+
+- review official/public government candidates already collected
+- classify likely desa-level availability
+- classify access type: public/API/export/login/manual
+- recommend MVP shortlist and limitations
+- recommend logical `sourceType` usage
+- do not scrape or integrate yet
+
+**Acceptance Criteria**
+
+- candidate source matrix exists
+- MVP shortlist exists
+- source risks and limitations are documented
+- no scraping or integration is performed
+
+---
+
+## S05-007 - Data Quality Rules
 
 **Priority:** P1  
 **Type:** validation design  
 **Dependency:** S05-005, S05-006
+
+**Batch 2 report:** `docs/bmad/reports/sprint-05-batch-2-data-governance-foundation-report.md`
 
 **Goal**  
 Define validation rules so manual input and auto mapping cannot publish arbitrary data.
@@ -827,16 +869,17 @@ S05-015 QA Seed Data depends on S05-010/S05-011/S05-014 so seed cases match actu
 4. S05-004 Data Governance & Permission Matrix
 5. S05-005 MVP Village Data Field Catalog
 6. S05-006 Data Source Registry Upgrade Plan
-7. S05-007 Data Quality Rules
-8. S05-008 Village Data Versioning Proposal
-9. S05-009 General Data Audit Trail Proposal
-10. S05-010 Document Intake & Auto Mapping Adapter
-11. S05-011 Structured Value Diff / Conflict Engine
-12. S05-012 Internal Data Review Workbench
-13. S05-013 Public Data Completeness & Empty State
-14. S05-014 Public Latest Published Rendering
-15. S05-015 QA Seed Data for Data Workflow
-16. S05-016 QA, Regression, and Documentation
+7. S05-006A Government Village Data Source Feasibility
+8. S05-007 Data Quality Rules
+9. S05-008 Village Data Versioning Proposal
+10. S05-009 General Data Audit Trail Proposal
+11. S05-010 Document Intake & Auto Mapping Adapter
+12. S05-011 Structured Value Diff / Conflict Engine
+13. S05-012 Internal Data Review Workbench
+14. S05-013 Public Data Completeness & Empty State
+15. S05-014 Public Latest Published Rendering
+16. S05-015 QA Seed Data for Data Workflow
+17. S05-016 QA, Regression, and Documentation
 
 ## Deferred / Not Recommended For Sprint 05 Start
 
