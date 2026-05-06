@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { perfStart, publicPerfLogWithRows } from "@/lib/perf";
 import type { Desa, SummaryStats, TrendData } from "@/lib/types";
 
 export type DesaDataOrigin = "database";
@@ -260,7 +261,8 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
 async function fetchDesaRecords(): Promise<DesaRecord[]> {
   if (!prisma) return [];
 
-  return prisma.desa.findMany({
+  const timer = perfStart();
+  const records = await prisma.desa.findMany({
     orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
     select: {
       id: true,
@@ -327,12 +329,15 @@ async function fetchDesaRecords(): Promise<DesaRecord[]> {
       },
     },
   });
+  publicPerfLogWithRows("public.desa-read", "desa.findMany(list)", records.length, timer);
+  return records;
 }
 
 async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | null> {
   if (!prisma) return null;
 
-  return prisma.desa.findFirst({
+  const timer = perfStart();
+  const record = await prisma.desa.findFirst({
     where: {
       OR: [
         { id: idOrSlug },
@@ -420,15 +425,23 @@ async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | nul
       },
     },
   });
+  publicPerfLogWithRows("public.desa-read", "desa.findFirst(detail)", record ? 1 : 0, timer);
+  return record;
 }
 
 async function fetchDesaItems() {
-  return (await fetchDesaRecords()).map(mapDesaRecord);
+  const timer = perfStart();
+  const items = (await fetchDesaRecords()).map(mapDesaRecord);
+  publicPerfLogWithRows("public.desa-read", "mapDesaRecords(list)", items.length, timer);
+  return items;
 }
 
 async function fetchDesaDetailItem(idOrSlug: string) {
+  const timer = perfStart();
   const record = await fetchDesaDetailRecord(idOrSlug);
-  return record ? mapDesaRecord(record) : null;
+  const item = record ? mapDesaRecord(record) : null;
+  publicPerfLogWithRows("public.desa-read", "mapDesaRecord(detail)", item ? 1 : 0, timer);
+  return item;
 }
 
 const getCachedDesaItems = unstable_cache(
@@ -444,6 +457,7 @@ const getCachedDesaDetailItem = unstable_cache(
 );
 
 export async function getDesaListResult(): Promise<DesaListReadResult> {
+  const timer = perfStart();
   const dbHostAlias = getDbHostAlias();
 
   if (!prisma) {
@@ -457,6 +471,7 @@ export async function getDesaListResult(): Promise<DesaListReadResult> {
 
   try {
     const items = await getCachedDesaItems();
+    publicPerfLogWithRows("public.desa-read", "getCachedDesaItems()", items.length, timer);
     if (items.length === 0) {
       return {
         items: [],

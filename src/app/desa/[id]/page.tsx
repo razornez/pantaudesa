@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
-import { perfLog, perfStart } from "@/lib/perf";
+import { perfStart, publicPerfLog } from "@/lib/perf";
 import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
 import DownloadButton from "@/components/desa/DownloadButton";
@@ -48,18 +48,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function DesaDetailPage({ params }: Props) {
+  const routeTimer = perfStart();
   const { id } = await params;
   const desaTimer = perfStart();
   const desa = await getDesaByIdOrSlugWithFallback(id);
-  perfLog("public.desa-detail", "getDesaByIdOrSlugWithFallback()", desaTimer);
+  publicPerfLog("public.desa-detail", "getDesaByIdOrSlugWithFallback()", desaTimer);
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
   const voiceTimer = perfStart();
   const voiceSummary = await getVoicePreviewForDesaFromDb(desa.id);
-  perfLog("public.desa-detail", "getVoicePreviewForDesaFromDb()", voiceTimer);
+  publicPerfLog("public.desa-detail", "getVoicePreviewForDesaFromDb()", voiceTimer);
   const voicePreview = voiceSummary.preview;
   const profil       = desa.profil;
+  publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
   const budgetItems = [
     { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFullMock(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50"  },

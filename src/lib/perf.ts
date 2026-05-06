@@ -12,6 +12,8 @@
  *   [perf][back-office] route=<route> step=<step> durationMs=<number>
  *   [perf][back-office] route=<route> query=<model.method> shape=<static-shape>
  *   [perf][back-office] route=<route> step=<step> rows=<n> durationMs=<number>
+ *   [perf][public] route=<route> step=<step> durationMs=<number>
+ *   [perf][public] route=<route> step=<step> rows=<n> durationMs=<number>
  *   [perf][prisma] model=<model> action=<action> durationMs=<number>
  *
  * Privacy guardrails:
@@ -52,6 +54,23 @@ export function perfLogWithRows(
   );
 }
 
+export function publicPerfLog(route: string, step: string, startedAt: number): void {
+  if (!perfEnabled()) return;
+  const durationMs = Date.now() - startedAt;
+  console.info(`[perf][public] route=${route} step=${step} durationMs=${durationMs}`);
+}
+
+export function publicPerfLogWithRows(
+  route: string,
+  step: string,
+  rows: number,
+  startedAt: number,
+): void {
+  if (!perfEnabled()) return;
+  const durationMs = Date.now() - startedAt;
+  console.info(`[perf][public] route=${route} step=${step} rows=${rows} durationMs=${durationMs}`);
+}
+
 export function perfQueryShape(route: string, query: string, shape: string): void {
   if (!perfEnabled()) return;
   console.info(`[perf][back-office] route=${route} query=${query} shape=${shape}`);
@@ -82,28 +101,41 @@ export async function perfTime<T>(
  *
  * Privacy: does NOT log query text, params, or any user/desa identifiers.
  */
-type PrismaClientLike = { $on: (event: string, callback: (...args: unknown[]) => void) => void };
+type PrismaClientLike = { $on: (event: "query", callback: (event: unknown) => void) => void };
 
 type PrismaQueryEventLike = {
-  duration?: unknown;
-  model?: unknown;
-  action?: unknown;
+  duration: number;
+  model?: string;
+  action?: string;
 };
 
 let _prismaPerfAttached = false;
 
+function isPrismaClientLike(prismaClient: unknown): prismaClient is PrismaClientLike {
+  return (
+    typeof prismaClient === "object" &&
+    prismaClient !== null &&
+    "$on" in prismaClient &&
+    typeof prismaClient.$on === "function"
+  );
+}
+
+function isPrismaQueryEventLike(event: unknown): event is PrismaQueryEventLike {
+  if (typeof event !== "object" || event === null) return false;
+  const candidate = event as Record<string, unknown>;
+  return typeof candidate.duration === "number";
+}
+
 export function attachPrismaPerfLogging(prismaClient: unknown): void {
   if (!perfEnabled()) return;
   if (_prismaPerfAttached) return;
+  if (!isPrismaClientLike(prismaClient)) return;
   _prismaPerfAttached = true;
-  const client = prismaClient as PrismaClientLike;
-  client.$on("query", (event: unknown) => {
-    const queryEvent = event as PrismaQueryEventLike;
-    if (typeof queryEvent.duration === "number") {
-      const ms = Math.round(queryEvent.duration / 1_000_000); // nanoseconds -> ms
-      const model = typeof queryEvent.model === "string" ? queryEvent.model : "unknown";
-      const action = typeof queryEvent.action === "string" ? queryEvent.action : "query";
-      console.info(`[perf][prisma] model=${model} action=${action} durationMs=${ms}`);
-    }
+  prismaClient.$on("query", (event: unknown) => {
+    if (!isPrismaQueryEventLike(event)) return;
+    const ms = Math.round(event.duration / 1_000_000); // nanoseconds -> ms
+    const model = event.model ?? "unknown";
+    const action = event.action ?? "query";
+    console.info(`[perf][prisma] model=${model} action=${action} durationMs=${ms}`);
   });
 }

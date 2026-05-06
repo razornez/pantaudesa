@@ -4,7 +4,12 @@ import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { sanitizeMappingFields, AI_MAPPABLE_DESA_FIELDS } from "@/lib/admin-claim/ai-mapping";
+import {
+  AI_MAPPABLE_DESA_SELECT,
+  createDesaMappingUpdateData,
+  getMappingFieldKeys,
+  sanitizeMappingFields,
+} from "@/lib/admin-claim/ai-mapping";
 import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 
 // POST /api/internal-admin/documents/:documentId/publish
@@ -48,14 +53,11 @@ export async function POST(
 
       // Always stamp dataSourceLabel + dataPublishedAt on publish.
       // Optionally apply field updates to Desa if any field was provided.
-      const fieldKeys = Object.keys(requestedFields) as Array<keyof typeof requestedFields>;
+      const fieldKeys = getMappingFieldKeys(requestedFields);
       if (fieldKeys.length > 0) {
         const desaBefore = await tx.desa.findUnique({
           where: { id: doc.desaId },
-          select: AI_MAPPABLE_DESA_FIELDS.reduce(
-            (acc, k) => { acc[k] = true; return acc; },
-            {} as Record<string, true>,
-          ),
+          select: AI_MAPPABLE_DESA_SELECT,
         });
         if (!desaBefore) {
           return { kind: "error" as const, status: 404, body: { error: "Desa not found" } };
@@ -63,24 +65,24 @@ export async function POST(
         beforeSnapshot = {};
         afterSnapshot = {};
         for (const key of fieldKeys) {
-          const before = (desaBefore as Record<string, unknown>)[key];
+          const before = desaBefore[key];
           const after = requestedFields[key] ?? null;
-          beforeSnapshot[key as string] =
+          beforeSnapshot[key] =
             before === null || before === undefined
               ? null
               : typeof before === "string" || typeof before === "number"
               ? before
               : String(before);
-          afterSnapshot[key as string] = after;
+          afterSnapshot[key] = after;
         }
       }
+
+      const mappingUpdateData = createDesaMappingUpdateData(requestedFields);
 
       await tx.desa.update({
         where: { id: doc.desaId },
         data: {
-          ...(fieldKeys.length > 0
-            ? (requestedFields as Parameters<typeof tx.desa.update>[0]["data"])
-            : {}),
+          ...(fieldKeys.length > 0 ? mappingUpdateData : {}),
           dataSourceLabel: "Dokumen Admin Desa",
           dataPublishedAt: now,
         },

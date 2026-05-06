@@ -1,3 +1,5 @@
+import type { Prisma } from "@/generated/prisma";
+
 // Manual mapping draft scope (BMAD 04-008.0):
 // AI provider NOT yet configured. Internal admin fills mapping fields manually by reading the document.
 // Allowed safe fields only:
@@ -18,12 +20,50 @@ export const AI_MAPPABLE_DESA_FIELDS = [
 ] as const;
 
 export type AiMappableDesaField = typeof AI_MAPPABLE_DESA_FIELDS[number];
+export type AiMappingFieldValue = string | number | null;
+export type AiMappingFields = Partial<Record<AiMappableDesaField, AiMappingFieldValue>>;
 
 export interface AiMappingDraft {
   generatedAt: string;
   generator: "manual" | "ai";   // "manual" until AI provider is configured
-  fields: Partial<Record<AiMappableDesaField, string | number | null>>;
+  fields: AiMappingFields;
   notes?: string;
+}
+
+export const AI_MAPPABLE_DESA_SELECT = {
+  websiteUrl: true,
+  kategori: true,
+  tahunData: true,
+  jumlahPenduduk: true,
+  kecamatan: true,
+  kabupaten: true,
+  provinsi: true,
+} satisfies Pick<Prisma.DesaSelect, AiMappableDesaField>;
+
+function isRecord(input: unknown): input is Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input);
+}
+
+function isMappingFieldValue(input: unknown): input is AiMappingFieldValue {
+  return input === null || typeof input === "string" || typeof input === "number";
+}
+
+function sanitizeFieldValue(
+  key: AiMappableDesaField,
+  input: AiMappingFieldValue,
+): AiMappingFieldValue | undefined {
+  if (input === null) {
+    return key === "websiteUrl" || key === "kategori" || key === "tahunData" || key === "jumlahPenduduk"
+      ? null
+      : undefined;
+  }
+
+  if (key === "tahunData" || key === "jumlahPenduduk") {
+    const value = typeof input === "number" ? input : Number(input);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  return String(input);
 }
 
 /**
@@ -49,18 +89,64 @@ export function generateManualMappingDraft(): AiMappingDraft {
  * Validates that the mapping result only contains keys we explicitly allow.
  * Returns the sanitized fields object.
  */
-export function sanitizeMappingFields(input: unknown): Partial<Record<AiMappableDesaField, string | number | null>> {
-  if (!input || typeof input !== "object") return {};
-  const out: Partial<Record<AiMappableDesaField, string | number | null>> = {};
+export function sanitizeMappingFields(input: unknown): AiMappingFields {
+  if (!isRecord(input)) return {};
+  const out: AiMappingFields = {};
   for (const key of AI_MAPPABLE_DESA_FIELDS) {
-    const v = (input as Record<string, unknown>)[key];
-    if (v === undefined) continue;
-    if (v === null) {
-      out[key] = null;
-    } else if (typeof v === "string" || typeof v === "number") {
-      out[key] = v;
-    }
+    const v = input[key];
+    if (v === undefined || !isMappingFieldValue(v)) continue;
+    const sanitizedValue = sanitizeFieldValue(key, v);
+    if (sanitizedValue !== undefined) out[key] = sanitizedValue;
     // Reject other types silently to prevent injection.
   }
   return out;
+}
+
+export function toAiMappingDraftJson(draft: AiMappingDraft): Prisma.InputJsonObject {
+  return {
+    generatedAt: draft.generatedAt,
+    generator: draft.generator,
+    fields: draft.fields,
+    ...(draft.notes ? { notes: draft.notes } : {}),
+  };
+}
+
+export function getMappingFieldKeys(fields: AiMappingFields): AiMappableDesaField[] {
+  return AI_MAPPABLE_DESA_FIELDS.filter((field) => Object.hasOwn(fields, field));
+}
+
+export function createDesaMappingUpdateData(fields: AiMappingFields): Pick<
+  Prisma.DesaUpdateInput,
+  AiMappableDesaField
+> {
+  const data: Pick<Prisma.DesaUpdateInput, AiMappableDesaField> = {};
+
+  for (const key of getMappingFieldKeys(fields)) {
+    const value = fields[key] ?? null;
+    switch (key) {
+      case "websiteUrl":
+        data.websiteUrl = value === null ? null : String(value);
+        break;
+      case "kategori":
+        data.kategori = value === null ? null : String(value);
+        break;
+      case "tahunData":
+        data.tahunData = value === null ? null : Number(value);
+        break;
+      case "jumlahPenduduk":
+        data.jumlahPenduduk = value === null ? null : Number(value);
+        break;
+      case "kecamatan":
+        if (value !== null) data.kecamatan = String(value);
+        break;
+      case "kabupaten":
+        if (value !== null) data.kabupaten = String(value);
+        break;
+      case "provinsi":
+        if (value !== null) data.provinsi = String(value);
+        break;
+    }
+  }
+
+  return data;
 }

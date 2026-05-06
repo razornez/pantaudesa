@@ -10,6 +10,7 @@ import AlertDiniSection from "@/components/home/AlertDiniSection";
 import CitizenJourneySection from "@/components/home/CitizenJourneySection";
 import DocumentDeskSection from "@/components/home/DocumentDeskSection";
 import { buildSummaryStats, buildTrendData, getDesaListResult } from "@/lib/data/desa-read";
+import { perfStart, publicPerfLog, publicPerfLogWithRows } from "@/lib/perf";
 import type { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
@@ -17,7 +18,11 @@ import { ASSETS } from "@/lib/assets";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const routeTimer = perfStart();
+  const desaListTimer = perfStart();
   const desaResult = await getDesaListResult();
+  publicPerfLogWithRows("public.home", "getDesaListResult()", desaResult.items.length, desaListTimer);
+  const compositionTimer = perfStart();
   const desaItems = desaResult.items;
   const summaryStats = buildSummaryStats(desaItems);
   const trendData = buildTrendData(desaItems);
@@ -49,6 +54,8 @@ export default async function HomePage() {
     }))
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 3);
+  publicPerfLog("public.home", "aggregateHomepageData", compositionTimer);
+  publicPerfLog("public.home", "routeDataReady", routeTimer);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

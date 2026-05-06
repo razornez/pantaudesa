@@ -4,7 +4,7 @@ import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
-import { generateManualMappingDraft } from "@/lib/admin-claim/ai-mapping";
+import { generateManualMappingDraft, toAiMappingDraftJson } from "@/lib/admin-claim/ai-mapping";
 
 // POST /api/internal-admin/documents/:documentId/draft-mapping
 // Generates an empty manual mapping draft for a PROCESSING document.
@@ -37,7 +37,7 @@ export async function POST(
       where: { id: documentId },
       data: {
         aiMappingStatus: "DRAFT_PENDING_REVIEW",
-        aiMappingResult: JSON.parse(JSON.stringify(draft)),
+        aiMappingResult: toAiMappingDraftJson(draft),
         updatedAt: new Date(),
       },
     });

@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { perfStart, publicPerfLogWithRows } from "@/lib/perf";
 import type { CitizenVoice, VoiceStatus } from "@/lib/citizen-voice";
 
 function mapStatus(status: string): VoiceStatus {
@@ -66,7 +67,8 @@ function mapVoice(record: VoiceRecord, desa?: DesaLookup): CitizenVoice {
 async function fetchVoiceRecords(desaId?: string) {
   if (!prisma) return [];
 
-  return prisma.voice.findMany({
+  const timer = perfStart();
+  const records = await prisma.voice.findMany({
     where: desaId ? { desaId } : undefined,
     orderBy: { createdAt: "desc" },
     include: {
@@ -79,9 +81,17 @@ async function fetchVoiceRecords(desaId?: string) {
       helpfuls: { select: { id: true } },
     },
   });
+  publicPerfLogWithRows(
+    "public.voice-read",
+    desaId ? "voice.findMany(desa)" : "voice.findMany(all)",
+    records.length,
+    timer,
+  );
+  return records;
 }
 
 async function fetchAllVoicesMapped() {
+  const timer = perfStart();
   const records = await fetchVoiceRecords();
   const desaRows = prisma
     ? await prisma.desa.findMany({
@@ -90,7 +100,9 @@ async function fetchAllVoicesMapped() {
       })
     : [];
   const desaMap = new Map(desaRows.map((desa) => [desa.id, desa]));
-  return records.map((record) => mapVoice(record, desaMap.get(record.desaId)));
+  const voices = records.map((record) => mapVoice(record, desaMap.get(record.desaId)));
+  publicPerfLogWithRows("public.voice-read", "mapAllVoices", voices.length, timer);
+  return voices;
 }
 
 const getCachedAllVoices = unstable_cache(
@@ -100,8 +112,11 @@ const getCachedAllVoices = unstable_cache(
 );
 
 export async function getAllVoicesFromDb() {
+  const timer = perfStart();
   try {
-    return await getCachedAllVoices();
+    const voices = await getCachedAllVoices();
+    publicPerfLogWithRows("public.voice-read", "getCachedAllVoices()", voices.length, timer);
+    return voices;
   } catch (error) {
     console.error("[voice-read] public voice read failed:", error);
     return [];
@@ -135,6 +150,7 @@ async function fetchVoicePreviewForDesa(desaId: string): Promise<DesaVoicePrevie
   if (!prisma) return { total: 0, preview: [] };
 
   try {
+    const timer = perfStart();
     const [total, records] = await Promise.all([
       prisma.voice.count({ where: { desaId } }),
       prisma.voice.findMany({
@@ -150,6 +166,7 @@ async function fetchVoicePreviewForDesa(desaId: string): Promise<DesaVoicePrevie
         },
       }),
     ]);
+    publicPerfLogWithRows("public.voice-read", "voicePreview.count+findMany", records.length, timer);
 
     return {
       total,
