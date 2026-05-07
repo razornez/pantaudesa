@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
             parser: extractMeta.parser,
             ...(extractError ? { extractError } : {}),
             openaiStatus: openaiResult.status,
+            ...(openaiResult.proof ? { openaiProof: openaiResult.proof } : {}),
           },
         },
         { status: 422 },

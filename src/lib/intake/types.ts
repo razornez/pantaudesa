@@ -47,6 +47,16 @@ export interface UnknownUsefulField {
   evidenceSnippet?: string;
 }
 
+export interface OpenAIProof {
+  httpStatus?: number;
+  errorCode?: string | null;
+  errorType?: string | null;
+  requestId?: string | null;
+  usageUrl?: string;
+  limitsUrl?: string;
+  docsUrl?: string;
+}
+
 export interface OpenAIResult {
   attempted: boolean;
   status: OpenAIStatus;
@@ -61,6 +71,7 @@ export interface OpenAIResult {
   detectedButNotPublishable: DetectedDetailField[];
   unknownUsefulFields: UnknownUsefulField[];
   warnings: string[];
+  proof?: OpenAIProof;
 }
 
 export type CurrentValueStatus = "filled" | "empty";

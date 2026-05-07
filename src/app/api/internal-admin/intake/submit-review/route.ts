@@ -289,6 +289,7 @@ export async function POST(req: NextRequest) {
             parser: pipeline.extract.parser,
             ...(parsed.extractError ? { extractError: parsed.extractError } : {}),
             openaiStatus: openaiResult.status,
+            ...(openaiResult.proof ? { openaiProof: openaiResult.proof } : {}),
           },
         },
         { status: 422 },

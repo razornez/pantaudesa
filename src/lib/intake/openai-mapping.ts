@@ -7,14 +7,18 @@ import type {
   DetectedDetailField,
   IntakeConfidence,
   IntakeDocumentType,
+  OpenAIProof,
   OpenAIResult,
   OpenAIStatus,
   UnknownUsefulField,
 } from "@/lib/intake/types";
 
 const MAX_TEXT_INPUT = 20_000;
-const TEXT_IMAGE_MODEL = "gpt-5.4-mini";
-const FILE_INPUT_MODEL = "gpt-5";
+const TEXT_IMAGE_MODEL = "gpt-5-mini";
+const FILE_INPUT_MODEL = "gpt-5-mini";
+const OPENAI_USAGE_URL = "https://platform.openai.com/usage";
+const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
+const OPENAI_ERROR_DOCS_URL = "https://platform.openai.com/docs/guides/error-codes";
 
 const JSON_SCHEMA = {
   type: "object",
@@ -142,6 +146,7 @@ function emptyResult(input: {
   message: string;
   model?: string | null;
   confidence?: IntakeConfidence;
+  proof?: OpenAIProof;
 }): OpenAIResult {
   return {
     attempted: input.attempted,
@@ -157,6 +162,7 @@ function emptyResult(input: {
     detectedButNotPublishable: [],
     unknownUsefulFields: [],
     warnings: [],
+    ...(input.proof ? { proof: input.proof } : {}),
   };
 }
 
@@ -276,6 +282,41 @@ function getResponseErrorMessage(payload: unknown): string | null {
   return typeof message === "string" ? message : null;
 }
 
+function getResponseErrorCode(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const error = (payload as { error?: unknown }).error;
+  if (typeof error !== "object" || error === null) return null;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === "string" && code.trim()) return code.trim();
+  const type = (error as { type?: unknown }).type;
+  return typeof type === "string" && type.trim() ? type.trim() : null;
+}
+
+function getResponseErrorType(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const error = (payload as { error?: unknown }).error;
+  if (typeof error !== "object" || error === null) return null;
+  const type = (error as { type?: unknown }).type;
+  return typeof type === "string" && type.trim() ? type.trim() : null;
+}
+
+function buildProof(input: {
+  httpStatus?: number;
+  errorCode?: string | null;
+  errorType?: string | null;
+  requestId?: string | null;
+}): OpenAIProof {
+  return {
+    ...(input.httpStatus ? { httpStatus: input.httpStatus } : {}),
+    ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+    ...(input.errorType ? { errorType: input.errorType } : {}),
+    ...(input.requestId ? { requestId: input.requestId } : {}),
+    usageUrl: OPENAI_USAGE_URL,
+    limitsUrl: OPENAI_LIMITS_URL,
+    docsUrl: OPENAI_ERROR_DOCS_URL,
+  };
+}
+
 function normalizeStructuredResult(
   parsed: unknown,
   model: string,
@@ -377,6 +418,10 @@ function dataUriForFile(input: { buffer: Buffer; mimeType: string }): string {
   return `data:${input.mimeType};base64,${input.buffer.toString("base64")}`;
 }
 
+function base64ForFile(buffer: Buffer): string {
+  return buffer.toString("base64");
+}
+
 export function mergeKnownFields(
   localFields: AiMappingFields,
   openaiFields: AiMappingFields,
@@ -455,13 +500,14 @@ export async function maybeMapWithOpenAI(input: {
   if (hasImageInput && input.fileBuffer && input.mimeType) {
     content.push({
       type: "input_image",
+      detail: "high",
       image_url: dataUriForFile({ buffer: input.fileBuffer, mimeType: input.mimeType }),
     });
   } else if (hasFileInput && input.fileBuffer && input.mimeType) {
     content.push({
       type: "input_file",
       filename: input.fileName ?? "dokumen-intake",
-      file_data: dataUriForFile({ buffer: input.fileBuffer, mimeType: input.mimeType }),
+      file_data: base64ForFile(input.fileBuffer),
     });
   }
 
@@ -483,7 +529,7 @@ export async function maybeMapWithOpenAI(input: {
         format: {
           type: "json_schema",
           name: "pantau_desa_intake_mapping",
-          strict: true,
+          strict: false,
           schema: JSON_SCHEMA,
         },
       },
@@ -494,9 +540,16 @@ export async function maybeMapWithOpenAI(input: {
 
   if (!response.ok) {
     const message = getResponseErrorMessage(payload) ?? "OpenAI mapping gagal dijalankan.";
+    const errorCode = getResponseErrorCode(payload)?.toLowerCase() ?? null;
+    const errorType = getResponseErrorType(payload);
+    const requestId =
+      response.headers.get("x-request-id") ??
+      response.headers.get("request-id") ??
+      response.headers.get("openai-request-id");
     const lowerMessage = message.toLowerCase();
     const status: OpenAIStatus =
-      response.status === 429 && lowerMessage.includes("quota")
+      response.status === 429 &&
+      (lowerMessage.includes("quota") || errorCode === "insufficient_quota")
         ? "quota_limited"
         : response.status === 429
         ? "rate_limited"
@@ -514,6 +567,12 @@ export async function maybeMapWithOpenAI(input: {
           ? "OpenAI sedang rate limited. Coba lagi beberapa saat atau lanjutkan dengan parser lokal."
           : "OpenAI belum bisa membantu membaca dokumen ini. Parser lokal/manual paste tetap tersedia.",
       model,
+      proof: buildProof({
+        httpStatus: response.status,
+        errorCode,
+        errorType,
+        requestId,
+      }),
     });
   }
 
