@@ -1,21 +1,22 @@
 /**
- * Sprint 05 Batch 3 - Structured Value Diff / Conflict Engine
+ * Sprint 05 Batch 3 Completion Handoff - Structured Value Diff / Conflict Engine
  *
  * Compares the incoming mapped fields against current published village data
  * and produces human-readable diff entries for the review workbench.
  *
- * Library: jsondiffpatch — selected for:
- *   - small bundle, no external dependencies,
- *   - structured delta format (add/remove/update),
- *   - well-typed TypeScript types,
- *   - active maintenance (as of 2025).
+ * FIX APPLIED (Batch 3 Completion Handoff):
+ * - Replaced jsondiffpatch dependency with pure manual scalar comparison.
+ * - jsondiffpatch root array interpretation can be unreliable for simple scalar fields.
+ * - Manual comparison is deterministic: prev === next -> unchanged,
+ *   prev empty + next filled -> added, prev filled + next empty -> removed, else -> updated.
+ *
+ * Library: none (pure manual comparison - no external deps for diff).
  *
  * Guardrails:
  *  - pure function, no DB access, no side effects,
  *  - diff output is preview only — never auto-applies anything.
  */
 
-import { diff } from "jsondiffpatch";
 import type { AiMappableDesaField, AiMappingFields } from "@/lib/admin-claim/ai-mapping";
 
 export type DiffDeltaType = "added" | "removed" | "updated" | "unchanged";
@@ -53,6 +54,29 @@ function fmt(v: string | number | null | undefined): string {
   return String(v);
 }
 
+/**
+ * Determines the delta type for a single scalar field comparison.
+ *
+ * Rules (per Batch 3 completion handoff):
+ * - previous equals next -> unchanged
+ * - previous empty and next filled -> added
+ * - previous filled and next empty -> removed
+ * - otherwise -> updated
+ */
+function computeScalarDelta(
+  prev: string | number | null | undefined,
+  next: string | number | null | undefined,
+): DiffDeltaType {
+  const prevIsEmpty = prev === null || prev === undefined || prev === "";
+  const nextIsEmpty = next === null || next === undefined || next === "";
+
+  if (prevIsEmpty && nextIsEmpty) return "unchanged";
+  if (prevIsEmpty && !nextIsEmpty) return "added";
+  if (!prevIsEmpty && nextIsEmpty) return "removed";
+  if (prev === next) return "unchanged";
+  return "updated";
+}
+
 export function diffFields(
   current: Partial<Record<AiMappableDesaField, string | number | null>>,
   incoming: AiMappingFields,
@@ -66,25 +90,11 @@ export function diffFields(
     const next = incoming[field] ?? null;
     const prev = current[field] ?? null;
 
-    // jsondiffpatch expects plain objects
-    const d = diff(
-      prev === null ? undefined : { v: prev },
-      next === null ? undefined : { v: next },
-    );
+    const deltaType = computeScalarDelta(prev, next);
 
-    let deltaType: DiffDeltaType = "unchanged";
-    if (!d) {
-      deltaType = "unchanged";
-    } else if (d[0] === undefined && d[1] !== undefined) {
-      deltaType = "added";
-      addedCount++;
-    } else if (d[0] !== undefined && d[1] === undefined) {
-      deltaType = "removed";
-      removedCount++;
-    } else if (d[0] !== undefined && d[1] !== undefined) {
-      deltaType = "updated";
-      updatedCount++;
-    }
+    if (deltaType === "added") addedCount++;
+    else if (deltaType === "updated") updatedCount++;
+    else if (deltaType === "removed") removedCount++;
 
     const changedLabel = (() => {
       if (deltaType === "unchanged") return undefined;

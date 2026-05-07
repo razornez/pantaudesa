@@ -14,6 +14,7 @@ import {
   toVillageVersionCandidateJson,
   type VillageDataVersionCandidate,
 } from "@/lib/versioning/desa-versioning";
+import type { OpenAIResult } from "@/lib/intake/openai-mapping";
 
 export type IntakeInputSource = "file" | "paste";
 
@@ -26,6 +27,8 @@ export interface IntakePipelineResult {
   diff: DiffResult | null;
   versionCandidate: VillageDataVersionCandidate | null;
   guardrailNote: string;
+  /** OpenAI enhanced mapping result (if attempted and available) */
+  openai?: OpenAIResult;
 }
 
 export const INTAKE_GUARDRAIL_NOTE =
