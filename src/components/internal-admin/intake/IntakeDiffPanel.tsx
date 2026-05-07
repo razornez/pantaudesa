@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { PipelineResult, DiffEntry } from "./types";
 import { DELTA_LABELS, FIELD_LABELS } from "./constants";
 import { formatDiffValue } from "./utils";

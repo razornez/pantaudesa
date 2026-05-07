@@ -2,6 +2,11 @@ import { cache } from "react";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  getDatabaseUnavailableMessage,
+  isDatabaseConnectivityError,
+} from "@/lib/db-connectivity";
+import { getInternalAdminRoleViaSupabase } from "@/lib/internal-admin/supabase-fallback";
 import { perfLog, perfStart } from "@/lib/perf";
 
 export type InternalAdminSession = {
@@ -19,14 +24,31 @@ export type InternalAdminSession = {
 export const isInternalAdmin = cache(async function isInternalAdmin(
   userId: string,
 ): Promise<boolean> {
-  if (!db) return false;
-  const t = perfStart();
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  perfLog("internal-admin.auth", "user.findUnique(role)", t);
-  return user?.role === "INTERNAL_ADMIN";
+  if (!db) {
+    try {
+      return (await getInternalAdminRoleViaSupabase(userId)) === "INTERNAL_ADMIN";
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const t = perfStart();
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    perfLog("internal-admin.auth", "user.findUnique(role)", t);
+    return user?.role === "INTERNAL_ADMIN";
+  } catch (error) {
+    if (!isDatabaseConnectivityError(error)) throw error;
+
+    try {
+      return (await getInternalAdminRoleViaSupabase(userId)) === "INTERNAL_ADMIN";
+    } catch {
+      return false;
+    }
+  }
 });
 
 // Get the current session and validate internal admin role server-side.
@@ -66,6 +88,12 @@ export async function requireInternalAdminSession(): Promise<InternalAdminSessio
     return { userId: session.user.id, email: session.user.email };
   } catch (error) {
     console.error("[internal-admin.auth] require session failed", error);
+    if (isDatabaseConnectivityError(error)) {
+      return NextResponse.json(
+        { error: getDatabaseUnavailableMessage() },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { error: "Sesi login bermasalah. Silakan masuk ulang." },
       { status: 401 },

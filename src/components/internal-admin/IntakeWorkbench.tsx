@@ -11,11 +11,15 @@ import type {
   IntakeMode,
   DesaOption,
   IntakeHistorySubmission,
-  IntakeHistoryActivity,
   DesaVersionEntry,
 } from "./intake/types";
 
-import { INTAKE_COPY, FIELD_LABELS, buildSuggestedReviewTitle } from "./intake/constants";
+import {
+  INTAKE_COPY,
+  FIELD_LABELS,
+  buildSuggestedReviewTitle,
+  buildQueueFocusHref,
+} from "./intake/constants";
 import { formatBytes, formatDiffValue, formatDateTime } from "./intake/utils";
 
 import { IntakeSection } from "./intake/IntakeSection";
@@ -78,6 +82,21 @@ function noticeClassForTone(tone: ErrorTone): string {
   return "notice-card notice-danger";
 }
 
+function formatSubmissionStatus(status: string) {
+  switch (status) {
+    case "WAITING_VERIFIED_APPROVAL":
+      return "Menunggu persetujuan";
+    case "PROCESSING":
+      return "Perlu review internal";
+    case "PUBLISHED":
+      return "Sudah dipublikasikan";
+    case "FAILED":
+      return "Perlu unggah ulang";
+    default:
+      return status;
+  }
+}
+
 // ============================================================================
 // Main Component - Refactored Compact Version
 // ============================================================================
@@ -105,7 +124,6 @@ export default function IntakeWorkbench() {
 
   // Village options (simplified)
   const [desaOptions, setDesaOptions] = useState<DesaOption[]>([]);
-  const [desaLoading, setDesaLoading] = useState(false);
 
   // History state (P0-1)
   const intakeHistory = useIntakeHistory();
@@ -116,7 +134,6 @@ export default function IntakeWorkbench() {
   // ============================================================================
 
   const handleSearchDesa = useCallback(async (query: string) => {
-    setDesaLoading(true);
     try {
       const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
       const res = await fetch(`/api/internal-admin/desa-options${suffix}`);
@@ -124,8 +141,6 @@ export default function IntakeWorkbench() {
       if (data.desa) setDesaOptions(data.desa);
     } catch {
       // ignore
-    } finally {
-      setDesaLoading(false);
     }
   }, []);
 
@@ -433,7 +448,6 @@ export default function IntakeWorkbench() {
           loading={intakeHistory.loading}
           error={intakeHistory.error}
           submissions={intakeHistory.history?.submissions ?? []}
-          activity={intakeHistory.history?.activity ?? []}
           storageNote={intakeHistory.history?.storage.note ?? null}
         />
       </IntakeSection>
@@ -488,13 +502,11 @@ function IntakeHistoryList({
   loading,
   error,
   submissions,
-  activity,
   storageNote,
 }: {
   loading: boolean;
   error: string | null;
   submissions: IntakeHistorySubmission[];
-  activity: IntakeHistoryActivity[];
   storageNote: string | null;
 }) {
   if (loading) {
@@ -507,7 +519,7 @@ function IntakeHistoryList({
       </p>
     );
   }
-  if (submissions.length === 0 && activity.length === 0) {
+  if (submissions.length === 0) {
     return (
       <p className="text-xs text-slate-500">
         Belum ada submission intake yang tercatat.
@@ -516,7 +528,6 @@ function IntakeHistoryList({
   }
 
   const topSubmissions = submissions.slice(0, 5);
-  const topActivity = activity.slice(0, 5);
 
   return (
     <div className="space-y-3">
@@ -524,50 +535,58 @@ function IntakeHistoryList({
         <p className="text-[11px] text-slate-500">{storageNote}</p>
       )}
 
-      {topSubmissions.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Submission terakhir
-          </p>
-          <ul className="space-y-1.5">
-            {topSubmissions.map((item) => (
-              <li
-                key={item.id}
-                className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-900">{item.title}</span>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                    {item.status}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  {item.desa.nama} · {formatDateTime(item.updatedAt)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700">
+        <p className="font-semibold text-slate-900">Antrean review adalah sumber utama</p>
+        <p className="mt-1">
+          Riwayat intake di bawah hanya shortcut cepat ke kartu dokumen yang sama di antrean review.
+          Semua cek draft, review, dan publish final tetap dilakukan dari antrean review.
+        </p>
+      </div>
 
-      {topActivity.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Aktivitas terbaru
-          </p>
-          <ul className="space-y-1">
-            {topActivity.map((evt) => (
-              <li key={evt.id} className="text-[11px] text-slate-600">
-                <span className="font-semibold text-slate-800">{evt.label}</span>
-                {" — "}
-                <span className="text-slate-500">{evt.desaName}</span>
-                {" · "}
-                <span className="text-slate-400">{formatDateTime(evt.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Shortcut terbaru
+        </p>
+        <Link
+          href="/internal-admin/documents"
+          className="text-[11px] font-semibold text-sky-700 transition hover:text-sky-800 hover:underline"
+        >
+          Buka antrean review
+        </Link>
+      </div>
+
+      <ul className="space-y-2">
+        {topSubmissions.map((item) => (
+          <li key={item.id}>
+            <Link
+              href={buildQueueFocusHref({ status: item.status, documentId: item.id })}
+              className="group block rounded-xl border border-slate-200 bg-white px-3 py-3 transition hover:border-emerald-200 hover:bg-emerald-50/40"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    {item.desa.nama} · {formatDateTime(item.updatedAt)}
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                  {formatSubmissionStatus(item.status)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
+                <span className="text-slate-500">
+                  Klik untuk membuka kartu ini di antrean review dengan highlight.
+                </span>
+                <span className="font-semibold text-emerald-700 transition group-hover:text-emerald-800">
+                  Buka di antrean →
+                </span>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

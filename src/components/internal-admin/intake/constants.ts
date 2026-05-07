@@ -411,9 +411,22 @@ export function formatDesaSearchValue(option: { nama: string; kecamatan: string;
   return `${option.nama} - ${option.kecamatan}, ${option.kabupaten}`;
 }
 
+export const REVIEW_QUEUE_STATUSES = [
+  "WAITING_VERIFIED_APPROVAL",
+  "PROCESSING",
+  "PUBLISHED",
+  "FAILED",
+] as const;
+
+export function isReviewQueueStatus(
+  value: string,
+): value is (typeof REVIEW_QUEUE_STATUSES)[number] {
+  return REVIEW_QUEUE_STATUSES.includes(value as (typeof REVIEW_QUEUE_STATUSES)[number]);
+}
+
 export function buildQueueFocusHref(input: { status: string; documentId: string }) {
   const params = new URLSearchParams();
-  if (input.status) params.set("status", input.status);
+  if (isReviewQueueStatus(input.status)) params.set("status", input.status);
   params.set("focus", input.documentId);
   return `/internal-admin/documents?${params.toString()}`;
 }

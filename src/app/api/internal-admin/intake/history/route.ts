@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { handleApiError } from "@/lib/api-error";
+import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
+import { getIntakeHistoryViaSupabase } from "@/lib/internal-admin/supabase-fallback";
 import { listDesaDataAuditEventsForDocuments } from "@/lib/versioning/village-data-persistence";
 
 const HISTORY_EVENT_TYPES = [
@@ -38,27 +40,33 @@ export async function GET() {
   try {
     const session = await requireInternalAdminSession();
     if (session instanceof NextResponse) return session;
-    if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+    if (!db) return NextResponse.json(await getIntakeHistoryViaSupabase());
 
-    const submissions = await db.adminDesaDocument.findMany({
-      where: { category: "intake_workbench" },
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      take: 8,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        aiMappingStatus: true,
-        fileName: true,
-        fileType: true,
-        fileSize: true,
-        failedReason: true,
-        publishedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        desa: { select: { id: true, nama: true, kabupaten: true } },
-      },
-    });
+    let submissions;
+    try {
+      submissions = await db.adminDesaDocument.findMany({
+        where: { category: "intake_workbench" },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        take: 8,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          aiMappingStatus: true,
+          fileName: true,
+          fileType: true,
+          fileSize: true,
+          failedReason: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          desa: { select: { id: true, nama: true, kabupaten: true } },
+        },
+      });
+    } catch (error) {
+      if (!isDatabaseConnectivityError(error)) throw error;
+      return NextResponse.json(await getIntakeHistoryViaSupabase());
+    }
 
     const submissionIds = submissions.map((item) => item.id);
 

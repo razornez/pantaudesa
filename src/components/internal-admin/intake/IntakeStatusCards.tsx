@@ -1,6 +1,5 @@
 "use client";
 
-import type { PipelineResult } from "./types";
 import type { StatusBadgeInfo } from "./types";
 import { INTAKE_COPY } from "./constants";
 

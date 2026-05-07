@@ -18,7 +18,7 @@ import { VOICE_CATEGORIES, STATUS_CONFIG, relativeTime } from "@/lib/citizen-voi
 import { mockDesa } from "@/lib/mock-data";
 import UserAvatar from "@/components/user/UserAvatar";
 import BadgePill from "@/components/user/BadgePill";
-import ProfileAdminAccessCard from "@/components/profil/ProfileAdminAccessCard";
+import ProfileAdminAccessEntryCard from "@/components/profil/admin-claim/ProfileAdminAccessEntryCard";
 import InternalAdminAccessCard from "@/components/profil/InternalAdminAccessCard";
 
 const desaMap = Object.fromEntries(mockDesa.map(d => [d.id, d.nama]));
@@ -596,7 +596,7 @@ export default function SayaProfilePage({
           <InternalAdminAccessCard />
 
           {/* Admin desa */}
-          <ProfileAdminAccessCard user={user} />
+          <ProfileAdminAccessEntryCard user={user} />
 
           {/* Trust card */}
           {user.role === "WARGA" && (

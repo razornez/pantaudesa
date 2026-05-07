@@ -2,7 +2,7 @@
  * Hook for Desa Options - search and select desa
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DesaOption, DesaOptionsResponse } from "../types";
 import { getPayloadError, readJsonLikeResponse } from "../utils";
 import { formatDesaSearchValue } from "../constants";
