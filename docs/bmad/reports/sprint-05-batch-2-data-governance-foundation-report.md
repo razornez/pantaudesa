@@ -331,6 +331,26 @@ Before versioning or conflict logic starts:
 
 ---
 
+## QA
+
+Batch 2 remains docs/proposal-first. No migration, schema apply, or package install was executed for this batch.
+
+Latest close-out QA note:
+
+| Command | Result | Note |
+|---|---|---|
+| `npm run lint` | PASS | warning lama `.eslintignore` masih muncul |
+| `npx tsc --noEmit` | PASS | tidak ada type error dari perubahan docs/proposal Batch 2 |
+| `npx prisma generate` | BLOCKED | issue environment Prisma Windows `EPERM` |
+| `npm run build` | BLOCKED | berhenti di langkah `prisma generate` yang gagal karena `EPERM` |
+
+Interpretasi:
+
+- Kontrak governance, field catalog, source registry, dan data quality rules untuk Batch 2 sudah terdokumentasi.
+- Blocker build bukan berasal dari isi proposal Batch 2, tetapi dari environment Prisma Windows yang juga mempengaruhi batch lanjutan.
+
+---
+
 ## Guardrails
 
 - No migration created.

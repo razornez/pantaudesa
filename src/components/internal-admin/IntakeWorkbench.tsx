@@ -83,6 +83,93 @@ interface VersionCandidate {
   proposedSnapshot: Partial<Record<AiMappableDesaField, string | number | null>>;
 }
 
+interface KnownFieldEvidence {
+  field: AiMappableDesaField;
+  evidenceSnippet?: string;
+  sourceReference?: string;
+}
+
+interface DetectedDetailField {
+  sectionKey: string;
+  sectionLabel: string;
+  fieldKey: string;
+  fieldLabel: string;
+  value: string;
+  reason: string;
+  sourceRequirement: string;
+  validationRequirement: string;
+  evidenceSnippet?: string;
+  sourceReference?: string;
+}
+
+interface UnknownUsefulField {
+  label: string;
+  value: string;
+  possibleCategory: string;
+  evidenceSnippet?: string;
+}
+
+interface OpenAIResult {
+  attempted: boolean;
+  status:
+    | "success"
+    | "skipped"
+    | "missing_key"
+    | "rate_limited"
+    | "quota_limited"
+    | "error"
+    | "invalid_json";
+  usedInputMode: "text" | "image" | "file";
+  reason: string;
+  message: string;
+  model: string | null;
+  documentType:
+    | "profil_desa"
+    | "anggaran"
+    | "perangkat_desa"
+    | "fasilitas"
+    | "potensi"
+    | "kontak"
+    | "dokumen_publik"
+    | "unknown";
+  confidence: "low" | "medium" | "high";
+  knownPublishableFields: Partial<Record<AiMappableDesaField, string | number | null>>;
+  knownFieldEvidence: KnownFieldEvidence[];
+  detectedButNotPublishable: DetectedDetailField[];
+  unknownUsefulFields: UnknownUsefulField[];
+  warnings: string[];
+}
+
+interface DetailFieldCoverageEntry {
+  sectionKey: string;
+  sectionLabel: string;
+  fieldKey: string;
+  fieldLabel: string;
+  currentModelSource: string;
+  currentValueStatus: "filled" | "empty";
+  currentValuePreview: string;
+  currentlyMappable: boolean;
+  aiDetectable: boolean;
+  publishableNow: boolean;
+  shouldBeMappableInSprint05: boolean;
+  deferredReason: string | null;
+  sourceRequirement: string;
+  validationRequirement: string;
+  uploadedCoverageStatus: "covered" | "missing" | "detected_not_publishable";
+  uploadedValuePreview: string | null;
+}
+
+interface DetailFieldCoverageSummary {
+  entries: DetailFieldCoverageEntry[];
+  filledCount: number;
+  emptyCount: number;
+  coveredCount: number;
+  detectedNotPublishableCount: number;
+  publishableNowCount: number;
+  detectedButNotPublishable: DetectedDetailField[];
+  unknownUsefulFields: UnknownUsefulField[];
+}
+
 interface PipelineResult {
   ok: boolean;
   inputSource: string;
@@ -90,8 +177,10 @@ interface PipelineResult {
   mapping: MappingResult;
   validation: ValidationResult;
   diff: DiffResult | null;
+  fieldCoverage: DetailFieldCoverageSummary | null;
   versionCandidate?: VersionCandidate | null;
   guardrailNote: string;
+  openai: OpenAIResult;
 }
 
 interface PipelineError {
@@ -407,6 +496,7 @@ function getValidationStatus(result: PipelineResult) {
 
 function getReviewStatus(result: PipelineResult) {
   const hasErrors = result.validation.issues.some((issue) => issue.severity === "error");
+  const hasReviewableContent = getReviewableContentCount(result) > 0;
 
   if (hasErrors) {
     return {
@@ -421,6 +511,14 @@ function getReviewStatus(result: PipelineResult) {
       label: "Siap direview",
       note: "Perubahan sudah terlihat dan bisa dibahas oleh internal admin.",
       className: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
+    };
+  }
+
+  if (!hasReviewableContent) {
+    return {
+      label: "Belum cukup terbaca",
+      note: "Belum ada hasil yang cukup kuat untuk dibawa ke review internal.",
+      className: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
     };
   }
 
@@ -452,6 +550,317 @@ function getChangedFieldList(result: PipelineResult) {
   }
 
   return [];
+}
+
+function getReviewableContentCount(result: PipelineResult) {
+  return (
+    getMappedFieldEntries(result).length +
+    (result.fieldCoverage?.detectedButNotPublishable.length ?? 0) +
+    (result.fieldCoverage?.unknownUsefulFields.length ?? 0)
+  );
+}
+
+function getOpenAiStatus(result: PipelineResult) {
+  switch (result.openai.status) {
+    case "success":
+      return {
+        label: "AI membantu",
+        note: result.openai.message,
+        className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
+      };
+    case "missing_key":
+      return {
+        label: "AI belum tersedia",
+        note: result.openai.message,
+        className: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+      };
+    case "rate_limited":
+    case "quota_limited":
+    case "error":
+    case "invalid_json":
+      return {
+        label: "AI fallback",
+        note: result.openai.message,
+        className: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+      };
+    default:
+      return {
+        label: "Parser lokal",
+        note: result.openai.message,
+        className: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+      };
+  }
+}
+
+function IntakeAiStatusPanel({
+  result,
+  embedded = false,
+}: {
+  result: PipelineResult;
+  embedded?: boolean;
+}) {
+  const status = getOpenAiStatus(result);
+  const hasAiFindings =
+    Object.keys(result.openai.knownPublishableFields).length > 0 ||
+    result.openai.detectedButNotPublishable.length > 0 ||
+    result.openai.unknownUsefulFields.length > 0;
+
+  return (
+    <div className={embedded ? "space-y-3" : "rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5"}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Pembacaan AI
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-slate-900 sm:text-base">
+            Jujur tentang kapan AI dipakai dan apa hasilnya
+          </h3>
+        </div>
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${status.className}`}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      <p className="mt-3 text-xs leading-relaxed text-slate-600">{status.note}</p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-xs">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mode input</p>
+          <p className="mt-1 font-semibold text-slate-900">{result.openai.usedInputMode}</p>
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-xs">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Confidence</p>
+          <p className="mt-1 font-semibold text-slate-900">{result.openai.confidence}</p>
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-xs">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Tipe dokumen</p>
+          <p className="mt-1 font-semibold text-slate-900">{result.openai.documentType}</p>
+        </div>
+      </div>
+
+      {!hasAiFindings && result.openai.status !== "success" ? (
+        <p className="mt-3 text-[11px] text-slate-500">
+          Tidak ada temuan AI yang dipakai di draft ini. Preview tetap dibangun dari parser lokal
+          atau dari input manual yang tersedia.
+        </p>
+      ) : null}
+
+      {result.openai.warnings.length > 0 ? (
+        <div className="mt-3 space-y-1">
+          {result.openai.warnings.map((warning, index) => (
+            <div
+              key={`${warning}-${index}`}
+              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800"
+            >
+              {warning}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function IntakeFieldCoveragePanel({
+  result,
+  selectedDesa,
+}: {
+  result: PipelineResult;
+  selectedDesa: DesaOption | null;
+}) {
+  const coverage = result.fieldCoverage;
+  const [showDetails, setShowDetails] = useState(false);
+
+  if (!coverage) return null;
+
+  const sectionOrder = Array.from(
+    new Map(coverage.entries.map((entry) => [entry.sectionKey, entry.sectionLabel])).entries(),
+  );
+
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Cakupan field detail
+        </p>
+        <h3 className="text-sm font-semibold text-slate-900 sm:text-base">
+          Bandingkan isi upload dengan field yang memang dipakai halaman detail desa
+        </h3>
+        <p className="text-xs leading-relaxed text-slate-600">
+          {selectedDesa
+            ? "Di sini Anda bisa lihat field publik yang sudah terisi, yang masih kosong, yang tertutup oleh upload ini, dan yang terdeteksi tetapi belum aman dipublish."
+            : "Pilih desa jika ingin melihat mana field publik yang sudah terisi dan mana yang masih kosong. Tanpa desa, bagian ini tetap menunjukkan field yang tertutup oleh upload."}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          ["Sudah terisi", `${coverage.filledCount} field`, "border-emerald-200 bg-emerald-50 text-emerald-900"],
+          ["Masih kosong", `${coverage.emptyCount} field`, "border-slate-200 bg-slate-50 text-slate-900"],
+          ["Tercakup upload", `${coverage.coveredCount} field`, "border-sky-200 bg-sky-50 text-sky-900"],
+          [
+            "Terdeteksi tapi belum publishable",
+            `${coverage.detectedNotPublishableCount} field`,
+            "border-amber-200 bg-amber-50 text-amber-900",
+          ],
+          [
+            "Publishable sekarang",
+            `${coverage.publishableNowCount} field`,
+            "border-indigo-200 bg-indigo-50 text-indigo-900",
+          ],
+        ].map(([label, value, className]) => (
+          <div key={label} className={`rounded-xl border px-3 py-3 text-xs ${className}`}>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-current/70">{label}</p>
+            <p className="mt-1 font-semibold text-current">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowDetails((current) => !current)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+        >
+          {showDetails ? <ChevronUp size={13} aria-hidden /> : <ChevronDown size={13} aria-hidden />}
+          {showDetails ? "Sembunyikan detail field" : "Lihat detail field coverage"}
+        </button>
+
+        {showDetails ? (
+          <div className="space-y-4">
+            {sectionOrder.map(([sectionKey, sectionLabel]) => {
+              const sectionEntries = coverage.entries.filter((entry) => entry.sectionKey === sectionKey);
+              return (
+                <div key={sectionKey} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    {sectionLabel}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {sectionEntries.map((entry) => (
+                      <div
+                        key={`${sectionKey}-${entry.fieldKey}`}
+                        className="rounded-xl border border-slate-100 bg-white px-3 py-3 text-xs"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-slate-900">{entry.fieldLabel}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {entry.currentModelSource}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                entry.currentValueStatus === "filled"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {entry.currentValueStatus === "filled" ? "Sudah terisi" : "Masih kosong"}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                entry.uploadedCoverageStatus === "covered"
+                                  ? "bg-sky-50 text-sky-700"
+                                  : entry.uploadedCoverageStatus === "detected_not_publishable"
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              {entry.uploadedCoverageStatus === "covered"
+                                ? "Tercakup upload"
+                                : entry.uploadedCoverageStatus === "detected_not_publishable"
+                                ? "Terdeteksi tapi belum publishable"
+                                : "Belum tertutup upload"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                              Nilai publik saat ini
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-700">{entry.currentValuePreview}</p>
+                          </div>
+                          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                              Hasil upload
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-700">
+                              {entry.uploadedValuePreview ?? "Belum ada temuan yang cukup kuat"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                          <p className="text-[11px] text-slate-500">
+                            <span className="font-semibold text-slate-700">Sumber:</span>{" "}
+                            {entry.sourceRequirement}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            <span className="font-semibold text-slate-700">Validasi:</span>{" "}
+                            {entry.validationRequirement}
+                          </p>
+                        </div>
+
+                        {!entry.publishableNow && entry.deferredReason ? (
+                          <p className="mt-2 text-[11px] text-amber-700">
+                            <span className="font-semibold">Belum publishable:</span>{" "}
+                            {entry.deferredReason}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {coverage.detectedButNotPublishable.length > 0 ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+              Terdeteksi tetapi belum aman dipublish
+            </p>
+            <div className="mt-2 space-y-2">
+              {coverage.detectedButNotPublishable.slice(0, 6).map((item, index) => (
+                <div key={`${item.fieldKey}-${index}`} className="rounded-xl border border-amber-100 bg-white px-3 py-2 text-xs">
+                  <p className="font-semibold text-slate-900">
+                    {item.fieldLabel} <span className="text-slate-400">({item.sectionLabel})</span>
+                  </p>
+                  <p className="mt-1 text-slate-700">{item.value}</p>
+                  <p className="mt-1 text-[11px] text-amber-700">{item.reason}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {coverage.unknownUsefulFields.length > 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Temuan lain yang mungkin berguna
+            </p>
+            <div className="mt-2 space-y-2">
+              {coverage.unknownUsefulFields.slice(0, 6).map((item, index) => (
+                <div key={`${item.label}-${index}`} className="rounded-xl border border-slate-100 bg-white px-3 py-2 text-xs">
+                  <p className="font-semibold text-slate-900">{item.label}</p>
+                  <p className="mt-1 text-slate-700">{item.value}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Kandidat kategori: {item.possibleCategory}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function SectionCard({
@@ -590,7 +999,11 @@ function IntakeDecisionSummary({
 }) {
   const mappedFields = getMappedFieldEntries(result);
   const changedFields = getChangedFieldList(result);
-  const canSubmit = Boolean(selectedDesa) && result.validation.ok && !submittedReview;
+  const canSubmit =
+    Boolean(selectedDesa) &&
+    result.validation.ok &&
+    !submittedReview &&
+    getReviewableContentCount(result) > 0;
 
   const cards = [
     {
@@ -644,6 +1057,8 @@ function IntakeDecisionSummary({
         ? "Pilih desa target dulu."
         : !result.validation.ok
         ? "Masih ada error validasi yang harus dibereskan."
+        : getReviewableContentCount(result) === 0
+        ? "Belum ada hasil yang cukup kuat untuk dibawa ke review."
         : "Hasil ini sudah cukup aman untuk dikirim ke antrean review.",
       className: submittedReview
         ? "border-emerald-200 bg-emerald-50 text-emerald-900"
@@ -966,6 +1381,7 @@ function DesaVersionHistoryPanel({
 export default function IntakeWorkbench() {
   const [step, setStep] = useState<"input" | "result">("input");
   const [mode, setMode] = useState<"upload" | "paste">("upload");
+  const [useAiMapping, setUseAiMapping] = useState(false);
   const [textValue, setTextValue] = useState("");
   const [desaSearch, setDesaSearch] = useState("");
   const [desaIdValue, setDesaIdValue] = useState("");
@@ -1174,6 +1590,7 @@ export default function IntakeWorkbench() {
         const formData = new FormData();
         formData.append("file", selectedFile);
         if (desaIdValue.trim()) formData.append("desaId", desaIdValue.trim());
+        if (useAiMapping) formData.append("useAiMapping", "true");
 
         const res = await fetch("/api/internal-admin/intake", {
           method: "POST",
@@ -1203,6 +1620,7 @@ export default function IntakeWorkbench() {
           body: JSON.stringify({
             text: textValue,
             ...(desaIdValue.trim() ? { desaId: desaIdValue.trim() } : {}),
+            ...(useAiMapping ? { useAiMapping: true } : {}),
           }),
         });
         const payload = await readJsonLikeResponse<PipelineResult>(res);
@@ -1222,7 +1640,7 @@ export default function IntakeWorkbench() {
     } finally {
       setLoading(false);
     }
-  }, [desaIdValue, mode, selectedFile, textValue]);
+  }, [desaIdValue, mode, selectedFile, textValue, useAiMapping]);
 
   const submitToReview = useCallback(async () => {
     if (!selectedDesa || !desaIdValue.trim()) {
@@ -1250,6 +1668,7 @@ export default function IntakeWorkbench() {
         const formData = new FormData();
         formData.append("file", selectedFile);
         formData.append("desaId", desaIdValue.trim());
+        if (useAiMapping) formData.append("useAiMapping", "true");
         if (reviewTitle.trim()) {
           formData.append("title", reviewTitle.trim());
         }
@@ -1282,6 +1701,7 @@ export default function IntakeWorkbench() {
           body: JSON.stringify({
             text: textValue,
             desaId: desaIdValue.trim(),
+            ...(useAiMapping ? { useAiMapping: true } : {}),
             ...(reviewTitle.trim() ? { title: reviewTitle.trim() } : {}),
           }),
         });
@@ -1302,7 +1722,17 @@ export default function IntakeWorkbench() {
     } finally {
       setSubmittingReview(false);
     }
-  }, [desaIdValue, fetchHistory, mode, result, reviewTitle, selectedDesa, selectedFile, textValue]);
+  }, [
+    desaIdValue,
+    fetchHistory,
+    mode,
+    result,
+    reviewTitle,
+    selectedDesa,
+    selectedFile,
+    textValue,
+    useAiMapping,
+  ]);
 
   return (
     <div className="space-y-5">
@@ -1355,15 +1785,41 @@ export default function IntakeWorkbench() {
             </button>
           </div>
 
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Bantuan AI (opsional)
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Pakai AI untuk foto, scan, atau dokumen yang sulit dibaca parser lokal
+                </p>
+                <p className="text-xs leading-relaxed text-slate-600">
+                  Parser lokal tetap dicoba lebih dulu. Jika AI gagal, limit, atau key tidak ada,
+                  sistem tetap jujur dan mengarahkan Anda kembali ke parser lokal atau paste teks.
+                </p>
+              </div>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={useAiMapping}
+                  onChange={(e) => setUseAiMapping(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                Coba AI
+              </label>
+            </div>
+          </div>
+
           {mode === "upload" && (
             <div className="space-y-2">
               <label className="field-label text-xs">
-                File (DOCX, XLSX, PDF, TXT, CSV - maks 10 MB)
+                File (DOCX, XLSX, PDF, TXT, CSV, JPG, PNG - maks 10 MB)
               </label>
               <input
                 ref={fileRef}
                 type="file"
-                accept=".docx,.xlsx,.pdf,.txt,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,text/plain,text/csv"
+                accept=".docx,.xlsx,.pdf,.txt,.csv,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,text/plain,text/csv,image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
                 className="field-lux text-sm"
               />
@@ -1377,6 +1833,9 @@ export default function IntakeWorkbench() {
               <p className="text-[11px] text-slate-400">
                 Contoh file uji upload tersedia di `public/testing/intake/`, termasuk
                 `contoh-perubahan-lengkap.docx` dan `contoh-perubahan-lengkap.pdf`.
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Untuk foto atau scan, aktifkan `Coba AI` agar sistem mencoba pembacaan visual.
               </p>
             </div>
           )}
@@ -1567,9 +2026,10 @@ export default function IntakeWorkbench() {
             const mappingStatus = getMappingStatus(result);
             const validationStatus = getValidationStatus(result);
             const reviewStatus = getReviewStatus(result);
+            const openAiStatus = getOpenAiStatus(result);
 
             return (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-slate-100 bg-white p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Mapping
@@ -1606,6 +2066,17 @@ export default function IntakeWorkbench() {
                     Belum bisa dipublish dari layar ini.
                   </p>
                 </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Bantuan AI
+                  </p>
+                  <span
+                    className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${openAiStatus.className}`}
+                  >
+                    {openAiStatus.label}
+                  </span>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600">{openAiStatus.note}</p>
+                </div>
               </div>
             );
           })()}
@@ -1615,6 +2086,9 @@ export default function IntakeWorkbench() {
             selectedDesa={selectedDesa}
             submittedReview={submittedReview}
           />
+
+          <IntakeFieldCoveragePanel result={result} selectedDesa={selectedDesa} />
+          <IntakeMappedSummary result={result} />
 
           <div className="flex flex-wrap gap-2">
             <button
@@ -1748,10 +2222,22 @@ export default function IntakeWorkbench() {
                       </div>
                     ) : null}
 
+                    {getReviewableContentCount(result) === 0 ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                        Belum ada hasil yang cukup kuat untuk disimpan ke review. Coba aktifkan AI,
+                        pilih file lain, atau tempel teks yang lebih jelas.
+                      </div>
+                    ) : null}
+
                     <button
                       type="button"
                       onClick={submitToReview}
-                      disabled={!selectedDesa || !result.validation.ok || submittingReview}
+                      disabled={
+                        !selectedDesa ||
+                        !result.validation.ok ||
+                        submittingReview ||
+                        getReviewableContentCount(result) === 0
+                      }
                       className="btn-lux btn-lux-success flex w-full items-center justify-center gap-2 text-xs sm:w-auto"
                     >
                       {submittingReview ? (
@@ -1773,57 +2259,6 @@ export default function IntakeWorkbench() {
               membuka `Review data`, lalu memilih simpan dulu atau publish final.
             </div>
           </div>
-
-          <IntakeMappedSummary result={result} />
-
-          <SectionCard title="Ekstraksi" defaultOpen={false}>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
-              <div>
-                <dt className="text-slate-500">Parser</dt>
-                <dd className="font-medium text-slate-900">{result.extract.parser}</dd>
-              </div>
-              {result.extract.fileName ? (
-                <>
-                  <div>
-                    <dt className="text-slate-500">File</dt>
-                    <dd className="font-medium text-slate-900">{result.extract.fileName}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Size</dt>
-                    <dd className="font-medium text-slate-900">
-                      {formatBytes(result.extract.size)}
-                    </dd>
-                  </div>
-                </>
-              ) : null}
-              {result.extract.pages ? (
-                <div>
-                  <dt className="text-slate-500">Pages</dt>
-                  <dd className="font-medium text-slate-900">{result.extract.pages}</dd>
-                </div>
-              ) : null}
-              {result.extract.sheets ? (
-                <div>
-                  <dt className="text-slate-500">Sheets</dt>
-                  <dd className="font-medium text-slate-900">
-                    {result.extract.sheets.join(", ")}
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt className="text-slate-500">Durasi</dt>
-                <dd className="font-medium text-slate-900">{result.extract.durationMs} ms</dd>
-              </div>
-              {result.extract.truncated ? (
-                <div className="col-span-full">
-                  <dt className="text-slate-500">Info</dt>
-                  <dd className="font-medium text-slate-600">
-                    Teks dipotong ({result.extract.parser})
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </SectionCard>
 
           <SectionCard title="Validasi">
             {result.validation.ok && result.validation.issues.length === 0 ? (
@@ -2035,6 +2470,62 @@ export default function IntakeWorkbench() {
               </p>
             </SectionCard>
           )}
+
+          <SectionCard title="Detail parser lokal & AI" defaultOpen={false}>
+            <IntakeAiStatusPanel result={result} embedded />
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Metadata ekstraksi
+              </p>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+                <div>
+                  <dt className="text-slate-500">Parser</dt>
+                  <dd className="font-medium text-slate-900">{result.extract.parser}</dd>
+                </div>
+                {result.extract.fileName ? (
+                  <>
+                    <div>
+                      <dt className="text-slate-500">File</dt>
+                      <dd className="font-medium text-slate-900">{result.extract.fileName}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500">Size</dt>
+                      <dd className="font-medium text-slate-900">
+                        {formatBytes(result.extract.size)}
+                      </dd>
+                    </div>
+                  </>
+                ) : null}
+                {result.extract.pages ? (
+                  <div>
+                    <dt className="text-slate-500">Pages</dt>
+                    <dd className="font-medium text-slate-900">{result.extract.pages}</dd>
+                  </div>
+                ) : null}
+                {result.extract.sheets ? (
+                  <div>
+                    <dt className="text-slate-500">Sheets</dt>
+                    <dd className="font-medium text-slate-900">
+                      {result.extract.sheets.join(", ")}
+                    </dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="text-slate-500">Durasi</dt>
+                  <dd className="font-medium text-slate-900">{result.extract.durationMs} ms</dd>
+                </div>
+                {result.extract.truncated ? (
+                  <div className="col-span-full">
+                    <dt className="text-slate-500">Info</dt>
+                    <dd className="font-medium text-slate-600">
+                      Teks dipotong ({result.extract.parser})
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          </SectionCard>
         </div>
       )}
 

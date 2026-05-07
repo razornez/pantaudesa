@@ -1,49 +1,23 @@
-/**
- * Sprint 05 Batch 3 Completion Handoff - Intake API Route
- *
- * Single POST endpoint that:
- *  1. Accepts a file upload or pasted text,
- *  2. Extracts plain text from the file,
- *  3. Auto-maps extracted text using local heuristic (first-pass),
- *  4. Optionally enhances with OpenAI mapping (if available and beneficial),
- *  5. Validates the mapped fields,
- *  6. Optionally diffs the result against an existing Desa.
- *
- * OpenAI is used when:
- *  - file is image/photo/scanned document (mime type check),
- *  - local extraction yields little content,
- *  - user explicitly requests AI mapping,
- *  - heuristic mapping has low confidence (few fields matched).
- *
- * Fallback: If OpenAI is unavailable (no key, quota, rate-limit, error),
- *  the pipeline continues with local heuristic mapping only.
- *
- * All steps are read-only / preview. No DB writes.
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
+import { autoMapFromText } from "@/lib/intake/auto-mapping";
 import { extractFromFile, extractFromText } from "@/lib/intake/extractors";
+import { maybeMapWithOpenAI } from "@/lib/intake/openai-mapping";
 import { buildIntakePipelineResult } from "@/lib/intake/pipeline";
-import { mapWithOpenAI } from "@/lib/intake/openai-mapping";
 import { perfLog, perfStart } from "@/lib/perf";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
-// Image/scanned document MIME types that trigger OpenAI enhancement
-const IMAGE_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "image/bmp",
-  "image/tiff",
-]);
-
-// PDF that may be scanned (contains no text)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SCANNED_PDF_MIME = "application/pdf";
 
 export const runtime = "nodejs";
+
+function hasDraftContent(result: Awaited<ReturnType<typeof maybeMapWithOpenAI>>): boolean {
+  return (
+    Object.keys(result.knownPublishableFields).length > 0 ||
+    result.detectedButNotPublishable.length > 0 ||
+    result.unknownUsefulFields.length > 0
+  );
+}
 
 export async function POST(req: NextRequest) {
   const sessionResult = await requireInternalAdminSession();
@@ -58,8 +32,12 @@ export async function POST(req: NextRequest) {
     let extractedText = "";
     let extractMeta: ReturnType<typeof extractFromText>["meta"];
     let desaId: string | undefined;
-    let isImageFile = false;
     let requestAiMapping = false;
+    let fileName: string | undefined;
+    let mimeType: string | undefined;
+    let fileBuffer: Buffer | undefined;
+    let extractFailed = false;
+    let extractError: string | undefined;
 
     if (contentType.includes("multipart/form-data")) {
       inputSource = "file";
@@ -79,30 +57,37 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "File terlalu besar (maks 10 MB)." }, { status: 422 });
       }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await extractFromFile({
-        buffer,
+      fileName = file.name;
+      mimeType = file.type || "application/octet-stream";
+      fileBuffer = Buffer.from(await file.arrayBuffer());
+
+      const extracted = await extractFromFile({
+        buffer: fileBuffer,
         fileName: file.name,
         mimeType: file.type,
         size: file.size,
       });
 
-      if (!result.ok) {
-        return NextResponse.json(
-          { error: result.error ?? "Gagal membaca file.", meta: result.meta },
-          { status: 422 },
-        );
+      extractMeta = extracted.meta;
+
+      if (extracted.ok) {
+        extractedText = extracted.text;
+      } else {
+        extractFailed = true;
+        extractError = extracted.error ?? "Gagal membaca file.";
+        const canContinueWithAi =
+          Boolean(fileBuffer) &&
+          (requestAiMapping ||
+            mimeType.toLowerCase().startsWith("image/") ||
+            mimeType.toLowerCase() === SCANNED_PDF_MIME);
+
+        if (!canContinueWithAi) {
+          return NextResponse.json(
+            { error: extractError, meta: extracted.meta },
+            { status: 422 },
+          );
+        }
       }
-
-      extractedText = result.text;
-      extractMeta = result.meta;
-
-      // Check if this is an image file
-      isImageFile = IMAGE_MIME_TYPES.has(file.type.toLowerCase());
-
-      // Trigger AI enhancement for potentially scanned PDF (very little text extracted)
-      // This is used indirectly via heuristicConfidenceLow check below
-      void (file.type.toLowerCase() === SCANNED_PDF_MIME && extractedText.trim().length < 100);
     } else if (contentType.includes("application/json")) {
       const body = (await req.json()) as {
         text?: unknown;
@@ -119,9 +104,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Teks wajib diisi." }, { status: 400 });
       }
 
-      const result = extractFromText(text.trim());
-      extractedText = result.text;
-      extractMeta = result.meta;
+      const extracted = extractFromText(text.trim());
+      extractedText = extracted.text;
+      extractMeta = extracted.meta;
     } else {
       return NextResponse.json(
         {
@@ -134,37 +119,50 @@ export async function POST(req: NextRequest) {
 
     perfLog("internal-admin.intake", "extract", t);
 
-    // Build base pipeline result with local heuristic mapping
+    const localMapping = autoMapFromText(extractedText);
+    const heuristicConfidenceLow =
+      localMapping.evidence.length < 2 && extractedText.trim().length > 0;
+
+    const aiTimer = perfStart();
+    const openaiResult = await maybeMapWithOpenAI({
+      extractedText,
+      fileName,
+      mimeType,
+      fileBuffer,
+      explicitRequest: requestAiMapping,
+      heuristicConfidenceLow,
+      localExtractFailed: extractFailed,
+    });
+    perfLog("internal-admin.intake", "openai", aiTimer);
+
+    const hasRecoverableOutput =
+      extractedText.trim().length > 0 || hasDraftContent(openaiResult);
+
+    if (!hasRecoverableOutput) {
+      return NextResponse.json(
+        {
+          error:
+            openaiResult.status === "missing_key"
+              ? "Dokumen ini butuh bantuan AI untuk dibaca, tetapi OPENAI_API_KEY tidak tersedia. Coba tempel teks manual atau gunakan dokumen teks."
+              : openaiResult.message || extractError || "Dokumen belum bisa dibaca.",
+          meta: {
+            parser: extractMeta.parser,
+            ...(extractError ? { extractError } : {}),
+            openaiStatus: openaiResult.status,
+          },
+        },
+        { status: 422 },
+      );
+    }
+
     const pipeline = await buildIntakePipelineResult({
       inputSource,
       extractedText,
       extractMeta,
       desaId,
+      localMapping,
+      openaiResult,
     });
-
-    // Decide whether to attempt OpenAI enhancement
-    // Criteria (per Batch 3 completion handoff):
-    // 1. User explicitly requested AI mapping
-    // 2. File is image/scanned document
-    // 3. Local extraction yielded very little text
-    // 4. Heuristic mapping has low confidence (few fields matched)
-    const heuristicConfidenceLow =
-      pipeline.mapping.evidence.length < 2 && extractedText.trim().length > 0;
-
-    const shouldTryOpenAI =
-      requestAiMapping || isImageFile || heuristicConfidenceLow;
-
-    // Attach OpenAI result if beneficial
-    // Note: we try OpenAI even on low text if user requested it
-    if (shouldTryOpenAI && extractedText.trim().length > 0) {
-      const openaiResult = await mapWithOpenAI(extractedText, {
-        explicitRequest: requestAiMapping,
-      });
-
-      // Attach OpenAI result to pipeline response
-      // The UI can use this to enhance the display
-      pipeline.openai = openaiResult;
-    }
 
     perfLog("internal-admin.intake", "full-pipeline", t);
 

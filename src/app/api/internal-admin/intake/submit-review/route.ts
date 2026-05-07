@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { db } from "@/lib/db";
+import { autoMapFromText } from "@/lib/intake/auto-mapping";
 import { extractFromFile, extractFromText } from "@/lib/intake/extractors";
+import { maybeMapWithOpenAI } from "@/lib/intake/openai-mapping";
 import { buildIntakePipelineResult, toIntakeReviewJson } from "@/lib/intake/pipeline";
 import { perfLog, perfStart } from "@/lib/perf";
 import {
@@ -20,9 +22,10 @@ import {
   writeDesaDataAuditEvent,
 } from "@/lib/versioning/village-data-persistence";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TITLE_LENGTH = 200;
 const PROCESSING_QUEUE_URL = "/internal-admin/documents?status=PROCESSING";
+const SCANNED_PDF_MIME = "application/pdf";
 
 type ParsedSubmission =
   | {
@@ -33,8 +36,11 @@ type ParsedSubmission =
       fileSize: number;
       desaId: string;
       title?: string;
+      requestAiMapping: boolean;
       extractedText: string;
       extractMeta: Awaited<ReturnType<typeof extractFromFile>>["meta"];
+      extractFailed: boolean;
+      extractError?: string;
     }
   | {
       inputSource: "paste";
@@ -44,8 +50,11 @@ type ParsedSubmission =
       fileSize: number;
       desaId: string;
       title?: string;
+      requestAiMapping: boolean;
       extractedText: string;
       extractMeta: ReturnType<typeof extractFromText>["meta"];
+      extractFailed: boolean;
+      extractError?: string;
     };
 
 function trimOptionalText(input: unknown, maxLength: number): string | undefined {
@@ -90,6 +99,7 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
     const file = formData.get("file");
     const desaId = trimOptionalText(formData.get("desaId"), 200);
     const title = trimOptionalText(formData.get("title"), MAX_TITLE_LENGTH);
+    const requestAiMapping = formData.get("useAiMapping") === "true";
 
     if (!desaId) {
       return NextResponse.json(
@@ -113,13 +123,6 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
       size: file.size,
     });
 
-    if (!extracted.ok) {
-      return NextResponse.json(
-        { error: extracted.error ?? "Gagal membaca file.", meta: extracted.meta },
-        { status: 422 },
-      );
-    }
-
     return {
       inputSource: "file",
       buffer,
@@ -128,16 +131,25 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
       fileSize: file.size,
       desaId,
       title,
-      extractedText: extracted.text,
+      requestAiMapping,
+      extractedText: extracted.ok ? extracted.text : "",
       extractMeta: extracted.meta,
+      extractFailed: !extracted.ok,
+      ...(extracted.ok ? {} : { extractError: extracted.error ?? "Gagal membaca file." }),
     };
   }
 
   if (contentType.includes("application/json")) {
-    const body = (await req.json()) as { text?: unknown; desaId?: unknown; title?: unknown };
+    const body = (await req.json()) as {
+      text?: unknown;
+      desaId?: unknown;
+      title?: unknown;
+      useAiMapping?: unknown;
+    };
     const text = typeof body.text === "string" ? body.text.trim() : "";
     const desaId = trimOptionalText(body.desaId, 200);
     const title = trimOptionalText(body.title, MAX_TITLE_LENGTH);
+    const requestAiMapping = body.useAiMapping === true;
 
     if (!desaId) {
       return NextResponse.json(
@@ -160,8 +172,10 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
       fileSize: buffer.byteLength,
       desaId,
       title,
+      requestAiMapping,
       extractedText: extracted.text,
       extractMeta: extracted.meta,
+      extractFailed: false,
     };
   }
 
@@ -171,6 +185,22 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
     },
     { status: 415 },
   );
+}
+
+function canContinueWithAiFallback(parsed: ParsedSubmission): boolean {
+  return (
+    parsed.requestAiMapping ||
+    parsed.fileType.toLowerCase().startsWith("image/") ||
+    parsed.fileType.toLowerCase() === SCANNED_PDF_MIME
+  );
+}
+
+function hasDraftContent(input: {
+  mappedFieldCount: number;
+  detectedCount: number;
+  unknownCount: number;
+}): boolean {
+  return input.mappedFieldCount > 0 || input.detectedCount > 0 || input.unknownCount > 0;
 }
 
 export async function POST(req: NextRequest) {
@@ -196,6 +226,13 @@ export async function POST(req: NextRequest) {
     const parsed = await parseSubmission(req);
     if (parsed instanceof NextResponse) return parsed;
 
+    if (parsed.extractFailed && !canContinueWithAiFallback(parsed)) {
+      return NextResponse.json(
+        { error: parsed.extractError ?? "Gagal membaca file.", meta: parsed.extractMeta },
+        { status: 422 },
+      );
+    }
+
     const desa = await db.desa.findUnique({
       where: { id: parsed.desaId },
       select: { id: true, nama: true },
@@ -208,6 +245,19 @@ export async function POST(req: NextRequest) {
     const t = perfStart();
     const fileName =
       parsed.inputSource === "paste" ? buildPasteFileName(desa.nama) : parsed.fileName;
+    const localMapping = autoMapFromText(parsed.extractedText);
+    const heuristicConfidenceLow =
+      localMapping.evidence.length < 2 && parsed.extractedText.trim().length > 0;
+    const openaiResult = await maybeMapWithOpenAI({
+      extractedText: parsed.extractedText,
+      fileName,
+      mimeType: parsed.fileType,
+      fileBuffer: parsed.inputSource === "file" ? parsed.buffer : undefined,
+      explicitRequest: parsed.requestAiMapping,
+      heuristicConfidenceLow,
+      localExtractFailed: parsed.extractFailed,
+    });
+
     const pipeline = await buildIntakePipelineResult({
       inputSource: parsed.inputSource,
       extractedText: parsed.extractedText,
@@ -216,8 +266,34 @@ export async function POST(req: NextRequest) {
         ...(parsed.inputSource === "paste" ? { fileName, mimeType: parsed.fileType } : {}),
       },
       desaId: parsed.desaId,
+      localMapping,
+      openaiResult,
     });
     perfLog("internal-admin.intake.submit-review", "pipeline", t);
+
+    if (
+      !parsed.extractedText.trim() &&
+      !hasDraftContent({
+        mappedFieldCount: Object.keys(pipeline.mapping.fields).length,
+        detectedCount: pipeline.fieldCoverage?.detectedButNotPublishable.length ?? 0,
+        unknownCount: pipeline.fieldCoverage?.unknownUsefulFields.length ?? 0,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            openaiResult.status === "missing_key"
+              ? "Dokumen ini butuh bantuan AI untuk dibaca, tetapi OPENAI_API_KEY tidak tersedia. Coba tempel teks manual atau gunakan dokumen teks."
+              : openaiResult.message || parsed.extractError || "Dokumen belum bisa dibaca.",
+          meta: {
+            parser: pipeline.extract.parser,
+            ...(parsed.extractError ? { extractError: parsed.extractError } : {}),
+            openaiStatus: openaiResult.status,
+          },
+        },
+        { status: 422 },
+      );
+    }
 
     if (!pipeline.validation.ok) {
       return NextResponse.json(
@@ -232,7 +308,8 @@ export async function POST(req: NextRequest) {
 
     const documentId = `intake_${randomBytes(12).toString("hex")}`;
     const finalTitle =
-      parsed.title ?? buildFallbackTitle({ fileName, inputSource: parsed.inputSource, desaName: desa.nama });
+      parsed.title ??
+      buildFallbackTitle({ fileName, inputSource: parsed.inputSource, desaName: desa.nama });
     const storageKey = buildDocumentStoragePath(parsed.desaId, documentId, fileName);
 
     let uploaded = false;
@@ -293,6 +370,7 @@ export async function POST(req: NextRequest) {
           fileSize: parsed.fileSize,
           hasDiff: pipeline.diff?.hasChanges ?? false,
           validationIssueCount: pipeline.validation.issues.length,
+          openaiStatus: pipeline.openai.status,
           title: document.title,
           versionNumber: reviewReadyVersion.versionNumber ?? null,
         },
@@ -313,6 +391,7 @@ export async function POST(req: NextRequest) {
         metadata: {
           inputSource: parsed.inputSource,
           parser: pipeline.extract.parser,
+          openaiStatus: pipeline.openai.status,
           title: document.title,
           versionNumber: reviewReadyVersion.versionNumber ?? null,
         },
