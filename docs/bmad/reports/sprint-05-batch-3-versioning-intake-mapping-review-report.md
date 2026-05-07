@@ -455,6 +455,143 @@ Checked against the handoff requirement:
   - `/suara-warga` routeDataReady about `1281ms`
 - Batch 2 report now includes a QA section
 
+## Intake Workbench Refactor & UX Polish (Sprint 05 Batch 3 follow-up)
+
+Date follow-up: 2026-05-07
+Task spec: `docs/bmad/tasks/sprint-05-batch-3-intake-workbench-refactor-and-ux-polish.md`
+Trigger: owner review of first attempt (commit `326d22e`) returned PARTIAL PASS:
+- folder structure dan komponen reusable sudah benar arah,
+- tetapi `IntakeWorkbench.tsx` parent belum benar-benar direfactor,
+- UI owner-facing belum terbukti lebih compact.
+
+### Before / after line count
+
+| File | Before | After |
+|---|---|---|
+| `src/components/internal-admin/IntakeWorkbench.tsx` | 2344 lines (monolithic) | 337 lines (orchestrator only) |
+
+Net: parent file shrunk roughly 7x, presentation/state logic now lives in the dedicated `intake/` module.
+
+### Component / hook split summary
+
+New module: `src/components/internal-admin/intake/`
+
+Presentational components (each one renders one UI concern):
+
+| File | Lines | Role |
+|---|---|---|
+| `IntakeSection.tsx` | 76 | Reusable collapsible section (`IntakeSection`, `IntakeCompactSection`) |
+| `IntakeStatusCards.tsx` | 97 | Status badge row (mapping / validation / review / AI) |
+| `IntakeCoveragePanel.tsx` | 208 | Detail-field coverage display with collapsible details |
+| `IntakeDiffPanel.tsx` | 98 | Diff viewer (added / updated / removed / same) |
+| `IntakeAiStatusPanel.tsx` | 76 | Parser + AI status detail (used inside collapsed section) |
+| `IntakeStatusHelpers.tsx` | 160 | Pure status derivation helpers (no JSX state) |
+
+Hooks (data + side-effect logic):
+
+| File | Lines | Role |
+|---|---|---|
+| `hooks/useIntakePipeline.ts` | 179 | `runPipeline` + `submitToReview` wrappers |
+| `hooks/useDesaOptions.ts` | 87 | Debounced village search + select |
+| `hooks/useIntakeHistory.ts` | 127 | Intake history + version history fetchers |
+| `hooks/index.ts` | 6 | Barrel |
+
+Module surface:
+
+| File | Lines | Role |
+|---|---|---|
+| `types.ts` | 300 | All shared interfaces (`PipelineResult`, `OpenAIResult`, `DesaOption`, `IntakeStep`, `IntakeMode`, `SubmitReviewSuccess`, etc.) |
+| `constants.ts` | 384 | UI copy, field labels, badge color maps, sample helpers, `formatReviewStatusLabel`, `buildSuggestedReviewTitle`, `buildQueueFocusHref` |
+| `utils.ts` | 109 | Formatters (`formatBytes`, `formatDateTime`, `formatDuration`, `formatDiffValue`, `getPayloadError`, `readJsonLikeResponse`) |
+| `index.ts` | 42 | Public barrel |
+
+Parent (`IntakeWorkbench.tsx`, 337 lines) now does only:
+
+- top-level state (step, mode, file, text, AI flag, selected desa, result, review title, submitted review),
+- 3 inline handlers (`handleSearchDesa`, `handleSelectDesa`, `handleRunPipeline`, `handleSubmitReview`),
+- composition of the extracted presentational components,
+- 1 small inline `WorkflowGuide` sub-component.
+
+No business behavior was changed:
+
+- pipeline POST endpoint paths are the same,
+- submit-review endpoint is the same,
+- AI toggle, desa picker, validation gating, and review-only publish gate are unchanged,
+- backward-compatible re-exports kept (`CollapsibleSection`, `StatusCardRow`).
+
+### UX improvement (compact / quiet luxury, mobile)
+
+Result panel structure now follows the requested order:
+
+1. status cards row,
+2. detail field coverage panel,
+3. mapped fields summary,
+4. action buttons,
+5. guardrail note,
+6. review action card.
+
+Progressive disclosure (collapsed by default):
+
+- `Detail parser lokal & AI` (was always-visible),
+- `Validasi` detail list,
+- `Diff` panel,
+- `Riwayat Intake`,
+- `Riwayat Versi Desa`.
+
+Compact / mobile-friendly tuning:
+
+- result blocks use `space-y-4`, no longer `space-y-6` / `space-y-8`,
+- card padding `p-4 sm:p-5` so iPhone 12 mini does not feel cramped,
+- typography downsized to `text-xs` / `text-sm` for technical detail and badges,
+- info banner reduced from full notice card to single-line `notice-info`,
+- workflow steps render as small chips that wrap on narrow viewports,
+- primary actions (`Jalankan pipeline`, `Kirim ke antrean review`) stay full-width on mobile and inline on desktop (`w-full sm:w-auto`),
+- text labels avoid technical jargon (`Coba AI`, `Kirim ke antrean review`, `Pastikan hasil otomatis masuk akal`),
+- non-actionable copy moved out of result hero into footer-like notes.
+
+### QA Result (refactor follow-up, run on owner's local machine)
+
+| Command | Result | Note |
+|---|---|---|
+| `npm run lint` | PASS | only pre-existing `.eslintignore` deprecation warning |
+| `npx tsc --noEmit` | PASS | refactored IntakeWorkbench + all extracted modules type-check cleanly |
+| `npm run build` | BLOCKED | same Prisma Windows `EPERM` blocker on `prisma generate` already documented in handoff; not a Batch 3 source-level regression |
+
+Exact build blocker text:
+
+```text
+Error:
+EPERM: operation not permitted, rename
+'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node.tmp25648'
+-> 'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node'
+```
+
+Interpretation: lint and TypeScript are green for the refactor. The `npm run build` failure is environmental (Prisma engine file lock on Windows), not a regression introduced by the refactor.
+
+### Owner test checklist (refactor follow-up)
+
+Open `/internal-admin/intake` and confirm:
+
+- [ ] page loads without console error,
+- [ ] mode toggle (`Upload file` / `Tempel teks`) works,
+- [ ] AI toggle (`Coba AI`) keeps state,
+- [ ] desa search returns options and selecting one fills the picker,
+- [ ] `Jalankan pipeline` runs and result panel appears,
+- [ ] status cards (mapping / validation / review / AI) appear at the top of result,
+- [ ] coverage panel renders before mapped-fields summary,
+- [ ] mapped fields summary shows compact 1-column / 2-column / 3-column grid,
+- [ ] technical sections (`Detail parser lokal & AI`, `Validasi`, `Diff`, `Riwayat Intake`, `Riwayat Versi Desa`) are collapsed by default and only expand on user click,
+- [ ] `Kirim ke antrean review` blocks correctly when desa not selected, validation not OK, or no reviewable content,
+- [ ] submit success shows the queue link and prevents duplicate submit,
+- [ ] iPhone 12 mini viewport (375px wide) layout: no horizontal scroll, primary buttons full-width, card padding still readable.
+
+What must still NOT happen (unchanged guardrails):
+
+- no auto-publish from intake page,
+- no silent success on unreadable input,
+- no shared/production DB write,
+- no secret or full document content in logs.
+
 ## QA Result
 
 | Command | Result | Note |
