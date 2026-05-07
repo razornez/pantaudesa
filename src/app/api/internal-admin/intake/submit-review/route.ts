@@ -26,6 +26,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TITLE_LENGTH = 200;
 const PROCESSING_QUEUE_URL = "/internal-admin/documents?status=PROCESSING";
 const SCANNED_PDF_MIME = "application/pdf";
+const AI_OFF_BINARY_MESSAGE =
+  "Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.";
 
 type ParsedSubmission =
   | {
@@ -188,11 +190,14 @@ async function parseSubmission(req: NextRequest): Promise<ParsedSubmission | Nex
 }
 
 function canContinueWithAiFallback(parsed: ParsedSubmission): boolean {
-  return (
-    parsed.requestAiMapping ||
-    parsed.fileType.toLowerCase().startsWith("image/") ||
-    parsed.fileType.toLowerCase() === SCANNED_PDF_MIME
-  );
+  // Hanya boleh lanjut ke AI fallback ketika user secara eksplisit mengaktifkan
+  // toggle "Coba AI". Image/scanned PDF tanpa AI ditangani lewat pesan ramah.
+  return parsed.requestAiMapping;
+}
+
+function isBinaryNeedingAi(parsed: ParsedSubmission): boolean {
+  const lower = parsed.fileType.toLowerCase();
+  return lower.startsWith("image/") || lower === SCANNED_PDF_MIME;
 }
 
 function hasDraftContent(input: {
@@ -227,6 +232,19 @@ export async function POST(req: NextRequest) {
     if (parsed instanceof NextResponse) return parsed;
 
     if (parsed.extractFailed && !canContinueWithAiFallback(parsed)) {
+      if (isBinaryNeedingAi(parsed)) {
+        return NextResponse.json(
+          {
+            error: AI_OFF_BINARY_MESSAGE,
+            meta: {
+              ...parsed.extractMeta,
+              aiOffForBinary: true,
+              openaiStatus: "skipped",
+            },
+          },
+          { status: 422 },
+        );
+      }
       return NextResponse.json(
         { error: parsed.extractError ?? "Gagal membaca file.", meta: parsed.extractMeta },
         { status: 422 },

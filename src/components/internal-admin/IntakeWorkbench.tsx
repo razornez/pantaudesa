@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { AlertTriangle, CheckCircle2, Info, Sparkles } from "lucide-react";
 
-import type { PipelineResult, SubmitReviewSuccess, IntakeStep, IntakeMode, DesaOption } from "./intake/types";
+import type {
+  PipelineResult,
+  SubmitReviewSuccess,
+  IntakeStep,
+  IntakeMode,
+  DesaOption,
+  IntakeHistorySubmission,
+  IntakeHistoryActivity,
+  DesaVersionEntry,
+} from "./intake/types";
 
 import { INTAKE_COPY, FIELD_LABELS, buildSuggestedReviewTitle } from "./intake/constants";
 import { formatBytes, formatDiffValue, formatDateTime } from "./intake/utils";
@@ -14,6 +23,7 @@ import { IntakeStatusCards } from "./intake/IntakeStatusCards";
 import { IntakeCoveragePanel } from "./intake/IntakeCoveragePanel";
 import { IntakeDiffPanel } from "./intake/IntakeDiffPanel";
 import { IntakeAiStatusPanel } from "./intake/IntakeAiStatusPanel";
+import { useIntakeHistory, useVersionHistory } from "./intake/hooks";
 
 import {
   getMappingStatus,
@@ -33,6 +43,40 @@ export {
   IntakeSection as CollapsibleSection,
   IntakeStatusCards as StatusCardRow,
 } from "./intake";
+
+// ============================================================================
+// Error tone helpers (P0-1: calm copy for AI-off / quota / rate-limit)
+// ============================================================================
+
+type ErrorTone = "info" | "warn" | "danger";
+
+interface ErrorState {
+  message: string;
+  tone: ErrorTone;
+}
+
+function classifyApiError(payload: {
+  error?: string;
+  meta?: { aiOffForBinary?: boolean; openaiStatus?: string };
+}): ErrorState {
+  const meta = payload.meta ?? {};
+  if (meta.aiOffForBinary) {
+    return { message: payload.error ?? "Gambar belum bisa dibaca tanpa AI.", tone: "info" };
+  }
+  if (meta.openaiStatus === "quota_limited" || meta.openaiStatus === "rate_limited") {
+    return {
+      message: payload.error ?? "Layanan AI sedang sibuk. Coba lagi atau pakai parser lokal.",
+      tone: "warn",
+    };
+  }
+  return { message: payload.error ?? "Terjadi kesalahan.", tone: "danger" };
+}
+
+function noticeClassForTone(tone: ErrorTone): string {
+  if (tone === "info") return "notice-card notice-info";
+  if (tone === "warn") return "notice-card notice-warn";
+  return "notice-card notice-danger";
+}
 
 // ============================================================================
 // Main Component - Refactored Compact Version
@@ -57,11 +101,15 @@ export default function IntakeWorkbench() {
 
   // Loading/error state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorState | null>(null);
 
   // Village options (simplified)
   const [desaOptions, setDesaOptions] = useState<DesaOption[]>([]);
   const [desaLoading, setDesaLoading] = useState(false);
+
+  // History state (P0-1)
+  const intakeHistory = useIntakeHistory();
+  const versionHistory = useVersionHistory(selectedDesa?.id ?? null);
 
   // ============================================================================
   // Handlers
@@ -94,13 +142,13 @@ export default function IntakeWorkbench() {
       let headers: HeadersInit = { Accept: "application/json" };
 
       if (mode === "upload") {
-        if (!selectedFile) { setError("Pilih file terlebih dahulu"); return; }
+        if (!selectedFile) { setError({ message: "Pilih file terlebih dahulu", tone: "danger" }); return; }
         body = new FormData();
         body.append("file", selectedFile);
         if (selectedDesa) body.append("desaId", selectedDesa.id);
         if (useAiMapping) body.append("useAiMapping", "true");
       } else {
-        if (!textValue.trim()) { setError("Teks wajib diisi"); return; }
+        if (!textValue.trim()) { setError({ message: "Teks wajib diisi", tone: "danger" }); return; }
         headers = { Accept: "application/json", "Content-Type": "application/json" };
         body = JSON.stringify({
           text: textValue,
@@ -112,19 +160,23 @@ export default function IntakeWorkbench() {
       const res = await fetch("/api/internal-admin/intake", { method: "POST", headers, body });
       const data = await res.json();
 
-      if (data.error) { setError(data.error); return; }
+      if (data.error) {
+        setError(classifyApiError(data));
+        return;
+      }
       setResult(data);
       setStep("result");
+      void intakeHistory.refetch();
     } catch {
-      setError("Koneksi bermasalah");
+      setError({ message: "Koneksi bermasalah", tone: "danger" });
     } finally {
       setLoading(false);
     }
-  }, [mode, selectedFile, textValue, selectedDesa, useAiMapping]);
+  }, [mode, selectedFile, textValue, selectedDesa, useAiMapping, intakeHistory]);
 
   const handleSubmitReview = useCallback(async () => {
     if (!selectedDesa || !result) return;
-    if (!result.validation.ok) { setError("Validasi belum lolos"); return; }
+    if (!result.validation.ok) { setError({ message: "Validasi belum lolos", tone: "danger" }); return; }
 
     setLoading(true);
     setError(null);
@@ -151,14 +203,15 @@ export default function IntakeWorkbench() {
       const res = await fetch("/api/internal-admin/intake/submit-review", { method: "POST", headers, body });
       const data = await res.json();
 
-      if (data.error) { setError(data.error); return; }
+      if (data.error) { setError(classifyApiError(data)); return; }
       setSubmittedReview(data);
+      void intakeHistory.refetch();
     } catch {
-      setError("Submit gagal");
+      setError({ message: "Submit gagal", tone: "danger" });
     } finally {
       setLoading(false);
     }
-  }, [mode, selectedFile, textValue, selectedDesa, useAiMapping, reviewTitle, result]);
+  }, [mode, selectedFile, textValue, selectedDesa, useAiMapping, reviewTitle, result, intakeHistory]);
 
   // ============================================================================
   // Computed
@@ -252,7 +305,18 @@ export default function IntakeWorkbench() {
           </div>
 
           {/* Error */}
-          {error && <div className="notice-card notice-danger mt-4">{error}</div>}
+          {error && (
+            <div className={`${noticeClassForTone(error.tone)} mt-4 flex items-start gap-2 text-xs`}>
+              {error.tone === "info" ? (
+                <Info size={14} className="mt-0.5 shrink-0" />
+              ) : error.tone === "warn" ? (
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              ) : (
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              )}
+              <span>{error.message}</span>
+            </div>
+          )}
 
           {/* Run Button */}
           <button onClick={handleRunPipeline} disabled={loading} className="btn-lux btn-lux-primary mt-4 flex w-full items-center justify-center gap-2 sm:w-auto">
@@ -271,6 +335,19 @@ export default function IntakeWorkbench() {
             reviewStatus={getReviewStatus(result)}
             aiStatus={getOpenAiStatus(result)}
           />
+
+          {/* Calm AI Limit Notice (P0-1) - quota / rate-limit gentle copy */}
+          {(result.openai.status === "quota_limited" || result.openai.status === "rate_limited") && (
+            <div className="notice-card notice-warn flex items-start gap-2 text-xs">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <span>
+                {result.openai.message}{" "}
+                <span className="text-slate-500">
+                  Detail teknis tersedia di section &ldquo;Detail parser lokal &amp; AI&rdquo; di bawah.
+                </span>
+              </span>
+            </div>
+          )}
 
           {/* Coverage Panel */}
           <IntakeCoveragePanel result={result} />
@@ -313,7 +390,9 @@ export default function IntakeWorkbench() {
                 {!result.validation.ok && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">Perbaiki error validasi dulu.</div>}
                 {getReviewableContentCount(result) === 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">Belum ada hasil yang cukup kuat untuk review.</div>}
                 <input type="text" value={reviewTitle} onChange={(e) => setReviewTitle(e.target.value.slice(0, 200))} placeholder={buildSuggestedReviewTitle({ mode, selectedFile, selectedDesa })} className="field-lux text-sm" />
-                {error && <div className="notice-card notice-danger text-sm">{error}</div>}
+                {error && (
+                  <div className={`${noticeClassForTone(error.tone)} text-sm`}>{error.message}</div>
+                )}
                 <button onClick={handleSubmitReview} disabled={!canSubmit || loading} className="btn-lux btn-lux-success w-full sm:w-auto">
                   {loading ? "Menyimpan..." : "Kirim ke antrean review"}
                 </button>
@@ -348,15 +427,26 @@ export default function IntakeWorkbench() {
         </div>
       )}
 
-      {/* History Section */}
+      {/* History Section (P0-1: wired to real API) */}
       <IntakeSection title="Riwayat Intake" defaultOpen={false}>
-        <p className="text-xs text-slate-500">Riwayat akan dimuat dari API saat integrated.</p>
+        <IntakeHistoryList
+          loading={intakeHistory.loading}
+          error={intakeHistory.error}
+          submissions={intakeHistory.history?.submissions ?? []}
+          activity={intakeHistory.history?.activity ?? []}
+          storageNote={intakeHistory.history?.storage.note ?? null}
+        />
       </IntakeSection>
 
-      {/* Version History */}
+      {/* Version History (P0-1: wired to real API for selected desa) */}
       <IntakeSection title="Riwayat Versi Desa" defaultOpen={false}>
-        {!selectedDesa && <p className="text-xs text-slate-500">Pilih desa dulu.</p>}
-        {selectedDesa && <p className="text-xs text-slate-500">Riwayat versi untuk {selectedDesa.nama} akan dimuat dari API saat integrated.</p>}
+        <DesaVersionHistoryList
+          desaName={selectedDesa?.nama ?? null}
+          loading={versionHistory.loading}
+          error={versionHistory.error}
+          versions={versionHistory.versionHistory?.versions ?? []}
+          storageNote={versionHistory.versionHistory?.storage.note ?? null}
+        />
       </IntakeSection>
     </div>
   );
@@ -386,6 +476,176 @@ function WorkflowGuide({ step, submittedReview }: { step: IntakeStep; submittedR
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Intake History list (P0-1)
+// ----------------------------------------------------------------------------
+
+function IntakeHistoryList({
+  loading,
+  error,
+  submissions,
+  activity,
+  storageNote,
+}: {
+  loading: boolean;
+  error: string | null;
+  submissions: IntakeHistorySubmission[];
+  activity: IntakeHistoryActivity[];
+  storageNote: string | null;
+}) {
+  if (loading) {
+    return <p className="text-xs text-slate-500">Memuat riwayat intake...</p>;
+  }
+  if (error) {
+    return (
+      <p className="text-xs text-slate-500">
+        Belum bisa memuat riwayat: {error}
+      </p>
+    );
+  }
+  if (submissions.length === 0 && activity.length === 0) {
+    return (
+      <p className="text-xs text-slate-500">
+        Belum ada submission intake yang tercatat.
+      </p>
+    );
+  }
+
+  const topSubmissions = submissions.slice(0, 5);
+  const topActivity = activity.slice(0, 5);
+
+  return (
+    <div className="space-y-3">
+      {storageNote && (
+        <p className="text-[11px] text-slate-500">{storageNote}</p>
+      )}
+
+      {topSubmissions.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Submission terakhir
+          </p>
+          <ul className="space-y-1.5">
+            {topSubmissions.map((item) => (
+              <li
+                key={item.id}
+                className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-slate-900">{item.title}</span>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    {item.status}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {item.desa.nama} · {formatDateTime(item.updatedAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {topActivity.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Aktivitas terbaru
+          </p>
+          <ul className="space-y-1">
+            {topActivity.map((evt) => (
+              <li key={evt.id} className="text-[11px] text-slate-600">
+                <span className="font-semibold text-slate-800">{evt.label}</span>
+                {" — "}
+                <span className="text-slate-500">{evt.desaName}</span>
+                {" · "}
+                <span className="text-slate-400">{formatDateTime(evt.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Desa Version History list (P0-1)
+// ----------------------------------------------------------------------------
+
+function DesaVersionHistoryList({
+  desaName,
+  loading,
+  error,
+  versions,
+  storageNote,
+}: {
+  desaName: string | null;
+  loading: boolean;
+  error: string | null;
+  versions: DesaVersionEntry[];
+  storageNote: string | null;
+}) {
+  if (!desaName) {
+    return (
+      <p className="text-xs text-slate-500">
+        Pilih desa di langkah 1 untuk melihat riwayat versi.
+      </p>
+    );
+  }
+  if (loading) {
+    return <p className="text-xs text-slate-500">Memuat riwayat versi {desaName}...</p>;
+  }
+  if (error) {
+    return (
+      <p className="text-xs text-slate-500">
+        Belum bisa memuat riwayat versi: {error}
+      </p>
+    );
+  }
+  if (versions.length === 0) {
+    return (
+      <p className="text-xs text-slate-500">
+        Belum ada riwayat versi untuk {desaName}.
+      </p>
+    );
+  }
+
+  const top = versions.slice(0, 5);
+
+  return (
+    <div className="space-y-2">
+      {storageNote && (
+        <p className="text-[11px] text-slate-500">{storageNote}</p>
+      )}
+      <ul className="space-y-1.5">
+        {top.map((v) => (
+          <li
+            key={v.id}
+            className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-slate-900">
+                v{v.versionNumber} · {v.title}
+              </span>
+              <span className="text-[11px] text-slate-500">
+                {formatDateTime(v.createdAt)}
+              </span>
+            </div>
+            {v.changedFields.length > 0 && (
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Field berubah: {v.changedFields.join(", ")}
+              </p>
+            )}
+            {v.reasonText && (
+              <p className="mt-0.5 text-[11px] text-slate-500">{v.reasonText}</p>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -776,6 +776,118 @@ Expected:
 - exact error text if any
 - short server log snippet only if runtime error occurred
 
+## P0-1 Fix Pack — AI/Image Guard + History Wiring
+
+Date follow-up: 2026-05-07
+Task spec: `docs/bmad/tasks/sprint-05-batch-3-p0-sequential-fix-plan.md` (P0-1 only)
+Branch: `feat/sprint-05-batch-3-completion-handoff`
+Scope guardrail: ONLY P0-1 from the sequential fix plan. P0-2 is intentionally NOT executed in this commit. No merge to main.
+
+### Bug observed (before fix)
+
+When the user uploaded an image / scanned PDF / photo with `Coba AI` toggle OFF, the intake API still treated the binary input as an "auto-AI fallback" trigger because the local extractor failed and `canContinueWithAi` only checked whether a `fileBuffer` existed. The pipeline then reached `maybeMapWithOpenAI`, which called the OpenAI Responses API and surfaced raw quota / rate-limit errors back to the owner-facing UI even though the user had explicitly opted out of using AI.
+
+In addition, the `Riwayat Intake` and `Riwayat Versi Desa` sections in the result panel rendered hard-coded placeholder text ("Belum ada data...") instead of being wired to their existing API endpoints, which was confusing because both endpoints already exist server-side.
+
+### Fix applied (3-layer defense in depth)
+
+1. `src/app/api/internal-admin/intake/route.ts`
+   - Added `AI_OFF_BINARY_MESSAGE` constant.
+   - When local extract fails AND mime is `image/*` OR `application/pdf` AND `requestAiMapping=false`, return `422` with friendly Indonesian copy:
+     `Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.`
+   - Response includes `meta.aiOffForBinary=true` and `meta.openaiStatus="skipped"` so the UI can render a calm notice.
+   - `canContinueWithAi` is now strictly `Boolean(fileBuffer) && requestAiMapping` — never auto-fallbacks to AI when toggle is OFF.
+
+2. `src/app/api/internal-admin/intake/submit-review/route.ts`
+   - Same `AI_OFF_BINARY_MESSAGE` and same gating: `canContinueWithAiFallback` returns only `parsed.requestAiMapping`.
+   - New helper `isBinaryNeedingAi` mirrors the binary-mime check.
+   - When extract fails + AI off + binary mime → friendly 422 (not a quota error).
+
+3. `src/lib/intake/openai-mapping.ts`
+   - Added a defensive early-return inside `maybeMapWithOpenAI`: if `!explicitRequest && (hasImageInput || hasFileInput)`, return `status: "skipped"` with the same friendly Indonesian message and never hit OpenAI.
+   - This is the third layer so any future caller cannot accidentally bypass the route-level guards.
+
+### Calm quota / rate-limit copy (Coba AI ON path)
+
+The 429 handling in `maybeMapWithOpenAI` already maps to:
+
+- `status: "quota_limited"` → "Kuota OpenAI sedang habis. Parser lokal/manual paste tetap bisa dipakai."
+- `status: "rate_limited"` → "OpenAI sedang rate limited. Coba lagi beberapa saat atau lanjutkan dengan parser lokal."
+
+The IntakeWorkbench result step now renders a `notice-warn` (amber, calm) banner when the result's `openai.status` is `quota_limited` or `rate_limited`, and the technical proof (HTTP status, request id, error code, OpenAI usage/limits/docs URLs) stays inside the collapsed `Detail parser lokal & AI` section — never inline next to the user-facing copy.
+
+### Error UI tone classification
+
+Added in `src/components/internal-admin/IntakeWorkbench.tsx`:
+
+- `ErrorTone = "info" | "warn" | "danger"` and `ErrorState` interface.
+- `classifyApiError()` reads `meta.aiOffForBinary` / `meta.openaiStatus` to pick the right tone.
+- `noticeClassForTone()` maps to existing Tailwind utility classes (`notice-info`, `notice-warn`, `notice-danger`).
+- The same string error state was previously a flat red banner regardless of cause; now an "AI off + image" message renders blue/info, a quota/rate-limit message renders amber/warn, and only true failures render red/danger.
+
+### Riwayat Intake & Riwayat Versi Desa wiring
+
+- Imported existing `useIntakeHistory` and `useVersionHistory` from `./intake/hooks` (both already wired to `/api/internal-admin/intake/history` and `/api/internal-admin/desa-version-history`).
+- New `IntakeHistoryList` sub-component renders the top 5 submissions and top 5 activity events with an honest empty state and a storage-mode note.
+- New `DesaVersionHistoryList` sub-component renders the top 5 versions, with explicit guidance ("Pilih desa di langkah 1 untuk melihat riwayat versi") when no desa is selected, and honest empty/error states.
+- `intakeHistory.refetch()` is now triggered after a successful pipeline run AND after a successful submit-to-review, so the history block stays accurate without a page reload.
+- Both sections remain collapsed by default (progressive disclosure) — they no longer show fake placeholders.
+
+### Files changed
+
+- `src/lib/intake/openai-mapping.ts`
+- `src/app/api/internal-admin/intake/route.ts`
+- `src/app/api/internal-admin/intake/submit-review/route.ts`
+- `src/components/internal-admin/IntakeWorkbench.tsx`
+- `docs/bmad/reports/sprint-05-batch-3-versioning-intake-mapping-review-report.md` (this section)
+
+### What was explicitly NOT changed (preview layout)
+
+- Step layout (input → result → coverage → mapping → diff → review action) is unchanged.
+- Status card row, coverage panel, mapped-fields summary, and primary action buttons are unchanged.
+- `IntakeSection` collapse defaults are unchanged.
+- No new endpoints or schema migrations were added.
+
+### QA Result (P0-1)
+
+| Command | Result | Note |
+|---|---|---|
+| `npx tsc --noEmit` | PASS | 0 errors |
+| `npm run lint` | PASS | 0 errors; 4 pre-existing warnings (none introduced by P0-1) |
+| `npm run build` | BLOCKED | Same Prisma Windows `EPERM` blocker already documented in handoff; not a P0-1 regression |
+
+Exact build blocker text:
+
+```text
+Error: EPERM: operation not permitted, rename
+'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node.tmp31204'
+-> 'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node'
+```
+
+Pre-existing lint warnings (not caused by P0-1):
+
+- `desaLoading` unused in `IntakeWorkbench.tsx`
+- `useState` unused in `intake/IntakeDiffPanel.tsx`
+- `PipelineResult` unused import in `intake/IntakeStatusCards.tsx`
+- `useRef` unused in `intake/hooks/useDesaOptions.ts`
+
+### Owner test checklist (P0-1)
+
+Open `/internal-admin/intake` and confirm:
+
+- [ ] With `Coba AI` OFF, upload a `.jpg` / `.png` / scanned PDF → friendly blue/info notice appears with the exact copy `Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.` and NO OpenAI quota error is shown.
+- [ ] With `Coba AI` ON, when OpenAI returns 429 quota or 429 rate limit → an amber/warn notice is rendered with calm copy; technical proof (HTTP status, request id, URLs) stays inside the collapsed `Detail parser lokal & AI` section; no crash.
+- [ ] After running the pipeline, expand `Riwayat Intake` → submissions list and activity list render from the real API (no `Belum ada data` placeholder when data exists); honest empty state appears only when the API truly returns empty.
+- [ ] Select a desa, then expand `Riwayat Versi Desa` → version list renders from the real API; when no desa is selected, a guidance line appears instead of a fake placeholder.
+- [ ] After submit-to-review, the `Riwayat Intake` block reflects the new submission without a page reload.
+
+What must still NOT happen (unchanged guardrails):
+
+- no auto-publish from intake page
+- no silent success on unreadable input
+- no shared/production DB migration
+- no secret or full document content in logs
+
 ## Copy-Paste Short Report For Rangga
 
 ```text

@@ -8,6 +8,8 @@ import { perfLog, perfStart } from "@/lib/perf";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SCANNED_PDF_MIME = "application/pdf";
+const AI_OFF_BINARY_MESSAGE =
+  "Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.";
 
 export const runtime = "nodejs";
 
@@ -75,12 +77,28 @@ export async function POST(req: NextRequest) {
       } else {
         extractFailed = true;
         extractError = extracted.error ?? "Gagal membaca file.";
-        const canContinueWithAi =
-          Boolean(fileBuffer) &&
-          (requestAiMapping ||
-            mimeType.toLowerCase().startsWith("image/") ||
-            mimeType.toLowerCase() === SCANNED_PDF_MIME);
 
+        const lowerMime = mimeType.toLowerCase();
+        const isBinaryNeedingAi =
+          lowerMime.startsWith("image/") || lowerMime === SCANNED_PDF_MIME;
+
+        // Bila user TIDAK mengaktifkan Coba AI dan dokumen adalah image / scanned PDF
+        // yang butuh AI untuk dibaca, kembalikan pesan ramah - jangan lanjut ke OpenAI.
+        if (!requestAiMapping && isBinaryNeedingAi) {
+          return NextResponse.json(
+            {
+              error: AI_OFF_BINARY_MESSAGE,
+              meta: {
+                ...extracted.meta,
+                aiOffForBinary: true,
+                openaiStatus: "skipped",
+              },
+            },
+            { status: 422 },
+          );
+        }
+
+        const canContinueWithAi = Boolean(fileBuffer) && requestAiMapping;
         if (!canContinueWithAi) {
           return NextResponse.json(
             { error: extractError, meta: extracted.meta },

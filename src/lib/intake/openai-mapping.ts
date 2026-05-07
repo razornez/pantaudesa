@@ -465,6 +465,20 @@ export async function maybeMapWithOpenAI(input: {
     });
   }
 
+  // Defense in depth: jangan pernah panggil OpenAI untuk input biner (image/file)
+  // ketika user tidak secara eksplisit mengaktifkan toggle "Coba AI". Ini mencegah
+  // pesan kuota OpenAI muncul ketika user memilih untuk tidak memakai AI sama sekali.
+  if (!input.explicitRequest && (hasImageInput || hasFileInput)) {
+    return emptyResult({
+      attempted: false,
+      status: "skipped",
+      usedInputMode,
+      reason: "User tidak mengaktifkan Coba AI untuk dokumen non-teks.",
+      message:
+        "Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.",
+    });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return emptyResult({
