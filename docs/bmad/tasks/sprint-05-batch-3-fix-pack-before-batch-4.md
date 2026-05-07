@@ -14,12 +14,47 @@ This task is a blocking fix pack before Batch 4.
 1. Intake review fields are too few compared to the public village detail page.
 2. The flow must stay no-cost/free as much as possible; do not require paid Supabase just to test this feature.
 3. Intake/review UI is too bulky and visually scattered; it needs to be more efficient and easier on the eyes.
-4. Photo/image/scanned document upload must be readable and mappable. The system needs OCR plus AI-assisted interpretation to infer which data fields the document contains.
-5. Existing carry-over findings must be fixed before Batch 4.
+4. Photo/image/scanned document upload must be readable and mappable through OpenAI vision/file input if `OPENAI_API_KEY` is available.
+5. Mapping must be dynamic because admins will upload raw/unstructured data and should not be forced to match PantauDesa field rules.
+6. Review must stay synchronized with the current public village detail structure, including which detail fields are already filled and which are still empty.
+7. Existing carry-over findings must be fixed before Batch 4.
 
 ## Goal
 
-Make Batch 3 owner-test ready by fixing functional gaps, field coverage, UI efficiency, no-cost operation clarity, OCR/AI mapping path, and remaining review findings.
+Make Batch 3 owner-test ready by fixing functional gaps, dynamic field coverage, UI efficiency, no-cost operation clarity, OpenAI-assisted mapping path, and remaining review findings.
+
+---
+
+## Core Product Decision - Dynamic AI Mapping
+
+OCR is no longer the preferred direction.
+
+Preferred direction:
+
+```text
+local parser first -> OpenAI vision/file mapping when needed -> structured dynamic draft -> validation -> field coverage/diff -> internal admin review -> publish only after review
+```
+
+Why:
+
+- Admin desa/internal users will upload raw data in many formats.
+- They should not be forced to format documents according to PantauDesa rules.
+- The system should infer what the document contains and map it to available/future village data fields.
+- Public village detail fields may change over time, so the mapping contract must be flexible.
+
+Required behavior:
+
+- Local parser remains first-pass for TXT/DOCX/XLSX/PDF text/CSV to reduce cost.
+- OpenAI is used when:
+  - file is image/photo/scanned document,
+  - PDF text extraction fails or text is too poor,
+  - owner explicitly chooses AI mapping,
+  - local heuristic mapping confidence is low.
+- If `OPENAI_API_KEY` is missing, quota is exhausted, or rate limit occurs, show a clear limitation/error and keep the flow usable through local parser/manual paste.
+- AI output is draft-only.
+- Internal admin remains final reviewer.
+- No auto-publish.
+- Do not log sensitive document content or full prompt/response.
 
 ---
 
@@ -67,14 +102,18 @@ Required:
 2. Create a field coverage matrix:
    - public detail section
    - current source/model
+   - current public value filled/empty status if desa is selected
    - currently mappable yes/no
+   - AI-detectable yes/no
+   - publishable now yes/no
    - should be mappable in Sprint 05 yes/no
    - reason if deferred
    - source requirement
    - validation requirement
 3. Expand intake mapping field set where safe.
 4. Do not force every public detail field into direct `Desa` update if the correct model is different.
-5. If a field belongs to future models, show it as `detected but not yet publishable` or `needs model support`.
+5. If a field belongs to future models, show it as `detected but not yet publishable`, `needs model support`, or `needs owner/schema approval`.
+6. The UI should show which public detail fields are still empty and which fields the uploaded document appears to cover.
 
 Important:
 
@@ -88,6 +127,7 @@ Acceptance:
 - Intake UI explains field coverage clearly.
 - Mappable fields are closer to public detail needs.
 - Deferred fields are documented honestly.
+- Owner can see: uploaded file covers which current detail fields, which empty detail fields remain, and which detected fields need future support.
 
 ---
 
@@ -102,6 +142,8 @@ Required:
 - Do not apply shared DB migration without explicit owner approval.
 - Document what works for free/no-cost mode:
   - intake preview
+  - local parser mapping
+  - OpenAI mapping only when key/quota is available
   - submit review
   - draft review
   - publish through existing flow
@@ -114,6 +156,7 @@ Acceptance:
 
 - Owner can test using current DB/env without paid Supabase feature.
 - UI/report clearly says fallback mode is expected while dedicated tables are inactive.
+- OpenAI quota/key issues degrade gracefully with clear message.
 
 ---
 
@@ -131,9 +174,10 @@ Required UX direction:
 - Stronger hierarchy:
   1. Input
   2. Result summary
-  3. Field mapping/diff
-  4. Review action
-  5. History/carry-over details collapsed
+  3. Coverage: public detail filled/empty + uploaded file coverage
+  4. Field mapping/diff
+  5. Review action
+  6. History/carry-over details collapsed
 - Mobile-friendly, especially small screens.
 - Keep copy simple for non-technical users.
 
@@ -143,10 +187,12 @@ Specific suggestions:
 - Show top summary first:
   - file read status
   - mapped field count
+  - fields covered from public detail
+  - empty fields still missing
   - validation result
   - diff count
   - next action
-- Move technical parser details to collapsed section.
+- Move technical parser/AI details to collapsed section.
 - Keep history panel compact or below main task.
 - Highlight only action buttons that matter.
 
@@ -158,39 +204,67 @@ Acceptance:
 
 ---
 
-## Workstream E - Photo / Scanned Document OCR + AI-Assisted Mapping Path
+## Workstream E - OpenAI Vision/File Input + Dynamic Mapping Adapter
 
 Owner requires the system to handle uploaded photo/scanned document content and infer what data it may contain.
 
+OCR local is not required as the primary path.
+
 Required:
 
-1. Add free/simple OCR attempt for image/scanned document path if feasible.
-2. Evaluate `tesseract.js` or another no-cost local OCR option.
-3. If OCR is too heavy for Vercel/server runtime, implement a safe fallback:
-   - clear error message,
-   - owner-visible limitation,
-   - path to paste text manually,
-   - report the runtime blocker.
-4. Add AI-assisted mapping design/adapter:
-   - AI interprets extracted text and suggests field candidates.
-   - AI output must remain draft only.
-   - Internal admin must review before publish.
-   - AI confidence must not be treated as truth.
-5. Use current heuristic mapping as fallback if AI is not configured.
-6. Do not add paid AI dependency without owner approval.
+1. Add OpenAI-assisted mapping adapter if feasible.
+2. Use OpenAI for image/photo/scanned document or when local parser confidence is low.
+3. AI must return structured JSON, not prose-only text.
+4. The JSON should support:
+   - known publishable fields,
+   - detected fields that match public detail sections but are not publishable yet,
+   - unknown but potentially useful fields,
+   - evidence snippets/page/section references when possible,
+   - confidence,
+   - warnings/limitations.
+5. If OpenAI key is missing, quota is exhausted, or rate limit/error occurs:
+   - return clear UI message,
+   - do not crash,
+   - keep local parser/manual paste flow usable,
+   - document exact limitation in report.
+6. Use current heuristic mapping as fallback.
+7. Do not add paid AI service dependency beyond OpenAI API usage controlled by env key.
 
-Suggested approach:
+Suggested structured output shape:
 
-- OCR extracts text from image/scanned file.
-- AI or heuristic converts text into candidate field mapping.
-- Validation checks candidate fields.
-- Diff compares with existing data.
-- Internal admin reviews before publish.
+```json
+{
+  "documentType": "profil_desa | anggaran | perangkat_desa | fasilitas | potensi | kontak | unknown",
+  "confidence": "low | medium | high",
+  "knownFields": {
+    "websiteUrl": "https://contoh.desa.id",
+    "jumlahPenduduk": 2450,
+    "tahunData": 2024
+  },
+  "detectedButNotPublishable": [
+    {
+      "section": "Perangkat Desa",
+      "label": "Nama Kepala Desa",
+      "value": "...",
+      "reason": "Model/publish mapping belum aktif"
+    }
+  ],
+  "unknownFields": [
+    {
+      "label": "...",
+      "value": "...",
+      "possibleCategory": "..."
+    }
+  ],
+  "warnings": ["..."]
+}
+```
 
 Acceptance:
 
-- Image/scanned input path is attempted or clearly documented with exact blocker.
-- AI-assisted mapping plan/adapter exists.
+- Image/scanned input can attempt OpenAI mapping if configured.
+- AI mapping output is dynamic and reviewable.
+- Missing/limited OpenAI availability is handled honestly.
 - No auto-publish.
 - No sensitive document content is logged.
 
@@ -251,7 +325,8 @@ Must include:
 - fixes completed
 - fields added/deferred
 - UI cleanup summary
-- OCR/AI mapping result
+- OpenAI dynamic mapping result
+- OpenAI unavailable/quota/rate-limit fallback behavior
 - no-cost mode clarification
 - public source check result
 - QA result
@@ -262,13 +337,13 @@ Must include:
 
 Do not:
 
-- auto-publish parser/OCR/AI/admin-desa output,
+- auto-publish parser/OpenAI/admin-desa output,
 - publish unsupported detected fields into the wrong model,
 - use dummy data as real public data,
 - apply shared/production DB migration without owner approval,
 - require paid Supabase feature for owner testing,
-- add paid AI service without owner approval,
-- log sensitive document content, token, DB URL, storage key, email, or raw sensitive identifiers.
+- require OpenAI to be available for the whole intake flow,
+- log sensitive document content, full prompt/response, token, DB URL, storage key, email, or raw sensitive identifiers.
 
 ## Owner Test Checklist Required
 
@@ -277,7 +352,10 @@ Final output must tell owner:
 - page/route to open,
 - file types to test,
 - image/scanned doc behavior,
+- OpenAI available behavior,
+- OpenAI unavailable/quota/rate-limit behavior,
 - what fields should appear,
+- how to verify public-detail coverage and empty fields,
 - how to verify diff,
 - how to submit to review,
 - what must not happen,
