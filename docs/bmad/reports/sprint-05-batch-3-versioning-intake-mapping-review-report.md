@@ -1,207 +1,165 @@
-# Sprint 05 Batch 3 - Versioning, Intake, Mapping, Review Report
+# Sprint 05 Batch 3 Completion Handoff Report
 
-Tanggal: 2026-05-06  
-Mode: accelerated feature batch  
-Branch kerja: `main`
+Date: 2026-05-07
+Branch: `feat/sprint-05-batch-3-completion-handoff`
+Primary task: `docs/bmad/tasks/sprint-05-batch-3-completion-handoff.md`
 
 ## Summary
 
-Batch 3 sudah punya visible MVP flow yang bisa dites owner untuk intake dokumen/teks internal admin:
+Sprint 05 Batch 3 handoff is now owner-test-ready for the intended MVP flow:
 
 ```text
-upload/input -> extract -> mapping draft -> validate -> diff preview -> internal review workbench preview
+upload / paste / file / photo / document
+-> local extract or OpenAI dynamic read
+-> mapping draft
+-> coverage against public village detail fields
+-> validation
+-> diff
+-> internal admin review
+-> publish only after explicit review
 ```
 
-Yang sudah benar-benar berjalan sekarang:
+What is now complete in code:
 
-- halaman internal admin intake tersedia di `/internal-admin/intake`,
-- upload dan paste text sudah masuk ke pipeline API,
-- extractor untuk `TXT`, `DOCX`, `XLSX`, `PDF`, dan `CSV` sudah aktif,
-- mapping draft heuristik untuk field Desa MVP sudah aktif,
-- validasi field dasar sudah aktif,
-- diff preview terhadap data `Desa` existing sudah aktif jika `desaId` diisi,
-- submit ke review internal sudah aktif jika desa dipilih dan validasi lolos,
-- hasil submit disimpan sebagai `AdminDesaDocument` status `PROCESSING` dengan salinan privat file/teks dan draft mapping,
-- riwayat intake terbaru dan aktivitas audit ringan sekarang tampil di workbench,
-- riwayat versi publik internal desa sekarang bisa dilihat dari workbench saat desa dipilih,
-- setiap intake review sekarang membawa `versionCandidate` yang menunjukkan snapshot calon versi sebelum publish,
-- runtime persistence untuk `VillageDataVersion` dan `DesaDataAuditEvent` sekarang sudah wired dengan fallback aman jika migration draft belum di-apply,
-- workbench sekarang menampilkan badge yang menjelaskan apakah history/versioning sedang membaca tabel dedicated atau masih fallback ke audit lama,
-- contoh dokumen valid/diff sekarang tersedia untuk test cepat via UI paste dan file fixture upload,
-- guardrail no auto-publish tetap terjaga.
+- diff engine no longer relies on `jsondiffpatch` root-array behavior for scalar fields,
+- intake preview and submit-review now support a real OpenAI dynamic mapping path with graceful fallback,
+- intake UI now shows live detail-field coverage against the current public village detail structure,
+- unsupported findings are separated into:
+  - `knownPublishableFields`
+  - `detectedButNotPublishable`
+  - `unknownUsefulFields`
+- intake result flow is more linear and quieter:
+  - input
+  - result summary
+  - detail field coverage
+  - mapping and diff
+  - review action
+  - parser and AI detail collapsed
+- Batch 1 and Batch 2 carry-over required by the handoff has been checked and documented.
 
-Yang belum selesai untuk Batch 3 penuh:
+What is still not fully complete:
 
-- migration apply + Prisma client regenerate untuk benar-benar mengaktifkan tabel `VillageDataVersion` dan `DesaDataAuditEvent`,
-- belum ada direct publish action dari layar intake; publish tetap lewat antrean review internal,
-- OCR belum dikonfigurasi,
-- belum ada ingestion dari source pemerintah, baru feasibility/reference level.
-- runbook operasi no-cost tersedia di `docs/bmad/runbooks/sprint-05-batch-3-no-cost-fallback-operations-runbook.md`
+- dedicated DB activation for `VillageDataVersion`,
+- dedicated DB activation for `DesaDataAuditEvent`,
+- OCR for scanned images and scanned PDFs,
+- full `npm run build` closure while Prisma Windows `EPERM` still blocks `prisma generate`.
 
-## Implemented vs Proposed
+## Handoff Fixes Completed
 
-| Area | Status | Hasil |
-|---|---|---|
-| S05-010 Document Intake & Auto Mapping Adapter | implemented MVP | Upload/paste -> extraction -> mapping -> validation berjalan |
-| S05-011 Structured Value Diff / Conflict Engine | implemented MVP | Diff preview antar field Desa berjalan jika `desaId` diisi |
-| S05-012 Internal Data Review Workbench | implemented MVP | UI preview + submit ke review internal tersedia di `/internal-admin/intake` |
-| S05-008 Village Data Versioning | partial | Submit review/draft save/publish sekarang sudah punya runtime persistence path ke `VillageDataVersion`, publish tetap menulis snapshot before/after + nomor versi internal ke audit log, history versi bisa membaca tabel dedicated jika migration aktif, dan schema draft masih menunggu apply |
-| S05-009 General Data Audit Trail | partial | Submit intake, draft save, publish, dan mark failed sekarang sudah punya runtime persistence path ke `DesaDataAuditEvent`, dengan fallback ke `AdminClaimAudit` jika migration belum aktif |
-| Public government source availability spike | documented only | Mengacu ke feasibility task/report Batch 2, belum ada adapter/integration |
-| OCR for scanned PDF/image | evaluated, deferred | Failure disurface eksplisit, tidak diam-diam gagal |
+### 1. Diff engine fix
 
-## Code Outcome
+Status: complete.
 
-File/area utama yang membentuk MVP saat ini:
+Implemented in:
 
-- `src/app/internal-admin/layout.tsx`
-  - nav internal admin sudah menampilkan entry `Intake`
-- `src/app/internal-admin/intake/page.tsx`
-  - page workbench aktif
-- `src/app/internal-admin/intake/loading.tsx`
-  - loading state tersedia
-- `src/components/internal-admin/IntakeWorkbench.tsx`
-  - UI input, hasil ekstraksi, validasi, mapping evidence, diff preview, submit ke review internal, dan riwayat intake ringan
-- `src/app/api/internal-admin/intake/route.ts`
-  - pipeline POST server-side
-- `src/app/api/internal-admin/intake/submit-review/route.ts`
-  - submit eksplisit ke antrean review internal sebagai `PROCESSING`
-- `src/app/api/internal-admin/intake/history/route.ts`
-  - riwayat submission intake + aktivitas audit ringan untuk workbench
-- `src/app/api/internal-admin/desa-version-history/route.ts`
-  - riwayat versi publik internal desa berbasis snapshot audit
-- `src/lib/intake/pipeline.ts`
-  - helper pipeline bersama untuk preview, submit-review, dan pembentukan `versionCandidate`
-- `src/lib/versioning/desa-versioning.ts`
-  - helper normalisasi snapshot, pembentukan `versionCandidate`, dan perhitungan field yang berubah
-- `prisma/schema.prisma`
-  - draft model `VillageDataVersion` + enum status sudah ditambahkan, belum diaplikasikan
-- `prisma/migrations/20260506093000_sprint_05_008_village_data_version_draft/migration.sql`
-  - draft migration lokal untuk owner review, belum di-apply ke DB
-- `src/lib/intake/extractors.ts`
-  - extractor `txt/docx/xlsx/pdf/csv`
-- `src/lib/intake/auto-mapping.ts`
-  - mapping heuristik berbasis regex
-- `src/lib/intake/validation.ts`
-  - rule validasi awal
 - `src/lib/intake/diff-engine.ts`
-  - diff terstruktur berbasis `jsondiffpatch`
+- `src/tests/lib/intake-diff-engine.test.ts`
 
-Follow-up fix yang dikerjakan saat review ini:
+Result:
 
-- memperbaiki parsing `desaId` di `src/app/api/internal-admin/intake/route.ts`
-- sebelumnya diff mencoba membaca body kedua kali melalui `req.clone().json()` setelah body sudah dikonsumsi
-- sekarang `desaId` dibaca aman dari `FormData` atau JSON body pada parse awal, sehingga diff preview bisa benar-benar muncul pada upload maupun paste mode
-- menyambungkan hasil intake ke antrean dokumen internal lewat route submit-review baru
-- memperbaiki server page antrean dokumen agar `aiMappingResult` ikut dikirim ke review queue/publish modal
-- memperbaiki tombol `Draft` di antrean dokumen agar membuka draft yang nyata, bukan sekadar refresh diam-diam
-- memperbaiki bug `window is not defined` di antrean dokumen dengan menghapus ketergantungan `window.location` saat render
-- menambahkan snapshot versioning internal saat publish (`before/after` + `versionNumber`)
-- menambahkan `versionCandidate` pada hasil intake/review agar calon versi terlihat sebelum publish
-- menyiapkan draft schema/migration lokal untuk `VillageDataVersion` tanpa mengubah DB shared/production
-- menyederhanakan UX flow: intake diposisikan sebagai langkah siapkan bahan, antrean dokumen diposisikan sebagai `review data`, dan publish final dipindahkan sebagai keputusan di dalam modal review
+- scalar compare is now manual and deterministic:
+  - previous equals next -> `unchanged`
+  - previous empty and next filled -> `added`
+  - previous filled and next empty -> `removed`
+  - otherwise -> `updated`
+- output shape stays compatible with the existing UI
+- smoke test coverage now exists in Vitest
 
-## Libraries Installed / Evaluated
+### 2. Public village detail alignment
 
-Library yang sudah ada di `package.json` untuk Batch 3:
+Status: complete for Sprint 05 Batch 3 MVP.
 
-| Library | Status | Penggunaan |
-|---|---|---|
-| `mammoth` | used | ekstraksi `DOCX` |
-| `xlsx` | used | ekstraksi `XLSX` menjadi teks/csv sheet |
-| `pdf-parse` | used | ekstraksi `PDF` teks |
-| `jsondiffpatch` | used | diff field-level preview |
-| `papaparse` | installed, not currently used | belum dipakai karena CSV cukup dibaca sebagai plain text |
+Implemented in:
 
-Catatan seleksi:
+- `src/lib/intake/detail-field-coverage.ts`
+- `src/lib/intake/types.ts`
+- `src/lib/intake/openai-mapping.ts`
+- `src/lib/intake/pipeline.ts`
+- `src/components/internal-admin/IntakeWorkbench.tsx`
 
-- pilihan library sudah cukup untuk visible MVP intake tanpa menambah kompleksitas layanan eksternal,
-- tidak ada package OCR yang dipasang pada batch ini,
-- tidak ada AI/LLM package baru untuk mapping,
-- keputusan ini menjaga batch tetap low-risk dan testable.
+Result:
 
-## OCR Result
+- intake review now compares uploaded content against the public village detail field registry,
+- the UI shows:
+  - fields already filled,
+  - fields still empty,
+  - fields covered by the upload,
+  - fields detected but not yet publishable,
+  - unknown useful fields,
+- current value state is calculated live per selected desa, not faked in docs.
 
-Status OCR: belum diaktifkan.
+### 3. Flexible `DataDesa` + `DetailFieldStandard` direction
 
-Hasil:
+Status: documented and partially implemented as a code-level registry, not as active DB schema.
 
-- image/scanned input tidak diproses diam-diam,
-- API mengembalikan error terstruktur yang menjelaskan OCR belum dikonfigurasi,
-- UI tetap mengarahkan user ke dokumen teks atau paste text.
+Current state:
 
-Keputusan:
+- `Desa` remains the stable identity and current publish target.
+- `DETAIL_FIELD_STANDARDS` inside `src/lib/intake/detail-field-coverage.ts` now acts as a temporary code-level `DetailFieldStandard` registry for Sprint 05.
+- This registry is already used by:
+  - intake coverage matrix,
+  - OpenAI template-aware prompt building,
+  - publishable vs deferred classification.
 
-- ini aman untuk MVP karena owner masih bisa menguji flow inti dengan `DOCX`, `PDF` teks, `TXT`, `CSV`, `XLSX`, atau paste text,
-- OCR sebaiknya masuk batch lanjutan setelah owner menyetujui tradeoff dependency/performance/akurasi.
+Still proposal-only:
 
-## Public Source Availability Result
+- `DataDesa` table/model,
+- DB-backed `DetailFieldStandard`,
+- migration and runtime persistence for a flexible village data layer.
 
-Batch 3 tidak melakukan scraping atau integrasi source pemerintah.
+### 4. Compact UI / quiet luxury cleanup
 
-Status saat ini:
+Status: materially improved.
 
-- source feasibility tetap mengacu ke `docs/bmad/tasks/sprint-05-006a-government-data-source-feasibility.md`,
-- shortlist source tetap:
-  - SID Kemendesa IDM
-  - SID Kemendesa Profil
-  - SID Kemendesa Dana Desa
-  - Satu Data Indonesia / jumlah penduduk desa
-  - API wilayah hanya untuk helper administratif, bukan source of truth
+Result:
 
-Kesimpulan:
+- main result flow is lighter and more linear,
+- detail field coverage is brought forward,
+- technical parser/AI detail is now collapsed,
+- history and version history stay collapsed,
+- primary action remains obvious,
+- copy is simpler for non-technical users,
+- layout remains usable on small screens such as iPhone 12 mini.
 
-- source pemerintah sudah cukup untuk referensi roadmap source registry,
-- belum ada ingestion/runtime adapter di batch ini,
-- ini sesuai guardrail karena belum ada approval untuk scraping/integration.
+### 5. OpenAI dynamic mapping path
 
-## Versioning Result
+Status: complete for MVP draft mapping path.
 
-Status: partial, but runtime path is now wired.
+Implemented in:
 
-Temuan:
+- `src/lib/intake/openai-mapping.ts`
+- `src/app/api/internal-admin/intake/route.ts`
+- `src/app/api/internal-admin/intake/submit-review/route.ts`
+- `src/lib/intake/pipeline.ts`
 
-- schema saat ini punya `Desa`, `DataSource`, dan model turunan publik lain,
-- model `VillageDataVersion` sekarang sudah didraft di schema + migration lokal, tetapi belum diapply,
-- publish sekarang menulis snapshot `beforeSnapshotJson` dan `afterSnapshotJson` ke `AdminClaimAudit`,
-- tiap publish sekarang mendapat `versionNumber` internal yang tersimpan di metadata audit,
-- intake/review sekarang menyimpan `versionCandidate` yang memotret base snapshot + proposed snapshot,
-- workbench bisa menampilkan riwayat versi publik internal untuk desa terpilih,
-- submit ke review, save draft review, dan publish sekarang sudah mencoba sinkron ke tabel `VillageDataVersion` jika tabel itu tersedia,
-- route riwayat versi desa sekarang memprioritaskan tabel `VillageDataVersion` bila migration sudah aktif, lalu fallback ke audit snapshot lama bila belum.
+Result:
 
-Kesimpulan:
+- `OPENAI_API_KEY` is used server-side only,
+- local parser remains first pass,
+- OpenAI is triggered when:
+  - user explicitly checks `Coba AI`,
+  - input is image/photo,
+  - local extraction fails,
+  - heuristic mapping confidence is low,
+- OpenAI response is structured JSON,
+- no prompt/response body is logged,
+- no document content is logged in full,
+- output remains draft-only,
+- internal admin review remains the only publish gate.
 
-- Batch 3 sekarang sudah punya fondasi version history internal berbasis audit-backed snapshots plus calon versi review,
-- lifecycle dedicated `VillageDataVersion` sudah disiapkan di runtime, tetapi aktivasi nyata masih menunggu apply migration + Prisma generate yang saat ini ke-block di mesin Windows ini.
+### 6. Dynamic mapping is flexible
 
-## Audit Trail Result
+Status: complete for detection, partial for publish target.
 
-Status: partial, but dedicated event path is now wired.
+Current classification:
 
-Temuan:
+1. `knownPublishableFields`
+2. `detectedButNotPublishable`
+3. `unknownUsefulFields`
 
-- existing `AdminClaimAudit` masih fokus admin-claim/admin-verification flow,
-- submit intake ke review sekarang menulis event `INTERNAL_INTAKE_SUBMITTED`,
-- workbench sekarang menampilkan activity feed ringan berbasis audit event intake/review,
-- publish data desa sekarang juga menyimpan snapshot audit terstruktur (`beforeSnapshotJson` / `afterSnapshotJson`),
-- route submit intake, draft save, publish, dan mark failed sekarang juga mencoba menulis ke tabel dedicated `DesaDataAuditEvent` jika tabel tersedia,
-- route riwayat intake sekarang memprioritaskan `DesaDataAuditEvent` lalu fallback ke `AdminClaimAudit` agar transisi aman,
-- model dedicated audit event sudah didraft di schema + migration lokal, tetapi belum diapply.
+Important limitation:
 
-Kesimpulan:
-
-- gap arsitektur dedicated audit trail sudah jauh mengecil,
-- tetapi aktivasi penuh tetap menunggu apply migration + Prisma generate yang saat ini belum bisa dituntaskan di environment ini.
-
-## Diff Engine Result
-
-Status: implemented MVP.
-
-Hasil:
-
-- diff membandingkan current public `Desa` fields dengan incoming mapped fields,
-- field yang dicakup:
+- only the current stable scalar publish target is publishable now:
   - `websiteUrl`
   - `kategori`
   - `tahunData`
@@ -209,340 +167,794 @@ Hasil:
   - `kecamatan`
   - `kabupaten`
   - `provinsi`
-- output menampilkan `added`, `updated`, `removed`, dan `unchanged`,
-- UI hanya menampilkan perubahan yang relevan.
+- richer findings such as perangkat desa, anggaran, fasilitas, BUMDes, kontak, and dokumen publik are intentionally detected but not published into the wrong model.
 
-Fix penting:
+### 7. No-cost / free mode
 
-- parsing `desaId` sudah diperbaiki supaya diff tidak gagal hanya karena body request sudah terpakai saat parse awal.
+Status: preserved.
 
-## Review Workbench Result
+Result:
 
-Status: implemented MVP.
+- no paid Supabase branch is required,
+- no shared or production migration was applied,
+- fallback versioning and audit remain honest,
+- UI and API explicitly state whether dedicated tables are active or fallback mode is in use,
+- local parser and manual paste still work when OpenAI is unavailable.
 
-Yang bisa dilakukan sekarang:
+### 8. Public source availability check
 
-1. Internal Admin membuka `/internal-admin/intake`
-2. Memilih `Upload file` atau `Tempel teks`
-3. Memilih desa opsional dari daftar hasil pencarian untuk membandingkan dengan data existing
-4. Menjalankan pipeline
-5. Melihat:
-   - metadata ekstraksi
-   - hasil validasi
-   - mapping evidence
-   - diff preview
-6. Jika preview sudah oke, klik `Submit ke review internal`
-7. Membuka antrean review di `/internal-admin/documents?status=PROCESSING`
-8. Klik `Draft` jika ingin membuka draft mapping untuk dicek atau dilengkapi
-9. Gunakan `Review data` sebagai pintu utama di antrean, lalu pilih `Simpan dulu` atau `Publikasikan sekarang` dari dalam modal review
-10. Lihat panel `Riwayat Versi Desa` untuk desa yang dipilih
+Status: completed as a bounded manual check, no scraping, no integration.
 
-Sample test aid yang tersedia:
+### 9. Batch 1 and 2 carry-over closure
 
-- tombol `Isi contoh valid` pada mode paste,
-- tombol `Isi contoh diff` pada mode paste,
-- file fixture upload:
-  - `public/testing/intake/contoh-dokumen-valid.txt`
-  - `public/testing/intake/contoh-dokumen-diff.txt`
-  - `public/testing/intake/contoh-dokumen-valid.csv`
+Status:
 
-Yang belum ada:
+- `src/lib/perf.ts` duration unit fix: already closed and retained
+- `src/lib/data/desa-read.ts` and `src/lib/data/voice-read.ts` mapping timer fix: already closed and retained
+- Batch 1 report manual test numbers: already present
+- Batch 2 report QA section: now added
 
-- direct publish action dari layar intake,
-- `VillageDataVersion`,
-- audit trail umum data desa yang terpisah dari audit claim,
-- OCR.
+## Code Outcome
 
-## QA Result
+Main code/files involved in the completion handoff:
 
-Hasil QA pada state code saat report ini dibuat:
+- `src/app/api/internal-admin/intake/route.ts`
+  - preview pipeline now supports local parse plus OpenAI fallback
+- `src/app/api/internal-admin/intake/submit-review/route.ts`
+  - submit-review path now supports the same dynamic mapping behavior
+- `src/lib/intake/openai-mapping.ts`
+  - server-side OpenAI Responses API adapter with structured JSON output and safe fallback states
+- `src/lib/intake/detail-field-coverage.ts`
+  - temporary field registry plus runtime coverage matrix
+- `src/lib/intake/types.ts`
+  - typed contract for AI status and coverage objects
+- `src/lib/intake/pipeline.ts`
+  - merged local plus OpenAI mapping, coverage summary, version candidate wiring
+- `src/lib/intake/auto-mapping.ts`
+  - heuristic mapping source string widened to support merged mode
+- `src/lib/intake/diff-engine.ts`
+  - manual scalar diff logic
+- `src/tests/lib/intake-diff-engine.test.ts`
+  - smoke tests for added, removed, updated, unchanged states
+- `src/components/internal-admin/IntakeWorkbench.tsx`
+  - field coverage UI, AI status UI, compact flow, collapsed technical detail
+
+## Public Village Detail Coverage Matrix
+
+The current public detail page is still backed primarily by:
+
+- `Desa` scalar identity/core fields,
+- `PerangkatDesa[]`,
+- `DokumenPublik[]`,
+- `AnggaranDesaSummary`,
+- `APBDesItem[]`,
+- derived or presentational values such as transparency score.
+
+Important note:
+
+- the "filled / empty when desa is selected" state below is calculated live in the UI for the selected desa.
+- the report documents the runtime rule honestly instead of freezing fake sample values.
+
+| Section | Field label / key | Current model/source | Current value state when desa selected | Currently mappable | AI-detectable | Publishable now | Deferred reason / note | Source requirement | Validation requirement |
+|---|---|---|---|---|---|---|---|---|---|
+| Identitas | Website resmi `websiteUrl` | `Desa.websiteUrl` | dynamic filled/empty from selected desa | yes | yes | yes | stable scalar publish target | sumber resmi desa / dokumen resmi | URL valid |
+| Identitas | Kategori desa `kategori` | `Desa.kategori` | dynamic filled/empty from selected desa | yes | yes | yes | stable scalar publish target | dokumen profil / status desa | kategori masuk akal |
+| Identitas | Tahun data `tahunData` | `Desa.tahunData` | dynamic filled/empty from selected desa | yes | yes | yes | stable scalar publish target | dokumen resmi yang menyebut periode | tahun valid |
+| Demografi | Jumlah penduduk `jumlahPenduduk` | `Desa.jumlahPenduduk` | dynamic filled/empty from selected desa | yes | yes | yes | stable scalar publish target | profil/statistik desa | angka positif |
+| Identitas | Kecamatan `kecamatan` | `Desa.kecamatan` | normally filled from selected desa | yes | yes | yes | stable scalar publish target | dokumen resmi | nama wilayah tidak kosong |
+| Identitas | Kabupaten/Kota `kabupaten` | `Desa.kabupaten` | normally filled from selected desa | yes | yes | yes | stable scalar publish target | dokumen resmi | nama wilayah tidak kosong |
+| Identitas | Provinsi `provinsi` | `Desa.provinsi` | normally filled from selected desa | yes | yes | yes | stable scalar publish target | dokumen resmi | nama wilayah tidak kosong |
+| Pemerintahan | Nama kepala desa `kepalaDesa` | `PerangkatDesa[nama/jabatan]` | dynamic filled/empty from perangkat data | no | yes | no | needs richer publish target than scalar `Desa` allowlist | SK perangkat / profil resmi | nama + jabatan jelas |
+| Pemerintahan | Daftar perangkat desa `perangkatDesa` | `PerangkatDesa[]` | dynamic filled/empty from perangkat rows | no | yes | no | needs item-level review and relasi write path | SK perangkat / struktur organisasi | nama, jabatan, review admin |
+| Profil | Telepon desa `teleponDesa` | future profile/contact layer | usually empty in current public data | no | yes | no | no safe publish target yet | kontak resmi desa | nomor kontak valid |
+| Profil | Email desa `emailDesa` | future profile/contact layer | usually empty in current public data | no | yes | no | no safe publish target yet | email resmi desa | email valid |
+| Profil | Potensi unggulan `potensiUnggulan` | future profile layer | usually empty in current public data | no | yes | no | better fit for flexible `DataDesa` | profil/potensi desa | kategori + sumber jelas |
+| Profil | Fasilitas umum `fasilitasUmum` | future profile/facility layer | usually empty in current public data | no | yes | no | needs list/relational target, not scalar fallback | profil/fasilitas resmi | label, jumlah, kondisi, sumber |
+| Profil | BUMDes `bumdesNama` | future profile/BUMDes layer | usually empty in current public data | no | yes | no | better fit for flexible profile/business registry | profil / dokumen BUMDes | nama, status, sumber |
+| Profil | Aset desa `asetDesa` | future asset layer | usually empty in current public data | no | yes | no | too structured and sensitive for scalar publish | dokumen aset resmi | nama, nilai, tahun, kondisi |
+| Dokumen | Dokumen publik `dokumenPublik` | `DokumenPublik[]` | dynamic filled/empty from document rows | no | yes | no | needs per-document mapping, not one scalar field | judul, status, file/reference, sumber | tiap item wajib lengkap |
+| Dokumen | Skor transparansi `skorTransparansi` | derived system score | derived when source/doc data exists | no | no | no | derived metric, not input-mapped field | turunan sistem | not applicable |
+| Anggaran | Total anggaran `totalAnggaran` | `AnggaranDesaSummary.totalAnggaran` | dynamic filled/empty from summary | no | yes | no | intake publish to summary not opened yet | APBDes / dokumen anggaran resmi | tahun + sumber jelas |
+| Anggaran | Realisasi anggaran `terealisasi` | `AnggaranDesaSummary.totalRealisasi` | dynamic filled/empty from summary | no | yes | no | needs summary review path | dokumen realisasi resmi | angka + tahun + sumber |
+| Anggaran | Rincian APBDes `apbdesItems` | `APBDesItem[]` | dynamic filled/empty from APBDes rows | no | yes | no | needs item-level mapping and table write path | dokumen APBDes resmi | bidang, nilai, tahun |
+
+Practical outcome:
+
+- the owner can now see exactly which public detail fields are already covered by the upload,
+- unsupported fields are not forced into the wrong table just to make the UI look complete,
+- the current UI is honest about what is publishable now vs what still needs the future flexible model.
+
+## `DataDesa` and `DetailFieldStandard` Direction
+
+Status:
+
+- documented clearly,
+- partially represented in code through `DETAIL_FIELD_STANDARDS`,
+- not migrated or activated in DB.
+
+### Current shipped direction
+
+Temporary runtime shape already in use:
+
+```text
+Desa
+  -> current stable identity and publish target
+
+DETAIL_FIELD_STANDARDS (code registry)
+  -> section key
+  -> section label
+  -> field key
+  -> field label
+  -> current model source
+  -> publishable now yes/no
+  -> AI-detectable yes/no
+  -> source requirement
+  -> validation requirement
+  -> deferred reason
+```
+
+### Proposed next DB-backed direction
+
+```text
+Desa
+  1 -> many DataDesa
+
+DataDesa
+  - desaId
+  - categoryKey
+  - fieldKey
+  - label
+  - valueText / valueNumber / valueDate / valueJson
+  - year
+  - sourceId
+  - pipelineStatus
+  - reviewStatus
+  - confidence
+  - publishedAt
+  - createdBy / reviewedBy / publishedBy
+
+DetailFieldStandard
+  - sectionKey
+  - sectionLabel
+  - fieldKey
+  - fieldLabel
+  - expectedValueType
+  - sourceRequired
+  - validationRule
+  - displayOrder
+  - isPublic
+  - isActive
+  - mapsToModel / mapsToPath
+  - publishTarget
+```
+
+### Status decision
+
+- for Sprint 05 Batch 3, the code-level registry is enough to make intake and coverage testable,
+- the DB-backed flexible model remains proposal-only until owner approves migration work,
+- no shared or production migration was applied.
+
+## OpenAI Dynamic Mapping Result
+
+Status: implemented and testable when `OPENAI_API_KEY` is available.
+
+### Trigger rules
+
+OpenAI is attempted when one or more of these are true:
+
+- user explicitly enables `Coba AI`,
+- input is image/photo,
+- local extraction fails,
+- heuristic mapping confidence is low.
+
+### Structured output categories
+
+The OpenAI path now returns:
+
+```text
+knownPublishableFields
+knownFieldEvidence
+detectedButNotPublishable
+unknownUsefulFields
+confidence
+warnings
+```
+
+### Fallback behavior
+
+Possible statuses:
+
+- `success`
+- `skipped`
+- `missing_key`
+- `rate_limited`
+- `quota_limited`
+- `error`
+- `invalid_json`
+
+Behavior:
+
+- preview route does not crash when OpenAI is unavailable,
+- submit-review route does not crash when OpenAI is unavailable,
+- user sees an honest message and can fall back to:
+  - parser lokal
+  - paste text
+  - clearer source document
+
+### Security and privacy guardrails
+
+- `OPENAI_API_KEY` stays server-side only
+- no secret/key logging
+- no full document content logging
+- no full prompt logging
+- no full response logging
+- AI output remains draft-only
+
+## UI Cleanup Summary
+
+Status: implemented.
+
+The result flow is now closer to the requested order:
+
+1. input
+2. result summary
+3. detail field coverage
+4. mapping and diff
+5. review action
+6. technical and history details collapsed
+
+Concrete UI changes:
+
+- result starts with short status cards and decision summary,
+- field coverage is visible early,
+- "Apa Yang Terbaca Utama" is pushed forward,
+- parser and AI detail is moved into a collapsed section,
+- history and version history remain collapsed,
+- review action stays explicit and clearly non-publishing,
+- copy avoids technical jargon where possible.
+
+## No-Cost / Free Mode Clarification
+
+Status: respected.
+
+- no paid Supabase branch was used,
+- no DB migration was applied to shared or production DB,
+- version history and audit use honest fallback mode when dedicated tables are inactive,
+- UI badges and API storage metadata explain whether the app is reading dedicated tables or fallback audit data,
+- OpenAI can be used when env is present, but the flow still works without it.
+
+## Public Source Availability Check
+
+This was a bounded manual check of public, non-login pages only. No scraping and no restricted data access was performed.
+
+| Source | What was visibly found | Access method | Limitation | Future adapter fit |
+|---|---|---|---|---|
+| SID Kemendesa IDM | public filters down to desa; visible ranking/year comparison; detail area shows score, status, target status, minimal score, indicator table; page shows last update 20 April 2026 | public web | export/API contract still unclear | high for manual verification and later structured adapter |
+| SID Kemendesa Profil | public search by desa/kecamatan/kabupaten/provinsi; visible statistik categories including Penduduk, Pekerjaan, Agama, Pendidikan, Kantor Desa, RT/RW, Lapangan Olahraga, Pasar Desa, Web Desa, Peta Desa; BNBA explicitly requires login | public web | BNBA must stay out of scope; some details may be UI-only | high for profile/reference adapter |
+| Satu Data Indonesia / data.go.id `Jumlah Penduduk Desa` | public dataset page with raw resources listed as `PETADESANAMADANPDDK`; search snippet indicates open dataset status and downloadable resource presence | public dataset portal | field quality and freshness must still be validated per dataset | medium-high for demography helper |
+| SID Dana Desa | public page with year filters 2021-2026; visible sections for Penyaluran Dana Desa, Padat Karya Tunai Desa, BLT Desa; table headings include wilayah, jumlah desa, pagu anggaran, penyaluran, persentase, monthly BLT counts; page shows last update 20 April 2026 | public web | exact desa-level row access still needs careful adapter validation | high for budget/reference adapter |
+
+Conclusion:
+
+- public non-login reference data does exist,
+- the safest next step is still source-aware manual review and later bounded adapters,
+- Batch 3 does not yet add ingestion code from these sources.
+
+## Batch 1 and 2 Carry-over Close-out
+
+Checked against the handoff requirement:
+
+- `src/lib/perf.ts` duration unit uses `Math.round(event.duration)` and remains correct
+- `src/lib/data/desa-read.ts` timer split remains correct:
+  - DB query timing is isolated from mapping timing
+- `src/lib/data/voice-read.ts` timer split remains correct:
+  - fetch timing is isolated from map timing
+- Batch 1 report already contains owner test numbers:
+  - `/desa` routeDataReady about `1235ms`
+  - `/desa/[id]` routeDataReady about `2169ms`
+  - `/suara-warga` routeDataReady about `1281ms`
+- Batch 2 report now includes a QA section
+
+## Intake Workbench Refactor & UX Polish (Sprint 05 Batch 3 follow-up)
+
+Date follow-up: 2026-05-07
+Task spec: `docs/bmad/tasks/sprint-05-batch-3-intake-workbench-refactor-and-ux-polish.md`
+Trigger: owner review of first attempt (commit `326d22e`) returned PARTIAL PASS:
+- folder structure dan komponen reusable sudah benar arah,
+- tetapi `IntakeWorkbench.tsx` parent belum benar-benar direfactor,
+- UI owner-facing belum terbukti lebih compact.
+
+### Before / after line count
+
+| File | Before | After |
+|---|---|---|
+| `src/components/internal-admin/IntakeWorkbench.tsx` | 2344 lines (monolithic) | 337 lines (orchestrator only) |
+
+Net: parent file shrunk roughly 7x, presentation/state logic now lives in the dedicated `intake/` module.
+
+### Component / hook split summary
+
+New module: `src/components/internal-admin/intake/`
+
+Presentational components (each one renders one UI concern):
+
+| File | Lines | Role |
+|---|---|---|
+| `IntakeSection.tsx` | 76 | Reusable collapsible section (`IntakeSection`, `IntakeCompactSection`) |
+| `IntakeStatusCards.tsx` | 97 | Status badge row (mapping / validation / review / AI) |
+| `IntakeCoveragePanel.tsx` | 208 | Detail-field coverage display with collapsible details |
+| `IntakeDiffPanel.tsx` | 98 | Diff viewer (added / updated / removed / same) |
+| `IntakeAiStatusPanel.tsx` | 76 | Parser + AI status detail (used inside collapsed section) |
+| `IntakeStatusHelpers.tsx` | 160 | Pure status derivation helpers (no JSX state) |
+
+Hooks (data + side-effect logic):
+
+| File | Lines | Role |
+|---|---|---|
+| `hooks/useIntakePipeline.ts` | 179 | `runPipeline` + `submitToReview` wrappers |
+| `hooks/useDesaOptions.ts` | 87 | Debounced village search + select |
+| `hooks/useIntakeHistory.ts` | 127 | Intake history + version history fetchers |
+| `hooks/index.ts` | 6 | Barrel |
+
+Module surface:
+
+| File | Lines | Role |
+|---|---|---|
+| `types.ts` | 300 | All shared interfaces (`PipelineResult`, `OpenAIResult`, `DesaOption`, `IntakeStep`, `IntakeMode`, `SubmitReviewSuccess`, etc.) |
+| `constants.ts` | 384 | UI copy, field labels, badge color maps, sample helpers, `formatReviewStatusLabel`, `buildSuggestedReviewTitle`, `buildQueueFocusHref` |
+| `utils.ts` | 109 | Formatters (`formatBytes`, `formatDateTime`, `formatDuration`, `formatDiffValue`, `getPayloadError`, `readJsonLikeResponse`) |
+| `index.ts` | 42 | Public barrel |
+
+Parent (`IntakeWorkbench.tsx`, 337 lines) now does only:
+
+- top-level state (step, mode, file, text, AI flag, selected desa, result, review title, submitted review),
+- 3 inline handlers (`handleSearchDesa`, `handleSelectDesa`, `handleRunPipeline`, `handleSubmitReview`),
+- composition of the extracted presentational components,
+- 1 small inline `WorkflowGuide` sub-component.
+
+No business behavior was changed:
+
+- pipeline POST endpoint paths are the same,
+- submit-review endpoint is the same,
+- AI toggle, desa picker, validation gating, and review-only publish gate are unchanged,
+- backward-compatible re-exports kept (`CollapsibleSection`, `StatusCardRow`).
+
+### UX improvement (compact / quiet luxury, mobile)
+
+Result panel structure now follows the requested order:
+
+1. status cards row,
+2. detail field coverage panel,
+3. mapped fields summary,
+4. action buttons,
+5. guardrail note,
+6. review action card.
+
+Progressive disclosure (collapsed by default):
+
+- `Detail parser lokal & AI` (was always-visible),
+- `Validasi` detail list,
+- `Diff` panel,
+- `Riwayat Intake`,
+- `Riwayat Versi Desa`.
+
+Compact / mobile-friendly tuning:
+
+- result blocks use `space-y-4`, no longer `space-y-6` / `space-y-8`,
+- card padding `p-4 sm:p-5` so iPhone 12 mini does not feel cramped,
+- typography downsized to `text-xs` / `text-sm` for technical detail and badges,
+- info banner reduced from full notice card to single-line `notice-info`,
+- workflow steps render as small chips that wrap on narrow viewports,
+- primary actions (`Jalankan pipeline`, `Kirim ke antrean review`) stay full-width on mobile and inline on desktop (`w-full sm:w-auto`),
+- text labels avoid technical jargon (`Coba AI`, `Kirim ke antrean review`, `Pastikan hasil otomatis masuk akal`),
+- non-actionable copy moved out of result hero into footer-like notes.
+
+### QA Result (refactor follow-up, run on owner's local machine)
 
 | Command | Result | Note |
 |---|---|---|
-| `npm run lint` | PASS | hanya warning lama `.eslintignore` |
-| `npx tsc --noEmit` | PASS | tidak ada type error |
-| `npx prisma generate` | BLOCKED | gagal `EPERM` Windows pada engine file / path lock |
-| `npm run build` | BLOCKED | build gagal karena `prisma generate` gagal dengan `EPERM` rename engine |
+| `npm run lint` | PASS | only pre-existing `.eslintignore` deprecation warning |
+| `npx tsc --noEmit` | PASS | refactored IntakeWorkbench + all extracted modules type-check cleanly |
+| `npm run build` | BLOCKED | same Prisma Windows `EPERM` blocker on `prisma generate` already documented in handoff; not a Batch 3 source-level regression |
 
-Detail blocker Prisma/build:
-
-- di sandbox: `EPERM: operation not permitted, lstat 'C:\\Users\\IWANKU~1'`
-- di luar sandbox: `EPERM` rename `src/generated/prisma/query_engine-windows.dll.node.tmp...`
-
-Interpretasi:
-
-- lint dan TypeScript menyatakan fitur Batch 3 ini compile-safe pada level source,
-- blocker build saat ini masih issue environment/file-lock Prisma di Windows, bukan error logic TypeScript pada feature intake.
-
-## Belum Complete dan Alasannya
-
-Hal-hal berikut masih belum bisa disebut selesai penuh pada Batch 3 ini:
-
-- `VillageDataVersion` belum aktif sebagai persistence nyata di database.
-  Alasan: saat ini baru tersedia dalam bentuk schema draft, migration draft, dan runtime fallback. Migration tidak di-apply ke DB aktif agar tetap mengikuti guardrail no-cost dan no shared DB change.
-- `DesaDataAuditEvent` dedicated table belum aktif di database.
-  Alasan: histori saat ini masih mengandalkan fallback yang aman ke audit lama karena migration dedicated audit juga belum di-apply.
-- versioning masih `fallback-backed`, belum full `table-backed immutable history`.
-  Alasan: jalur runtime sudah disiapkan, tetapi aktivasi penuh bergantung pada migration apply + Prisma client regenerate yang masih tertahan.
-- OCR untuk PDF scan/image belum diaktifkan.
-  Alasan: implementasi OCR akan butuh dependency atau service tambahan, pengujian akurasi, dan potensi biaya/infra baru. Batch ini sengaja hanya menampilkan failure message yang jelas.
-- status `build PASS` penuh belum tercapai.
-  Alasan: `npm run build` masih gagal di langkah `prisma generate` karena issue Windows `EPERM`, bukan karena source feature intake/review tidak type-safe.
-
-## Belum Bisa Dikerjakan Sekarang
-
-Hal-hal berikut belum bisa ditutup pada state project dan guardrail saat report ini dibuat:
-
-- aktivasi tabel `village_data_versions` dan `desa_data_audit_events` di DB aktif,
-- verifikasi end-to-end write ke tabel versioning dan audit baru,
-- OCR dokumen scan/image,
-- penutupan QA build production penuh sampai `PASS`.
-
-Alasan penahan utama:
-
-- owner meminta jalur no-cost 100%, jadi tidak boleh ada branch database berbayar atau perubahan schema ke shared DB aktif,
-- environment Windows saat ini masih memblokir `prisma generate` melalui error `EPERM`,
-- belum ada dependency atau service OCR yang disetujui untuk dipasang.
-
-## Guardrails Check
-
-Guardrails tetap respected:
-
-- tidak ada auto-publish parser/OCR/AI/admin-desa output,
-- tidak ada bypass auth internal admin,
-- tidak ada DB write dari intake pipeline,
-- tidak ada migration atau schema apply,
-- tidak ada production env change,
-- tidak ada restricted/private/BNBA data access,
-- tidak ada logging document content penuh, token, atau secret,
-- parser/OCR/source-access failure tidak disembunyikan.
-
-## What Owner Should Test
-
-Owner test minimum yang disarankan:
-
-1. Buka `/internal-admin/intake`
-2. Pilih desa dari daftar pencarian agar diff bisa terlihat lebih jelas
-3. Coba mode `Tempel teks` dengan tombol:
-   - `Isi contoh valid`
-   - `Isi contoh diff`
-4. Atau upload fixture dari:
-   - `public/testing/intake/contoh-dokumen-valid.txt`
-   - `public/testing/intake/contoh-dokumen-diff.txt`
-   - `public/testing/intake/contoh-dokumen-valid.csv`
-5. Jika ingin manual paste, bisa pakai contoh:
+Exact build blocker text:
 
 ```text
-Website: https://desa-maju.id
-Jumlah Penduduk: 2450 jiwa
-Tahun Data: 2024
-Kategori Desa: Mandiri
-Kecamatan: Cibungbulang
-Kabupaten: Bogor
-Provinsi: Jawa Barat
+Error:
+EPERM: operation not permitted, rename
+'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node.tmp25648'
+-> 'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node'
 ```
 
-6. Klik `Jalankan pipeline`
-7. Expected:
-   - muncul section ekstraksi
-   - muncul field mapping yang terdeteksi
-   - validasi muncul dan tidak error untuk contoh valid
-   - jika desa dipilih, diff preview muncul
-   - ada guardrail note bahwa preview tidak mem-publish data
-8. Lanjut klik `Submit ke review internal`
-9. Expected:
-   - item review berhasil dibuat
-   - muncul link ke antrean review
-   - item baru terlihat di `/internal-admin/documents?status=PROCESSING`
-   - tidak ada publish otomatis
-10. Klik tombol `Draft` pada item `PROCESSING`
-11. Expected:
-   - draft mapping langsung terbuka
-   - jika item intake sudah punya mapping awal, field terisi otomatis
-   - jika belum ada draft, sistem membuat draft dulu lalu langsung membukanya
-12. Setelah publish sukses, buka lagi `/internal-admin/intake` dan pilih desa yang sama
-13. Expected:
-   - panel `Riwayat Versi Desa` menampilkan versi terbaru
-   - field yang berubah terlihat sebagai before vs after
+Interpretation: lint and TypeScript are green for the refactor. The `npm run build` failure is environmental (Prisma engine file lock on Windows), not a regression introduced by the refactor.
 
-Owner test file-based:
+### Owner test checklist (refactor follow-up)
 
-1. Upload salah satu file teks yang aman:
-   - `.docx`
-   - `.xlsx`
-   - `.pdf` berbasis teks
-   - `.txt`
-   - `.csv`
-2. Klik `Jalankan pipeline`
-3. Expected:
-   - parser metadata tampil
-   - hasil mapping/validasi tampil
-   - tidak ada crash
+Open `/internal-admin/intake` and confirm:
 
-Negative test yang penting:
+- [ ] page loads without console error,
+- [ ] mode toggle (`Upload file` / `Tempel teks`) works,
+- [ ] AI toggle (`Coba AI`) keeps state,
+- [ ] desa search returns options and selecting one fills the picker,
+- [ ] `Jalankan pipeline` runs and result panel appears,
+- [ ] status cards (mapping / validation / review / AI) appear at the top of result,
+- [ ] coverage panel renders before mapped-fields summary,
+- [ ] mapped fields summary shows compact 1-column / 2-column / 3-column grid,
+- [ ] technical sections (`Detail parser lokal & AI`, `Validasi`, `Diff`, `Riwayat Intake`, `Riwayat Versi Desa`) are collapsed by default and only expand on user click,
+- [ ] `Kirim ke antrean review` blocks correctly when desa not selected, validation not OK, or no reviewable content,
+- [ ] submit success shows the queue link and prevents duplicate submit,
+- [ ] iPhone 12 mini viewport (375px wide) layout: no horizontal scroll, primary buttons full-width, card padding still readable.
 
-1. Upload image/scanned doc
-2. Expected:
-   - muncul error jelas bahwa OCR belum dikonfigurasi
-   - jangan ada hasil palsu seolah parsing sukses
+What must still NOT happen (unchanged guardrails):
 
-3. Coba input tanpa file atau tanpa text
-4. Expected:
-   - tampil error validasi input
+- no auto-publish from intake page,
+- no silent success on unreadable input,
+- no shared/production DB write,
+- no secret or full document content in logs.
 
-5. Coba pilih desa valid dari daftar
-6. Expected:
-   - diff preview benar-benar muncul jika desa ditemukan
+## QA Result
 
-Yang tidak boleh terjadi:
+| Command | Result | Note |
+|---|---|---|
+| `npm run lint` | PASS | existing `.eslintignore` deprecation warning only |
+| `npx tsc --noEmit` | PASS | intake/OpenAI/coverage changes compile cleanly |
+| `npm test -- src/tests/lib/intake-diff-engine.test.ts` | PASS | had to be rerun outside sandbox because Vitest hit `spawn EPERM` inside sandbox |
+| `npx prisma generate` | BLOCKED | Windows Prisma `EPERM` |
+| `npm run build` | BLOCKED | build stops because `prisma generate` fails first |
 
-- data publik berubah otomatis,
-- publish terjadi otomatis dari halaman intake,
-- error diam-diam tanpa pesan,
-- log menampilkan isi dokumen penuh, token, DB URL, atau data sensitif lain.
+Exact Prisma blocker that must remain visible:
 
-Yang perlu owner share balik:
+- sandbox failure: `EPERM: operation not permitted, lstat 'C:\\Users\\IWANKU~1'`
+- local engine/file-lock failure when attempted outside sandbox previously: `EPERM` rename on `query_engine-windows.dll.node`
 
-- screenshot halaman hasil pipeline,
-- file type yang dicoba,
-- apakah diff muncul saat `desaId` diisi,
-- pesan error jika ada,
-- potongan log server jika muncul error runtime.
+Interpretation:
 
-## Short Report For Rangga And Owner
+- lint, tests, and TypeScript pass,
+- the remaining build blocker is Prisma-on-Windows environment behavior, not a source-level type error in the Batch 3 completion work.
+
+## Guardrails Respected
+
+- no auto-publish of parser or OpenAI output
+- no auth bypass
+- no shared or production DB migration apply
+- no paid Supabase requirement
+- no dummy data promoted as real public data
+- no unsupported field forced into the wrong model
+- no secret or sensitive content logging
+- no `.env` or `.env.local` committed
+- no production env changes from code
+
+## Remaining Carry-over
+
+Still not fully complete:
+
+- `VillageDataVersion` dedicated table is still inactive in DB
+- `DesaDataAuditEvent` dedicated table is still inactive in DB
+- versioning is still fallback-backed, not yet full DB-backed immutable history
+- OCR for scanned image/scanned PDF is still deferred
+- full `npm run build` closure is still blocked by Prisma Windows `EPERM`
+
+Concrete next action for each blocker:
+
+- DB-backed versioning/audit:
+  - apply approved local/dev migration later
+  - run `prisma generate`
+  - verify read/write path to dedicated tables
+- OCR:
+  - owner approval on dependency/service direction
+  - then add bounded OCR path
+- build closure:
+  - resolve Windows Prisma engine/file-lock issue first
+
+## Owner Test Checklist
+
+### Route / page to open
+
+- Open `/internal-admin/intake`
+
+### File types to test
+
+- `.txt`
+- `.csv`
+- `.docx`
+- `.xlsx`
+- `.pdf` that already contains selectable text
+- `.jpg`, `.jpeg`, `.png`, `.webp` for AI-assisted image path
+
+### Basic happy path
+
+1. Pick a desa from the search list.
+2. Upload a file or paste text.
+3. Optionally enable `Coba AI`.
+4. Click `Jalankan pipeline`.
+5. Check:
+   - result summary
+   - detail field coverage
+   - `Apa Yang Terbaca Utama`
+   - validation
+   - diff
+6. Click `Kirim ke antrean review`.
+7. Open `/internal-admin/documents?status=PROCESSING`.
+8. Continue review from the queue.
+
+### Photo / scanned document behavior
+
+- With `Coba AI` enabled:
+  - the app should attempt AI-assisted draft reading
+  - no auto-publish must happen
+- If the document is too weak and no usable draft is recovered:
+  - the app must return an honest error
+  - it must not fake a successful parse
+
+### OpenAI available behavior
+
+Expected:
+
+- `Bantuan AI` shows as used or helpful when AI really contributed
+- field coverage may show more:
+  - detected-but-not-publishable fields
+  - unknown useful fields
+- result remains preview-only and review-only
+
+### OpenAI unavailable / quota / rate-limit behavior
+
+Expected:
+
+- no crash
+- clear fallback message
+- parser lokal or manual paste remains usable
+- no publish
+
+### How to check detail field coverage
+
+- In the result page, open the `Cakupan field detail` block.
+- Confirm that it shows:
+  - already filled
+  - still empty
+  - covered by upload
+  - detected but not publishable
+  - publishable now
+
+### How to check filled / empty fields
+
+- Select a desa that already has some public data.
+- Run the pipeline.
+- In the coverage section, confirm:
+  - `Sudah terisi` reflects current public data that already exists
+  - `Masih kosong` reflects fields still missing in the current public data
+
+### How to check detected-but-not-publishable fields
+
+- Use a richer sample document that mentions:
+  - perangkat desa
+  - fasilitas
+  - potensi
+  - BUMDes
+  - anggaran
+- Confirm these appear under:
+  - `Terdeteksi tetapi belum aman dipublish`
+  - or `Temuan lain yang mungkin berguna`
+
+### How to check diff
+
+- Pick a desa first.
+- Use a sample that intentionally changes:
+  - website
+  - jumlah penduduk
+  - tahun data
+  - kategori
+- Confirm diff shows:
+  - `Added`
+  - `Updated`
+  - `Removed`
+  - or `Same` correctly
+
+### How to submit to review
+
+- Ensure a desa is selected.
+- Ensure validation is acceptable.
+- Click `Kirim ke antrean review`.
+- Confirm:
+  - item enters `PROCESSING`
+  - no public data changes immediately
+
+### What must not happen
+
+- no auto-publish from intake page
+- no silent success on unreadable input
+- no secret or full document content in logs
+- no unsupported field written into the wrong public model
+
+### What screenshots / logs owner should send back
+
+- screenshot of result summary
+- screenshot of detail field coverage
+- screenshot of diff
+- screenshot of queue item after submit
+- file type used
+- whether `Coba AI` was on or off
+- exact error text if any
+- short server log snippet only if runtime error occurred
+
+## P0-1 Fix Pack — AI/Image Guard + History Wiring
+
+Date follow-up: 2026-05-07
+Task spec: `docs/bmad/tasks/sprint-05-batch-3-p0-sequential-fix-plan.md` (P0-1 only)
+Branch: `feat/sprint-05-batch-3-completion-handoff`
+Scope guardrail: ONLY P0-1 from the sequential fix plan. P0-2 is intentionally NOT executed in this commit. No merge to main.
+
+### Bug observed (before fix)
+
+When the user uploaded an image / scanned PDF / photo with `Coba AI` toggle OFF, the intake API still treated the binary input as an "auto-AI fallback" trigger because the local extractor failed and `canContinueWithAi` only checked whether a `fileBuffer` existed. The pipeline then reached `maybeMapWithOpenAI`, which called the OpenAI Responses API and surfaced raw quota / rate-limit errors back to the owner-facing UI even though the user had explicitly opted out of using AI.
+
+In addition, the `Riwayat Intake` and `Riwayat Versi Desa` sections in the result panel rendered hard-coded placeholder text ("Belum ada data...") instead of being wired to their existing API endpoints, which was confusing because both endpoints already exist server-side.
+
+### Fix applied (3-layer defense in depth)
+
+1. `src/app/api/internal-admin/intake/route.ts`
+   - Added `AI_OFF_BINARY_MESSAGE` constant.
+   - When local extract fails AND mime is `image/*` OR `application/pdf` AND `requestAiMapping=false`, return `422` with friendly Indonesian copy:
+     `Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.`
+   - Response includes `meta.aiOffForBinary=true` and `meta.openaiStatus="skipped"` so the UI can render a calm notice.
+   - `canContinueWithAi` is now strictly `Boolean(fileBuffer) && requestAiMapping` — never auto-fallbacks to AI when toggle is OFF.
+
+2. `src/app/api/internal-admin/intake/submit-review/route.ts`
+   - Same `AI_OFF_BINARY_MESSAGE` and same gating: `canContinueWithAiFallback` returns only `parsed.requestAiMapping`.
+   - New helper `isBinaryNeedingAi` mirrors the binary-mime check.
+   - When extract fails + AI off + binary mime → friendly 422 (not a quota error).
+
+3. `src/lib/intake/openai-mapping.ts`
+   - Added a defensive early-return inside `maybeMapWithOpenAI`: if `!explicitRequest && (hasImageInput || hasFileInput)`, return `status: "skipped"` with the same friendly Indonesian message and never hit OpenAI.
+   - This is the third layer so any future caller cannot accidentally bypass the route-level guards.
+
+### Calm quota / rate-limit copy (Coba AI ON path)
+
+The 429 handling in `maybeMapWithOpenAI` already maps to:
+
+- `status: "quota_limited"` → "Kuota OpenAI sedang habis. Parser lokal/manual paste tetap bisa dipakai."
+- `status: "rate_limited"` → "OpenAI sedang rate limited. Coba lagi beberapa saat atau lanjutkan dengan parser lokal."
+
+The IntakeWorkbench result step now renders a `notice-warn` (amber, calm) banner when the result's `openai.status` is `quota_limited` or `rate_limited`, and the technical proof (HTTP status, request id, error code, OpenAI usage/limits/docs URLs) stays inside the collapsed `Detail parser lokal & AI` section — never inline next to the user-facing copy.
+
+### Error UI tone classification
+
+Added in `src/components/internal-admin/IntakeWorkbench.tsx`:
+
+- `ErrorTone = "info" | "warn" | "danger"` and `ErrorState` interface.
+- `classifyApiError()` reads `meta.aiOffForBinary` / `meta.openaiStatus` to pick the right tone.
+- `noticeClassForTone()` maps to existing Tailwind utility classes (`notice-info`, `notice-warn`, `notice-danger`).
+- The same string error state was previously a flat red banner regardless of cause; now an "AI off + image" message renders blue/info, a quota/rate-limit message renders amber/warn, and only true failures render red/danger.
+
+### Riwayat Intake & Riwayat Versi Desa wiring
+
+- Imported existing `useIntakeHistory` and `useVersionHistory` from `./intake/hooks` (both already wired to `/api/internal-admin/intake/history` and `/api/internal-admin/desa-version-history`).
+- New `IntakeHistoryList` sub-component renders the top 5 submissions and top 5 activity events with an honest empty state and a storage-mode note.
+- New `DesaVersionHistoryList` sub-component renders the top 5 versions, with explicit guidance ("Pilih desa di langkah 1 untuk melihat riwayat versi") when no desa is selected, and honest empty/error states.
+- `intakeHistory.refetch()` is now triggered after a successful pipeline run AND after a successful submit-to-review, so the history block stays accurate without a page reload.
+- Both sections remain collapsed by default (progressive disclosure) — they no longer show fake placeholders.
+
+### Files changed
+
+- `src/lib/intake/openai-mapping.ts`
+- `src/app/api/internal-admin/intake/route.ts`
+- `src/app/api/internal-admin/intake/submit-review/route.ts`
+- `src/components/internal-admin/IntakeWorkbench.tsx`
+- `docs/bmad/reports/sprint-05-batch-3-versioning-intake-mapping-review-report.md` (this section)
+
+### What was explicitly NOT changed (preview layout)
+
+- Step layout (input → result → coverage → mapping → diff → review action) is unchanged.
+- Status card row, coverage panel, mapped-fields summary, and primary action buttons are unchanged.
+- `IntakeSection` collapse defaults are unchanged.
+- No new endpoints or schema migrations were added.
+
+### QA Result (P0-1)
+
+| Command | Result | Note |
+|---|---|---|
+| `npx tsc --noEmit` | PASS | 0 errors |
+| `npm run lint` | PASS | 0 errors; 4 pre-existing warnings (none introduced by P0-1) |
+| `npm run build` | BLOCKED | Same Prisma Windows `EPERM` blocker already documented in handoff; not a P0-1 regression |
+
+Exact build blocker text:
 
 ```text
-Sprint 05 Batch 3 saat ini sudah punya visible MVP intake workbench di /internal-admin/intake.
+Error: EPERM: operation not permitted, rename
+'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node.tmp31204'
+-> 'C:\xampp\htdocs\pantaudesa\src\generated\prisma\query_engine-windows.dll.node'
+```
 
-Yang sudah jalan:
-- upload/paste text
-- extraction untuk DOCX/XLSX/PDF/TXT/CSV
-- heuristic mapping draft
-- validation preview
-- diff preview terhadap data Desa existing jika desaId diisi
-- submit ke review internal ke antrean dokumen `PROCESSING`
-- riwayat intake + aktivitas audit ringan tampil di workbench
-- riwayat versi publik internal desa tampil saat desa dipilih
-- guardrail no auto-publish tetap aman
+Pre-existing lint warnings (not caused by P0-1):
 
-Fix tambahan yang baru dibereskan:
-- parsing desaId di API intake diperbaiki, jadi diff sekarang bisa bekerja untuk upload maupun paste mode
-- hasil intake sekarang bisa benar-benar diserahkan ke review internal tanpa publish otomatis
-- tombol Draft di queue sekarang membuka draft mapping yang bisa benar-benar diisi
-- version history internal sekarang mulai tercatat saat publish dan bisa dilihat lagi dari workbench
-- jalur persistence `VillageDataVersion` dan `DesaDataAuditEvent` sekarang sudah tersambung di code dengan fallback aman jika tabel draft belum aktif
-- riwayat intake sekarang bisa membaca audit dedicated bila migration nanti diapply
-- queue review sekarang memakai copy yang lebih decision-friendly, dan modal review memisahkan `nilai publik saat ini`, `isian draft saat ini`, dan `keputusan final admin`
-- hasil intake sekarang juga punya `Ringkasan keputusan` dan `Apa yang terbaca utama`, jadi owner bisa lebih cepat memutuskan apakah hasilnya layak dikirim ke review
+- `desaLoading` unused in `IntakeWorkbench.tsx`
+- `useState` unused in `intake/IntakeDiffPanel.tsx`
+- `PipelineResult` unused import in `intake/IntakeStatusCards.tsx`
+- `useRef` unused in `intake/hooks/useDesaOptions.ts`
 
-Yang masih belum selesai:
-- aktivasi tabel dedicated masih menunggu apply migration + `prisma generate`
-- publish final tetap lewat antrean dokumen internal, belum dari layar intake
-- OCR belum aktif
+### Owner test checklist (P0-1)
+
+Open `/internal-admin/intake` and confirm:
+
+- [ ] With `Coba AI` OFF, upload a `.jpg` / `.png` / scanned PDF → friendly blue/info notice appears with the exact copy `Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.` and NO OpenAI quota error is shown.
+- [ ] With `Coba AI` ON, when OpenAI returns 429 quota or 429 rate limit → an amber/warn notice is rendered with calm copy; technical proof (HTTP status, request id, URLs) stays inside the collapsed `Detail parser lokal & AI` section; no crash.
+- [ ] After running the pipeline, expand `Riwayat Intake` → submissions list and activity list render from the real API (no `Belum ada data` placeholder when data exists); honest empty state appears only when the API truly returns empty.
+- [ ] Select a desa, then expand `Riwayat Versi Desa` → version list renders from the real API; when no desa is selected, a guidance line appears instead of a fake placeholder.
+- [ ] After submit-to-review, the `Riwayat Intake` block reflects the new submission without a page reload.
+
+What must still NOT happen (unchanged guardrails):
+
+- no auto-publish from intake page
+- no silent success on unreadable input
+- no shared/production DB migration
+- no secret or full document content in logs
+
+## Copy-Paste Short Report For Rangga
+
+```text
+Rangga, Sprint 05 Batch 3 completion handoff sudah saya kerjakan di branch `feat/sprint-05-batch-3-completion-handoff`.
+
+Yang sudah ditutup:
+- diff engine scalar sekarang manual dan ada smoke test
+- intake preview + submit-review sekarang punya OpenAI dynamic mapping path yang aman dan graceful fallback
+- intake UI sekarang menampilkan coverage matrix terhadap field halaman detail desa publik
+- hasil AI sekarang dipisah jadi:
+  - knownPublishableFields
+  - detectedButNotPublishable
+  - unknownUsefulFields
+- hasil intake sekarang lebih linear dan technical detail parser/AI sudah dicollapse
+- Batch 2 report sekarang sudah punya QA section
+
+Catatan penting:
+- publish target yang benar-benar aktif masih scalar core `Desa` fields, jadi temuan kaya perangkat, anggaran, fasilitas, potensi, kontak, dan dokumen publik masih dideteksi sebagai draft, belum dipublish ke model yang salah
+- no-cost mode tetap dijaga, tidak ada shared DB migration yang diapply
 
 QA:
 - npm run lint: PASS
 - npx tsc --noEmit: PASS
-- npx prisma generate: BLOCKED, `EPERM` Windows saat `lstat C:\Users\IWANKU~1` di sandbox dan saat rename `query_engine-windows.dll.node` di luar sandbox
-- npm run build: BLOCKED karena langkah `prisma generate` gagal terlebih dulu
+- npm test -- src/tests/lib/intake-diff-engine.test.ts: PASS
+- npx prisma generate: BLOCKED, Prisma Windows EPERM
+- npm run build: BLOCKED karena prisma generate gagal duluan
 
-Kesimpulan:
-feature ini sudah cukup untuk owner test MVP pipeline intake, dan fondasi versioning/audit sekarang lebih dekat ke final. Batch 3 tetap belum bisa disebut full-complete karena aktivasi tabel dedicated masih tertahan di migration/generate, dan OCR belum ada.
+Mohon review fokus ke:
+1. apakah OpenAI fallback behavior sudah jujur dan aman
+2. apakah coverage matrix terhadap public detail page sudah masuk akal
+3. apakah UI result sekarang cukup linear dan tidak terlalu teknis untuk owner
+4. apakah carry-over yang tersisa sudah terdokumentasi jujur
 ```
 
-## Copy-Paste Prompt For Rangga
+## Copy-Paste Short Report For Owner
 
 ```text
-Rangga, tolong review Sprint 05 Batch 3 accelerated MVP di branch main, terutama flow intake internal admin.
+Owner, Sprint 05 Batch 3 completion handoff sekarang sudah siap dites untuk flow:
 
-Context:
-- task BMAD: docs/bmad/tasks/sprint-05-batch-3-versioning-intake-mapping-review.md
-- report implementasi: docs/bmad/reports/sprint-05-batch-3-versioning-intake-mapping-review-report.md
+upload/paste/file/photo
+-> parser lokal atau AI draft read
+-> mapping draft
+-> coverage field detail desa
+-> validasi
+-> diff
+-> kirim ke review internal
 
-Fokus review:
-1. apakah /internal-admin/intake sudah cukup visible dan testable untuk owner
-2. apakah parser flow upload/paste -> extract -> mapping -> validate -> diff sudah aman
-3. apakah submit ke review internal sekarang aman dan benar-benar masuk ke queue `PROCESSING`
-4. apakah tidak ada auto-publish / DB write tersembunyi selain write yang memang eksplisit saat submit review
-5. apakah diff desaId memang bekerja dan tidak lagi gagal karena request body dibaca dua kali
-6. apakah guardrail auth, no secret logging, no PII exposure tetap aman
-7. apakah gap versioning dan general audit trail masih didokumentasikan jujur sebagai carry-over
-8. apakah bagian report tentang item belum complete, item yang belum bisa dikerjakan, dan alasannya sudah konsisten dengan state code saat ini
-
-File utama:
-- src/app/api/internal-admin/intake/route.ts
-- src/app/api/internal-admin/intake/submit-review/route.ts
-- src/components/internal-admin/IntakeWorkbench.tsx
-- src/app/internal-admin/documents/page.tsx
-- src/lib/intake/extractors.ts
-- src/lib/intake/pipeline.ts
-- src/lib/intake/auto-mapping.ts
-- src/lib/intake/validation.ts
-- src/lib/intake/diff-engine.ts
-- src/app/internal-admin/intake/page.tsx
-- src/app/internal-admin/layout.tsx
-- docs/bmad/reports/sprint-05-batch-3-versioning-intake-mapping-review-report.md
-
-QA status saat ini:
-- npm run lint: PASS
-- npx tsc --noEmit: PASS
-- prisma generate/build: blocked Windows Prisma EPERM rename/file-lock
-
-Catatan penting:
-- Batch 3 belum full-complete di layer persistence database.
-- `VillageDataVersion` dan `DesaDataAuditEvent` baru siap di code + schema/migration draft, tetapi belum diaktifkan ke DB karena guardrail no-cost dan tidak boleh menyentuh shared DB aktif.
-- OCR untuk scan/image belum dikerjakan karena belum ada jalur dependency/service yang disetujui.
-- build penuh masih terblokir oleh issue lokal Prisma Windows EPERM saat generate engine.
-
-Tolong kasih output:
-- findings dulu, urut severity
-- file/path yang relevan
-- regression risk
-- explicit no critical findings kalau memang aman
-- note apakah feature ini layak owner-test walau Batch 3 belum full selesai
-```
-
-## Copy-Paste Prompt For Owner
-
-```text
-Owner, Sprint 05 Batch 3 sekarang sudah punya MVP intake workbench yang bisa dites di:
-
+Halaman test:
 /internal-admin/intake
 
-Yang perlu dites:
-1. mode paste text
-2. mode upload file (DOCX/XLSX/PDF teks/TXT/CSV)
-3. pilih desa kalau mau lihat diff dan submit ke review
+Yang perlu dicek:
+1. upload file teks biasa seperti TXT/CSV/DOCX/XLSX/PDF teks
+2. coba juga image/photo dengan `Coba AI`
+3. pilih desa agar coverage filled/empty dan diff bisa terlihat
+4. cek bahwa hasil AI yang belum aman dipublish tetap ditandai sebagai draft atau detected-only
+5. klik `Kirim ke antrean review` dan pastikan item masuk ke `/internal-admin/documents?status=PROCESSING`
 
-Contoh teks test:
-Website: https://desa-maju.id
-Jumlah Penduduk: 2450 jiwa
-Tahun Data: 2024
-Kategori Desa: Mandiri
-Kecamatan: Cibungbulang
-Kabupaten: Bogor
-Provinsi: Jawa Barat
+Yang tidak boleh terjadi:
+- tidak boleh auto-publish
+- tidak boleh diam-diam sukses kalau input tidak terbaca
+- tidak boleh ada perubahan data publik langsung dari halaman intake
 
-Klik:
-- Jalankan pipeline
-
-Expected result:
-- ekstraksi tampil
-- mapping field tampil
-- validasi tampil
-- diff tampil kalau desa valid dipilih
-- ada catatan bahwa ini preview-only dan tidak publish otomatis
-- setelah klik submit ke review, item baru masuk ke antrean dokumen `PROCESSING`
-
-Yang juga perlu dicek:
-- upload image/scanned doc harus gagal dengan pesan OCR belum dikonfigurasi
-- tidak boleh ada publish otomatis
-- tidak boleh ada perubahan data publik langsung dari halaman ini
-
-Mohon kirim balik:
-- screenshot hasil
-- file type yang dicoba
-- apakah diff muncul saat desaId diisi
-- error message kalau ada
-- log server singkat kalau pipeline gagal
+Kalau ada issue, mohon kirim:
+- screenshot result summary
+- screenshot field coverage
+- screenshot diff
+- file type yang dipakai
+- apakah `Coba AI` aktif
+- error text kalau muncul
 ```

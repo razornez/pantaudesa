@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { handleApiError } from "@/lib/api-error";
+import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
+import { getDesaVersionHistoryViaSupabase } from "@/lib/internal-admin/supabase-fallback";
 import {
   getChangedVersionFields,
   normalizeVersionSnapshot,
@@ -25,23 +27,106 @@ export async function GET(req: NextRequest) {
   try {
     const session = await requireInternalAdminSession();
     if (session instanceof NextResponse) return session;
-    if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
     const desaId = req.nextUrl.searchParams.get("desaId")?.trim();
     if (!desaId) {
       return NextResponse.json({ error: "desaId wajib diisi." }, { status: 400 });
     }
 
-    const desa = await db.desa.findUnique({
-      where: { id: desaId },
-      select: {
-        id: true,
-        nama: true,
-        kabupaten: true,
-        dataPublishedAt: true,
-        dataSourceLabel: true,
-      },
-    });
+    if (!db) {
+      const fallback = await getDesaVersionHistoryViaSupabase(desaId);
+      if (!fallback) {
+        return NextResponse.json({ error: "Desa tidak ditemukan." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        storage: fallback.storage,
+        desa: {
+          ...fallback.desa,
+          dataPublishedAt: fallback.desa.dataPublishedAt ?? null,
+        },
+        versions: fallback.audits.map((audit, index) => {
+          const beforeSnapshot = normalizeVersionSnapshot(audit.beforeSnapshotJson);
+          const afterSnapshot = normalizeVersionSnapshot(audit.afterSnapshotJson);
+          const changedFields = getChangedVersionFields({
+            before: beforeSnapshot,
+            after: afterSnapshot,
+          });
+
+          return {
+            id: audit.id,
+            documentId: audit.entityId ?? null,
+            versionNumber: getVersionNumber(audit.metadata, fallback.audits.length - index),
+            reasonText: audit.reasonText ?? null,
+            createdAt: audit.createdAt,
+            changedFields,
+            beforeSnapshot,
+            afterSnapshot,
+            title:
+              typeof audit.metadata === "object" &&
+              audit.metadata !== null &&
+              "title" in audit.metadata &&
+              typeof (audit.metadata as { title?: unknown }).title === "string"
+                ? (audit.metadata as { title: string }).title
+                : "Publikasi data desa",
+          };
+        }),
+      });
+    }
+
+    let desa;
+    try {
+      desa = await db.desa.findUnique({
+        where: { id: desaId },
+        select: {
+          id: true,
+          nama: true,
+          kabupaten: true,
+          dataPublishedAt: true,
+          dataSourceLabel: true,
+        },
+      });
+    } catch (error) {
+      if (!isDatabaseConnectivityError(error)) throw error;
+      const fallback = await getDesaVersionHistoryViaSupabase(desaId);
+      if (!fallback) {
+        return NextResponse.json({ error: "Desa tidak ditemukan." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        storage: fallback.storage,
+        desa: {
+          ...fallback.desa,
+          dataPublishedAt: fallback.desa.dataPublishedAt ?? null,
+        },
+        versions: fallback.audits.map((audit, index) => {
+          const beforeSnapshot = normalizeVersionSnapshot(audit.beforeSnapshotJson);
+          const afterSnapshot = normalizeVersionSnapshot(audit.afterSnapshotJson);
+          const changedFields = getChangedVersionFields({
+            before: beforeSnapshot,
+            after: afterSnapshot,
+          });
+
+          return {
+            id: audit.id,
+            documentId: audit.entityId ?? null,
+            versionNumber: getVersionNumber(audit.metadata, fallback.audits.length - index),
+            reasonText: audit.reasonText ?? null,
+            createdAt: audit.createdAt,
+            changedFields,
+            beforeSnapshot,
+            afterSnapshot,
+            title:
+              typeof audit.metadata === "object" &&
+              audit.metadata !== null &&
+              "title" in audit.metadata &&
+              typeof (audit.metadata as { title?: unknown }).title === "string"
+                ? (audit.metadata as { title: string }).title
+                : "Publikasi data desa",
+          };
+        }),
+      });
+    }
 
     if (!desa) {
       return NextResponse.json({ error: "Desa tidak ditemukan." }, { status: 404 });

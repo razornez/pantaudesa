@@ -32,7 +32,7 @@ export interface AutoMappingResult {
   fields: AiMappingFields;
   evidence: AutoMappingEvidence[];
   unmatched: AiMappableDesaField[];
-  source: "heuristic-regex";
+  source: string;
   generatedAt: string;
 }
 

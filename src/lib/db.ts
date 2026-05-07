@@ -3,6 +3,10 @@ import { attachPrismaPerfLogging } from "@/lib/perf";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+function localDirectUrlOptInEnabled(): boolean {
+  return process.env.PANTAUDESA_LOCAL_DB_USE_DIRECT_URL === "true" && Boolean(process.env.DIRECT_URL);
+}
+
 function getPrismaDatasourceUrl(): string {
   const databaseUrl = process.env.DATABASE_URL ?? "";
   const directUrl = process.env.DIRECT_URL ?? "";
@@ -15,11 +19,11 @@ function getPrismaDatasourceUrl(): string {
     return directUrl;
   }
 
-  if (isLocalRuntime && directUrl) {
+  if (isLocalRuntime && localDirectUrlOptInEnabled()) {
     return directUrl;
   }
 
-  return databaseUrl;
+  return databaseUrl || directUrl;
 }
 
 function previewDirectUrlRuntimeEnabled(): boolean {
@@ -31,7 +35,7 @@ function previewDirectUrlRuntimeEnabled(): boolean {
 }
 
 function localDirectUrlRuntimeEnabled(): boolean {
-  return !process.env.VERCEL && !process.env.VERCEL_ENV && Boolean(process.env.DIRECT_URL);
+  return !process.env.VERCEL && !process.env.VERCEL_ENV && localDirectUrlOptInEnabled();
 }
 
 function createClient(): PrismaClient | null {
