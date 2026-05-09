@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Info, Sparkles } from "lucide-react";
 
 import type {
@@ -23,10 +23,10 @@ import {
 import { formatBytes, formatDiffValue, formatDateTime } from "./intake/utils";
 
 import { IntakeSection } from "./intake/IntakeSection";
-import { IntakeStatusCards } from "./intake/IntakeStatusCards";
 import { IntakeCoveragePanel } from "./intake/IntakeCoveragePanel";
 import { IntakeDiffPanel } from "./intake/IntakeDiffPanel";
 import { IntakeAiStatusPanel } from "./intake/IntakeAiStatusPanel";
+import { IntakeResultHero } from "./intake/IntakeResultHero";
 import { useIntakeHistory, useVersionHistory } from "./intake/hooks";
 
 import {
@@ -129,6 +129,9 @@ export default function IntakeWorkbench() {
   const intakeHistory = useIntakeHistory();
   const versionHistory = useVersionHistory(selectedDesa?.id ?? null);
 
+  // Ref for review section — used by hero "Lanjut ke Review" CTA
+  const reviewSectionRef = useRef<HTMLDivElement>(null);
+
   // ============================================================================
   // Handlers
   // ============================================================================
@@ -228,11 +231,23 @@ export default function IntakeWorkbench() {
     }
   }, [mode, selectedFile, textValue, selectedDesa, useAiMapping, reviewTitle, result, intakeHistory]);
 
+  const handleContinueReview = useCallback(() => {
+    reviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   // ============================================================================
   // Computed
   // ============================================================================
 
   const canSubmit = Boolean(selectedDesa && result?.validation.ok && !submittedReview && getReviewableContentCount(result) > 0);
+
+  const reviewBlockerReason: string | null = (() => {
+    if (submittedReview) return null;
+    if (!selectedDesa) return "Pilih desa target dulu sebelum melanjutkan.";
+    if (result && !result.validation.ok) return "Perbaiki error validasi sebelum melanjutkan.";
+    if (result && getReviewableContentCount(result) === 0) return "Belum ada hasil yang cukup kuat untuk review.";
+    return null;
+  })();
 
   // ============================================================================
   // Render
@@ -343,12 +358,18 @@ export default function IntakeWorkbench() {
       {/* RESULT STEP */}
       {step === "result" && result && (
         <div className="space-y-4">
-          {/* Status Cards */}
-          <IntakeStatusCards
+          {/* Hero card — owns verdict, coverage ring, impact metrics, status rail, action rail */}
+          <IntakeResultHero
+            result={result}
             mappingStatus={getMappingStatus(result)}
             validationStatus={getValidationStatus(result)}
             reviewStatus={getReviewStatus(result)}
             aiStatus={getOpenAiStatus(result)}
+            mappedFieldCount={getMappedFieldEntries(result).length}
+            onBackToInput={() => { setStep("input"); setResult(null); }}
+            onContinueReview={handleContinueReview}
+            reviewBlockerReason={reviewBlockerReason}
+            reviewSubmitted={Boolean(submittedReview)}
           />
 
           {/* Calm AI Limit Notice (P0-1) - quota / rate-limit gentle copy */}
@@ -364,11 +385,8 @@ export default function IntakeWorkbench() {
             </div>
           )}
 
-          {/* Coverage Panel */}
-          <IntakeCoveragePanel result={result} />
-
-          {/* Mapped Fields */}
-          <IntakeSection title={`Yang Terbaca Utama (${getMappedFieldEntries(result).length} field)`}>
+          {/* Mapped Fields (drilldown) */}
+          <IntakeSection title={`Yang Terbaca Utama (${getMappedFieldEntries(result).length} field)`} defaultOpen={false}>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {getMappedFieldEntries(result).map((item) => (
                 <div key={item.field} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
@@ -379,19 +397,42 @@ export default function IntakeWorkbench() {
             </div>
           </IntakeSection>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => { setStep("input"); setResult(null); }} className="btn-lux btn-lux-secondary text-xs">Kembali ke input</button>
-            <button onClick={handleRunPipeline} disabled={loading} className="btn-lux btn-lux-ghost text-xs"><Sparkles size={12} /> Ulangi</button>
-          </div>
+          {/* Coverage drilldown (hero already shows ring + metrics) */}
+          <IntakeSection title="Analisis Cakupan Detail" defaultOpen={false}>
+            <IntakeCoveragePanel result={result} />
+          </IntakeSection>
+
+          {/* Diff drilldown */}
+          <IntakeDiffPanel result={result} />
+
+          {/* Technical Details */}
+          <IntakeSection title="Detail parser lokal & AI" defaultOpen={false}>
+            <IntakeAiStatusPanel result={result} embedded />
+          </IntakeSection>
+
+          {/* Validation Details */}
+          <IntakeSection title="Validasi" defaultOpen={false}>
+            {result.validation.ok && result.validation.issues.length === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-green-700"><CheckCircle2 size={14} /> Semua field valid.</div>
+            ) : (
+              <div className="space-y-1.5">
+                {result.validation.issues.map((issue, i) => (
+                  <div key={i} className={`notice-card flex items-start gap-2 text-xs ${issue.severity === "error" ? "notice-danger" : "notice-warn"}`}>
+                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                    <span className="font-semibold">{FIELD_LABELS[issue.field]}</span>: {issue.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </IntakeSection>
 
           {/* Guardrail Note */}
           <div className="notice-card notice-info text-xs">
             <span className="font-semibold">Catatan:</span> {result.guardrailNote}
           </div>
 
-          {/* Review Action */}
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+          {/* Review Action — scroll target for hero "Lanjut ke Review" */}
+          <div ref={reviewSectionRef} className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">Langkah 2 · Cek lalu kirim ke review</p>
             <p className="mt-1 text-sm font-semibold text-slate-900">
               {submittedReview ? (
@@ -415,30 +456,6 @@ export default function IntakeWorkbench() {
             )}
             <p className="mt-3 text-xs text-slate-500">Publish final tidak terjadi di layar ini.</p>
           </div>
-
-          {/* Collapsed Technical Details */}
-          <IntakeSection title="Detail parser lokal & AI" defaultOpen={false}>
-            <IntakeAiStatusPanel result={result} embedded />
-          </IntakeSection>
-
-          {/* Validation Details */}
-          <IntakeSection title="Validasi" defaultOpen={false}>
-            {result.validation.ok && result.validation.issues.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-green-700"><CheckCircle2 size={14} /> Semua field valid.</div>
-            ) : (
-              <div className="space-y-1.5">
-                {result.validation.issues.map((issue, i) => (
-                  <div key={i} className={`notice-card flex items-start gap-2 text-xs ${issue.severity === "error" ? "notice-danger" : "notice-warn"}`}>
-                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-                    <span className="font-semibold">{FIELD_LABELS[issue.field]}</span>: {issue.message}
-                  </div>
-                ))}
-              </div>
-            )}
-          </IntakeSection>
-
-          {/* Diff */}
-          <IntakeDiffPanel result={result} />
         </div>
       )}
 

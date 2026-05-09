@@ -45,3 +45,5 @@ export {
   getReviewableContentCount,
   canSubmitToReview,
 } from "./IntakeStatusHelpers";
+
+export { IntakeResultHero } from "./IntakeResultHero";
