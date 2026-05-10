@@ -14,14 +14,14 @@ import type {
   UploadedCoverageStatus,
 } from "@/lib/intake/types";
 
-type DetailFieldStandard = Omit<
+export type DetailFieldStandard = Omit<
   DetailFieldCoverageEntry,
   "currentValueStatus" | "currentValuePreview" | "uploadedCoverageStatus" | "uploadedValuePreview"
 >;
 
 const KNOWN_FIELD_KEYS = new Set<string>(AI_MAPPABLE_DESA_FIELDS);
 
-const DETAIL_FIELD_STANDARDS: DetailFieldStandard[] = [
+export const DETAIL_FIELD_STANDARDS: DetailFieldStandard[] = [
   {
     sectionKey: "identitas",
     sectionLabel: "Identitas & wilayah",

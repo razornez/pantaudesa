@@ -10,6 +10,7 @@
     "test": "vitest run",
     "seed:demo": "node prisma/seed-demo.mjs",
     "seed:qa": "node prisma/seed-qa.mjs",
+    "seed:templates": "node prisma/seed-templates.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
