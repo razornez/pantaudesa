@@ -32,6 +32,22 @@ export const DELTA_LABELS: Record<string, string> = {
 };
 
 // ============================================================================
+// Field Section Map — groups each field into a display section for diff grouping
+// ============================================================================
+
+export const FIELD_SECTION_MAP: Record<AiMappableDesaField, string> = {
+  websiteUrl:      "Kontak & layanan",
+  kategori:        "Identitas",
+  tahunData:       "Identitas",
+  jumlahPenduduk:  "Identitas",
+  kecamatan:       "Wilayah",
+  kabupaten:       "Wilayah",
+  provinsi:        "Wilayah",
+};
+
+export const FIELD_SECTION_ORDER = ["Identitas", "Wilayah", "Kontak & layanan"];
+
+// ============================================================================
 // Badge Color Classes
 // ============================================================================
 

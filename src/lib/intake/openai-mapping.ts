@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import {
   sanitizeMappingFields,
   type AiMappingFields,
@@ -14,8 +15,8 @@ import type {
 } from "@/lib/intake/types";
 
 const MAX_TEXT_INPUT = 20_000;
-const TEXT_IMAGE_MODEL = "gpt-5-mini";
-const FILE_INPUT_MODEL = "gpt-5-mini";
+const TEXT_IMAGE_MODEL = "gpt-4o-mini";
+const FILE_INPUT_MODEL = "gpt-4o-mini";
 const OPENAI_USAGE_URL = "https://platform.openai.com/usage";
 const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 const OPENAI_ERROR_DOCS_URL = "https://platform.openai.com/docs/guides/error-codes";
@@ -418,9 +419,6 @@ function dataUriForFile(input: { buffer: Buffer; mimeType: string }): string {
   return `data:${input.mimeType};base64,${input.buffer.toString("base64")}`;
 }
 
-function base64ForFile(buffer: Buffer): string {
-  return buffer.toString("base64");
-}
 
 export function mergeKnownFields(
   localFields: AiMappingFields,
@@ -430,6 +428,68 @@ export function mergeKnownFields(
     ...localFields,
     ...openaiFields,
   };
+}
+
+const CLAUDE_FALLBACK_MODEL = "claude-haiku-4-5-20251001";
+
+async function maybeFallbackToClaude(input: {
+  extractedText: string;
+  mimeType?: string;
+  fileBuffer?: Buffer;
+  usedInputMode: "text" | "image" | "file";
+  attemptedBecause: string[];
+}): Promise<OpenAIResult | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  try {
+    const anthropic = new Anthropic({ apiKey });
+
+    const promptText = [
+      "Anda membantu internal admin PantauDesa membuat draft mapping desa.",
+      "Jangan mengarang. Kembalikan HANYA JSON yang valid sesuai skema berikut, tanpa prose atau markdown.",
+      "Skema wajib: { documentType, confidence, knownPublishableFields, knownFieldEvidence, detectedButNotPublishable, unknownUsefulFields, warnings }",
+      "knownPublishableFields boleh berisi: websiteUrl, kategori, tahunData, jumlahPenduduk, kecamatan, kabupaten, provinsi.",
+      buildDetailFieldRegistryPrompt(),
+      "",
+      "Teks dokumen:",
+      input.extractedText.slice(0, MAX_TEXT_INPUT),
+    ].join("\n");
+
+    type AnthropicImageMime = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+    const VALID_IMAGE_MIMES: AnthropicImageMime[] = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+    const contentBlocks: Array<
+      | { type: "text"; text: string }
+      | { type: "image"; source: { type: "base64"; media_type: AnthropicImageMime; data: string } }
+    > = [{ type: "text", text: promptText }];
+
+    if (input.usedInputMode === "image" && input.fileBuffer && input.mimeType) {
+      const mime = VALID_IMAGE_MIMES.find(m => m === input.mimeType);
+      if (mime) {
+        contentBlocks.push({
+          type: "image",
+          source: { type: "base64", media_type: mime, data: input.fileBuffer.toString("base64") },
+        });
+      }
+    }
+
+    const message = await anthropic.messages.create({
+      model: CLAUDE_FALLBACK_MODEL,
+      max_tokens: 4096,
+      messages: [{ role: "user", content: contentBlocks }],
+    });
+
+    const rawText = message.content.find(c => c.type === "text")?.text ?? "";
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]) as unknown;
+    return normalizeStructuredResult(parsed, `${CLAUDE_FALLBACK_MODEL} (fallback)`, input.usedInputMode);
+  } catch (err) {
+    console.error("[claude-fallback] failed:", err);
+    return null;
+  }
 }
 
 export async function maybeMapWithOpenAI(input: {
@@ -511,17 +571,14 @@ export async function maybeMapWithOpenAI(input: {
     });
   }
 
+  // Images are sent as base64 data URI — OpenAI Responses API supports input_image.
+  // Files (PDF/DOCX/XLSX etc.) are NOT sent as input_file — gpt-4o-mini rejects raw
+  // base64 file_data with 400 invalid_value. The extracted text above is sufficient.
   if (hasImageInput && input.fileBuffer && input.mimeType) {
     content.push({
       type: "input_image",
       detail: "high",
       image_url: dataUriForFile({ buffer: input.fileBuffer, mimeType: input.mimeType }),
-    });
-  } else if (hasFileInput && input.fileBuffer && input.mimeType) {
-    content.push({
-      type: "input_file",
-      filename: input.fileName ?? "dokumen-intake",
-      file_data: base64ForFile(input.fileBuffer),
     });
   }
 
@@ -569,6 +626,10 @@ export async function maybeMapWithOpenAI(input: {
         ? "rate_limited"
         : "error";
 
+    // Plan B — try Claude before giving up (different provider, works even if OpenAI quota is exhausted)
+    const claudeResult = await maybeFallbackToClaude({ extractedText: input.extractedText, mimeType: input.mimeType, fileBuffer: input.fileBuffer, usedInputMode, attemptedBecause });
+    if (claudeResult) return claudeResult;
+
     return emptyResult({
       attempted: true,
       status,
@@ -592,6 +653,10 @@ export async function maybeMapWithOpenAI(input: {
 
   const structuredText = extractStructuredText(payload);
   if (!structuredText) {
+    // Plan B — OpenAI responded but gave no parseable JSON
+    const claudeResult = await maybeFallbackToClaude({ extractedText: input.extractedText, mimeType: input.mimeType, fileBuffer: input.fileBuffer, usedInputMode, attemptedBecause });
+    if (claudeResult) return claudeResult;
+
     return emptyResult({
       attempted: true,
       status: "invalid_json",
