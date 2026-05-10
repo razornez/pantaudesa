@@ -1,20 +1,7 @@
 /**
  * Intake Workbench Components
- * 
- * These are extracted components from the monolithic IntakeWorkbench.tsx
- * in the parent directory for better maintainability.
- * 
- * Components available:
- * - types: All TypeScript interfaces
- * - constants: UI copy, labels, sample texts
- * - utils: Formatters and helpers
- * - hooks: useIntakePipeline, useDesaOptions, useIntakeHistory, useVersionHistory
- * - IntakeSection: Reusable collapsible section
- * - IntakeStatusCards: Status summary cards
- * - IntakeCoveragePanel: Field coverage display
- * - IntakeDiffPanel: Diff display
- * - IntakeAiStatusPanel: AI/parser status details
- * - Status helpers: getMappingStatus, getValidationStatus, etc.
+ *
+ * Types, constants, utils, hooks, and all v2 result-step components.
  */
 
 // Types
@@ -29,12 +16,10 @@ export * from "./utils";
 // Hooks
 export * from "./hooks";
 
-// Components
+// Shared UI
 export { IntakeSection, IntakeCompactSection } from "./IntakeSection";
-export { IntakeStatusCards, StatusBadgeInline, StatusMini } from "./IntakeStatusCards";
-export { IntakeCoveragePanel } from "./IntakeCoveragePanel";
-export { IntakeDiffPanel } from "./IntakeDiffPanel";
-export { IntakeAiStatusPanel } from "./IntakeAiStatusPanel";
+
+// Status helpers
 export {
   getMappingStatus,
   getValidationStatus,
@@ -46,4 +31,11 @@ export {
   canSubmitToReview,
 } from "./IntakeStatusHelpers";
 
-export { IntakeResultHero } from "./IntakeResultHero";
+// v2 result step components
+export { IntakeSourceRibbon }    from "./IntakeSourceRibbon";
+export { IntakeDiffTheatre }     from "./IntakeDiffTheatre";
+export { IntakeCoverageLens }    from "./IntakeCoverageLens";
+export { IntakeValidationPanel } from "./IntakeValidationPanel";
+export { IntakeDetectedGallery } from "./IntakeDetectedGallery";
+export { IntakeInfoStrip }       from "./IntakeInfoStrip";
+export { IntakeInspectorDrawer } from "./IntakeInspectorDrawer";

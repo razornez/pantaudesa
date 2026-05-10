@@ -1,276 +1,148 @@
-# Back Office UI Design Guidelines
+---
+Date: 2026-05-10
+Status: mandatory-reference-for-back-office-ui
+Prepared-by: Iwan / BMAD
+Supersedes: —
+Related:
+- docs/bmad/checklists/back-office-quiet-luxury-design-standard.md
+---
 
-## Status
-MANDATORY STANDARD for back-office development.
+# Back-Office UI Design Guidelines
 
-## Scope
+> **Read this before touching any back-office UI.** This is the build reference, not the QA checklist.
+> For pre-handoff QA, see `docs/bmad/checklists/back-office-quiet-luxury-design-standard.md`.
 
-This guideline is mandatory for all current and future PantauDesa back-office/internal-admin UI work.
+---
 
-Initial scope:
+## Design Direction
 
-```text
-/internal-admin/**
-/admin-desa/**
-/profil/admin-desa/**
-back-office related components under src/components/internal-admin/**
-back-office related components under src/components/profil/admin-claim/**
+All back-office pages follow **Intake V2** as the canonical reference implementation.
+
+The style is: **quiet luxury** — clean, calm, premium, decision-oriented.
+
+Key principles:
+- Technical detail is **collapsed by default** (behind a drawer, accordion, or "Lihat detail" toggle).
+- The **primary action** is always the most visually obvious element on screen.
+- Every section has a clear **eyebrow label** above its heading.
+- Status is shown first — user understands the situation before reading explanation.
+- Mobile-first: single column by default, expand to multi-column at `sm:` (640px).
+
+---
+
+## Reference Implementation
+
+**Intake V2 result step is the canonical reference.** Study these files before adding anything new.
+
+| Component | What it shows |
+|---|---|
+| `src/components/internal-admin/IntakeWorkbench.tsx` | Sticky action header, layout orchestration |
+| `src/components/internal-admin/intake/IntakeSourceRibbon.tsx` | 3-col source/target info ribbon |
+| `src/components/internal-admin/intake/IntakeDiffTheatre.tsx` | Filter tabs, section-grouped diff rows, responsive grid vs card |
+| `src/components/internal-admin/intake/IntakeCoverageLens.tsx` | Donut chart, section bars, responsive flex layout |
+| `src/components/internal-admin/intake/IntakeValidationPanel.tsx` | Inline validation, 2×2 mini cards, reviewer hint |
+| `src/components/internal-admin/intake/IntakeInspectorDrawer.tsx` | Technical detail collapsed behind slide-up drawer |
+
+---
+
+## Before Creating a New Component
+
+1. `grep -r "ComponentPurpose" src/components/internal-admin/` — search for existing implementations first.
+2. If something similar exists, **extend it** — do not create a parallel duplicate.
+3. If an old component is superseded by a new one, **delete the old one immediately** — do not leave it dormant.
+
+---
+
+## Required Design System Classes
+
+Use these existing utilities from `src/app/globals.css`. Never re-implement them with inline styles or ad-hoc Tailwind.
+
+```
+Surfaces:     .lux-card  .lux-panel  .glass  .ring-hair  .shadow-lux-1  .shadow-lux-2  .shadow-lux-hover
+Typography:   .eyebrow  .section-title  (eyebrow always above h2/h3)
+Buttons:      .btn-lux-primary  .btn-lux-secondary  .btn-lux-ghost  .btn-lux-success  .btn-lux-danger
+Forms:        .field-lux  .select-lux  .textarea-lux  .field-label
+Status pills: .pill-ok  .pill-warn  .pill-danger  .pill-info
+Notices:      .notice-card  .notice-info  .notice-warn  .notice-danger  .notice-ok
+Metrics:      .metric-card  .metric-label  .metric-value  .metric-note
+Motion:       .t-spring  (all hover/focus/active transitions)
+Status bg:    .lux-status-good  .lux-status-warn  .lux-status-danger
 ```
 
-For now, apply this standard first to back-office pages. Public pages may adopt it later with adjusted public-facing tone.
+---
 
-## Reference Direction
+## Anti-Patterns — Never Do These
 
-The approved direction is the Intake V2 visual style:
+| Anti-pattern | Correct approach |
+|---|---|
+| `border border-slate-100` on a card | `.lux-card` or `.ring-hair` + `.shadow-lux-1` |
+| `style={{ boxShadow: "0 1px …" }}` inline | Use `.shadow-lux-1` / `.shadow-lux-2` class |
+| Raw enum status as label (`"PROCESSING"`) | Paraphrase in Indonesian (see checklist §A4) |
+| Fixed-width grid columns in a card (`180px 1fr`) | Responsive: `sm:grid sm:grid-cols-[180px_1fr]` with mobile fallback |
+| Multiple full-width primary buttons stacked vertically | One `.btn-lux-primary`, rest as ghost or secondary |
+| Showing all technical detail by default | Collapse behind drawer/accordion; see `IntakeInspectorDrawer` |
+| Creating a new component without searching first | Always grep before creating |
+| Leaving superseded v1 components in the codebase | Delete immediately; update index.ts and parent re-exports |
 
-```text
-quiet luxury
-clean
-calm
-premium but simple
-soft border
-subtle shadow
-strong hierarchy
-compact but breathable
-decision-oriented
-technical detail collapsed
-clear primary action
-mobile-friendly
+---
+
+## Page Layout Hierarchy
+
+Every back-office page must follow this top-to-bottom order:
+
+```
+1. Sticky header      — breadcrumb · workflow step indicator · primary CTA
+2. Status/summary     — what is the current verdict? (eyebrow + h2 + status pill)
+3. Primary content    — the main decision surface (diff, coverage, review queue)
+4. Supporting detail  — collapsed by default or below the fold
+5. Submit/action block — scroll target for the primary CTA in the sticky header
 ```
 
-This style must become the default reference for future back-office screens.
+Do not put long explanatory copy before the user sees status and next action.
 
-## Design Principles
+---
 
-### 1. Decision-oriented UI
+## Color Semantics
 
-Back-office screens should help users make decisions quickly.
+| Color | Meaning |
+|---|---|
+| Indigo / `#1E1B4B` | Brand, admin workspace, updated/changed field values |
+| Emerald | Success, published, approved, new/added |
+| Amber | Pending, review needed, detected-not-safe, warning |
+| Rose | Error, rejected, destructive, removed/deleted |
+| Slate | Neutral content, unchanged values, secondary labels |
+| Sky | Soft informational, AI/model labels (non-critical) |
 
-Every key page must answer:
+---
 
-```text
-What is this item?
-What changed?
-What needs attention?
-What is safe?
-What is blocked?
-What should I do next?
+## Mobile Rules (iPhone 12 mini class = 375px)
+
+- **Default single-column.** Use `sm:grid` / `sm:flex-row` to widen at ≥ 640px.
+- **Sticky header labels:** shorten with `sm:hidden` / `hidden sm:inline`. Example: "Kirim ke review" → "Review" on mobile.
+- **Fixed-column grids** (e.g. diff row `4px 180px 1fr 24px 1fr`): must render as a stacked card on `< sm` (see `IntakeDiffTheatre` DiffRow implementation).
+- **Column headers** in tables/grids: `hidden sm:grid` — hide on mobile.
+- **Inspector/drawer panels:** fixed bottom; still reachable and toggleable at 375px.
+- Accordion/progressive disclosure preferred over all-visible long lists on mobile.
+
+---
+
+## Component Cleanup Rule
+
+When a v2 component supersedes a v1 component:
+
+1. **Delete the v1 file** — do not rename, comment out, or leave it "just in case."
+2. Remove from `index.ts` exports.
+3. Remove any backward-compat re-exports from parent components (`IntakeWorkbench.tsx`, etc.).
+4. Run `grep` to confirm zero remaining imports before committing.
+5. Run `npx tsc --noEmit` — must be clean.
+
+---
+
+## Mandatory QA Reference
+
+Before marking any back-office UI task done, verify against:
+
+```
+docs/bmad/checklists/back-office-quiet-luxury-design-standard.md
 ```
 
-Avoid showing raw system status as the main experience unless the user is explicitly in a debugging/technical section.
-
-### 2. One-glance summary first
-
-Each major workflow page should start with a useful summary/hero area.
-
-Good summary examples:
-
-- source to target narrative,
-- impact summary,
-- diff summary,
-- validation state,
-- next action.
-
-Avoid scattered small cards that force the user to read everything one by one.
-
-### 3. Technical detail is secondary
-
-Technical detail must be collapsed, secondary, or placed in an inspector/troubleshooting area.
-
-Examples of secondary technical detail:
-
-- parser metadata,
-- OpenAI proof/request id,
-- fallback mode details,
-- raw evidence snippets,
-- debug timings,
-- internal API/storage notes.
-
-Default visible UI should be useful for non-technical owner/admin users.
-
-### 4. Quiet luxury visual language
-
-Use:
-
-- soft white/off-white surfaces,
-- subtle borders,
-- subtle shadows,
-- calm accent colors,
-- strong typography hierarchy,
-- compact spacing with enough breathing room,
-- fewer but more meaningful visual groups.
-
-Avoid:
-
-- too many plain white boxes,
-- repeated info boxes,
-- heavy nested cards,
-- loud colors everywhere,
-- tiny dense text walls,
-- dashboard/debug-panel look,
-- redundant summaries.
-
-### 5. Clear action placement
-
-Primary actions must be easy to find.
-
-Rules:
-
-- primary action should not be buried in the middle of content,
-- destructive action must not compete visually with primary action,
-- secondary actions should be quieter but still reachable,
-- mobile must keep actions obvious and not cramped.
-
-### 6. Progressive disclosure
-
-Show only what is needed by default.
-
-Default visible:
-
-- decision summary,
-- primary status,
-- important changes,
-- blockers,
-- next action.
-
-Collapsed/secondary:
-
-- unchanged data,
-- long history,
-- technical parser details,
-- full evidence,
-- fallback/debug proof,
-- raw metadata.
-
-### 7. Mobile-first back office
-
-Back-office features must remain usable on small screens, including iPhone 12 mini width around 375px.
-
-Rules:
-
-- no horizontal scroll,
-- no dense tiny text walls,
-- stack complex layouts cleanly,
-- keep primary action visible,
-- avoid long unstructured scroll,
-- avoid nested scroll jank unless absolutely necessary.
-
-## Engineering Principles
-
-### 1. No duplicate UI surfaces
-
-There must be one source of truth per workflow.
-
-Examples:
-
-- review queue is the source of truth for review work items,
-- intake history may be shortcut/link only, not a competing review queue,
-- technical inspector is the place for parser/AI details, not repeated cards across the page.
-
-If a new component duplicates an existing flow, reuse or consolidate instead.
-
-### 2. No redundant components
-
-Before adding a new component, check if an equivalent component already exists.
-
-Avoid duplicates for:
-
-- status badges,
-- cards/sections,
-- empty states,
-- formatters,
-- action bars,
-- diff rows,
-- review cards,
-- modal shells,
-- technical detail panels.
-
-If a component is superseded and no longer used, remove it.
-
-### 3. Keep components small and focused
-
-Use SOLID/DRY-style boundaries.
-
-Rules:
-
-- parent page/component should orchestrate only,
-- presentational components should not own API/business logic,
-- hooks should own stateful fetch/action logic,
-- domain helpers should live in `src/lib/**`, not inside UI components,
-- component files should stay small enough to review comfortably,
-- avoid 1000+ line UI components.
-
-### 4. Shared contracts and helpers
-
-Do not duplicate domain DTOs or constants in UI folders if shared types already exist.
-
-Preferred ownership:
-
-- domain/API DTOs: `src/lib/**`,
-- UI-only state/props: component folder,
-- mapping/data contracts: neutral domain module,
-- reusable formatting helpers: shared helper only when used by multiple surfaces.
-
-### 5. Dynamic data only
-
-Prototype/demo data must never ship as real UI data.
-
-Rules:
-
-- all visible operational data must come from API/DB/pipeline result,
-- if data is missing, show honest empty/fallback state,
-- do not hardcode values from mockups,
-- do not use dummy data to make the UI look complete.
-
-## Required Developer Checklist Before Starting Back-office UI Work
-
-Before implementing a back-office UI task, the developer must check:
-
-```text
-1. Is there an existing component/flow that already solves this?
-2. Am I creating a second source of truth?
-3. Can this reuse Intake V2 visual patterns?
-4. Is the default view decision-oriented?
-5. Are technical details secondary/collapsed?
-6. Is the primary action obvious?
-7. Is the mobile layout usable around 375px?
-8. Are all displayed data dynamic from API/DB/result state?
-9. Are unused/superseded components removed?
-10. Are domain types/helpers reused instead of duplicated?
-```
-
-## Required Review Checklist
-
-Every back-office UI PR must include:
-
-- screenshot desktop,
-- screenshot mobile/narrow viewport,
-- list of reused components,
-- list of new components and why they are needed,
-- confirmation no duplicate source of truth was introduced,
-- confirmation no static prototype/demo data remains,
-- QA result:
-  - `npm run lint`
-  - `npx tsc --noEmit`
-  - `npm run build` if environment allows.
-
-## Current Mandatory Direction
-
-For Sprint 05 Batch 3 and onward:
-
-```text
-Intake V2 is the approved back-office UI reference.
-Any new back-office screen should visually and structurally align with this direction unless owner explicitly approves a different direction.
-```
-
-## Guardrails
-
-Do not compromise:
-
-- auth/permission rules,
-- no-auto-publish rule,
-- review/publish flow,
-- audit/version safety,
-- sensitive data protection,
-- API key/secret protection,
-- production env safety.
+That checklist is the ship gate. These guidelines are the build reference.
