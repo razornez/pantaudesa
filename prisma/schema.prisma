@@ -202,6 +202,10 @@ model Desa {
   villageDataVersions VillageDataVersion[]
   dataAuditEvents   DesaDataAuditEvent[]
 
+  detailTemplateAssignment     DesaDetailTemplateAssignment?
+  componentVisibilityOverrides DesaDetailComponentVisibility[]
+  dataDesa                     DataDesa[]
+
   @@index([kecamatan, kabupaten, provinsi])
   @@index([dataStatus])
   @@map("desa")
@@ -670,132 +674,144 @@ model AIReviewResult {
 // dataDesa                     DataDesa[]
 //
 // ─── VillageDetailTemplate ───────────────────────────────────────────────────
-// model VillageDetailTemplate {
-//   id          String   @id @default(cuid())
-//   key         String   @unique   // "CURRENT_PUBLIC_DETAIL_TEMPLATE"
-//   name        String
-//   description String?  @db.Text
-//   version     Int      @default(1)
-//   status      VillageDetailTemplateStatus @default(ACTIVE)
-//   isDefault   Boolean  @default(false)
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @updatedAt
+model VillageDetailTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique   // "CURRENT_PUBLIC_DETAIL_TEMPLATE"
+  name        String
+  description String?  @db.Text
+  version     Int      @default(1)
+  status      VillageDetailTemplateStatus @default(ACTIVE)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 //
-//   components      VillageDetailComponent[]
-//   desaAssignments DesaDetailTemplateAssignment[]
+  components      VillageDetailComponent[]
+  desaAssignments DesaDetailTemplateAssignment[]
 //
-//   @@map("village_detail_templates")
-// }
+  @@map("village_detail_templates")
+}
 //
 // ─── VillageDetailComponent (section/komponen di dalam template) ─────────────
-// model VillageDetailComponent {
-//   id               String   @id @default(cuid())
-//   templateId       String
-//   componentKey     String   // "identitas"|"demografi"|"anggaran"|"profil_desa"|dst
-//   label            String   // "Identitas & Wilayah"
-//   description      String?  @db.Text
-//   componentType    String   @default("section")
-//   isDefaultVisible Boolean  @default(true)
-//   displayOrder     Int      @default(0)
-//   status           String   @default("ACTIVE")
-//   createdAt        DateTime @default(now())
-//   updatedAt        DateTime @updatedAt
+model VillageDetailComponent {
+  id               String   @id @default(cuid())
+  templateId       String
+  componentKey     String   // "identitas"|"demografi"|"anggaran"|"profil_desa"|dst
+  label            String   // "Identitas & Wilayah"
+  description      String?  @db.Text
+  componentType    String   @default("section")
+  isDefaultVisible Boolean  @default(true)
+  displayOrder     Int      @default(0)
+  status           String   @default("ACTIVE")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 //
-//   template       VillageDetailTemplate          @relation(fields: [templateId], references: [id])
-//   fieldStandards DetailFieldStandard[]
-//   desaVisibility DesaDetailComponentVisibility[]
-//   dataDesa       DataDesa[]
+  template       VillageDetailTemplate          @relation(fields: [templateId], references: [id])
+  fieldStandards DetailFieldStandard[]
+  desaVisibility DesaDetailComponentVisibility[]
+  dataDesa       DataDesa[]
 //
-//   @@unique([templateId, componentKey])
-//   @@map("village_detail_components")
-// }
+  @@unique([templateId, componentKey])
+  @@map("village_detail_components")
+}
 //
 // ─── DetailFieldStandard ─────────────────────────────────────────────────────
-// model DetailFieldStandard {
-//   id               String   @id @default(cuid())
-//   templateId       String
-//   componentId      String
-//   fieldKey         String
-//   label            String
-//   valueType        String   // "string" | "number" | "url" | "text" | "json"
-//   validationRules  Json?
-//   isRequired       Boolean  @default(false)
-//   isPublicVisible  Boolean  @default(true)
-//   isPublishableNow Boolean  @default(false)
-//   displayOrder     Int      @default(0)
-//   status           String   @default("ACTIVE")
-//   createdAt        DateTime @default(now())
-//   updatedAt        DateTime @updatedAt
+model DetailFieldStandard {
+  id               String   @id @default(cuid())
+  templateId       String
+  componentId      String
+  fieldKey         String
+  label            String
+  valueType        String   // "string" | "number" | "url" | "text" | "json"
+  validationRules  Json?
+  isRequired       Boolean  @default(false)
+  isPublicVisible  Boolean  @default(true)
+  isPublishableNow Boolean  @default(false)
+  displayOrder     Int      @default(0)
+  status           String   @default("ACTIVE")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 //
-//   component VillageDetailComponent @relation(fields: [componentId], references: [id])
+  component VillageDetailComponent @relation(fields: [componentId], references: [id])
 //
-//   @@unique([templateId, componentId, fieldKey])
-//   @@map("detail_field_standards")
-// }
+  @@unique([templateId, componentId, fieldKey])
+  @@map("detail_field_standards")
+}
 //
 // ─── DesaDetailTemplateAssignment ────────────────────────────────────────────
-// model DesaDetailTemplateAssignment {
-//   id         String   @id @default(cuid())
-//   desaId     String   @unique   // satu template aktif per desa
-//   templateId String
-//   isActive   Boolean  @default(true)
-//   assignedAt DateTime @default(now())
-//   reason     String?
+model DesaDetailTemplateAssignment {
+  id         String   @id @default(cuid())
+  desaId     String   @unique   // satu template aktif per desa
+  templateId String
+  isActive   Boolean  @default(true)
+  assignedAt DateTime @default(now())
+  reason     String?
 //
-//   desa     Desa                  @relation(fields: [desaId], references: [id], onDelete: Cascade)
-//   template VillageDetailTemplate @relation(fields: [templateId], references: [id])
+  desa     Desa                  @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  template VillageDetailTemplate @relation(fields: [templateId], references: [id])
 //
-//   @@map("desa_detail_template_assignments")
-// }
+  @@map("desa_detail_template_assignments")
+}
 //
 // ─── DesaDetailComponentVisibility (show/hide per desa, NOT per data) ─────────
-// model DesaDetailComponentVisibility {
-//   id          String   @id @default(cuid())
-//   desaId      String
-//   templateId  String
-//   componentId String
-//   isVisible   Boolean   // overrides VillageDetailComponent.isDefaultVisible
-//   reason      String?   // "Desa ini tidak ingin menampilkan anggaran"
-//   updatedById String?
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @updatedAt
+model DesaDetailComponentVisibility {
+  id          String   @id @default(cuid())
+  desaId      String
+  templateId  String
+  componentId String
+  isVisible   Boolean   // overrides VillageDetailComponent.isDefaultVisible
+  reason      String?   // "Desa ini tidak ingin menampilkan anggaran"
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 //
-//   desa      Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
-//   component VillageDetailComponent @relation(fields: [componentId], references: [id])
+  desa      Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  component VillageDetailComponent @relation(fields: [componentId], references: [id])
 //
-//   @@unique([desaId, componentId])
-//   @@map("desa_detail_component_visibility")
-// }
+  @@unique([desaId, componentId])
+  @@map("desa_detail_component_visibility")
+}
 //
 // ─── DataDesa (data values, terpisah dari visibility komponen) ─────────────────
-// model DataDesa {
-//   id              String         @id @default(cuid())
-//   desaId          String
-//   templateId      String
-//   componentId     String
-//   fieldStandardId String?
-//   fieldKey        String
-//   valueJson       Json?
-//   valueText       String?        @db.Text
-//   sourceId        String?
-//   status          DataDesaStatus @default(DRAFT)
-//   isActive        Boolean        @default(true)
-//   publishedAt     DateTime?
-//   reviewedById    String?
-//   createdAt       DateTime @default(now())
-//   updatedAt       DateTime @updatedAt
+model DataDesa {
+  id              String         @id @default(cuid())
+  desaId          String
+  templateId      String
+  componentId     String
+  fieldStandardId String?
+  fieldKey        String
+  valueJson       Json?
+  valueText       String?        @db.Text
+  sourceId        String?
+  status          DataDesaStatus @default(DRAFT)
+  isActive        Boolean        @default(true)
+  publishedAt     DateTime?
+  reviewedById    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 //
-//   desa      Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
-//   component VillageDetailComponent @relation(fields: [componentId], references: [id])
+  desa      Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  component VillageDetailComponent @relation(fields: [componentId], references: [id])
 //
-//   @@index([desaId, fieldKey, status])
-//   @@index([desaId, componentId])
-//   @@map("data_desa")
-// }
+  @@index([desaId, fieldKey, status])
+  @@index([desaId, componentId])
+  @@map("data_desa")
+}
 //
 // ─── New enums (tambahkan ke section Enums di bawah) ─────────────────────────
-// enum VillageDetailTemplateStatus { DRAFT ACTIVE DEPRECATED ARCHIVED }
-// enum DataDesaStatus { DRAFT IN_REVIEW PUBLISHED REJECTED ARCHIVED }
+enum VillageDetailTemplateStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
+  ARCHIVED
+}
+
+enum DataDesaStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
 //
 // ─── Template design (11 komponen, semua di CURRENT_PUBLIC_DETAIL_TEMPLATE) ──
 // 1.  identitas      — Identitas & Wilayah     (websiteUrl, kategori, tahunData, kec, kab, prov)
