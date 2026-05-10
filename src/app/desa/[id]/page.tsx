@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
+import { getPublishedTemplateData } from "@/lib/data/village-template-read";
 import { perfStart, publicPerfLog } from "@/lib/perf";
 import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
@@ -56,11 +57,23 @@ export default async function DesaDetailPage({ params }: Props) {
   if (!desa) return notFound();
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
+
   const voiceTimer = perfStart();
-  const voiceSummary = await getVoicePreviewForDesaFromDb(desa.id);
+  const [voiceSummary, templateData] = await Promise.all([
+    getVoicePreviewForDesaFromDb(desa.id),
+    getPublishedTemplateData(desa.id),
+  ]);
   publicPerfLog("public.desa-detail", "getVoicePreviewForDesaFromDb()", voiceTimer);
+
   const voicePreview = voiceSummary.preview;
   const profil       = desa.profil;
+
+  const visibleComponentKeys = new Set(
+    templateData.resolvedTemplate.visibleComponents.map(c => c.componentKey)
+  );
+  const isVisible = (componentKey: string) =>
+    visibleComponentKeys.size === 0 || visibleComponentKeys.has(componentKey);
+
   publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
   const budgetItems = [
@@ -126,16 +139,21 @@ export default async function DesaDetailPage({ params }: Props) {
       <DetailSectionNav />
 
       {/* ── 2. SOURCE & DOCUMENTS — source/doc proof before any numbers (DOC-01) */}
-      <section id="dokumen-transparansi" className="space-y-5">
-        <SourceDocumentSnapshotSection desa={desa} />
+      {isVisible("sumber_dokumen") && (
+        <section id="dokumen-transparansi" className="space-y-5">
+          <SourceDocumentSnapshotSection desa={desa} />
 
-      {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
-        <div id="dokumen-desa">
-          <TransparansiCard desa={desa} />
-        </div>
-      </section>
+          {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
+          {isVisible("transparansi") && (
+            <div id="dokumen-desa">
+              <TransparansiCard desa={desa} />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── 4. BUDGET RINGKASAN — after source/doc context (DETAIL-RISK-02, D-01) */}
+      {isVisible("anggaran") && (
       <section id="anggaran" className="space-y-5">
       <div className="space-y-3">
 
@@ -197,108 +215,107 @@ export default async function DesaDetailPage({ params }: Props) {
       </div>
 
       {/* ── 5. KINERJA ANGGARAN — after budget context */}
-      <KinerjaAnggaranCard desa={desa} />
+      {isVisible("kinerja") && <KinerjaAnggaranCard desa={desa} />}
       </section>
+      )}
 
       {/* ── 6. KELENGKAPAN DESA — secondary context before citizen guidance */}
-      {profil && <KelengkapanDesa profil={profil} />}
+      {isVisible("profil_desa") && profil && <KelengkapanDesa profil={profil} />}
 
       {/* ── 7. PANDUAN WARGA — connected citizen journey */}
-      <section id="panduan-warga" className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5">
-        <div className="space-y-4">
-          <div className="max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-widest text-amber-700">Panduan Warga</p>
-            <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
-              Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum melapor.
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Alur ini membantu warga bergerak dari memahami konteks, menanyakan hal yang tepat,
-              sampai menyampaikan kondisi desa tanpa membuat data demo terlihat seperti temuan final.
-            </p>
-          </div>
-
-          <ol className="grid gap-2 sm:grid-cols-4" aria-label="Alur panduan warga">
-            {panduanFlowSteps.map((item) => (
-              <li key={item.step} className="rounded-2xl border border-amber-100 bg-white/85 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
-                    {item.step}
-                  </span>
-                  <p className="text-xs font-black text-slate-800">{item.title}</p>
-                </div>
-                <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{item.body}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <SeharusnyaAdaSection desa={desa} />
-
-        {/* ── 8. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
-        <ResponsibilityGuideCard />
-
-        {/* ── 9. TANGGUNG JAWAB — escalation guide ──────────────────────────── */}
-        {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
-        <div id="pre-report-checklist">
-          <PreReportChecklistCard kabupaten={desa.kabupaten} />
-        </div>
-      </section>
-
-      <section id="suara-warga" className="space-y-3">
-        <div className="max-w-2xl">
-          <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
-          <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
-        </div>
-
-        {/* ── 11. SUARA WARGA + PAK WASPADA CTA ─────────────────────────────── */}
-        {/* Suara warga preview */}
-        <Link
-          href={`/desa/${desa.id}/suara`}
-          prefetch={false}
-          className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-          aria-label={`Suara warga untuk ${desa.nama}`}
-        >
-          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
-                <Megaphone size={15} className="text-white" aria-hidden />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">Suara Warga</p>
-                <p className="text-[10px] text-indigo-200">
-                  {voiceSummary.total > 0
-                    ? `${voiceSummary.total} cerita dari warga`
-                    : "Jadilah yang pertama bercerita"}
-                </p>
-              </div>
+      {isVisible("panduan_warga") && (
+        <section id="panduan-warga" className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5">
+          <div className="space-y-4">
+            <div className="max-w-2xl">
+              <p className="text-xs font-black uppercase tracking-widest text-amber-700">Panduan Warga</p>
+              <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
+                Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum melapor.
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Alur ini membantu warga bergerak dari memahami konteks, menanyakan hal yang tepat,
+                sampai menyampaikan kondisi desa tanpa membuat data demo terlihat seperti temuan final.
+              </p>
             </div>
-            <ArrowRight size={16} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" aria-hidden />
-          </div>
-          {voicePreview.length > 0 && (
-            <div className="bg-white divide-y divide-slate-50">
-              {voicePreview.map((v) => (
-                <div key={v.id} className="px-4 py-2.5 flex items-start gap-2.5">
-                  <span className="text-sm flex-shrink-0 mt-0.5" aria-hidden>
-                    {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{v.author}</p>
+
+            <ol className="grid gap-2 sm:grid-cols-4" aria-label="Alur panduan warga">
+              {panduanFlowSteps.map((item) => (
+                <li key={item.step} className="rounded-2xl border border-amber-100 bg-white/85 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
+                      {item.step}
+                    </span>
+                    <p className="text-xs font-black text-slate-800">{item.title}</p>
                   </div>
-                </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{item.body}</p>
+                </li>
               ))}
-            </div>
-          )}
-          <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
-            <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
-            <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+            </ol>
           </div>
-        </Link>
 
-        {/* Pak Waspada CTA — now points to checklist, not direct LAPOR */}
-      </section>
+          <SeharusnyaAdaSection desa={desa} />
 
-      {/* Data note */}
+          {/* ── 8. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
+          <ResponsibilityGuideCard />
+
+          {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
+          <div id="pre-report-checklist">
+            <PreReportChecklistCard kabupaten={desa.kabupaten} />
+          </div>
+        </section>
+      )}
+
+      {/* ── 11. SUARA WARGA ─────────────────────────────────────────────────── */}
+      {isVisible("suara_warga") && (
+        <section id="suara-warga" className="space-y-3">
+          <div className="max-w-2xl">
+            <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
+            <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
+          </div>
+
+          <Link
+            href={`/desa/${desa.id}/suara`}
+            prefetch={false}
+            className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            aria-label={`Suara warga untuk ${desa.nama}`}
+          >
+            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                  <Megaphone size={15} className="text-white" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Suara Warga</p>
+                  <p className="text-[10px] text-indigo-200">
+                    {voiceSummary.total > 0
+                      ? `${voiceSummary.total} cerita dari warga`
+                      : "Jadilah yang pertama bercerita"}
+                  </p>
+                </div>
+              </div>
+              <ArrowRight size={16} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" aria-hidden />
+            </div>
+            {voicePreview.length > 0 && (
+              <div className="bg-white divide-y divide-slate-50">
+                {voicePreview.map((v) => (
+                  <div key={v.id} className="px-4 py-2.5 flex items-start gap-2.5">
+                    <span className="text-sm flex-shrink-0 mt-0.5" aria-hidden>
+                      {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{v.author}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
+              <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
+              <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+            </div>
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

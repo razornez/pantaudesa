@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   BookOpen, Database, Clock, ChevronRight, ExternalLink,
-  CheckCircle2, Clock3, AlertCircle, LayoutGrid,
+  CheckCircle2, Clock3, AlertCircle, LayoutGrid, Eye, EyeOff,
 } from "lucide-react";
 import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME } from "@/lib/village-data/template-constants";
 
@@ -22,6 +22,24 @@ interface FieldStandardsData {
   templateKey: string; templateName: string;
   totalFields: number; publishableCount: number; holdCount: number;
   sections: Array<{ sectionKey: string; sectionLabel: string; fields: FieldStandard[] }>;
+}
+
+interface DesaComponent {
+  componentId: string;
+  componentKey: string;
+  label: string;
+  displayOrder: number;
+  fieldCount: number;
+}
+
+interface DesaComponentData {
+  templateKey: string;
+  templateName: string;
+  source: "db" | "fallback";
+  visibleComponents: DesaComponent[];
+  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string }>;
+  totalFields: number;
+  publishableCount: number;
 }
 
 interface DesaRow {
@@ -330,28 +348,34 @@ function DesaDataTab() {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="px-4 sm:px-6 pb-4 pt-1 bg-indigo-50/20 border-t border-indigo-100/60">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                        <FieldValue label="Website" value={d.websiteUrl} />
-                        <FieldValue label="Kategori" value={d.kategori} />
-                        <FieldValue label="Tahun data" value={d.tahunData ? String(d.tahunData) : null} />
-                        <FieldValue label="Penduduk" value={d.jumlahPenduduk ? d.jumlahPenduduk.toLocaleString("id-ID") + " jiwa" : null} />
+                    <div className="px-4 sm:px-6 pb-4 pt-1 bg-indigo-50/20 border-t border-indigo-100/60 space-y-4">
+                      {/* Field values */}
+                      <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                          <FieldValue label="Website" value={d.websiteUrl} />
+                          <FieldValue label="Kategori" value={d.kategori} />
+                          <FieldValue label="Tahun data" value={d.tahunData ? String(d.tahunData) : null} />
+                          <FieldValue label="Penduduk" value={d.jumlahPenduduk ? d.jumlahPenduduk.toLocaleString("id-ID") + " jiwa" : null} />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                          <FieldValue label="Kecamatan" value={d.kecamatan} />
+                          <FieldValue label="Kabupaten" value={d.kabupaten} />
+                          <FieldValue label="Provinsi" value={d.provinsi} />
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <a href={`/internal-admin/intake?desaId=${d.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-medium bg-white text-indigo-700 hover:bg-indigo-50 transition-colors"
+                            style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.15)" }}>
+                            <ExternalLink size={11} aria-hidden /> Buka di Intake
+                          </a>
+                          {d.dataSourceLabel && (
+                            <span className="text-[11px] text-slate-400">Sumber: {d.dataSourceLabel}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                        <FieldValue label="Kecamatan" value={d.kecamatan} />
-                        <FieldValue label="Kabupaten" value={d.kabupaten} />
-                        <FieldValue label="Provinsi" value={d.provinsi} />
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <a href={`/internal-admin/intake?desaId=${d.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-medium bg-white text-indigo-700 hover:bg-indigo-50 transition-colors"
-                          style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.15)" }}>
-                          <ExternalLink size={11} aria-hidden /> Buka di Intake
-                        </a>
-                        {d.dataSourceLabel && (
-                          <span className="text-[11px] text-slate-400">Sumber: {d.dataSourceLabel}</span>
-                        )}
-                      </div>
+
+                      {/* Component visibility panel */}
+                      <ComponentVisibilityPanel desaId={d.id} />
                     </div>
                   )}
                 </div>
@@ -381,6 +405,147 @@ function DesaDataTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Component Visibility Panel ──────────────────────────────────────────────
+
+function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
+  const [data, setData] = useState<DesaComponentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch(`/api/internal-admin/village-data/field-standards?desaId=${encodeURIComponent(desaId)}`)
+      .then(r => r.json())
+      .then((d: {
+        templateKey: string; templateName: string; source: "db" | "fallback";
+        visibleComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number; fields: unknown[] }>;
+        hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string }>;
+        sections?: Array<{ sectionKey: string; sectionLabel: string; fields: unknown[] }>;
+        totalFields: number; publishableCount: number;
+      }) => {
+        if (d.source === "db" && d.visibleComponents) {
+          setData({
+            templateKey: d.templateKey,
+            templateName: d.templateName,
+            source: "db",
+            visibleComponents: d.visibleComponents.map(c => ({
+              componentId: c.componentId,
+              componentKey: c.componentKey,
+              label: c.label,
+              displayOrder: c.displayOrder,
+              fieldCount: Array.isArray(c.fields) ? c.fields.length : 0,
+            })),
+            hiddenComponents: d.hiddenComponents ?? [],
+            totalFields: d.totalFields,
+            publishableCount: d.publishableCount,
+          });
+        } else {
+          // Fallback — convert sections into pseudo-components (no IDs, can't toggle)
+          setData({
+            templateKey: d.templateKey,
+            templateName: d.templateName,
+            source: "fallback",
+            visibleComponents: (d.sections ?? []).map((s, i) => ({
+              componentId: `fallback-${s.sectionKey}`,
+              componentKey: s.sectionKey,
+              label: s.sectionLabel,
+              displayOrder: i + 1,
+              fieldCount: Array.isArray(s.fields) ? s.fields.length : 0,
+            })),
+            hiddenComponents: [],
+            totalFields: d.totalFields,
+            publishableCount: d.publishableCount,
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [desaId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (componentId: string, currentlyVisible: boolean) => {
+    if (data?.source !== "db") return;
+    setToggling(componentId);
+    try {
+      const res = await fetch("/api/internal-admin/village-data/component-visibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ desaId, componentId, isVisible: !currentlyVisible }),
+      });
+      if (res.ok) load();
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  if (loading) return (
+    <div className="rounded-2xl bg-white/60 px-4 py-3 animate-pulse h-16"
+      style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.05)" }} />
+  );
+  if (!data) return null;
+
+  const allComponents = [
+    ...data.visibleComponents.map(c => ({ ...c, isVisible: true })),
+    ...data.hiddenComponents.map(c => ({ componentId: c.componentId, componentKey: c.componentKey, label: c.label, displayOrder: 999, fieldCount: 0, isVisible: false })),
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  return (
+    <div className="rounded-2xl bg-white/70 px-4 py-3 space-y-2.5"
+      style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.05)" }}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
+          Visibilitas Komponen
+        </p>
+        <span className="text-[10.5px] text-slate-400">{data.templateName}</span>
+        {data.source === "fallback" && (
+          <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(217,119,6,0.15)" }}>
+            Migrasi belum aktif
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {allComponents.map(comp => (
+          <div key={comp.componentId}
+            className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
+              comp.isVisible ? "bg-slate-50/80" : "bg-rose-50/60"
+            }`}
+            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.05)" }}>
+            <div className="flex items-center gap-2 min-w-0">
+              {comp.isVisible
+                ? <Eye size={12} className="text-emerald-500 flex-shrink-0" aria-hidden />
+                : <EyeOff size={12} className="text-rose-400 flex-shrink-0" aria-hidden />
+              }
+              <span className="text-[12px] text-slate-700 truncate font-medium">{comp.label}</span>
+              {comp.fieldCount > 0 && (
+                <span className="text-[10px] text-slate-400 tabular-nums flex-shrink-0">{comp.fieldCount}f</span>
+              )}
+            </div>
+            {data.source === "db" ? (
+              <button
+                type="button"
+                disabled={toggling === comp.componentId}
+                onClick={() => void toggle(comp.componentId, comp.isVisible)}
+                className={`flex-shrink-0 text-[10.5px] px-2 py-0.5 rounded-lg font-medium transition-colors ${
+                  comp.isVisible
+                    ? "text-rose-600 hover:bg-rose-100"
+                    : "text-emerald-600 hover:bg-emerald-100"
+                } disabled:opacity-40`}>
+                {toggling === comp.componentId ? "..." : comp.isVisible ? "Sembunyikan" : "Tampilkan"}
+              </button>
+            ) : (
+              <span className="text-[10px] text-slate-300">—</span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

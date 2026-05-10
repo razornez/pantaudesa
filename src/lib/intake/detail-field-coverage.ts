@@ -13,6 +13,17 @@ import type {
   UnknownUsefulField,
   UploadedCoverageStatus,
 } from "@/lib/intake/types";
+import type { ResolvedTemplate } from "@/lib/village-data/template-resolver";
+
+// Maps DETAIL_FIELD_STANDARDS sectionKey → template componentKey(s)
+const SECTION_TO_COMPONENT: Record<string, string[]> = {
+  identitas:    ["identitas"],
+  demografi:    ["demografi"],
+  pemerintahan: ["perangkat"],
+  profil:       ["profil_desa"],
+  dokumen:      ["sumber_dokumen", "transparansi"],
+  anggaran:     ["anggaran", "pendapatan", "kinerja"],
+};
 
 export type DetailFieldStandard = Omit<
   DetailFieldCoverageEntry,
@@ -577,6 +588,7 @@ export async function buildDetailFieldCoverageSummary(input: {
   mappedFields: AiMappingFields;
   extractedText: string;
   openaiResult?: OpenAIResult | null;
+  resolvedTemplate?: ResolvedTemplate | null;
 }): Promise<DetailFieldCoverageSummary> {
   const desa = input.desaId ? await getDesaByIdOrSlugWithFallback(input.desaId) : null;
   const localSignals = detectLocalFlexibleSignals(input.extractedText);
@@ -597,6 +609,15 @@ export async function buildDetailFieldCoverageSummary(input: {
     appendUnknownField(unknownUsefulFields, item);
   }
 
+  // Build set of hidden component keys from resolved template
+  const hiddenComponentKeys = new Set<string>(
+    input.resolvedTemplate?.hiddenComponents.map(c => c.componentKey) ?? []
+  );
+  const isSectionHidden = (sectionKey: string) => {
+    const componentKeys = SECTION_TO_COMPONENT[sectionKey] ?? [sectionKey];
+    return componentKeys.some(k => hiddenComponentKeys.has(k));
+  };
+
   const entries: DetailFieldCoverageEntry[] = DETAIL_FIELD_STANDARDS.map((standard) => {
     const currentValue = getCurrentValueForStandard(standard, desa, input.currentKnownFields);
     const knownMappedValue = KNOWN_FIELD_KEYS.has(standard.fieldKey)
@@ -607,7 +628,9 @@ export async function buildDetailFieldCoverageSummary(input: {
     let uploadedCoverageStatus: UploadedCoverageStatus = "missing";
     let uploadedValuePreview: string | null = null;
 
-    if (knownMappedValue !== undefined) {
+    if (isSectionHidden(standard.sectionKey)) {
+      uploadedCoverageStatus = "component_hidden";
+    } else if (knownMappedValue !== undefined) {
       uploadedCoverageStatus = "covered";
       uploadedValuePreview = formatPreviewValue(knownMappedValue);
     } else if (detectedMatch) {

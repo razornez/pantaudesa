@@ -75,7 +75,7 @@ export interface OpenAIResult {
 }
 
 export type CurrentValueStatus = "filled" | "empty";
-export type UploadedCoverageStatus = "covered" | "missing" | "detected_not_publishable";
+export type UploadedCoverageStatus = "covered" | "missing" | "detected_not_publishable" | "component_hidden";
 
 export interface DetailFieldCoverageEntry {
   sectionKey: string;

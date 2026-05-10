@@ -7,6 +7,7 @@ import {
 import type { AutoMappingResult } from "@/lib/intake/auto-mapping";
 import { autoMapFromText } from "@/lib/intake/auto-mapping";
 import { buildDetailFieldCoverageSummary } from "@/lib/intake/detail-field-coverage";
+import { resolveDesaTemplate } from "@/lib/village-data/template-resolver";
 import { diffFields, type DiffResult } from "@/lib/intake/diff-engine";
 import type { IntakeExtractResult } from "@/lib/intake/extractors";
 import { mergeKnownFields } from "@/lib/intake/openai-mapping";
@@ -110,8 +111,14 @@ export async function buildIntakePipelineResult(input: {
   let versionCandidate: VillageDataVersionCandidate | null = null;
   let currentKnownFields: Partial<Record<AiMappableDesaField, string | number | null>> = {};
 
+  let resolvedTemplate = null;
+
   if (input.desaId) {
-    const desaSnapshot = await getDesaVersionSnapshot(input.desaId);
+    const [desaSnapshot, template] = await Promise.all([
+      getDesaVersionSnapshot(input.desaId),
+      resolveDesaTemplate(input.desaId),
+    ]);
+    resolvedTemplate = template;
     if (desaSnapshot) {
       currentKnownFields = desaSnapshot;
       diff = diffFields(desaSnapshot, mapping.fields);
@@ -129,6 +136,7 @@ export async function buildIntakePipelineResult(input: {
     mappedFields: mapping.fields,
     extractedText: input.extractedText,
     openaiResult: input.openaiResult,
+    resolvedTemplate,
   });
 
   return {
