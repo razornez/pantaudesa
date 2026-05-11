@@ -1,16 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   BookOpen, Database, Clock, ChevronRight, ExternalLink,
-  CheckCircle2, Clock3, AlertCircle, LayoutGrid, Eye, EyeOff,
+  CheckCircle2, Clock3, AlertCircle, LayoutGrid, Eye, EyeOff, Activity,
 } from "lucide-react";
 import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME } from "@/lib/village-data/template-constants";
+import AdminDesaFilterBar, { type AdminDesaFilter } from "./AdminDesaFilterBar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "standards" | "desa-data" | "versions";
+type Tab = "standards" | "desa-data" | "versions" | "activity";
 
 interface FieldStandard {
   sectionKey: string; sectionLabel: string; fieldKey: string; fieldLabel: string;
@@ -54,6 +55,7 @@ interface DesaRow {
   tahunData: number | null; jumlahPenduduk: number | null;
   dataStatus: string; dataSourceLabel: string | null; dataPublishedAt: string | null;
   _count: { villageDataVersions: number };
+  detailTemplateAssignment?: { template: { key: string; name: string } } | null;
 }
 
 interface VersionRow {
@@ -122,15 +124,17 @@ export function VillageDataCenter({ initialTab }: { initialTab: Tab }) {
         {/* Tab bar */}
         <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-50 w-fit"
           style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06)" }}>
-          <TabButton tab="standards" active={activeTab} icon={<BookOpen size={13} />} label="Standar Detail" onClick={switchTab} />
           <TabButton tab="desa-data" active={activeTab} icon={<LayoutGrid size={13} />} label="Data per Desa" onClick={switchTab} />
+          <TabButton tab="standards" active={activeTab} icon={<BookOpen size={13} />} label="Standar Detail" onClick={switchTab} />
           <TabButton tab="versions" active={activeTab} icon={<Clock size={13} />} label="Versi & Audit" onClick={switchTab} />
+          <TabButton tab="activity" active={activeTab} icon={<Activity size={13} />} label="Log Aktivitas" onClick={switchTab} />
         </div>
 
         {/* Tab content */}
         {activeTab === "standards" && <StandardsTab />}
         {activeTab === "desa-data" && <DesaDataTab />}
         {activeTab === "versions" && <VersionsTab />}
+        {activeTab === "activity" && <ActivityLogTab />}
       </div>
     </>
   );
@@ -273,16 +277,18 @@ function DesaDataTab() {
   const [desa, setDesa] = useState<DesaRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<AdminDesaFilter>({ q: "", provinsi: "", kabupaten: "", kecamatan: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback((q: string, p: number) => {
+  const fetchData = useCallback((f: AdminDesaFilter, p: number) => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (q) params.set("q", q);
+    if (f.q)         params.set("q", f.q);
+    if (f.provinsi)  params.set("provinsi", f.provinsi);
+    if (f.kabupaten) params.set("kabupaten", f.kabupaten);
+    if (f.kecamatan) params.set("kecamatan", f.kecamatan);
     params.set("page", String(p));
     fetch(`/api/internal-admin/village-data/desa-data?${params.toString()}`)
       .then(r => r.json())
@@ -291,35 +297,28 @@ function DesaDataTab() {
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchData("", 1); }, [fetchData]);
+  useEffect(() => { fetchData({ q: "", provinsi: "", kabupaten: "", kecamatan: "" }, 1); }, [fetchData]);
 
-  const handleSearch = (q: string) => {
-    setQuery(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { setPage(1); fetchData(q, 1); }, 300);
+  const handleFilterChange = (f: AdminDesaFilter) => {
+    setFilter(f);
+    setPage(1);
+    fetchData(f, 1);
   };
 
   if (error) return <ErrorNotice message={error} />;
 
   const totalPages = Math.ceil(total / 20);
+  const hasFilter = filter.q || filter.provinsi || filter.kabupaten || filter.kecamatan;
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <input type="text" value={query} onChange={e => handleSearch(e.target.value)}
-          className="field-lux text-sm pr-8" placeholder="Cari nama desa, kecamatan, atau kabupaten..." />
-        {loading && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-            <span className="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-500" />
-          </span>
-        )}
-      </div>
+      {/* Filter */}
+      <AdminDesaFilterBar onChange={handleFilterChange} />
 
       {/* Summary */}
       {!loading && (
         <p className="text-[12px] text-slate-500 tabular-nums">
-          {total.toLocaleString("id-ID")} desa {query && `· hasil pencarian "${query}"`}
+          {total.toLocaleString("id-ID")} desa {hasFilter && filter.q && `· hasil pencarian "${filter.q}"`}
         </p>
       )}
 
@@ -327,7 +326,7 @@ function DesaDataTab() {
       {loading && desa.length === 0 ? (
         <SkeletonCards count={5} height="h-16" />
       ) : desa.length === 0 ? (
-        <EmptyState icon={<Database size={20} />} title="Tidak ada desa ditemukan" note={query ? `Tidak ada hasil untuk "${query}".` : "Belum ada data desa."} />
+        <EmptyState icon={<Database size={20} />} title="Tidak ada desa ditemukan" note={hasFilter ? `Tidak ada hasil untuk filter ini.` : "Belum ada data desa."} />
       ) : (
         <section className="rounded-3xl bg-white overflow-hidden"
           style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
@@ -361,6 +360,11 @@ function DesaDataTab() {
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-slate-900 truncate">{d.nama}</p>
                         <p className="text-[11px] text-slate-400">{d.kecamatan}, {d.kabupaten}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                          {d.detailTemplateAssignment?.template.name ?? "Default template"}
+                          {" · "}
+                          <span className="opacity-60">{d.detailTemplateAssignment?.template.key ?? "CURRENT_PUBLIC_DETAIL_TEMPLATE"}</span>
+                        </p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className="h-1.5 flex-1 max-w-[60px] rounded-full bg-slate-100 overflow-hidden">
@@ -421,13 +425,13 @@ function DesaDataTab() {
           <span>Halaman {page} dari {totalPages}</span>
           <div className="flex gap-2">
             <button type="button" disabled={page <= 1}
-              onClick={() => { const p = page - 1; setPage(p); fetchData(query, p); }}
+              onClick={() => { const p = page - 1; setPage(p); fetchData(filter, p); }}
               className="px-3 py-1.5 rounded-xl bg-white text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
               style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}>
               ← Sebelumnya
             </button>
             <button type="button" disabled={page >= totalPages}
-              onClick={() => { const p = page + 1; setPage(p); fetchData(query, p); }}
+              onClick={() => { const p = page + 1; setPage(p); fetchData(filter, p); }}
               className="px-3 py-1.5 rounded-xl bg-white text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
               style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}>
               Berikutnya →
@@ -664,13 +668,14 @@ function VersionsTab() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [desaFilter, setDesaFilter] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback((desaId: string) => {
+  const fetchData = useCallback((f: AdminDesaFilter) => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (desaId) params.set("desaId", desaId);
+    if (f.q)         params.set("q", f.q);
+    if (f.provinsi)  params.set("provinsi", f.provinsi);
+    if (f.kabupaten) params.set("kabupaten", f.kabupaten);
+    if (f.kecamatan) params.set("kecamatan", f.kecamatan);
     fetch(`/api/internal-admin/village-data/versions?${params.toString()}`)
       .then(r => r.json())
       .then(d => {
@@ -683,22 +688,14 @@ function VersionsTab() {
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchData(""); }, [fetchData]);
+  useEffect(() => { fetchData({ q: "", provinsi: "", kabupaten: "", kecamatan: "" }); }, [fetchData]);
 
   if (error) return <ErrorNotice message={error} />;
 
   return (
     <div className="space-y-5">
       {/* Filter */}
-      <div className="relative max-w-sm">
-        <input type="text" value={desaFilter}
-          onChange={e => {
-            setDesaFilter(e.target.value);
-            if (debounceRef.current) clearTimeout(debounceRef.current);
-            debounceRef.current = setTimeout(() => fetchData(e.target.value), 400);
-          }}
-          className="field-lux text-sm" placeholder="Filter berdasarkan ID desa..." />
-      </div>
+      <AdminDesaFilterBar onChange={fetchData} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-5">
         {/* Versions */}
@@ -780,6 +777,135 @@ function VersionsTab() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+// ─── Tab 4: Log Aktivitas (Fix 2) ────────────────────────────────────────────
+// Pure audit/history log — no approve/reject buttons. Shows all actions from
+// the village data flow: intake submissions, publish events, version creates, etc.
+
+const EVENT_LABEL: Record<string, string> = {
+  INTERNAL_INTAKE_SUBMITTED:     "Dokumen disubmit ke review",
+  INTERNAL_DOCUMENT_REVIEWED:    "Dokumen direview",
+  INTERNAL_AI_MAPPING_RUN:       "AI mapping dijalankan",
+  INTERNAL_AI_MAPPING_ACCEPTED:  "Mapping AI diterima",
+  INTERNAL_DATA_PUBLISHED:       "Data diterbitkan",
+  INTERNAL_DOCUMENT_FAILED:      "Dokumen gagal diproses",
+  DATA_DESA_PUBLISHED:           "Data desa diterbitkan",
+  DATA_DESA_REJECTED:            "Data desa ditolak",
+};
+
+function ActivityLogTab() {
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [auditEvents, setAuditEvents] = useState<AuditRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback((f: AdminDesaFilter) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (f.q)         params.set("q", f.q);
+    if (f.provinsi)  params.set("provinsi", f.provinsi);
+    if (f.kabupaten) params.set("kabupaten", f.kabupaten);
+    if (f.kecamatan) params.set("kecamatan", f.kecamatan);
+    params.set("pageSize", "50");
+    fetch(`/api/internal-admin/village-data/versions?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        setVersions(d.versions ?? []);
+        setAuditEvents(d.auditEvents ?? []);
+        setLoading(false);
+      })
+      .catch(() => { setError("Gagal memuat log aktivitas."); setLoading(false); });
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchData({ q: "", provinsi: "", kabupaten: "", kecamatan: "" }); }, [fetchData]);
+
+  if (error) return <ErrorNotice message={error} />;
+
+  // Merge versions + audit events into a single timeline sorted by date desc
+  type TimelineItem =
+    | { kind: "audit"; row: AuditRow }
+    | { kind: "version"; row: VersionRow };
+
+  const timeline: TimelineItem[] = [
+    ...auditEvents.map(r => ({ kind: "audit" as const, row: r })),
+    ...versions.map(r => ({ kind: "version" as const, row: r })),
+  ].sort((a, b) => {
+    const dateA = a.kind === "audit" ? a.row.createdAt : a.row.createdAt;
+    const dateB = b.kind === "audit" ? b.row.createdAt : b.row.createdAt;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <section className="rounded-3xl bg-white p-6"
+        style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow text-indigo-600 mb-1.5">Histori · semua aksi data desa</p>
+            <h2 className="text-[18px] font-semibold text-slate-900 leading-tight">Log Aktivitas</h2>
+            <p className="text-[12px] text-slate-500 mt-1">Rekam jejak intake, publikasi, dan perubahan data desa. Hanya untuk dibaca — aksi dilakukan di Intake Workbench dan modal review dokumen.</p>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <AdminDesaFilterBar onChange={fetchData} />
+        </div>
+      </section>
+
+      {/* Timeline */}
+      {loading ? (
+        <SkeletonCards count={5} height="h-12" />
+      ) : timeline.length === 0 ? (
+        <EmptyState icon={<Activity size={20} />}
+          title="Belum ada aktivitas tercatat"
+          note="Log akan muncul setelah intake disubmit atau data diterbitkan." />
+      ) : (
+        <section className="rounded-3xl bg-white p-6"
+          style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
+          <div className="space-y-0 divide-y divide-slate-50">
+            {timeline.map((item, idx) => {
+              if (item.kind === "audit") {
+                const ev = item.row;
+                return (
+                  <div key={`a-${ev.id}-${idx}`} className="flex items-start gap-3 py-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12.5px] font-medium text-slate-900">
+                        {ev.eventLabel ?? EVENT_LABEL[ev.eventType] ?? ev.eventType}
+                      </p>
+                      <p className="text-[11px] text-slate-400">{ev.desa.nama} · {ev.actorRole ?? "system"}</p>
+                      {ev.note && <p className="text-[11px] text-slate-500 mt-0.5 truncate">{ev.note}</p>}
+                    </div>
+                    <span className="text-[10.5px] text-slate-400 flex-shrink-0 tabular-nums">
+                      {new Date(ev.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2-digit" })}
+                    </span>
+                  </div>
+                );
+              }
+              const v = item.row;
+              return (
+                <div key={`v-${v.id}-${idx}`} className="flex items-start gap-3 py-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[12.5px] font-medium text-slate-900 truncate">{v.title}</p>
+                      <VersionStatusPill status={v.status} />
+                    </div>
+                    <p className="text-[11px] text-slate-400">{v.desa.nama} · v{v.versionNumber}</p>
+                  </div>
+                  <span className="text-[10.5px] text-slate-400 flex-shrink-0 tabular-nums">
+                    {new Date(v.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2-digit" })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

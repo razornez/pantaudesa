@@ -11,8 +11,12 @@ export async function GET(req: NextRequest) {
     const session = await requireInternalAdminSession();
     if (session instanceof NextResponse) return session;
 
-    const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
-    const page = Math.max(1, parseInt(req.nextUrl.searchParams.get("page") ?? "1", 10));
+    const sp = req.nextUrl.searchParams;
+    const q        = sp.get("q")?.trim()         ?? "";
+    const provinsi = sp.get("provinsi")?.trim()  ?? "";
+    const kabupaten= sp.get("kabupaten")?.trim() ?? "";
+    const kecamatan= sp.get("kecamatan")?.trim() ?? "";
+    const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
     const skip = (page - 1) * PAGE_SIZE;
 
     if (!db) {
@@ -20,15 +24,19 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      const where = q
-        ? {
-            OR: [
-              { nama: { contains: q, mode: "insensitive" as const } },
-              { kecamatan: { contains: q, mode: "insensitive" as const } },
-              { kabupaten: { contains: q, mode: "insensitive" as const } },
-            ],
-          }
-        : undefined;
+      const where = {
+        ...(q ? {
+          OR: [
+            { nama:      { contains: q, mode: "insensitive" as const } },
+            { kecamatan: { contains: q, mode: "insensitive" as const } },
+            { kabupaten: { contains: q, mode: "insensitive" as const } },
+            { provinsi:  { contains: q, mode: "insensitive" as const } },
+          ],
+        } : {}),
+        ...(provinsi  ? { provinsi:  { equals: provinsi,  mode: "insensitive" as const } } : {}),
+        ...(kabupaten ? { kabupaten: { equals: kabupaten, mode: "insensitive" as const } } : {}),
+        ...(kecamatan ? { kecamatan: { equals: kecamatan, mode: "insensitive" as const } } : {}),
+      } as Record<string, unknown>;
 
       const [desa, total] = await Promise.all([
         db.desa.findMany({
@@ -51,6 +59,11 @@ export async function GET(req: NextRequest) {
             dataSourceLabel: true,
             dataPublishedAt: true,
             _count: { select: { villageDataVersions: true } },
+            detailTemplateAssignment: {
+              select: {
+                template: { select: { key: true, name: true } },
+              },
+            },
           },
         }),
         db.desa.count({ where }),

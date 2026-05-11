@@ -169,8 +169,22 @@ export interface DetailFieldCoverageEntry {
   deferredReason: string | null;
   sourceRequirement: string;
   validationRequirement: string;
-  uploadedCoverageStatus: "covered" | "missing" | "detected_not_publishable";
+  uploadedCoverageStatus:
+    | "covered"
+    | "missing"
+    | "detected_not_publishable"
+    | "component_hidden"
+    | "outside_template";
   uploadedValuePreview: string | null;
+}
+
+export interface CoverageTemplateInfo {
+  templateKey: string;
+  templateName: string;
+  source: "db" | "fallback";
+  visibleComponentCount: number;
+  hiddenComponentCount: number;
+  totalFieldCount: number;
 }
 
 export interface DetailFieldCoverageSummary {
@@ -182,6 +196,7 @@ export interface DetailFieldCoverageSummary {
   publishableNowCount: number;
   detectedButNotPublishable: DetectedDetailField[];
   unknownUsefulFields: UnknownUsefulField[];
+  templateInfo?: CoverageTemplateInfo;
 }
 
 // ============================================================================

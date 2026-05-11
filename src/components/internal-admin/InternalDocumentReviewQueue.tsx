@@ -242,6 +242,51 @@ function getFieldReviewContext(
   };
 }
 
+interface TemplateRibbonInfo {
+  templateName: string;
+  templateKey: string;
+  source: string;
+  visibleCount: number;
+  hiddenCount: number;
+}
+
+type CoverageHiddenItem = { fieldLabel: string; componentLabel: string };
+type CoverageOutsideItem = { fieldLabel: string; fieldKey: string; uploadedValuePreview: string };
+
+function readFieldCoverageSignals(raw: unknown): {
+  componentHidden: CoverageHiddenItem[];
+  outsideTemplate: CoverageOutsideItem[];
+} {
+  const empty = { componentHidden: [] as CoverageHiddenItem[], outsideTemplate: [] as CoverageOutsideItem[] };
+  if (!raw || typeof raw !== "object") return empty;
+  const result = raw as Record<string, unknown>;
+  const fc = result.fieldCoverage;
+  if (!fc || typeof fc !== "object" || Array.isArray(fc)) return empty;
+  const entries = (fc as Record<string, unknown>).entries;
+  if (!Array.isArray(entries)) return empty;
+
+  const componentHidden: CoverageHiddenItem[] = [];
+  const outsideTemplate: CoverageOutsideItem[] = [];
+
+  for (const e of entries) {
+    if (!e || typeof e !== "object") continue;
+    const entry = e as Record<string, unknown>;
+    if (entry.uploadedCoverageStatus === "component_hidden") {
+      componentHidden.push({
+        fieldLabel: String(entry.fieldLabel ?? entry.fieldKey ?? ""),
+        componentLabel: String(entry.sectionLabel ?? entry.sectionKey ?? ""),
+      });
+    } else if (entry.uploadedCoverageStatus === "outside_template") {
+      outsideTemplate.push({
+        fieldLabel: String(entry.fieldLabel ?? entry.fieldKey ?? ""),
+        fieldKey: String(entry.fieldKey ?? ""),
+        uploadedValuePreview: String(entry.uploadedValuePreview ?? ""),
+      });
+    }
+  }
+  return { componentHidden, outsideTemplate };
+}
+
 function PublishModal({
   doc,
   onClose,
@@ -255,6 +300,8 @@ function PublishModal({
 }) {
   const normalizedDraft = readAiMappingDraft(doc.aiMappingResult);
   const versionCandidate = readVillageVersionCandidate(doc.aiMappingResult);
+  const coverageSignals = readFieldCoverageSignals(doc.aiMappingResult);
+  const [templateInfo, setTemplateInfo] = useState<TemplateRibbonInfo | null>(null);
   const [fields, setFields] = useState<Record<string, string>>(() => {
     const out: Record<string, string> = {};
     for (const key of AI_MAPPABLE_DESA_FIELDS) {
@@ -265,6 +312,22 @@ function PublishModal({
   });
   const [note, setNote] = useState(normalizedDraft?.notes ?? "");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!doc.desa.id) return;
+    fetch(`/api/internal-admin/village-data/field-standards?desaId=${encodeURIComponent(doc.desa.id)}`)
+      .then(r => r.json())
+      .then((d: { templateName?: string; templateKey?: string; source?: string; visibleComponents?: unknown[]; hiddenComponents?: unknown[] }) => {
+        setTemplateInfo({
+          templateName: d.templateName ?? "—",
+          templateKey: d.templateKey ?? "—",
+          source: d.source ?? "fallback",
+          visibleCount: Array.isArray(d.visibleComponents) ? d.visibleComponents.length : 0,
+          hiddenCount: Array.isArray(d.hiddenComponents) ? d.hiddenComponents.length : 0,
+        });
+      })
+      .catch(() => {});
+  }, [doc.desa.id]);
 
   function buildPayloadFields() {
     const payloadFields: Record<string, string | number | null> = {};
@@ -364,21 +427,80 @@ function PublishModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
       <div className="lux-panel max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto p-5 sm:p-6">
         <div className="space-y-1">
-          <p className="eyebrow text-[10px]">Review data dokumen</p>
+          <p className="eyebrow text-[10px]">Review data dokumen · sumber dari dokumen resmi</p>
           <h2 className="text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
             {doc.title}
           </h2>
-          <p className="text-xs text-slate-500">{doc.desa.nama}</p>
+          <p className="text-xs text-slate-500">{doc.desa.nama} · {doc.desa.kecamatan}, {doc.desa.kabupaten}</p>
         </div>
+
+        {/* Template ribbon (Fix 1, Fix 4) */}
+        {templateInfo && (
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-widest font-semibold text-indigo-400 mb-1">Template aktif untuk desa ini</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-[12px] font-semibold text-indigo-900">{templateInfo.templateName}</span>
+              <span className="text-[10.5px] font-mono text-indigo-400">{templateInfo.templateKey}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                templateInfo.source === "db" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+              }`}>
+                {templateInfo.source === "db" ? "DB" : "Fallback"}
+              </span>
+              {templateInfo.visibleCount > 0 && (
+                <span className="text-[10.5px] text-indigo-500">{templateInfo.visibleCount} komponen aktif</span>
+              )}
+              {templateInfo.hiddenCount > 0 && (
+                <span className="text-[10.5px] text-rose-500">{templateInfo.hiddenCount} komponen hidden</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {normalizedDraft?.notes ? (
           <div className="notice-card notice-info text-xs">{normalizedDraft.notes}</div>
         ) : null}
 
         <div className="notice-card notice-warn text-xs">
-          Halaman ini dipakai untuk mengecek hasil otomatis, melengkapi field yang perlu, lalu
-          memutuskan apakah mau disimpan dulu atau langsung dipublikasikan.
+          Data yang dipublikasikan di sini bersumber dari dokumen resmi yang diupload. Setiap perubahan
+          yang di-publish akan membuat versi publik baru dan tercatat dalam audit trail.
         </div>
+
+        {/* Hidden component fields (Fix 6) */}
+        {coverageSignals.componentHidden.length > 0 && (
+          <div className="rounded-xl border border-rose-100 bg-rose-50/50 px-3 py-2.5 text-xs">
+            <p className="font-semibold text-rose-700 mb-1">
+              Terdeteksi di dokumen — komponen sedang hidden ({coverageSignals.componentHidden.length} field)
+            </p>
+            <p className="text-rose-600 mb-1.5">Field berikut terbaca dari dokumen, tapi komponennya sedang disembunyikan untuk desa ini. Tidak akan diterbitkan.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {coverageSignals.componentHidden.map((item, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10.5px]">
+                  {item.fieldLabel} · <span className="opacity-60">{item.componentLabel}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Outside-template fields (Fix 5) */}
+        {coverageSignals.outsideTemplate.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs">
+            <p className="font-semibold text-slate-700 mb-1">
+              Terdeteksi di luar template ({coverageSignals.outsideTemplate.length} field)
+            </p>
+            <p className="text-slate-500 mb-1.5">
+              Data ini terbaca dari dokumen, tetapi tidak dicatat sebagai perubahan karena field tersebut belum ada di template desa ini.
+              Buat atau aktifkan field/template baru di Standar Detail agar data ini dapat ditampilkan.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {coverageSignals.outsideTemplate.map((item, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10.5px]">
+                  {item.fieldLabel}{item.uploadedValuePreview ? `: ${item.uploadedValuePreview.slice(0, 30)}` : ""}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {versionCandidate ? (
           <div className="rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2 text-xs text-sky-900">
@@ -388,11 +510,12 @@ function PublishModal({
         ) : null}
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-          <p className="font-semibold text-slate-900">Cara pakai modal ini</p>
-          <p className="mt-1">1. Lihat nilai publik saat ini pada setiap field.</p>
-          <p>2. Bandingkan dengan isian draft hasil intake atau review sebelumnya.</p>
-          <p>3. Ubah `Keputusan final admin` hanya untuk field yang memang ingin dipublish.</p>
-          <p>4. Kosongkan field jika ingin mempertahankan nilai publik saat ini.</p>
+          <p className="font-semibold text-slate-900">Cara pakai review ini</p>
+          <p className="mt-1">1. Cek template aktif desa di atas — field yang di-publish harus sesuai template.</p>
+          <p>2. Bandingkan nilai publik saat ini dengan hasil ekstraksi dokumen (isian draft).</p>
+          <p>3. Isi <span className="font-medium">Keputusan final admin</span> hanya untuk field yang ingin diubah dari sumber ini.</p>
+          <p>4. Kosongkan field jika tidak ingin mengubah nilai publik saat ini.</p>
+          <p className="mt-1 text-slate-500">Hanya field dengan sumber dokumen yang dapat dipublikasikan. Internal admin adalah reviewer, bukan sumber data.</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-700">

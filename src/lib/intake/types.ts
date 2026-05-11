@@ -75,7 +75,12 @@ export interface OpenAIResult {
 }
 
 export type CurrentValueStatus = "filled" | "empty";
-export type UploadedCoverageStatus = "covered" | "missing" | "detected_not_publishable" | "component_hidden";
+export type UploadedCoverageStatus =
+  | "covered"               // detected + maps to visible template field
+  | "missing"               // not detected
+  | "detected_not_publishable" // detected but field not ready to publish
+  | "component_hidden"      // detected, field in template but component is hidden for this desa
+  | "outside_template";     // detected but field does not exist in active template
 
 export interface DetailFieldCoverageEntry {
   sectionKey: string;
@@ -96,6 +101,15 @@ export interface DetailFieldCoverageEntry {
   uploadedValuePreview: string | null;
 }
 
+export interface CoverageTemplateInfo {
+  templateKey: string;
+  templateName: string;
+  source: "db" | "fallback";
+  visibleComponentCount: number;
+  hiddenComponentCount: number;
+  totalFieldCount: number;
+}
+
 export interface DetailFieldCoverageSummary {
   entries: DetailFieldCoverageEntry[];
   filledCount: number;
@@ -105,4 +119,6 @@ export interface DetailFieldCoverageSummary {
   publishableNowCount: number;
   detectedButNotPublishable: DetectedDetailField[];
   unknownUsefulFields: UnknownUsefulField[];
+  /** Template used to generate this coverage — shown in UI as context for reviewer */
+  templateInfo?: CoverageTemplateInfo;
 }

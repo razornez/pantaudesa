@@ -2,7 +2,7 @@ import { VillageDataCenter } from "@/components/internal-admin/VillageDataCenter
 
 export const dynamic = "force-dynamic";
 
-const VALID_TABS = ["standards", "desa-data", "versions"] as const;
+const VALID_TABS = ["standards", "desa-data", "versions", "activity"] as const;
 type VillageDataTab = (typeof VALID_TABS)[number];
 
 export default async function VillageDataPage({
@@ -13,7 +13,7 @@ export default async function VillageDataPage({
   const params = await searchParams;
   const tab: VillageDataTab = VALID_TABS.includes(params.tab as VillageDataTab)
     ? (params.tab as VillageDataTab)
-    : "standards";
+    : "desa-data";
 
   return <VillageDataCenter initialTab={tab} />;
 }

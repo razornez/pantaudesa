@@ -5,6 +5,7 @@ import {
 } from "@/lib/admin-claim/ai-mapping";
 import { getDesaByIdOrSlugWithFallback, type DesaListItem } from "@/lib/data/desa-read";
 import type {
+  CoverageTemplateInfo,
   CurrentValueStatus,
   DetailFieldCoverageEntry,
   DetailFieldCoverageSummary,
@@ -582,6 +583,42 @@ function findDetectedMatch(
   );
 }
 
+// Lookup map for cross-referencing DB template fields with hardcoded metadata
+const STANDARDS_BY_KEY = new Map(DETAIL_FIELD_STANDARDS.map(s => [s.fieldKey, s]));
+
+function buildEntryFromDbField(input: {
+  fieldKey: string;
+  fieldLabel: string;
+  componentKey: string;
+  componentLabel: string;
+  isPublishableNow: boolean;
+  uploadedCoverageStatus: UploadedCoverageStatus;
+  uploadedValuePreview: string | null;
+  currentValueStatus: CurrentValueStatus;
+  currentValuePreview: string;
+}): DetailFieldCoverageEntry {
+  // Cross-reference with hardcoded metadata where available
+  const meta = STANDARDS_BY_KEY.get(input.fieldKey);
+  return {
+    sectionKey:   input.componentKey,
+    sectionLabel: input.componentLabel,
+    fieldKey:     input.fieldKey,
+    fieldLabel:   input.fieldLabel,
+    currentModelSource:       meta?.currentModelSource       ?? "DataDesa",
+    currentlyMappable:        meta?.currentlyMappable        ?? false,
+    aiDetectable:             meta?.aiDetectable             ?? false,
+    publishableNow:           input.isPublishableNow,
+    shouldBeMappableInSprint05: meta?.shouldBeMappableInSprint05 ?? false,
+    deferredReason:           meta?.deferredReason           ?? null,
+    sourceRequirement:        meta?.sourceRequirement        ?? "Sumber resmi desa",
+    validationRequirement:    meta?.validationRequirement    ?? "Nilai harus valid",
+    currentValueStatus:       input.currentValueStatus,
+    currentValuePreview:      input.currentValuePreview,
+    uploadedCoverageStatus:   input.uploadedCoverageStatus,
+    uploadedValuePreview:     input.uploadedValuePreview,
+  };
+}
+
 export async function buildDetailFieldCoverageSummary(input: {
   desaId?: string;
   currentKnownFields: Partial<Record<AiMappableDesaField, string | number | null>>;
@@ -595,23 +632,136 @@ export async function buildDetailFieldCoverageSummary(input: {
   const detectedButNotPublishable: DetectedDetailField[] = [];
   const unknownUsefulFields: UnknownUsefulField[] = [];
 
-  for (const item of localSignals.detectedButNotPublishable) {
-    appendDetectedField(detectedButNotPublishable, item);
-  }
-  for (const item of input.openaiResult?.detectedButNotPublishable ?? []) {
-    appendDetectedField(detectedButNotPublishable, item);
+  for (const item of localSignals.detectedButNotPublishable) appendDetectedField(detectedButNotPublishable, item);
+  for (const item of input.openaiResult?.detectedButNotPublishable ?? []) appendDetectedField(detectedButNotPublishable, item);
+  for (const item of localSignals.unknownUsefulFields) appendUnknownField(unknownUsefulFields, item);
+  for (const item of input.openaiResult?.unknownUsefulFields ?? []) appendUnknownField(unknownUsefulFields, item);
+
+  const resolved = input.resolvedTemplate;
+  const useDbTemplate = resolved && resolved.templateId !== "fallback" && resolved.visibleComponents.length > 0;
+
+  // ── Branch A: DB template available ──────────────────────────────────────────
+  if (useDbTemplate) {
+    const entries: DetailFieldCoverageEntry[] = [];
+
+    // All fieldKeys in template (visible + hidden) — for outside_template detection
+    const allTemplateFieldKeys = new Set<string>([
+      ...resolved.visibleComponents.flatMap(c => c.fields.map(f => f.fieldKey)),
+      ...resolved.hiddenComponents.flatMap(() => [] as string[]), // hidden components have no fields in ResolvedTemplate type
+    ]);
+
+    // Also add fields from DETAIL_FIELD_STANDARDS that map to hidden components
+    for (const std of DETAIL_FIELD_STANDARDS) {
+      const compKeys = SECTION_TO_COMPONENT[std.sectionKey] ?? [std.sectionKey];
+      const hiddenCompKeys = new Set(resolved.hiddenComponents.map(c => c.componentKey));
+      if (compKeys.some(k => hiddenCompKeys.has(k))) {
+        allTemplateFieldKeys.add(std.fieldKey);
+      }
+    }
+
+    // Entries for VISIBLE component fields
+    for (const component of resolved.visibleComponents) {
+      for (const field of component.fields) {
+        const knownMappedValue = KNOWN_FIELD_KEYS.has(field.fieldKey)
+          ? input.mappedFields[field.fieldKey as AiMappableDesaField]
+          : undefined;
+        const detectedMatch = findDetectedMatch(
+          { fieldKey: field.fieldKey, fieldLabel: field.label, sectionKey: component.componentKey, sectionLabel: component.label } as DetailFieldStandard,
+          detectedButNotPublishable
+        );
+        const currentValue = getCurrentValueForStandard(
+          STANDARDS_BY_KEY.get(field.fieldKey) ?? { fieldKey: field.fieldKey, fieldLabel: field.label, sectionKey: component.componentKey, sectionLabel: component.label } as DetailFieldStandard,
+          desa, input.currentKnownFields
+        );
+
+        let uploadedCoverageStatus: UploadedCoverageStatus = "missing";
+        let uploadedValuePreview: string | null = null;
+
+        if (knownMappedValue !== undefined) {
+          uploadedCoverageStatus = "covered";
+          uploadedValuePreview = formatPreviewValue(knownMappedValue);
+        } else if (detectedMatch) {
+          uploadedCoverageStatus = "detected_not_publishable";
+          uploadedValuePreview = detectedMatch.value;
+        }
+
+        entries.push(buildEntryFromDbField({
+          fieldKey: field.fieldKey, fieldLabel: field.label,
+          componentKey: component.componentKey, componentLabel: component.label,
+          isPublishableNow: field.isPublishableNow,
+          uploadedCoverageStatus, uploadedValuePreview,
+          currentValueStatus: currentValue.status, currentValuePreview: currentValue.preview,
+        }));
+      }
+    }
+
+    // Entries for HIDDEN component fields (from DETAIL_FIELD_STANDARDS cross-reference)
+    for (const std of DETAIL_FIELD_STANDARDS) {
+      const compKeys = SECTION_TO_COMPONENT[std.sectionKey] ?? [std.sectionKey];
+      const hiddenComp = resolved.hiddenComponents.find(c => compKeys.includes(c.componentKey));
+      if (!hiddenComp) continue;
+      // Avoid duplicate if already added via visible components
+      if (entries.some(e => e.fieldKey === std.fieldKey)) continue;
+
+      const currentValue = getCurrentValueForStandard(std, desa, input.currentKnownFields);
+      entries.push(buildEntryFromDbField({
+        fieldKey: std.fieldKey, fieldLabel: std.fieldLabel,
+        componentKey: hiddenComp.componentKey, componentLabel: hiddenComp.label,
+        isPublishableNow: std.publishableNow,
+        uploadedCoverageStatus: "component_hidden", uploadedValuePreview: null,
+        currentValueStatus: currentValue.status, currentValuePreview: currentValue.preview,
+      }));
+    }
+
+    // Synthetic entries for OUTSIDE_TEMPLATE detected fields
+    for (const detected of detectedButNotPublishable) {
+      if (allTemplateFieldKeys.has(detected.fieldKey)) continue; // already covered above
+      if (entries.some(e => e.fieldKey === detected.fieldKey)) continue;
+      entries.push({
+        sectionKey: "outside_template",
+        sectionLabel: "Di luar template",
+        fieldKey: detected.fieldKey,
+        fieldLabel: detected.fieldLabel,
+        currentModelSource: "—",
+        currentlyMappable: false,
+        aiDetectable: true,
+        publishableNow: false,
+        shouldBeMappableInSprint05: false,
+        deferredReason: "Field ini tidak ada di template aktif desa ini.",
+        sourceRequirement: detected.sourceRequirement,
+        validationRequirement: detected.validationRequirement,
+        currentValueStatus: "empty",
+        currentValuePreview: "—",
+        uploadedCoverageStatus: "outside_template",
+        uploadedValuePreview: detected.value,
+      });
+    }
+
+    const templateInfo: CoverageTemplateInfo = {
+      templateKey:            resolved.templateKey,
+      templateName:           resolved.templateName,
+      source:                 "db",
+      visibleComponentCount:  resolved.visibleComponents.length,
+      hiddenComponentCount:   resolved.hiddenComponents.length,
+      totalFieldCount:        resolved.visibleComponents.flatMap(c => c.fields).length,
+    };
+
+    return {
+      entries,
+      filledCount:                  entries.filter(e => e.currentValueStatus === "filled").length,
+      emptyCount:                   entries.filter(e => e.currentValueStatus === "empty").length,
+      coveredCount:                 entries.filter(e => e.uploadedCoverageStatus === "covered").length,
+      detectedNotPublishableCount:  entries.filter(e => e.uploadedCoverageStatus === "detected_not_publishable").length,
+      publishableNowCount:          entries.filter(e => e.publishableNow).length,
+      detectedButNotPublishable,
+      unknownUsefulFields,
+      templateInfo,
+    };
   }
 
-  for (const item of localSignals.unknownUsefulFields) {
-    appendUnknownField(unknownUsefulFields, item);
-  }
-  for (const item of input.openaiResult?.unknownUsefulFields ?? []) {
-    appendUnknownField(unknownUsefulFields, item);
-  }
-
-  // Build set of hidden component keys from resolved template
+  // ── Branch B: Fallback — hardcoded DETAIL_FIELD_STANDARDS ────────────────────
   const hiddenComponentKeys = new Set<string>(
-    input.resolvedTemplate?.hiddenComponents.map(c => c.componentKey) ?? []
+    resolved?.hiddenComponents.map(c => c.componentKey) ?? []
   );
   const isSectionHidden = (sectionKey: string) => {
     const componentKeys = SECTION_TO_COMPONENT[sectionKey] ?? [sectionKey];
@@ -647,17 +797,25 @@ export async function buildDetailFieldCoverageSummary(input: {
     };
   });
 
+  const fallbackTemplateInfo: CoverageTemplateInfo = {
+    templateKey:           "DETAIL_FIELD_STANDARDS_FALLBACK",
+    templateName:          "Standar Fallback (DB template belum tersedia)",
+    source:                "fallback",
+    visibleComponentCount: 0,
+    hiddenComponentCount:  0,
+    totalFieldCount:       DETAIL_FIELD_STANDARDS.length,
+  };
+
   return {
     entries,
-    filledCount: entries.filter((entry) => entry.currentValueStatus === "filled").length,
-    emptyCount: entries.filter((entry) => entry.currentValueStatus === "empty").length,
-    coveredCount: entries.filter((entry) => entry.uploadedCoverageStatus === "covered").length,
-    detectedNotPublishableCount: entries.filter(
-      (entry) => entry.uploadedCoverageStatus === "detected_not_publishable",
-    ).length,
-    publishableNowCount: entries.filter((entry) => entry.publishableNow).length,
+    filledCount:                  entries.filter(e => e.currentValueStatus === "filled").length,
+    emptyCount:                   entries.filter(e => e.currentValueStatus === "empty").length,
+    coveredCount:                 entries.filter(e => e.uploadedCoverageStatus === "covered").length,
+    detectedNotPublishableCount:  entries.filter(e => e.uploadedCoverageStatus === "detected_not_publishable").length,
+    publishableNowCount:          entries.filter(e => e.publishableNow).length,
     detectedButNotPublishable,
     unknownUsefulFields,
+    templateInfo: fallbackTemplateInfo,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronRight, Info, RotateCw, Send, Sparkles } from "lucide-react";
 
@@ -89,6 +90,7 @@ function formatSubmissionStatus(status: string) {
 // ============================================================================
 
 export default function IntakeWorkbench() {
+  const router = useRouter();
   const [step, setStep] = useState<IntakeStep>("input");
   const [mode, setMode] = useState<IntakeMode>("upload");
   const [textValue, setTextValue] = useState("");
@@ -209,6 +211,7 @@ export default function IntakeWorkbench() {
       if (data.error) { setError(classifyApiError(data)); return; }
       setSubmittedReview(data);
       void intakeHistory.refetch();
+      router.push(buildQueueFocusHref({ status: "PROCESSING", documentId: data.documentId }));
     } catch {
       setError({ message: "Submit gagal", tone: "danger" });
     } finally {
