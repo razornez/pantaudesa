@@ -472,13 +472,78 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
   const toggle = async (componentId: string, currentlyVisible: boolean) => {
     if (data?.source !== "db") return;
     setToggling(componentId);
+
+    // Optimistic update — move component between visible/hidden immediately
+    const newVisible = !currentlyVisible;
+    setData(prev => {
+      if (!prev) return prev;
+      if (newVisible) {
+        // hidden → visible: remove from hiddenComponents, add to visibleComponents
+        const comp = prev.hiddenComponents.find(c => c.componentId === componentId);
+        if (!comp) return prev;
+        return {
+          ...prev,
+          hiddenComponents: prev.hiddenComponents.filter(c => c.componentId !== componentId),
+          visibleComponents: [...prev.visibleComponents, {
+            componentId: comp.componentId,
+            componentKey: comp.componentKey,
+            label: comp.label,
+            displayOrder: prev.visibleComponents.length + 1,
+            fieldCount: 0,
+          }],
+        };
+      } else {
+        // visible → hidden: remove from visibleComponents, add to hiddenComponents
+        const comp = prev.visibleComponents.find(c => c.componentId === componentId);
+        if (!comp) return prev;
+        return {
+          ...prev,
+          visibleComponents: prev.visibleComponents.filter(c => c.componentId !== componentId),
+          hiddenComponents: [...prev.hiddenComponents, {
+            componentId: comp.componentId,
+            componentKey: comp.componentKey,
+            label: comp.label,
+          }],
+        };
+      }
+    });
+
     try {
       const res = await fetch("/api/internal-admin/village-data/component-visibility", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ desaId, componentId, isVisible: !currentlyVisible }),
+        body: JSON.stringify({ desaId, componentId, isVisible: newVisible }),
       });
-      if (res.ok) load();
+      // Silent background reload to sync actual DB state (no loading spinner)
+      if (res.ok) {
+        fetch(`/api/internal-admin/village-data/field-standards?desaId=${encodeURIComponent(desaId)}`)
+          .then(r => r.json())
+          .then((d: {
+            source: "db" | "fallback";
+            visibleComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number; fields: unknown[] }>;
+            hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string }>;
+          }) => {
+            if (d.source === "db" && d.visibleComponents) {
+              setData(prev => prev ? {
+                ...prev,
+                visibleComponents: d.visibleComponents!.map(c => ({
+                  componentId: c.componentId,
+                  componentKey: c.componentKey,
+                  label: c.label,
+                  displayOrder: c.displayOrder,
+                  fieldCount: Array.isArray(c.fields) ? c.fields.length : 0,
+                })),
+                hiddenComponents: d.hiddenComponents ?? [],
+              } : prev);
+            }
+          })
+          .catch(() => { /* ignore background sync failure */ });
+      } else {
+        // Revert optimistic update on error
+        load();
+      }
+    } catch {
+      load(); // Revert on network error
     } finally {
       setToggling(null);
     }
