@@ -28,7 +28,12 @@ export async function GET(req: NextRequest) {
               displayOrder: c.displayOrder,
               fields:       c.fields,
             })),
-            hiddenComponents: resolved.hiddenComponents,
+            hiddenComponents: resolved.hiddenComponents.map(c => ({
+              componentId:  c.componentId,
+              componentKey: c.componentKey,
+              label:        c.label,
+              displayOrder: c.displayOrder,
+            })),
             totalFields:      resolved.visibleComponents.flatMap(c => c.fields).length,
             publishableCount: resolved.visibleComponents.flatMap(c => c.fields).filter(f => f.isPublishableNow).length,
           });

@@ -36,7 +36,7 @@ export interface ResolvedTemplate {
   /** Components visible for this desa (accounting for visibility overrides) */
   visibleComponents: ResolvedComponent[];
   /** Components that exist in template but are hidden for this desa */
-  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string }>;
+  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number }>;
 }
 
 // ─── Fallback (pre-migration) ─────────────────────────────────────────────────
@@ -171,6 +171,7 @@ export async function resolveDesaTemplate(desaId: string): Promise<ResolvedTempl
           componentId:  comp.id,
           componentKey: comp.componentKey,
           label:        comp.label,
+          displayOrder: comp.displayOrder,
         });
       }
     }

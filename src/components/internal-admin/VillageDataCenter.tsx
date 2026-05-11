@@ -37,7 +37,7 @@ interface DesaComponentData {
   templateName: string;
   source: "db" | "fallback";
   visibleComponents: DesaComponent[];
-  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string }>;
+  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number }>;
   totalFields: number;
   publishableCount: number;
 }
@@ -423,7 +423,7 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
       .then((d: {
         templateKey: string; templateName: string; source: "db" | "fallback";
         visibleComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number; fields: unknown[] }>;
-        hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string }>;
+        hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number }>;
         sections?: Array<{ sectionKey: string; sectionLabel: string; fields: unknown[] }>;
         totalFields: number; publishableCount: number;
       }) => {
@@ -439,7 +439,12 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
               displayOrder: c.displayOrder,
               fieldCount: Array.isArray(c.fields) ? c.fields.length : 0,
             })),
-            hiddenComponents: d.hiddenComponents ?? [],
+            hiddenComponents: (d.hiddenComponents ?? []).map(c => ({
+              componentId: c.componentId,
+              componentKey: c.componentKey,
+              label: c.label,
+              displayOrder: c.displayOrder,
+            })),
             totalFields: d.totalFields,
             publishableCount: d.publishableCount,
           });
@@ -473,12 +478,12 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
     if (data?.source !== "db") return;
     setToggling(componentId);
 
-    // Optimistic update — move component between visible/hidden immediately
+    // Optimistic update — move component between visible/hidden, preserve displayOrder
     const newVisible = !currentlyVisible;
     setData(prev => {
       if (!prev) return prev;
       if (newVisible) {
-        // hidden → visible: remove from hiddenComponents, add to visibleComponents
+        // hidden → visible: restore with original displayOrder
         const comp = prev.hiddenComponents.find(c => c.componentId === componentId);
         if (!comp) return prev;
         return {
@@ -488,12 +493,12 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
             componentId: comp.componentId,
             componentKey: comp.componentKey,
             label: comp.label,
-            displayOrder: prev.visibleComponents.length + 1,
+            displayOrder: comp.displayOrder,
             fieldCount: 0,
           }],
         };
       } else {
-        // visible → hidden: remove from visibleComponents, add to hiddenComponents
+        // visible → hidden: preserve displayOrder so order is stable
         const comp = prev.visibleComponents.find(c => c.componentId === componentId);
         if (!comp) return prev;
         return {
@@ -503,6 +508,7 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
             componentId: comp.componentId,
             componentKey: comp.componentKey,
             label: comp.label,
+            displayOrder: comp.displayOrder,
           }],
         };
       }
@@ -521,7 +527,7 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
           .then((d: {
             source: "db" | "fallback";
             visibleComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number; fields: unknown[] }>;
-            hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string }>;
+            hiddenComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number }>;
           }) => {
             if (d.source === "db" && d.visibleComponents) {
               setData(prev => prev ? {
@@ -533,7 +539,12 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
                   displayOrder: c.displayOrder,
                   fieldCount: Array.isArray(c.fields) ? c.fields.length : 0,
                 })),
-                hiddenComponents: d.hiddenComponents ?? [],
+                hiddenComponents: (d.hiddenComponents ?? []).map(c => ({
+                  componentId: c.componentId,
+                  componentKey: c.componentKey,
+                  label: c.label,
+                  displayOrder: c.displayOrder,
+                })),
               } : prev);
             }
           })
@@ -557,7 +568,7 @@ function ComponentVisibilityPanel({ desaId }: { desaId: string }) {
 
   const allComponents = [
     ...data.visibleComponents.map(c => ({ ...c, isVisible: true })),
-    ...data.hiddenComponents.map(c => ({ componentId: c.componentId, componentKey: c.componentKey, label: c.label, displayOrder: 999, fieldCount: 0, isVisible: false })),
+    ...data.hiddenComponents.map(c => ({ ...c, fieldCount: 0, isVisible: false })),
   ].sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (

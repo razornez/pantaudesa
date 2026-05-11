@@ -68,11 +68,11 @@ export default async function DesaDetailPage({ params }: Props) {
   const voicePreview = voiceSummary.preview;
   const profil       = desa.profil;
 
-  const visibleComponentKeys = new Set(
-    templateData.resolvedTemplate.visibleComponents.map(c => c.componentKey)
+  // Only hide sections explicitly marked hidden — default show everything
+  const hiddenComponentKeys = new Set(
+    templateData.resolvedTemplate.hiddenComponents.map(c => c.componentKey)
   );
-  const isVisible = (componentKey: string) =>
-    visibleComponentKeys.size === 0 || visibleComponentKeys.has(componentKey);
+  const isVisible = (componentKey: string) => !hiddenComponentKeys.has(componentKey);
 
   publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
