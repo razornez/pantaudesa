@@ -146,7 +146,8 @@ export interface PendapatanDesa {
 }
 
 export interface Desa {
-  id: string;
+  id: string;        // slug — used for URLs (/desa/arjasari)
+  prismaId?: string; // actual DB primary key — used for all DB queries (falls back to id for mock data)
   nama: string;
   kecamatan: string;
   kabupaten: string;

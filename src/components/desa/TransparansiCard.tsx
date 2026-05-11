@@ -11,17 +11,18 @@ import PerangkatDesaSection from "./PerangkatDesaSection";
 
 type Tab = "transparansi" | "perangkat" | "dokumen";
 
-export default function TransparansiCard({ desa }: { desa: Desa }) {
+export default function TransparansiCard({ desa, showPerangkat = true }: { desa: Desa; showPerangkat?: boolean }) {
   const [tab, setTab] = useState<Tab>("dokumen");
   const tersediaCount = desa.dokumen?.filter(d => d.tersedia).length ?? 0;
   const totalDok      = desa.dokumen?.length ?? 0;
 
-  const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
+  const allTabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: "dokumen",      label: "Dokumen",       icon: FileText,
       badge: totalDok > 0 ? `${tersediaCount}/${totalDok}` : undefined },
     { id: "transparansi", label: "Transparansi", icon: BarChart3 },
     { id: "perangkat",    label: "Perangkat",    icon: Users2 },
   ];
+  const tabs = allTabs.filter(t => t.id !== "perangkat" || showPerangkat);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -71,7 +72,7 @@ export default function TransparansiCard({ desa }: { desa: Desa }) {
         )}
 
         {/* Perangkat — header teks berwarna, tanpa banner gambar */}
-        {tab === "perangkat" && (
+        {tab === "perangkat" && showPerangkat && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">

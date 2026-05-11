@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
@@ -58,23 +59,17 @@ export default async function DesaDetailPage({ params }: Props) {
 
   const selisih      = desa.totalAnggaran - desa.terealisasi;
 
-  const voiceTimer = perfStart();
-  const [voiceSummary, templateData] = await Promise.all([
-    getVoicePreviewForDesaFromDb(desa.id),
-    getPublishedTemplateData(desa.id),
-  ]);
-  publicPerfLog("public.desa-detail", "getVoicePreviewForDesaFromDb()", voiceTimer);
+  // Use prismaId (actual DB PK) for all DB queries — desa.id is the URL slug
+  const templateData = await getPublishedTemplateData(desa.prismaId ?? desa.id);
+  publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
-  const voicePreview = voiceSummary.preview;
-  const profil       = desa.profil;
+  const profil = desa.profil;
 
   // Only hide sections explicitly marked hidden — default show everything
   const hiddenComponentKeys = new Set(
     templateData.resolvedTemplate.hiddenComponents.map(c => c.componentKey)
   );
   const isVisible = (componentKey: string) => !hiddenComponentKeys.has(componentKey);
-
-  publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
   const budgetItems = [
     { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFullMock(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50"  },
@@ -133,7 +128,7 @@ export default async function DesaDetailPage({ params }: Props) {
 
       {/* ── 1. FIRST VIEW — identity, status, safe framing (DETAIL-HIER-01/06, DETAIL-RISK-01) */}
       <div id="ringkasan">
-        <DesaDetailFirstView desa={desa} />
+        <DesaDetailFirstView desa={desa} hiddenComponentKeys={hiddenComponentKeys} />
       </div>
 
       <DetailSectionNav />
@@ -146,7 +141,7 @@ export default async function DesaDetailPage({ params }: Props) {
           {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
           {isVisible("transparansi") && (
             <div id="dokumen-desa">
-              <TransparansiCard desa={desa} />
+              <TransparansiCard desa={desa} showPerangkat={isVisible("perangkat")} />
             </div>
           )}
         </section>
@@ -178,7 +173,7 @@ export default async function DesaDetailPage({ params }: Props) {
         </div>
 
         {/* Sumber pendapatan — compact horizontal */}
-        {desa.pendapatan && (
+        {isVisible("pendapatan") && desa.pendapatan && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold text-slate-600">Dari mana uang desa ini berasal?</p>
@@ -264,58 +259,75 @@ export default async function DesaDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* ── 11. SUARA WARGA ─────────────────────────────────────────────────── */}
+      {/* ── 11. SUARA WARGA — streamed independently so voice DB query doesn't block page */}
       {isVisible("suara_warga") && (
-        <section id="suara-warga" className="space-y-3">
-          <div className="max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
-            <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
-          </div>
-
-          <Link
-            href={`/desa/${desa.id}/suara`}
-            prefetch={false}
-            className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-            aria-label={`Suara warga untuk ${desa.nama}`}
-          >
-            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
-                  <Megaphone size={15} className="text-white" aria-hidden />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">Suara Warga</p>
-                  <p className="text-[10px] text-indigo-200">
-                    {voiceSummary.total > 0
-                      ? `${voiceSummary.total} cerita dari warga`
-                      : "Jadilah yang pertama bercerita"}
-                  </p>
-                </div>
-              </div>
-              <ArrowRight size={16} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" aria-hidden />
-            </div>
-            {voicePreview.length > 0 && (
-              <div className="bg-white divide-y divide-slate-50">
-                {voicePreview.map((v) => (
-                  <div key={v.id} className="px-4 py-2.5 flex items-start gap-2.5">
-                    <span className="text-sm flex-shrink-0 mt-0.5" aria-hidden>
-                      {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{v.author}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
-              <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
-              <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
-            </div>
-          </Link>
-        </section>
+        <Suspense fallback={
+          <div className="h-28 rounded-2xl bg-slate-100 animate-pulse" aria-hidden />
+        }>
+          <SuaraWargaSection desaId={desa.id} desaPrismaId={desa.prismaId ?? desa.id} desaNama={desa.nama} />
+        </Suspense>
       )}
     </div>
+  );
+}
+
+// ─── Streaming component — fetches voice data independently ──────────────────
+
+async function SuaraWargaSection({
+  desaId, desaPrismaId, desaNama,
+}: { desaId: string; desaPrismaId: string; desaNama: string }) {
+  const voiceSummary = await getVoicePreviewForDesaFromDb(desaPrismaId);
+  const voicePreview = voiceSummary.preview;
+
+  return (
+    <section id="suara-warga" className="space-y-3">
+      <div className="max-w-2xl">
+        <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
+        <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
+      </div>
+
+      <Link
+        href={`/desa/${desaId}/suara`}
+        prefetch={false}
+        className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+        aria-label={`Suara warga untuk ${desaNama}`}
+      >
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <Megaphone size={15} className="text-white" aria-hidden />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Suara Warga</p>
+              <p className="text-[10px] text-indigo-200">
+                {voiceSummary.total > 0
+                  ? `${voiceSummary.total} cerita dari warga`
+                  : "Jadilah yang pertama bercerita"}
+              </p>
+            </div>
+          </div>
+          <ArrowRight size={16} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" aria-hidden />
+        </div>
+        {voicePreview.length > 0 && (
+          <div className="bg-white divide-y divide-slate-50">
+            {voicePreview.map((v) => (
+              <div key={v.id} className="px-4 py-2.5 flex items-start gap-2.5">
+                <span className="text-sm flex-shrink-0 mt-0.5" aria-hidden>
+                  {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{v.author}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
+          <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
+          <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+        </div>
+      </Link>
+    </section>
   );
 }

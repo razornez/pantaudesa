@@ -224,6 +224,7 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
 
   return {
     id: record.slug || record.id,
+    prismaId: record.id,
     nama: record.nama,
     kecamatan: record.kecamatan,
     kabupaten: record.kabupaten,

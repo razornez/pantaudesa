@@ -25,10 +25,9 @@ export interface PublishedTemplateData {
  * and uses DETAIL_FIELD_STANDARDS as the template.
  */
 export async function getPublishedTemplateData(desaId: string): Promise<PublishedTemplateData> {
-  const [resolvedTemplate, publishedValues] = await Promise.all([
-    resolveDesaTemplate(desaId),
-    getPublishedDataDesa(desaId),
-  ]);
-
+  // Resolve template once, then pass it to getPublishedDataDesa to avoid a
+  // redundant second call to resolveDesaTemplate inside getPublishedDataDesa.
+  const resolvedTemplate = await resolveDesaTemplate(desaId);
+  const publishedValues = await getPublishedDataDesa(desaId, resolvedTemplate);
   return { resolvedTemplate, publishedValues };
 }

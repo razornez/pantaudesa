@@ -18,10 +18,16 @@ interface FieldStandard {
   sourceRequirement?: string; validationRequirement?: string; deferredReason?: string | null;
 }
 
+interface DbField {
+  fieldKey: string; label: string; valueType: string;
+  isPublishableNow: boolean; componentKey: string; componentLabel: string;
+}
+
 interface FieldStandardsData {
-  templateKey: string; templateName: string;
+  templateKey: string; templateName: string; source: "db" | "fallback";
   totalFields: number; publishableCount: number; holdCount: number;
-  sections: Array<{ sectionKey: string; sectionLabel: string; fields: FieldStandard[] }>;
+  visibleComponents?: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number; fields: DbField[] }>;
+  sections?: Array<{ sectionKey: string; sectionLabel: string; fields: FieldStandard[] }>;
 }
 
 interface DesaComponent {
@@ -159,7 +165,31 @@ function StandardsTab() {
   useEffect(() => {
     fetch("/api/internal-admin/village-data/field-standards")
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
+      .then((d: FieldStandardsData) => {
+        // Normalize DB visibleComponents → sections shape for unified rendering
+        if (d.source === "db" && d.visibleComponents) {
+          const sections = d.visibleComponents.map(comp => ({
+            sectionKey:   comp.componentKey,
+            sectionLabel: comp.label,
+            fields: comp.fields.map((f): FieldStandard => ({
+              sectionKey:            comp.componentKey,
+              sectionLabel:          comp.label,
+              fieldKey:              f.fieldKey,
+              fieldLabel:            f.label,
+              publishableNow:        f.isPublishableNow,
+              aiDetectable:          true,
+              currentModelSource:    "DataDesa",
+              sourceRequirement:     undefined,
+              validationRequirement: undefined,
+              deferredReason:        f.isPublishableNow ? null : "Belum diaktifkan untuk template ini.",
+            })),
+          }));
+          setData({ ...d, sections, holdCount: d.holdCount ?? (d.totalFields - d.publishableCount) });
+        } else {
+          setData(d);
+        }
+        setLoading(false);
+      })
       .catch(() => { setError("Gagal memuat standar field."); setLoading(false); });
   }, []);
 
@@ -196,7 +226,7 @@ function StandardsTab() {
       </section>
 
       {/* Per-section field cards */}
-      {data.sections.map(section => (
+      {(data.sections ?? []).map(section => (
         <section key={section.sectionKey} className="rounded-3xl bg-white p-6"
           style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
           <div className="flex items-center justify-between mb-4">

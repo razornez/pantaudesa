@@ -13,19 +13,21 @@ import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatus
 
 interface Props {
   desa: Desa;
+  hiddenComponentKeys?: Set<string>;
 }
 
-export default function DesaDetailFirstView({ desa }: Props) {
+export default function DesaDetailFirstView({ desa, hiddenComponentKeys = new Set() }: Props) {
+  const isHidden = (key: string) => hiddenComponentKeys.has(key);
   const profil = desa.profil;
   const availableDocs = desa.dokumen?.filter((doc) => doc.tersedia).length ?? 0;
   const totalDocs = desa.dokumen?.length ?? 0;
   const hasSource = (desa.jumlahSumber ?? 0) > 0 || Boolean(profil?.website);
   const primarySource = desa.sumber?.[0]?.nama ?? profil?.website;
   const overviewItems = [
-    { label: "Penduduk", value: desa.penduduk > 0 ? `${desa.penduduk.toLocaleString("id-ID")} jiwa` : "Belum tercatat", icon: Users2 },
+    ...(!isHidden("demografi") ? [{ label: "Penduduk", value: desa.penduduk > 0 ? `${desa.penduduk.toLocaleString("id-ID")} jiwa` : "Belum tercatat", icon: Users2 }] : []),
     { label: "Sumber", value: `${desa.jumlahSumber ?? 0} sumber`, icon: Globe2 },
     { label: "Dokumen", value: `${desa.jumlahDokumenPendukung ?? totalDocs} dokumen`, icon: FileText },
-    { label: "Kategori", value: desa.kategori, icon: Layers3 },
+    ...(!isHidden("identitas") ? [{ label: "Kategori", value: desa.kategori, icon: Layers3 }] : []),
   ];
 
   const quickFacts = [
@@ -52,6 +54,7 @@ export default function DesaDetailFirstView({ desa }: Props) {
 
   return (
     <section className="space-y-4">
+      {!isHidden("identitas") && (
       <div className="overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/35 to-sky-50 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="p-6 sm:p-7">
@@ -139,6 +142,7 @@ export default function DesaDetailFirstView({ desa }: Props) {
           </div>
         </div>
       </div>
+      )}
 
       <div id="status-data" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
         <div className="flex items-start gap-3">

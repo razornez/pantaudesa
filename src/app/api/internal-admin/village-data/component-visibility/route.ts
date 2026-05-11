@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { handleApiError } from "@/lib/api-error";
 import { db } from "@/lib/db";
+import { invalidateTemplateCache } from "@/lib/village-data/template-resolver";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,8 +21,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const component = await (db as any).villageDetailComponent?.findUnique({
+      const component = await db.villageDetailComponent.findUnique({
         where: { id: componentId },
         select: { id: true, templateId: true },
       });
@@ -33,8 +33,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const row = await (db as any).desaDetailComponentVisibility?.upsert({
+      const row = await db.desaDetailComponentVisibility.upsert({
         where: { desaId_componentId: { desaId, componentId } },
         create: {
           desaId,
@@ -50,6 +49,7 @@ export async function POST(req: NextRequest) {
         select: { desaId: true, componentId: true, isVisible: true },
       });
 
+      invalidateTemplateCache(desaId);
       return NextResponse.json({ ok: true, visibility: row });
     } catch {
       // Tables don't exist yet (pre-migration)

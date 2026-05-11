@@ -10,6 +10,27 @@
 import { db } from "@/lib/db";
 import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME, DETAIL_FIELD_STANDARDS } from "@/lib/village-data/template-constants";
 
+// ─── Module-level cache + deduplication (60s TTL) ────────────────────────────
+// Cache survives across requests in the same Node.js process.
+// Deduplication map ensures concurrent requests for the same desaId share one
+// DB round trip instead of each firing their own (e.g. React StrictMode in dev).
+const _templateCache = new Map<string, { data: ResolvedTemplate; ts: number }>();
+const _inflight = new Map<string, Promise<ResolvedTemplate>>();
+const TEMPLATE_CACHE_TTL_MS = 60_000;
+
+function fromTemplateCache(key: string): ResolvedTemplate | null {
+  const hit = _templateCache.get(key);
+  return hit && Date.now() - hit.ts < TEMPLATE_CACHE_TTL_MS ? hit.data : null;
+}
+function toTemplateCache(key: string, data: ResolvedTemplate) {
+  _templateCache.set(key, { data, ts: Date.now() });
+}
+/** Call after toggling component visibility so the cache reflects the change immediately. */
+export function invalidateTemplateCache(desaId: string) {
+  _templateCache.delete(desaId);
+  _inflight.delete(desaId);
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ResolvedComponent {
@@ -81,61 +102,79 @@ function buildFallbackTemplate(): ResolvedTemplate {
  * Resolve the full template for a desa, including component visibility overrides.
  * Falls back to DETAIL_FIELD_STANDARDS constants if DB tables don't exist yet.
  */
-export async function resolveDesaTemplate(desaId: string): Promise<ResolvedTemplate> {
+export function resolveDesaTemplate(desaId: string): Promise<ResolvedTemplate> {
+  const cached = fromTemplateCache(desaId);
+  if (cached) return Promise.resolve(cached);
+
+  // Deduplicate: if a request is already in-flight for this desaId, reuse it.
+  const inflight = _inflight.get(desaId);
+  if (inflight) return inflight;
+
+  const promise = _resolveDesaTemplateFromDB(desaId).then(result => {
+    toTemplateCache(desaId, result);
+    _inflight.delete(desaId);
+    return result;
+  }).catch(e => {
+    _inflight.delete(desaId);
+    throw e;
+  });
+  _inflight.set(desaId, promise);
+  return promise;
+}
+
+async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTemplate> {
   if (!db) return buildFallbackTemplate();
 
   try {
-    // 1. Find template assignment for this desa
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const assignment = await (db as any).desaDetailTemplateAssignment?.findUnique({
-      where: { desaId },
-      select: {
-        templateId: true,
-        template: {
-          select: {
-            id: true,
-            key: true,
-            name: true,
-            components: {
-              where: { status: "ACTIVE" },
-              orderBy: { displayOrder: "asc" },
-              select: {
-                id: true,
-                componentKey: true,
-                label: true,
-                isDefaultVisible: true,
-                displayOrder: true,
-                fieldStandards: {
-                  where: { status: "ACTIVE" },
-                  orderBy: { displayOrder: "asc" },
-                  select: {
-                    fieldKey: true,
-                    label: true,
-                    valueType: true,
-                    isPublishableNow: true,
+    // Run both queries in parallel — visibility overrides don't depend on assignment
+    const [assignment, overrides] = await Promise.all([
+      db.desaDetailTemplateAssignment.findUnique({
+        where: { desaId },
+        select: {
+          templateId: true,
+          template: {
+            select: {
+              id: true,
+              key: true,
+              name: true,
+              components: {
+                where: { status: "ACTIVE" },
+                orderBy: { displayOrder: "asc" },
+                select: {
+                  id: true,
+                  componentKey: true,
+                  label: true,
+                  isDefaultVisible: true,
+                  displayOrder: true,
+                  fieldStandards: {
+                    where: { status: "ACTIVE" },
+                    orderBy: { displayOrder: "asc" },
+                    select: {
+                      fieldKey: true,
+                      label: true,
+                      valueType: true,
+                      isPublishableNow: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+      db.desaDetailComponentVisibility.findMany({
+        where: { desaId },
+        select: { componentId: true, isVisible: true },
+      }),
+    ]);
 
-    // If table doesn't exist or no assignment found, use fallback
+    // If no assignment found, use fallback
     if (!assignment?.template) return buildFallbackTemplate();
 
     const template = assignment.template;
 
-    // 2. Get visibility overrides for this desa
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const overrides = await (db as any).desaDetailComponentVisibility?.findMany({
-      where: { desaId },
-      select: { componentId: true, isVisible: true },
-    }) ?? [];
-
     const overrideMap = new Map<string, boolean>(
-      overrides.map((o: { componentId: string; isVisible: boolean }) => [o.componentId, o.isVisible])
+      overrides.map(o => [o.componentId, o.isVisible])
     );
 
     // 3. Separate visible and hidden components
@@ -183,8 +222,10 @@ export async function resolveDesaTemplate(desaId: string): Promise<ResolvedTempl
       visibleComponents,
       hiddenComponents,
     };
-  } catch {
-    // Tables don't exist yet (pre-migration) — use fallback
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[template-resolver] error for", desaId, e);
+    }
     return buildFallbackTemplate();
   }
 }
@@ -210,21 +251,23 @@ export async function isComponentVisibleForDesa(desaId: string, componentKey: st
 }
 
 /**
- * Get published DataDesa values for a desa (PUBLISHED + visible components only).
- * Used by public detail page for hybrid data merge.
+ * Get published DataDesa values for a desa given an already-resolved template.
+ * Accepts pre-resolved template to avoid a redundant resolveDesaTemplate call.
  */
-export async function getPublishedDataDesa(desaId: string): Promise<Record<string, unknown>> {
+export async function getPublishedDataDesa(
+  desaId: string,
+  resolved: ResolvedTemplate,
+): Promise<Record<string, unknown>> {
   if (!db) return {};
 
   try {
-    const resolved = await resolveDesaTemplate(desaId);
-    const visibleComponentIds = resolved.visibleComponents.map(c => c.componentId)
+    const visibleComponentIds = resolved.visibleComponents
+      .map(c => c.componentId)
       .filter(id => !id.startsWith("fallback-"));
 
     if (visibleComponentIds.length === 0) return {};
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = await (db as any).dataDesa?.findMany({
+    const rows = await db.dataDesa.findMany({
       where: {
         desaId,
         status: "PUBLISHED",
@@ -232,7 +275,7 @@ export async function getPublishedDataDesa(desaId: string): Promise<Record<strin
         componentId: { in: visibleComponentIds },
       },
       select: { fieldKey: true, valueJson: true, valueText: true },
-    }) ?? [];
+    });
 
     const result: Record<string, unknown> = {};
     for (const row of rows) {
