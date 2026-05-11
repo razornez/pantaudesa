@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
             templateName: resolved.templateName,
             source: "db",
             visibleComponents: resolved.visibleComponents.map(c => ({
+              componentId:  c.componentId,
               componentKey: c.componentKey,
               label:        c.label,
               displayOrder: c.displayOrder,
