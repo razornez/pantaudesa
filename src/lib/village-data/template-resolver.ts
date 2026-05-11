@@ -250,22 +250,31 @@ export async function isComponentVisibleForDesa(desaId: string, componentKey: st
   return resolved.visibleComponents.some(c => c.componentKey === componentKey);
 }
 
+export interface ComponentSource {
+  documentTitle: string | null;
+  publishedAt: string | null;
+}
+
 /**
  * Get published DataDesa values for a desa given an already-resolved template.
- * Accepts pre-resolved template to avoid a redundant resolveDesaTemplate call.
+ * Also returns per-component source info for public attribution.
+ * Only PUBLISHED + isActive=true rows from VISIBLE components are returned.
  */
 export async function getPublishedDataDesa(
   desaId: string,
   resolved: ResolvedTemplate,
-): Promise<Record<string, unknown>> {
-  if (!db) return {};
+): Promise<{ publishedValues: Record<string, unknown>; componentSources: Record<string, ComponentSource> }> {
+  if (!db) return { publishedValues: {}, componentSources: {} };
 
   try {
-    const visibleComponentIds = resolved.visibleComponents
-      .map(c => c.componentId)
-      .filter(id => !id.startsWith("fallback-"));
+    const componentIdToKey = new Map(
+      resolved.visibleComponents
+        .filter(c => !c.componentId.startsWith("fallback-"))
+        .map(c => [c.componentId, c.componentKey])
+    );
 
-    if (visibleComponentIds.length === 0) return {};
+    const visibleComponentIds = [...componentIdToKey.keys()];
+    if (visibleComponentIds.length === 0) return { publishedValues: {}, componentSources: {} };
 
     const rows = await db.dataDesa.findMany({
       where: {
@@ -274,15 +283,42 @@ export async function getPublishedDataDesa(
         isActive: true,
         componentId: { in: visibleComponentIds },
       },
-      select: { fieldKey: true, valueJson: true, valueText: true },
+      select: { fieldKey: true, valueJson: true, valueText: true, componentId: true, sourceId: true, publishedAt: true },
+      orderBy: { publishedAt: "desc" },
     });
 
-    const result: Record<string, unknown> = {};
-    for (const row of rows) {
-      result[row.fieldKey] = row.valueJson ?? row.valueText;
+    // Collect unique source document IDs for title lookup
+    const sourceIds = [...new Set(
+      rows.map(r => r.sourceId).filter((id): id is string => typeof id === "string" && id.startsWith("intake_"))
+    )];
+
+    const docTitleMap = new Map<string, string>();
+    if (sourceIds.length > 0) {
+      const docs = await db.adminDesaDocument.findMany({
+        where: { id: { in: sourceIds } },
+        select: { id: true, title: true },
+      });
+      for (const doc of docs) docTitleMap.set(doc.id, doc.title);
     }
-    return result;
+
+    const publishedValues: Record<string, unknown> = {};
+    // componentSources: one source per componentKey (most recently published)
+    const componentSources: Record<string, ComponentSource> = {};
+
+    for (const row of rows) {
+      publishedValues[row.fieldKey] = row.valueJson ?? row.valueText;
+
+      const componentKey = componentIdToKey.get(row.componentId);
+      if (componentKey && !componentSources[componentKey]) {
+        componentSources[componentKey] = {
+          documentTitle: row.sourceId ? (docTitleMap.get(row.sourceId) ?? null) : null,
+          publishedAt: row.publishedAt?.toISOString() ?? null,
+        };
+      }
+    }
+
+    return { publishedValues, componentSources };
   } catch {
-    return {};
+    return { publishedValues: {}, componentSources: {} };
   }
 }

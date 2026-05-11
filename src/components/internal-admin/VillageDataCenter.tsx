@@ -5,12 +5,13 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   BookOpen, Database, Clock, ChevronRight, ExternalLink,
   CheckCircle2, Clock3, AlertCircle, LayoutGrid, Eye, EyeOff,
+  XCircle, Inbox, ChevronDown, Info,
 } from "lucide-react";
 import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME } from "@/lib/village-data/template-constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "standards" | "desa-data" | "versions";
+type Tab = "standards" | "desa-data" | "versions" | "review";
 
 interface FieldStandard {
   sectionKey: string; sectionLabel: string; fieldKey: string; fieldLabel: string;
@@ -69,6 +70,16 @@ interface AuditRow {
   desa: { nama: string };
 }
 
+interface DataDesaRowData {
+  id: string; desaId: string; desaNama: string | null;
+  templateId: string; componentId: string;
+  componentKey: string | null; componentLabel: string | null;
+  fieldKey: string; valueText: string | null; valueJson: unknown;
+  sourceId: string | null; sourceTitle: string | null;
+  status: string; isActive: boolean;
+  publishedAt: string | null; createdAt: string; updatedAt: string;
+}
+
 // ─── VillageDataCenter ────────────────────────────────────────────────────────
 
 export function VillageDataCenter({ initialTab }: { initialTab: Tab }) {
@@ -119,20 +130,123 @@ export function VillageDataCenter({ initialTab }: { initialTab: Tab }) {
           </p>
         </div>
 
+        {/* Quick guide */}
+        <QuickGuide />
+
         {/* Tab bar */}
         <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-50 w-fit"
           style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06)" }}>
           <TabButton tab="standards" active={activeTab} icon={<BookOpen size={13} />} label="Standar Detail" onClick={switchTab} />
           <TabButton tab="desa-data" active={activeTab} icon={<LayoutGrid size={13} />} label="Data per Desa" onClick={switchTab} />
           <TabButton tab="versions" active={activeTab} icon={<Clock size={13} />} label="Versi & Audit" onClick={switchTab} />
+          <TabButton tab="review" active={activeTab} icon={<Inbox size={13} />} label="Review Data" onClick={switchTab} />
         </div>
 
         {/* Tab content */}
         {activeTab === "standards" && <StandardsTab />}
         {activeTab === "desa-data" && <DesaDataTab />}
         {activeTab === "versions" && <VersionsTab />}
+        {activeTab === "review" && <DataDesaReviewTab />}
       </div>
     </>
+  );
+}
+
+// ─── QuickGuide ───────────────────────────────────────────────────────────────
+
+const FLOW_STEPS = [
+  {
+    num: "1",
+    color: "bg-indigo-100 text-indigo-800",
+    title: "Upload dokumen resmi",
+    lines: [
+      "Buka Intake Workbench. Upload dokumen resmi (APBDes, profil desa, dll) atau tempel teks dari sumber terpercaya.",
+      "Dokumen yang diupload menjadi sumber data — harus berasal dari sumber resmi (pemda, SIPD, website desa resmi).",
+    ],
+  },
+  {
+    num: "2",
+    color: "bg-amber-100 text-amber-800",
+    title: "Review data",
+    lines: [
+      "Buka tab Review Data. Semua data dari intake dan input manual muncul di sini dengan status menunggu.",
+      "Periksa nilai setiap field. Klik Terbitkan untuk menyetujui, atau Tolak jika salah.",
+    ],
+  },
+  {
+    num: "3",
+    color: "bg-emerald-100 text-emerald-800",
+    title: "Data diterbitkan",
+    lines: [
+      "Data yang disetujui langsung aktif. Cache halaman publik di-refresh otomatis.",
+      "Data yang ditolak tidak pernah tampil — bisa diinput ulang dengan nilai yang benar.",
+    ],
+  },
+  {
+    num: "4",
+    color: "bg-violet-100 text-violet-800",
+    title: "Tampil di halaman publik",
+    lines: [
+      "Buka /desa/[nama-desa] di browser. Bagian Kelengkapan Desa (Aset, Fasilitas, BUMDes, dsb) akan menampilkan nilai yang sudah diterbitkan.",
+      "Desa tanpa data tetap tampil normal — menggunakan template default, tidak rusak.",
+    ],
+  },
+] as const;
+
+function QuickGuide() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.10), 0 1px 3px rgba(15,23,42,0.04)" }}>
+      {/* Toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50/70 hover:bg-indigo-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Info size={13} className="text-indigo-500 flex-shrink-0" aria-hidden />
+          <span className="text-[12.5px] font-semibold text-indigo-900">Cara pakai sistem data desa</span>
+          <span className="hidden sm:inline text-[11px] text-indigo-400">— dari input sampai tampil di halaman publik</span>
+        </div>
+        <ChevronDown
+          size={14}
+          className={`text-indigo-400 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
+
+      {/* Content */}
+      {open && (
+        <div className="px-4 py-4 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {FLOW_STEPS.map((step) => (
+              <div key={step.num} className="rounded-xl p-3.5 bg-slate-50/80"
+                style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.05)" }}>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black flex-shrink-0 ${step.color}`}>
+                    {step.num}
+                  </span>
+                  <p className="text-[12px] font-semibold text-slate-900">{step.title}</p>
+                </div>
+                <ul className="space-y-1.5">
+                  {step.lines.map((line, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-slate-300 text-[10px] mt-0.5 flex-shrink-0">›</span>
+                      <p className="text-[11.5px] text-slate-600 leading-relaxed">{line}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] text-slate-400 border-t border-slate-100 pt-3">
+            <span className="font-semibold text-slate-500">Aturan penting:</span> Data hanya bisa masuk dari dokumen resmi yang di-upload di Intake. Tidak ada jalur input manual — setiap nilai yang diterbitkan harus bisa dilacak ke sumber dokumennya.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -379,6 +493,14 @@ function DesaDataTab() {
                   {/* Expanded detail */}
                   {isExpanded && (
                     <div className="px-4 sm:px-6 pb-4 pt-1 bg-indigo-50/20 border-t border-indigo-100/60 space-y-4">
+                      {/* Context hint */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <Info size={11} className="text-indigo-300 flex-shrink-0" aria-hidden />
+                        <p className="text-[11px] text-indigo-600/70">
+                          Atur komponen yang tampil di halaman publik dan lihat data yang sudah diterbitkan. Input data dilakukan di <a href="/internal-admin/intake" className="font-semibold underline">Intake Workbench</a>.
+                        </p>
+                      </div>
+
                       {/* Field values */}
                       <div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
@@ -406,6 +528,7 @@ function DesaDataTab() {
 
                       {/* Component visibility panel */}
                       <ComponentVisibilityPanel desaId={d.id} />
+
                     </div>
                   )}
                 </div>
@@ -783,6 +906,169 @@ function VersionsTab() {
     </div>
   );
 }
+
+// ─── Tab 4: Review Data ───────────────────────────────────────────────────────
+
+function DataDesaReviewTab() {
+  const [rows, setRows] = useState<DataDesaRowData[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch("/api/internal-admin/village-data/data-desa-rows?status=IN_REVIEW&pageSize=50")
+      .then(r => r.json())
+      .then((d: { rows: DataDesaRowData[]; total: number }) => {
+        setRows(d.rows ?? []);
+        setTotal(d.total ?? 0);
+        setLoading(false);
+      })
+      .catch(() => { setError("Gagal memuat data pending review."); setLoading(false); });
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [load]);
+
+  const act = async (id: string, action: "publish" | "reject") => {
+    setActing(id);
+    try {
+      const res = await fetch("/api/internal-admin/village-data/data-desa-rows", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      if (res.ok) {
+        setRows(prev => prev.filter(r => r.id !== id));
+        setTotal(prev => Math.max(0, prev - 1));
+      }
+    } catch { /* ignore */ }
+    setActing(null);
+  };
+
+  if (error) return <ErrorNotice message={error} />;
+
+  // Group rows by desa
+  const grouped = rows.reduce<Record<string, { desaNama: string; rows: DataDesaRowData[] }>>((acc, row) => {
+    const key = row.desaId;
+    if (!acc[key]) acc[key] = { desaNama: row.desaNama ?? row.desaId, rows: [] };
+    acc[key].rows.push(row);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <section className="rounded-3xl bg-white p-6"
+        style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow text-amber-700 mb-1.5">Perlu tindakan</p>
+            <h2 className="text-[18px] font-semibold text-slate-900 leading-tight">Review Data Desa</h2>
+            <p className="text-[12px] text-slate-500 mt-1">Data dari intake dan input manual yang menunggu persetujuan sebelum diterbitkan.</p>
+          </div>
+          {!loading && (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold ${
+              total > 0 ? "bg-amber-50 text-amber-900 shadow-[inset_0_0_0_1px_rgba(146,64,14,0.14)]"
+                        : "bg-emerald-50 text-emerald-900 shadow-[inset_0_0_0_1px_rgba(5,95,70,0.12)]"
+            }`}>
+              {total > 0 ? <Clock3 size={11} aria-hidden /> : <CheckCircle2 size={11} aria-hidden />}
+              {total > 0 ? `${total} menunggu review` : "Semua sudah direview"}
+            </span>
+          )}
+        </div>
+        {/* Contextual help */}
+        <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">A</span>
+            <p className="text-[11.5px] text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-800">Dari mana data ini?</span> Dari Intake Workbench (upload dokumen) atau Input Data Manual di tab Data per Desa.
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">B</span>
+            <p className="text-[11.5px] text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-800">Terbitkan</span> = nilai langsung aktif di halaman publik desa. Tidak bisa dibatalkan — hanya bisa diganti dengan nilai baru.
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">C</span>
+            <p className="text-[11.5px] text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-800">Tolak</span> = data dihapus dari antrian, tidak pernah tampil publik. Bisa diinput ulang dengan nilai yang benar.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Content */}
+      {loading ? (
+        <SkeletonCards count={3} />
+      ) : rows.length === 0 ? (
+        <EmptyState icon={<CheckCircle2 size={20} className="text-emerald-400" />}
+          title="Tidak ada data pending review"
+          note="Data baru dari intake atau input manual akan muncul di sini setelah disubmit." />
+      ) : (
+        Object.entries(grouped).map(([desaId, group]) => (
+          <section key={desaId} className="rounded-3xl bg-white overflow-hidden"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)" }}>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="eyebrow mb-0.5">{group.desaNama}</p>
+                <p className="text-[11px] text-slate-400 font-mono">{desaId}</p>
+              </div>
+              <span className="pill-warn text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                {group.rows.length} pending
+              </span>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {group.rows.map(row => (
+                <div key={row.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10.5px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg"
+                        style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.12)" }}>
+                        {row.componentLabel ?? row.componentKey ?? row.componentId}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">{row.fieldKey}</span>
+                    </div>
+                    <p className="text-[13px] font-medium text-slate-900 truncate">
+                      {row.valueText ?? <span className="text-slate-400 italic">— kosong</span>}
+                    </p>
+                    {(row.sourceTitle || row.sourceId) && (
+                      <p className="text-[10.5px] text-slate-400 mt-0.5 flex items-center gap-1">
+                        <span className="text-[9px] uppercase tracking-widest font-bold text-slate-300">Sumber</span>
+                        <span className="truncate">{row.sourceTitle ?? (row.sourceId?.startsWith("intake_") ? "Intake workbench" : row.sourceId)}</span>
+                      </p>
+                    )}
+                    <p className="text-[10px] text-slate-400 tabular-nums mt-0.5">
+                      {new Date(row.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" disabled={acting === row.id}
+                      onClick={() => void act(row.id, "publish")}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-semibold btn-lux-success disabled:opacity-40">
+                      <CheckCircle2 size={12} aria-hidden />
+                      {acting === row.id ? "..." : "Terbitkan"}
+                    </button>
+                    <button type="button" disabled={acting === row.id}
+                      onClick={() => void act(row.id, "reject")}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-semibold btn-lux-danger disabled:opacity-40">
+                      <XCircle size={12} aria-hidden />
+                      Tolak
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
 
 // ─── Shared micro-components ──────────────────────────────────────────────────
 

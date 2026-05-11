@@ -215,7 +215,13 @@ export default async function DesaDetailPage({ params }: Props) {
       )}
 
       {/* ── 6. KELENGKAPAN DESA — secondary context before citizen guidance */}
-      {isVisible("profil_desa") && profil && <KelengkapanDesa profil={profil} />}
+      {isVisible("profil_desa") && profil && (
+        <KelengkapanDesa
+          profil={profil}
+          publishedValues={templateData.publishedValues}
+          componentSources={templateData.componentSources}
+        />
+      )}
 
       {/* ── 7. PANDUAN WARGA — connected citizen journey */}
       {isVisible("panduan_warga") && (

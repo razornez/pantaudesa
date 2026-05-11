@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         if (resolved.templateId !== "fallback") {
           const allFields = resolved.visibleComponents.flatMap(c => c.fields);
           return NextResponse.json({
+            templateId:   resolved.templateId,
             templateKey:  resolved.templateKey,
             templateName: resolved.templateName,
             source: "db",

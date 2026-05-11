@@ -204,7 +204,7 @@ export function getVoiceStatsFromVoices(voices: CitizenVoice[]) {
   const avgResolutionDays = resolvedWithDate.length
     ? Math.round(
         resolvedWithDate.reduce((acc, voice) => {
-          return acc + (voice.resolvedAt!.getTime() - voice.createdAt.getTime()) / 86_400_000;
+          return acc + (new Date(voice.resolvedAt as string | Date).getTime() - voice.createdAt.getTime()) / 86_400_000;
         }, 0) / resolvedWithDate.length
       )
     : null;

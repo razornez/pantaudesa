@@ -19,8 +19,10 @@ import {
 } from "@/lib/storage/supabase-storage";
 import {
   syncReviewReadyVillageVersion,
+  writeDataDesaFromIntake,
   writeDesaDataAuditEvent,
 } from "@/lib/versioning/village-data-persistence";
+import { resolveDesaTemplate } from "@/lib/village-data/template-resolver";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TITLE_LENGTH = 200;
@@ -373,6 +375,28 @@ export async function POST(req: NextRequest) {
             createdByUserId: session.userId,
           })
         : { persisted: false as const };
+
+      // Write detected non-AI_MAPPABLE fields to DataDesa as IN_REVIEW
+      if (pipeline.fieldCoverage) {
+        const detectedFields = pipeline.fieldCoverage.detectedButNotPublishable.map(f => ({
+          fieldKey: f.fieldKey,
+          value: f.value,
+        }));
+        if (detectedFields.length > 0) {
+          try {
+            const resolved = await resolveDesaTemplate(parsed.desaId);
+            await writeDataDesaFromIntake({
+              desaId: parsed.desaId,
+              sourceDocumentId: document.id,
+              detectedFields,
+              resolvedTemplate: resolved,
+            });
+          } catch (err) {
+            // Non-fatal — intake document is already saved
+            console.error("[intake] DataDesa write failed", err);
+          }
+        }
+      }
 
       await writeAuditEvent({
         eventType: AUDIT_EVENT.INTERNAL_INTAKE_SUBMITTED,

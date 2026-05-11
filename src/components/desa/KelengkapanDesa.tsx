@@ -10,6 +10,16 @@ import {
 import { ProfilDesa, AsetDesa, FasilitasDesa, LembagaDesa } from "@/lib/types";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
+import type { ComponentSource } from "@/lib/data/village-template-read";
+
+function safeParse<T>(val: unknown): T | null {
+  if (val === null || val === undefined || val === "") return null;
+  if (typeof val === "object") return val as T;
+  if (typeof val === "string") {
+    try { return JSON.parse(val) as T; } catch { return null; }
+  }
+  return null;
+}
 
 type Tab = "aset" | "fasilitas" | "lembaga" | "bumdes";
 
@@ -384,12 +394,31 @@ function BumdesTab({ bumdes }: { bumdes: NonNullable<ProfilDesa["bumdes"]> }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
+export default function KelengkapanDesa({
+  profil,
+  publishedValues = {},
+  componentSources = {},
+}: {
+  profil: ProfilDesa;
+  publishedValues?: Record<string, unknown>;
+  componentSources?: Record<string, ComponentSource>;
+}) {
   const [tab, setTab] = useState<Tab>("aset");
+
+  // Merge: publishedValues take precedence over profil when present and valid
+  const aset       = safeParse<AsetDesa[]>(publishedValues.asetDesa)       ?? profil.aset;
+  const fasilitas  = safeParse<FasilitasDesa[]>(publishedValues.fasilitasUmum) ?? profil.fasilitas;
+  const lembaga    = safeParse<LembagaDesa[]>(publishedValues.lembagaDesa)  ?? profil.lembaga;
+  const bumdes     = safeParse<ProfilDesa["bumdes"]>(publishedValues.bumdes) ?? profil.bumdes;
+  const potensiUnggulan = typeof publishedValues.potensiUnggulan === "string"
+    ? publishedValues.potensiUnggulan
+    : (profil.potensiUnggulan ?? null);
+
+  const hasPublished = Object.keys(publishedValues).length > 0;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      {/* Header — clean dark, no image */}
+      {/* Header */}
       <div className="bg-slate-800 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -398,9 +427,12 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
           <div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelengkapan Desa</p>
             <h2 className="text-sm font-black text-white leading-tight">Aset, Fasilitas &amp; Organisasi Masyarakat</h2>
+            {potensiUnggulan && (
+              <p className="text-[11px] text-emerald-300 mt-0.5 leading-snug">✦ {potensiUnggulan}</p>
+            )}
           </div>
         </div>
-        <DataStatusBadge status="demo" size="xs" className="self-start" />
+        <DataStatusBadge status={hasPublished ? "verified" : "demo"} size="xs" className="self-start" />
       </div>
 
       {/* Tabs */}
@@ -423,13 +455,33 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
 
       {/* Content */}
       <div className="p-4 sm:p-5">
-        {tab === "aset"      && <AsetTab      aset={profil.aset} />}
-        {tab === "fasilitas" && <FasilitasTab  fasilitas={profil.fasilitas} />}
-        {tab === "lembaga"   && <LembagaTab    lembaga={profil.lembaga} />}
-        {tab === "bumdes"    && (profil.bumdes
-          ? <BumdesTab bumdes={profil.bumdes} />
+        {tab === "aset"      && <AsetTab      aset={aset} />}
+        {tab === "fasilitas" && <FasilitasTab  fasilitas={fasilitas} />}
+        {tab === "lembaga"   && <LembagaTab    lembaga={lembaga} />}
+        {tab === "bumdes"    && (bumdes
+          ? <BumdesTab bumdes={bumdes} />
           : <p className="py-8 text-center text-slate-400 text-sm">BUMDes belum terbentuk.</p>
         )}
+
+        {/* Source attribution — shown when data comes from a published DataDesa row */}
+        {(() => {
+          const componentKey = tab === "fasilitas" ? "profil_desa"
+            : tab === "lembaga" ? "profil_desa"
+            : tab === "bumdes"  ? "profil_desa"
+            : "profil_desa"; // aset
+          const src = componentSources[componentKey];
+          if (!src?.documentTitle) return null;
+          const date = src.publishedAt
+            ? new Date(src.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+            : null;
+          return (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1.5">
+              <span className="text-[9px] uppercase tracking-widest font-bold text-slate-300">Sumber</span>
+              <span className="text-[11px] text-slate-400 truncate">{src.documentTitle}</span>
+              {date && <span className="text-[10px] text-slate-300 flex-shrink-0">· {date}</span>}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
