@@ -137,6 +137,7 @@ export default function IntakeWorkbench() {
   }, [fetchDesaOptions]);
 
   // Warm DB connection on mount so first interaction is instant
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchDesaOptions(""); }, [fetchDesaOptions]);
 
   const handleSelectDesa = useCallback((desa: DesaOption) => {

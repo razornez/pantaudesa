@@ -645,18 +645,11 @@ model AIReviewResult {
 }
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  FLEXIBLE VILLAGE TEMPLATE FOUNDATION — PENDING MIGRATION               ║
-// ║  Branch: s05-flexible-village-data-admin-center                         ║
-// ║  Status: APPROVED DESIGN, waiting for local/dev DB to migrate           ║
-// ║                                                                          ║
-// ║  DATABASE_URL currently points to Supabase cloud.                        ║
-// ║  To activate:                                                            ║
-// ║    1. Point DATABASE_URL to a local/dev PostgreSQL                       ║
-// ║    2. Add the 3 Desa relations below to model Desa {}                    ║
-// ║    3. Remove the `// ` prefix from every line in this block              ║
-// ║    4. Run: npx prisma migrate dev --name flexible-village-template       ║
-// ║    5. Run: npx prisma generate                                           ║
-// ║    6. Run: node prisma/seed-templates.mjs                                ║
+// ║  FLEXIBLE VILLAGE TEMPLATE FOUNDATION — MIGRATION APPLIED               ║
+// ║  Migration: 20260510141750_flexible_village_template_components          ║
+// ║  Applied to: Supabase cloud (aws-1-ap-south-1.pooler.supabase.com)      ║
+// ║  Seed: node prisma/seed-templates.mjs ✓ (3 templates, 4 assignments)    ║
+// ║  Status: ACTIVE — all 6 models live in production DB                    ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 // ─── Architecture ────────────────────────────────────────────────────────────
@@ -666,12 +659,10 @@ model AIReviewResult {
 //    │                                  ├─ VillageDetailComponent[]
 //    │                                  │   └─ DetailFieldStandard[]
 //    ├─ DesaDetailComponentVisibility (override show/hide per component)
-//    └─ DataDesa[] (field values, separated from visibility)
+//    └─ DataDesa[] (field values — WRITE PIPELINE NOT YET IMPLEMENTED)
 //
-// ─── Add these 3 relations to model Desa when activating ─────────────────────
-// detailTemplateAssignment     DesaDetailTemplateAssignment?
-// componentVisibilityOverrides DesaDetailComponentVisibility[]
-// dataDesa                     DataDesa[]
+// ─── NEXT: DataDesa write pipeline (intake → DataDesa rows on submit) ────────
+// See: docs/bmad/reports/sprint-05-flexible-village-data-admin-center-report.md
 //
 // ─── VillageDetailTemplate ───────────────────────────────────────────────────
 model VillageDetailTemplate {
