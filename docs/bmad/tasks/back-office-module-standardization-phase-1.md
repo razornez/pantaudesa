@@ -7,7 +7,7 @@ PLANNED - execute before new dashboard/public filter enhancements.
 
 Clean up and standardize the current back-office modules before adding more features.
 
-This task focuses on structure, maintainability, performance, and consistency for back-office pages first.
+This task focuses on code structure, maintainability, performance, type safety, and module boundaries.
 
 ## Owner Direction
 
@@ -20,11 +20,13 @@ commit 9f1776b6d62481d70d8d22bf3dcc47e901524c58
 docs/bmad/standards/nextjs-engineering-standard.md
 ```
 
-Also follow existing back-office UI standard:
+Important owner clarification:
 
 ```text
-docs/bmad/standards/back-office-ui-design-guidelines.md
+Do not change UI design in this task.
 ```
+
+This is not a visual redesign task. Preserve current UI behavior and appearance as much as possible.
 
 Going forward, every development task must check BMAD standards first before coding.
 
@@ -54,7 +56,7 @@ Step 1 - Audit and report module problems
 Step 2 - Extract types/constants/copy
 Step 3 - Extract API clients/hooks/view models
 Step 4 - Extract service/repository/policy boundaries where safe
-Step 5 - Remove duplicate components/flows
+Step 5 - Remove duplicate logic/modules/flows
 Step 6 - Performance and query cleanup
 Step 7 - QA and report
 ```
@@ -109,7 +111,7 @@ Not allowed:
 - complex Prisma query,
 - large mapper/helper blocks.
 
-### 3. UI component responsibility
+### 3. UI component responsibility without visual redesign
 
 Client components should not own large API/business logic.
 
@@ -120,6 +122,8 @@ Move:
 - business rules to services/policies,
 - formatting/mapping to mapper modules,
 - repeated user copy to copy modules.
+
+But do not change visual design, layout direction, spacing system, colors, or UX flow unless it is required to preserve behavior after extraction.
 
 ### 4. Type safety
 
@@ -154,25 +158,39 @@ Preserve:
 - no sensitive logging,
 - audit trail for sensitive action.
 
-### 7. UI consistency
+### 7. No UI redesign in this task
 
-All touched back-office UI must follow:
+This task must not change the current visual style.
 
-```text
-docs/bmad/standards/back-office-ui-design-guidelines.md
-```
+Allowed:
 
-Do not create a feature with different vibe from Intake V2 / quiet luxury direction.
+- component extraction,
+- moving copy/constants/types,
+- extracting hooks/API clients,
+- consolidating duplicated logic,
+- preserving existing JSX appearance while moving it to smaller files.
+
+Not allowed unless explicitly approved:
+
+- changing layout aesthetics,
+- changing colors,
+- changing spacing rhythm,
+- changing typography scale,
+- changing card style,
+- redesigning modal/table/list appearance,
+- adding new visual concepts.
+
+If a UI file is split, the rendered UI should remain effectively the same.
 
 ### 8. No duplicate modules
 
 Audit and remove/consolidate duplicated:
 
-- filter components,
-- review/publish surfaces,
-- history/audit panels,
-- status badges,
-- empty states,
+- filter logic,
+- review/publish flow logic,
+- history/audit logic,
+- status badge logic,
+- empty-state logic,
 - DTO/type definitions,
 - constants/copy maps,
 - route helper functions,
@@ -207,15 +225,16 @@ Do not:
 - change business behavior without explicit note,
 - run production/shared DB migration,
 - rewrite everything in one giant commit,
-- mix unrelated visual redesign with structural refactor unless necessary.
+- perform visual redesign,
+- mix UI polish with structural refactor.
 
 ## Expected Deliverables
 
 1. Audit list of problematic modules.
 2. Refactor plan split into safe chunks.
 3. Refactored modules for agreed Phase 1 scope.
-4. Removed duplicate/dead components where safe.
-5. No regression to current back-office behavior.
+4. Removed duplicate/dead logic/components where safe.
+5. No regression to current back-office behavior or appearance.
 6. Updated report.
 
 ## Required Report
@@ -234,12 +253,13 @@ Report must include:
 4. files refactored,
 5. before/after line counts for large files,
 6. extracted modules summary,
-7. duplicate components removed/consolidated,
+7. duplicate logic/components removed/consolidated,
 8. behavior changes if any,
-9. performance notes,
-10. QA result,
-11. known limitations,
-12. suggested next standardization step.
+9. UI changes if any, expected answer should be `none` unless explicitly justified,
+10. performance notes,
+11. QA result,
+12. known limitations,
+13. suggested next standardization step.
 
 ## QA Required
 
@@ -271,13 +291,13 @@ If any QA is blocked, document the exact reason.
 - Back-office modules follow the Next.js engineering standard better than before.
 - Large files are reduced or have documented step-by-step plan.
 - No new `any`.
-- No duplicate obvious components/flows remain in touched area.
-- Back-office UI remains consistent with the design guideline.
+- No duplicate obvious logic/flows remain in touched area.
+- No intentional UI design changes are introduced.
 - Existing Sprint 05 behavior does not regress.
 - Report and QA are complete.
 
 ## Short Instruction For Ujang
 
 ```text
-Ujang, pull latest main. Before new feature work, read docs/bmad/standards/nextjs-engineering-standard.md and docs/bmad/standards/back-office-ui-design-guidelines.md. Then work on docs/bmad/tasks/back-office-module-standardization-phase-1.md. Focus back-office only. Do it step by step if too large. Do not add new dashboard/public filter/template CRUD in this task. Preserve behavior, improve structure, remove duplicates, run QA, and update report.
+Ujang, pull latest main. Before new feature work, read docs/bmad/standards/nextjs-engineering-standard.md. Then work on docs/bmad/tasks/back-office-module-standardization-phase-1.md. Focus back-office only. This is code/module cleanup, not UI redesign. Do it step by step if too large. Do not add new dashboard/public filter/template CRUD in this task. Preserve behavior and appearance, improve structure, remove duplicates, run QA, and update report.
 ```
