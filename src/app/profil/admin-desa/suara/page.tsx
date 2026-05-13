@@ -1,8 +1,6 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
+import { requireAdminDesaContext } from "@/lib/admin-desa/require-context";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 import AdminDesaSuaraStatusAction from "@/components/admin-desa/AdminDesaSuaraStatusAction";
 import { ExternalLink, MessageSquare, MessagesSquare, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -31,12 +29,7 @@ function FooterStat({ icon, value, label }: { icon: React.ReactNode; value: numb
 }
 
 export default async function AdminDesaSuaraPage() {
-  const tAuth = perfStart();
-  const session = await auth();
-  perfLog("admin-desa.suara", "auth()", tAuth);
-  if (!session?.user?.id) redirect("/login");
-  const ctx = await getAdminDesaContext(session.user.id);
-  if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
+  const ctx = await requireAdminDesaContext("admin-desa.suara");
 
   const tVoices = perfStart();
   const voiceDesaKeys = [ctx.desa.id, ctx.desa.slug].filter(Boolean);

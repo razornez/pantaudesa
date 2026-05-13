@@ -812,3 +812,111 @@ Done means:
 - no sensitive leak
 - no unreviewed migration
 - report updated if task affects architecture/performance
+
+---
+
+## Appendix A. Execution Protocol for Large Standardization Tasks
+
+Use this protocol when scope is large enough that ad-hoc refactor progress can become uneven.
+
+### A1. Use the standard as the source of truth
+
+For large cleanup or module-standardization work, do not track progress only by file count or "many changes made".
+
+Required:
+
+1. Build a compliance matrix from items `1` through `27` in this document.
+2. For each item, record:
+   - interpretation in the current repo/task
+   - files/features affected
+   - current status: `NOT_STARTED`, `PARTIAL`, `DONE`, or `BLOCKED`
+   - evidence or file references
+   - remaining gap if not done
+3. Progress report must be based on this matrix, not intuition.
+
+### A2. Work by cluster, not random file order
+
+For large refactors, group work into explicit clusters. Example:
+
+- client fetch / api / hooks
+- route / page / layout boundaries
+- repository / service / policy / validation
+- constants / copy / mapper / view-model
+- QA / performance / report / done checklist
+
+Rules:
+
+1. Finish one cluster to a stable state before moving to the next.
+2. Do not leave the same standard partially implemented across many areas if one cluster can be closed first.
+3. Update the compliance matrix after each cluster.
+
+### A3. Do not claim "done" before the matrix is updated
+
+Before saying a task is complete, explicitly review all `27` items again.
+
+Required output:
+
+- which items are `DONE`
+- which items are `PARTIAL`
+- which items are `BLOCKED`
+- exact reason for each blocked item
+
+### A4. Checkpoints for large refactors
+
+Every major checkpoint must include at least:
+
+```text
+1. What cluster was worked on
+2. Which standard items moved status
+3. Which files changed
+4. QA result for this checkpoint
+5. What remains before the next checkpoint
+```
+
+### A5. QA gate per cluster
+
+At minimum, after a meaningful cluster is stabilized:
+
+```bash
+npm run lint
+npx tsc --noEmit
+```
+
+Before final completion claim:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+If `build` is blocked by environment, mark the affected standard items as `BLOCKED` and continue closing the remaining non-blocked items.
+
+### A6. Honest blocker rule
+
+If a standard item cannot be completed, state whether the reason is:
+
+- instruction scope
+- missing approval
+- environment/tooling blocker
+- dependency on another unfinished cluster
+- genuine out-of-scope work
+
+Do not describe a partially improved area as fully compliant.
+
+### A7. No hidden "almost done"
+
+Forbidden:
+
+- reporting "sudah rapi" if the matrix still shows many `PARTIAL`
+- reporting "sesuai standard" without mapping to the numbered items
+- mixing UI polish with structural standardization unless explicitly requested
+
+### A8. Efficiency rule
+
+To avoid wasting tokens and rework:
+
+1. Establish the matrix first.
+2. Close clusters in order.
+3. Re-check numbered compliance before reporting success.
+4. Do not postpone obvious standard violations if they are already inside the active cluster.

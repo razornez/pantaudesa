@@ -3,8 +3,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import type { DesaOption, DesaOptionsResponse } from "../types";
-import { getPayloadError, readJsonLikeResponse } from "../utils";
+import type { DesaOption } from "../types";
+import { requestDesaOptions } from "../api";
 import { formatDesaSearchValue } from "../constants";
 
 export function useDesaOptions() {
@@ -24,15 +24,9 @@ export function useDesaOptions() {
       setError(null);
 
       try {
-        const query = desaSearch.trim();
-        const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
-        const res = await fetch(`/api/internal-admin/desa-options${suffix}`, {
-          headers: { Accept: "application/json" },
-        });
-        const payload = await readJsonLikeResponse<DesaOptionsResponse>(res);
-
-        if (!res.ok || "error" in payload) {
-          throw new Error(getPayloadError(payload, "Gagal memuat daftar desa."));
+        const payload = await requestDesaOptions(desaSearch);
+        if ("error" in payload) {
+          throw new Error(payload.error || "Gagal memuat daftar desa.");
         }
 
         if (!cancelled) {

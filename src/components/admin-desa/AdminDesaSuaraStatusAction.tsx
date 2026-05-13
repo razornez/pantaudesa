@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { CheckCircle2, ChevronDown } from "lucide-react";
+import { updateVoiceStatus } from "./api";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.suara.statusAction;
@@ -34,18 +35,12 @@ export default function AdminDesaSuaraStatusAction({ voiceId, currentStatus }: P
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch(`/api/voices/${voiceId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? COPY.failed); return; }
+      await updateVoiceStatus(voiceId, next);
       startTransition(() => setStatus(next));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
-    } catch {
-      setError(COPY.failed);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : COPY.failed);
     }
   }
 

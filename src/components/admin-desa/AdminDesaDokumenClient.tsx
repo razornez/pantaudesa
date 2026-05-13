@@ -5,12 +5,22 @@ import { useRouter } from "next/navigation";
 import { Check, ExternalLink, FileText, FolderKanban, ShieldAlert, Upload } from "lucide-react";
 import type { StorageConfigurationStatus } from "@/lib/storage/supabase-storage";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
+import {
+  approveAdminDesaDocument,
+  fetchAdminDesaDocumentPreviewUrl,
+  uploadAdminDesaDocuments,
+} from "./api";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+import {
+  canApproveAdminDesaDocuments,
+  canUploadAdminDesaDocuments,
+  type AdminDesaDocumentStatus,
+} from "@/lib/admin-desa/policy";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.documents;
 const COMMON_COPY = BACK_OFFICE_COPY.adminDesa.common;
 
-type DocStatus = "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "FAILED";
+type DocStatus = AdminDesaDocumentStatus;
 
 interface DocRow {
   id: string;
@@ -83,7 +93,7 @@ function UploadForm({ categories, maxFileSizeMB, maxFilesPerUpload, allowedMimeT
     if (!ack) { onNotify(COPY.upload.responsibilityError, "error"); return; }
     for (const file of files) { if (file.size > maxFileSizeMB * 1024 * 1024) { onNotify(COPY.upload.fileTooLargeError(file.name, maxFileSizeMB), "error"); return; } if (!allowedMimeTypes.includes(file.type)) { onNotify(COPY.upload.fileTypeError(file.name), "error"); return; } }
     setLoading(true);
-    try { const fd = new FormData(); for (const file of files) fd.append("files", file); fd.append("title", title); fd.append("category", category); fd.append("responsibilityAck", "true"); const res = await fetch("/api/admin-claim/documents/upload", { method: "POST", body: fd }); const data = await res.json(); if (!res.ok) { const detail = data.detail ? ` (${data.detail})` : ""; onNotify(`${data.error ?? COPY.upload.uploadFailed}${detail}`, "error"); return; } const persisted = Array.isArray(data.documents) ? data.documents.length : 0; if (persisted === 0) { onNotify(COPY.upload.serverNoConfirmation, "error"); return; } onNotify(COPY.upload.uploadSuccess(persisted), "success"); reset(); onUploaded(); } catch { onNotify(COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
+    try { const fd = new FormData(); for (const file of files) fd.append("files", file); fd.append("title", title); fd.append("category", category); fd.append("responsibilityAck", "true"); const persisted = await uploadAdminDesaDocuments(fd); onNotify(COPY.upload.uploadSuccess(persisted), "success"); reset(); onUploaded(); } catch (error) { onNotify(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
   }
   const formats = allowedMimeTypes.map((t) => t.split("/")[1]?.toUpperCase()).join(", ");
   return (
@@ -102,15 +112,15 @@ export default function AdminDesaDokumenClient(props: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const { toasts, toast, removeToast } = useToast();
-  const canUpload = props.memberStatus === "VERIFIED" || props.memberStatus === "LIMITED";
-  const canApprove = props.memberStatus === "VERIFIED" && props.memberRole === "VERIFIED_ADMIN";
+  const canUpload = canUploadAdminDesaDocuments(props.memberStatus);
+  const canApprove = canApproveAdminDesaDocuments(props.memberStatus, props.memberRole);
   const summary = useMemo(() => {
     const counts = { total: props.documents.length, waiting: 0, processing: 0, published: 0, failed: 0 };
     for (const doc of props.documents) { if (doc.status === "WAITING_VERIFIED_APPROVAL") counts.waiting += 1; if (doc.status === "PROCESSING") counts.processing += 1; if (doc.status === "PUBLISHED") counts.published += 1; if (doc.status === "FAILED") counts.failed += 1; }
     return counts;
   }, [props.documents]);
-  async function handleApprove(id: string) { setBusyId(id); try { const res = await fetch(`/api/admin-claim/documents/${id}/approve`, { method: "POST" }); const data = await res.json(); if (!res.ok) { toast(data.error ?? COMMON_COPY.genericFailed, "error"); return; } toast(COPY.actions.forwardedToPantauDesa, "success"); router.refresh(); } catch { toast(COMMON_COPY.connectionError, "error"); } finally { setBusyId(null); } }
-  async function handlePreview(id: string) { setBusyId(id); try { const res = await fetch(`/api/admin-claim/documents/${id}/preview`); const data = await res.json(); if (!res.ok || !data.signedUrl) { toast(data.error ?? COMMON_COPY.genericFailed, "error"); return; } window.open(data.signedUrl, "_blank", "noopener,noreferrer"); } catch { toast(COMMON_COPY.connectionError, "error"); } finally { setBusyId(null); } }
+  async function handleApprove(id: string) { setBusyId(id); try { await approveAdminDesaDocument(id); toast(COPY.actions.forwardedToPantauDesa, "success"); router.refresh(); } catch (error) { toast(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error"); } finally { setBusyId(null); } }
+  async function handlePreview(id: string) { setBusyId(id); try { const signedUrl = await fetchAdminDesaDocumentPreviewUrl(id); window.open(signedUrl, "_blank", "noopener,noreferrer"); } catch (error) { toast(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error"); } finally { setBusyId(null); } }
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"><div className="space-y-1"><p className="eyebrow text-[10px]">{COPY.headingEyebrow}</p><h1 className="display text-[22px] sm:text-[26px] font-semibold text-slate-900 tracking-tight">{COPY.headingTitle}</h1></div><div className="flex flex-wrap gap-1.5"><span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.total} {COPY.summary.documents}</span>{summary.waiting > 0 && <span className="pill-warn rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.waiting} {COPY.summary.waiting.toLowerCase()}</span>}{summary.processing > 0 && <span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.processing} {COPY.status.PROCESSING.toLowerCase()}</span>}{summary.published > 0 && <span className="pill-ok rounded-full px-2.5 py-0.5 text-[10px] font-semibold">{summary.published} {COPY.summary.published.toLowerCase()}</span>}</div></div>

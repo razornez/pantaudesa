@@ -11,6 +11,7 @@ import {
   Mail,
 } from "lucide-react";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
+import { approveClaim, rejectClaim } from "./claim-review/api";
 
 type ClaimRow = {
   id: string;
@@ -90,20 +91,11 @@ function RejectModal({ claim, onClose, onDone, onNotify }: { claim: ClaimRow; on
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/internal-admin/claims/${claim.id}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reasonCategory, reasonText, fixInstructions, isFraud }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        onNotify(data.error ?? "Penolakan pengajuan belum berhasil disimpan.", "error");
-        return;
-      }
+      await rejectClaim(claim.id, { reasonCategory, reasonText, fixInstructions, isFraud });
       onNotify("Pengajuan ditolak dan alasan sudah dikirim ke pengguna.", "success");
       onDone();
-    } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi beberapa saat.", "error");
     } finally {
       setLoading(false);
     }
@@ -169,16 +161,11 @@ function ClaimCard({ claim, onRefresh, onReject, onNotify }: { claim: ClaimRow; 
   async function handleApprove() {
     setApproving(true);
     try {
-      const res = await fetch(`/api/internal-admin/claims/${claim.id}/approve`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        onNotify(data.error ?? "Persetujuan pengajuan belum berhasil.", "error");
-        return;
-      }
+      await approveClaim(claim.id);
       onNotify("Pengajuan disetujui dan akun admin desa sudah diperbarui.", "success");
       onRefresh();
-    } catch {
-      onNotify("Koneksi bermasalah. Coba lagi beberapa saat.", "error");
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi beberapa saat.", "error");
     } finally {
       setApproving(false);
     }

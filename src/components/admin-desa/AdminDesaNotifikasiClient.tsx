@@ -11,6 +11,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
+import { markAdminNotificationsRead } from "./api";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.notifications;
@@ -55,39 +56,27 @@ export default function AdminDesaNotifikasiClient({
 
   async function markAllRead() {
     try {
-      const res = await fetch("/api/admin-claim/notifications/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast(data.error ?? COPY.messages.markAllReadFailed, "error"); return; }
+      await markAdminNotificationsRead();
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
         setUnread(0);
       });
       toast(COPY.messages.markAllReadSuccess, "success");
-    } catch {
-      toast(COMMON_COPY.connectionError, "error");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error");
     }
   }
 
   async function markOneRead(id: string) {
     try {
-      const res = await fetch("/api/admin-claim/notifications/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [id] }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast(data.error ?? COPY.messages.markOneReadFailed, "error"); return; }
+      await markAdminNotificationsRead([id]);
       startTransition(() => {
         setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
         setUnread((c) => Math.max(0, c - 1));
       });
       toast(COPY.messages.markOneReadSuccess, "success");
-    } catch {
-      toast(COMMON_COPY.connectionError, "error");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error");
     }
   }
 

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { House, ShieldCheck, FileText, RefreshCcw, UserCog, FileUp, Database } from "lucide-react";
+import { House, ShieldCheck } from "lucide-react";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
+import {
+  INTERNAL_ADMIN_AREAS_SUMMARY,
+  INTERNAL_ADMIN_NAV_ITEMS,
+} from "@/lib/internal-admin/constants";
 import { perfLog, perfStart } from "@/lib/perf";
 
 export default async function InternalAdminLayout({
@@ -15,14 +19,6 @@ export default async function InternalAdminLayout({
   if (!session) {
     redirect("/masuk?error=unauthorized");
   }
-
-  const navItems = [
-    { href: "/internal-admin/claims", label: "Pengajuan", icon: UserCog },
-    { href: "/internal-admin/documents", label: "Dokumen", icon: FileText },
-    { href: "/internal-admin/intake", label: "Intake", icon: FileUp },
-    { href: "/internal-admin/renewals", label: "Perpanjangan", icon: RefreshCcw },
-    { href: "/internal-admin/village-data", label: "Data Desa", icon: Database },
-  ];
 
   return (
     <div className="min-h-screen" data-testid="internal-admin-shell">
@@ -56,7 +52,7 @@ export default async function InternalAdminLayout({
                 <div className="flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="lux-card px-3 py-1.5">
                     <span className="text-slate-500">3 area: </span>
-                    <span className="font-semibold text-slate-900">klaim, dokumen, perpanjangan</span>
+                    <span className="font-semibold text-slate-900">{INTERNAL_ADMIN_AREAS_SUMMARY}</span>
                   </span>
                   <Link
                     href="/"
@@ -77,7 +73,7 @@ export default async function InternalAdminLayout({
             >
               <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5">
                 <div className="inline-flex min-w-max items-center gap-1.5 rounded-[1.2rem] bg-white/80 p-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06),0_14px_28px_-20px_rgba(15,23,42,0.2)]">
-                  {navItems.map(({ href, label, icon: Icon }) => (
+                  {INTERNAL_ADMIN_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                     <Link
                       key={href}
                       href={href}

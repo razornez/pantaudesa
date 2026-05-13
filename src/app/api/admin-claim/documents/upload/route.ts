@@ -17,6 +17,10 @@ import {
   getMaxFilesPerUpload,
 } from "@/lib/storage/upload-validation";
 import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
+import {
+  getUploadedDocumentInitialStatus,
+} from "@/lib/admin-desa/policy";
+import { parseAdminDesaUploadFields } from "@/lib/admin-desa/validation";
 
 // POST /api/admin-claim/documents/upload
 // multipart/form-data fields:
@@ -57,9 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
     }
 
-    const title = String(form.get("title") ?? "").trim();
-    const category = String(form.get("category") ?? "").trim();
-    const ack = String(form.get("responsibilityAck") ?? "");
+    const { title, category, responsibilityAck: ack } = parseAdminDesaUploadFields(form);
 
     if (!title) return NextResponse.json({ error: "title is required" }, { status: 400 });
     if (title.length > 200) return NextResponse.json({ error: "title too long (max 200 chars)" }, { status: 400 });
@@ -122,7 +124,9 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const status = member.status === "VERIFIED" ? "PROCESSING" : "WAITING_VERIFIED_APPROVAL";
+    const status = getUploadedDocumentInitialStatus(
+      member.status as "LIMITED" | "VERIFIED",
+    );
     const multi = files.length > 1;
     const uploaded: Array<{ id: string; title: string; status: string; createdAt: string }> = [];
 

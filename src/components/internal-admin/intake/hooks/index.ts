@@ -4,4 +4,5 @@
 
 export { useIntakePipeline } from "./useIntakePipeline";
 export { useDesaOptions } from "./useDesaOptions";
-export { useIntakeHistory, useVersionHistory } from "./useIntakeHistory";
+export { useIntakeHistory } from "./useIntakeHistory";
+export { useVersionHistory } from "./useVersionHistory";

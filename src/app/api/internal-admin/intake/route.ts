@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { autoMapFromText } from "@/lib/intake/auto-mapping";
-import { extractFromFile, extractFromText } from "@/lib/intake/extractors";
+import { AI_OFF_BINARY_MESSAGE } from "@/lib/intake/constants";
 import { maybeMapWithOpenAI } from "@/lib/intake/openai-mapping";
 import { buildIntakePipelineResult } from "@/lib/intake/pipeline";
+import {
+  canContinueWithAiFallback,
+  hasOpenAiDraftContent,
+  isBinaryNeedingAi,
+  parseIntakeSubmission,
+} from "@/lib/intake/request-parser";
 import { perfLog, perfStart } from "@/lib/perf";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const SCANNED_PDF_MIME = "application/pdf";
-const AI_OFF_BINARY_MESSAGE =
-  "Gambar belum bisa dibaca tanpa AI. Aktifkan Coba AI, atau gunakan dokumen teks/PDF teks/DOCX/XLSX/CSV/TXT.";
-
 export const runtime = "nodejs";
-
-function hasDraftContent(result: Awaited<ReturnType<typeof maybeMapWithOpenAI>>): boolean {
-  return (
-    Object.keys(result.knownPublishableFields).length > 0 ||
-    result.detectedButNotPublishable.length > 0 ||
-    result.unknownUsefulFields.length > 0
-  );
-}
 
 export async function POST(req: NextRequest) {
   const sessionResult = await requireInternalAdminSession();
@@ -28,110 +21,43 @@ export async function POST(req: NextRequest) {
   const t = perfStart();
 
   try {
-    const contentType = req.headers.get("content-type") ?? "";
+    const parsed = await parseIntakeSubmission(req, {
+      requireDesaId: false,
+      allowTitle: false,
+    });
+    if (parsed instanceof NextResponse) return parsed;
 
-    let inputSource: "file" | "paste" = "paste";
-    let extractedText = "";
-    let extractMeta: ReturnType<typeof extractFromText>["meta"];
-    let desaId: string | undefined;
-    let requestAiMapping = false;
-    let fileName: string | undefined;
-    let mimeType: string | undefined;
-    let fileBuffer: Buffer | undefined;
-    let extractFailed = false;
-    let extractError: string | undefined;
+    const {
+      inputSource,
+      extractedText,
+      extractMeta,
+      desaId,
+      requestAiMapping,
+      fileName,
+      fileType,
+      buffer: fileBuffer,
+      extractFailed,
+      extractError,
+    } = parsed;
 
-    if (contentType.includes("multipart/form-data")) {
-      inputSource = "file";
-      const formData = await req.formData();
-      const file = formData.get("file");
-      const rawDesaId = formData.get("desaId");
-      const rawAiMapping = formData.get("useAiMapping");
-
-      desaId =
-        typeof rawDesaId === "string" && rawDesaId.trim() ? rawDesaId.trim() : undefined;
-      requestAiMapping = rawAiMapping === "true";
-
-      if (!(file instanceof File)) {
-        return NextResponse.json({ error: "File tidak ditemukan." }, { status: 400 });
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({ error: "File terlalu besar (maks 10 MB)." }, { status: 422 });
-      }
-
-      fileName = file.name;
-      mimeType = file.type || "application/octet-stream";
-      fileBuffer = Buffer.from(await file.arrayBuffer());
-
-      const extracted = await extractFromFile({
-        buffer: fileBuffer,
-        fileName: file.name,
-        mimeType: file.type,
-        size: file.size,
-      });
-
-      extractMeta = extracted.meta;
-
-      if (extracted.ok) {
-        extractedText = extracted.text;
-      } else {
-        extractFailed = true;
-        extractError = extracted.error ?? "Gagal membaca file.";
-
-        const lowerMime = mimeType.toLowerCase();
-        const isBinaryNeedingAi =
-          lowerMime.startsWith("image/") || lowerMime === SCANNED_PDF_MIME;
-
-        // Bila user TIDAK mengaktifkan Coba AI dan dokumen adalah image / scanned PDF
-        // yang butuh AI untuk dibaca, kembalikan pesan ramah - jangan lanjut ke OpenAI.
-        if (!requestAiMapping && isBinaryNeedingAi) {
-          return NextResponse.json(
-            {
-              error: AI_OFF_BINARY_MESSAGE,
-              meta: {
-                ...extracted.meta,
-                aiOffForBinary: true,
-                openaiStatus: "skipped",
-              },
+    if (extractFailed && !canContinueWithAiFallback(parsed)) {
+      if (isBinaryNeedingAi(parsed)) {
+        return NextResponse.json(
+          {
+            error: AI_OFF_BINARY_MESSAGE,
+            meta: {
+              ...extractMeta,
+              aiOffForBinary: true,
+              openaiStatus: "skipped",
             },
-            { status: 422 },
-          );
-        }
-
-        const canContinueWithAi = Boolean(fileBuffer) && requestAiMapping;
-        if (!canContinueWithAi) {
-          return NextResponse.json(
-            { error: extractError, meta: extracted.meta },
-            { status: 422 },
-          );
-        }
-      }
-    } else if (contentType.includes("application/json")) {
-      const body = (await req.json()) as {
-        text?: unknown;
-        desaId?: unknown;
-        useAiMapping?: unknown;
-      };
-      const text = typeof body.text === "string" ? body.text : "";
-
-      desaId =
-        typeof body.desaId === "string" && body.desaId.trim() ? body.desaId.trim() : undefined;
-      requestAiMapping = body.useAiMapping === true;
-
-      if (!text.trim()) {
-        return NextResponse.json({ error: "Teks wajib diisi." }, { status: 400 });
+          },
+          { status: 422 },
+        );
       }
 
-      const extracted = extractFromText(text.trim());
-      extractedText = extracted.text;
-      extractMeta = extracted.meta;
-    } else {
       return NextResponse.json(
-        {
-          error:
-            "Content-Type tidak didukung. Gunakan multipart/form-data atau application/json.",
-        },
-        { status: 415 },
+        { error: extractError ?? "Gagal membaca file.", meta: extractMeta },
+        { status: 422 },
       );
     }
 
@@ -145,8 +71,8 @@ export async function POST(req: NextRequest) {
     const openaiResult = await maybeMapWithOpenAI({
       extractedText,
       fileName,
-      mimeType,
-      fileBuffer,
+      mimeType: fileType,
+      fileBuffer: inputSource === "file" ? fileBuffer : undefined,
       explicitRequest: requestAiMapping,
       heuristicConfidenceLow,
       localExtractFailed: extractFailed,
@@ -154,7 +80,7 @@ export async function POST(req: NextRequest) {
     perfLog("internal-admin.intake", "openai", aiTimer);
 
     const hasRecoverableOutput =
-      extractedText.trim().length > 0 || hasDraftContent(openaiResult);
+      extractedText.trim().length > 0 || hasOpenAiDraftContent(openaiResult);
 
     if (!hasRecoverableOutput) {
       return NextResponse.json(

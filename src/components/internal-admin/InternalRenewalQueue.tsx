@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, CalendarClock, CheckCircle2 } from "lucide-react";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
+import { approveRenewal, rejectRenewal } from "./renewal-queue/api";
 
 type RenewalRow = {
   id: string;
@@ -49,14 +50,14 @@ function DecisionModal({ target, mode, onClose, onDone, onNotify }: { target: Re
     if (!isApprove && !reason.trim()) { onNotify("Alasan penolakan wajib diisi.", "error"); return; }
     setLoading(true);
     try {
-      const endpoint = isApprove ? `/api/internal-admin/members/${target.id}/renewal/approve` : `/api/internal-admin/members/${target.id}/renewal/reject`;
-      const body = isApprove ? undefined : JSON.stringify({ reason: reason.trim(), suspicious });
-      const res = await fetch(endpoint, { method: "POST", headers: body ? { "Content-Type": "application/json" } : undefined, body });
-      const data = await res.json();
-      if (!res.ok) { onNotify(data.error ?? "Aksi belum berhasil diproses.", "error"); return; }
+      if (isApprove) {
+        await approveRenewal(target.id);
+      } else {
+        await rejectRenewal(target.id, { reason: reason.trim(), suspicious });
+      }
       onNotify(isApprove ? "Masa aktif berhasil diperpanjang." : "Akses ditandai berakhir.", "success");
       onDone();
-    } catch { onNotify("Koneksi bermasalah. Coba lagi.", "error"); }
+    } catch (error) { onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.", "error"); }
     finally { setLoading(false); }
   }
 

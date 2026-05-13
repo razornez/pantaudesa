@@ -6,6 +6,7 @@ import {
   getSelectedDesa,
   isDemoSession,
 } from "@/components/profil/admin-claim/adminClaimCopy";
+import { fetchAdminClaimProfile } from "@/components/profil/admin-claim/api";
 
 export function useAdminClaimProfile() {
   const [data, setData] = useState<AdminClaimProfileData | null>(null);
@@ -21,12 +22,8 @@ export function useAdminClaimProfile() {
     let mounted = true;
     const controller = new AbortController();
 
-    fetch("/api/admin-claim/profile", { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`admin claim profile load failed: ${response.status}`);
-        }
-        const payload = (await response.json()) as AdminClaimProfileData;
+    fetchAdminClaimProfile(controller.signal)
+      .then((payload) => {
         if (!mounted) return;
         setData(payload);
         setLoadError(false);

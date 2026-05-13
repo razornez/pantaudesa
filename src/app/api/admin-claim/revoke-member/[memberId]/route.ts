@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { isVerifiedAdminMember } from "@/lib/admin-desa/policy";
+import { parseAdminDesaRevokeBody } from "@/lib/admin-desa/validation";
 
 // POST /api/admin-claim/revoke-member/:memberId
 // VERIFIED admin revokes LIMITED admin in the same desa.
@@ -33,7 +35,7 @@ export async function POST(
     } catch {
       // body is optional; reason will be missing
     }
-    const reason = body.reason?.trim() ?? null;
+    const { reason } = parseAdminDesaRevokeBody(body);
 
     const dbClient = db;
     const result = await dbClient.$transaction(async (tx) => {
@@ -59,12 +61,10 @@ export async function POST(
         where: {
           desaId: target.desaId,
           userId: actorUserId,
-          status: "VERIFIED",
-          role: "VERIFIED_ADMIN",
         },
-        select: { id: true },
+        select: { id: true, status: true, role: true },
       });
-      if (!actor) {
+      if (!actor || !isVerifiedAdminMember(actor.status, actor.role)) {
         return {
           kind: "error" as const,
           status: 403,
@@ -86,7 +86,10 @@ export async function POST(
         return {
           kind: "error" as const,
           status: 422,
-          body: { error: "Tidak bisa mencabut akses Admin Desa VERIFIED. Hanya admin internal PantauDesa yang berwenang." },
+          body: {
+            error:
+              "Tidak bisa mencabut akses Admin Desa VERIFIED. Hanya admin internal PantauDesa yang berwenang.",
+          },
         };
       }
 

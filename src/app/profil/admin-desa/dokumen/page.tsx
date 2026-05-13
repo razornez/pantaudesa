@@ -1,8 +1,6 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
 import AdminDesaDokumenClient from "@/components/admin-desa/AdminDesaDokumenClient";
+import { requireAdminDesaContext } from "@/lib/admin-desa/require-context";
 import {
   DEFAULT_MAX_FILE_SIZE_MB,
   DEFAULT_MAX_FILES_PER_UPLOAD,
@@ -18,12 +16,7 @@ import { perfLog, perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf"
 export const dynamic = "force-dynamic";
 
 export default async function AdminDesaDokumenPage() {
-  const tAuth = perfStart();
-  const session = await auth();
-  perfLog("admin-desa.dokumen", "auth()", tAuth);
-  if (!session?.user?.id) redirect("/login");
-  const ctx = await getAdminDesaContext(session.user.id);
-  if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
+  const ctx = await requireAdminDesaContext("admin-desa.dokumen");
 
   perfQueryShape(
     "admin-desa.dokumen",

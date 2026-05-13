@@ -76,11 +76,11 @@ export interface OpenAIResult {
 
 export type CurrentValueStatus = "filled" | "empty";
 export type UploadedCoverageStatus =
-  | "covered"               // detected + maps to visible template field
-  | "missing"               // not detected
-  | "detected_not_publishable" // detected but field not ready to publish
-  | "component_hidden"      // detected, field in template but component is hidden for this desa
-  | "outside_template";     // detected but field does not exist in active template
+  | "covered"
+  | "missing"
+  | "detected_not_publishable"
+  | "component_hidden"
+  | "outside_template";
 
 export interface DetailFieldCoverageEntry {
   sectionKey: string;
@@ -119,6 +119,106 @@ export interface DetailFieldCoverageSummary {
   publishableNowCount: number;
   detectedButNotPublishable: DetectedDetailField[];
   unknownUsefulFields: UnknownUsefulField[];
-  /** Template used to generate this coverage — shown in UI as context for reviewer */
   templateInfo?: CoverageTemplateInfo;
+}
+
+export interface ExtractMeta {
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  pages?: number;
+  sheets?: string[];
+  parser: string;
+  durationMs: number;
+  truncated?: boolean;
+}
+
+export interface SubmitReviewSuccess {
+  ok: boolean;
+  documentId: string;
+  title: string;
+  newStatus: string;
+  queuedAt: string;
+  queueUrl: string;
+}
+
+export interface DesaOption {
+  id: string;
+  nama: string;
+  slug: string;
+  kecamatan: string;
+  kabupaten: string;
+  provinsi: string;
+}
+
+export interface DesaOptionsResponse {
+  desa: DesaOption[];
+}
+
+export interface IntakeHistorySubmission {
+  id: string;
+  title: string;
+  status: string;
+  aiMappingStatus: string | null;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  failedReason: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  desa: { id: string; nama: string; kabupaten: string };
+}
+
+export interface IntakeHistoryActivity {
+  id: string;
+  documentId: string | null;
+  title: string;
+  desaName: string;
+  eventType: string;
+  label: string;
+  nextStatus: string | null;
+  reasonText: string | null;
+  createdAt: string;
+}
+
+export interface StorageModeState {
+  mode: "dedicated" | "audit_fallback";
+  dedicatedTableActive: boolean;
+  note: string;
+}
+
+export interface IntakeHistoryResponse {
+  storage: StorageModeState;
+  submissions: IntakeHistorySubmission[];
+  activity: IntakeHistoryActivity[];
+}
+
+export interface DesaVersionEntry {
+  id: string;
+  documentId: string | null;
+  versionNumber: number;
+  reasonText: string | null;
+  createdAt: string;
+  changedFields: AiMappableDesaField[];
+  beforeSnapshot: Partial<Record<AiMappableDesaField, string | number | null>>;
+  afterSnapshot: Partial<Record<AiMappableDesaField, string | number | null>>;
+  title: string;
+}
+
+export interface DesaVersionHistoryResponse {
+  storage: StorageModeState;
+  desa: {
+    id: string;
+    nama: string;
+    kabupaten: string;
+    dataPublishedAt: string | null;
+    dataSourceLabel: string | null;
+  };
+  versions: DesaVersionEntry[];
+}
+
+export interface PipelineError {
+  error: string;
+  meta?: Record<string, unknown>;
 }

@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 import type { DesaAdminRoster, DesaAdminRow } from "@/lib/data/desa-admins";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
+import { inviteAdminDesa, revokeAdminDesaMember } from "./api";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+import {
+  canRevokeAdminDesaMember,
+  isAdminDesaInviteLimitReached,
+} from "@/lib/admin-desa/policy";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.listAdmin;
 const COMMON_COPY = BACK_OFFICE_COPY.adminDesa.common;
@@ -44,7 +49,11 @@ function StatusPill({ status }: { status: DesaAdminRow["status"] }) {
 function AdminRow({ row, canManage, isSelf, onRevoke }: { row: DesaAdminRow; canManage: boolean; isSelf: boolean; onRevoke: (row: DesaAdminRow) => void }) {
   const displayName = row.user.nama ?? row.user.username ?? row.user.email;
   const isVerified = row.status === "VERIFIED";
-  const canRevokeThis = canManage && row.status === "LIMITED" && !isSelf;
+  const canRevokeThis = canRevokeAdminDesaMember({
+    canManage,
+    targetStatus: row.status,
+    isSelf,
+  });
 
   return (
     <div className="flex items-start gap-4 rounded-[1.3rem] bg-white/72 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]">
@@ -76,11 +85,9 @@ function InviteModal({ desaId, desaName, onClose, onDone, onNotify }: { desaId: 
     if (!email.trim()) { onNotify(COPY.modal.emailRequired, "error"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/admin-claim/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ desaId, email: email.trim() }) });
-      const data = await res.json();
-      if (!res.ok) { onNotify(data.error ?? COPY.modal.inviteFailed, "error"); return; }
+      await inviteAdminDesa({ desaId, email: email.trim() });
       onNotify(COPY.modal.inviteSuccess, "success"); setEmail(""); setTimeout(() => onDone(), 250);
-    } catch { onNotify(COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
+    } catch (error) { onNotify(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
   }
   return <ModalFrame title={COPY.modal.inviteTitle} subtitle={COPY.modal.inviteSubtitle(desaName)} onClose={onClose}><div className="notice-card notice-warn text-sm leading-relaxed">{COPY.modal.inviteNotice}</div><form onSubmit={handleSubmit} className="space-y-4"><div><label className="field-label">{COPY.modal.inviteEmailLabel}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={COPY.modal.inviteEmailPlaceholder} className="field-lux" required autoFocus /><p className="text-xs text-slate-500 mt-2 leading-relaxed">{COPY.modal.inviteHelper}</p></div><div className="flex gap-3 pt-1"><button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">{COMMON_COPY.cancel}</button><button type="submit" disabled={loading} className="btn-lux btn-lux-primary flex-1">{loading ? COPY.modal.sendingInvite : COPY.modal.sendInvite}</button></div></form></ModalFrame>;
 }
@@ -92,11 +99,9 @@ function RevokeModal({ member, onClose, onDone, onNotify }: { member: DesaAdminR
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true);
     try {
-      const res = await fetch(`/api/admin-claim/revoke-member/${member.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: reason.trim() || undefined }) });
-      const data = await res.json();
-      if (!res.ok) { onNotify(data.error ?? COPY.modal.revokeFailed, "error"); return; }
+      await revokeAdminDesaMember(member.id, { reason: reason.trim() || undefined });
       onNotify(COPY.modal.revokeSuccess, "success"); onDone();
-    } catch { onNotify(COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
+    } catch (error) { onNotify(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error"); } finally { setLoading(false); }
   }
   return <ModalFrame title={COPY.modal.revokeTitle} subtitle={displayName} onClose={onClose}><div className="notice-card notice-danger text-sm leading-relaxed">{COPY.modal.revokeNotice}</div><form onSubmit={handleSubmit} className="space-y-4"><div><label className="field-label">{COPY.modal.revokeReasonLabel}</label><textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder={COPY.modal.revokeReasonPlaceholder} className="textarea-lux" /></div><div className="flex gap-3 pt-1"><button type="button" onClick={onClose} className="btn-lux btn-lux-secondary flex-1">{COMMON_COPY.cancel}</button><button type="submit" disabled={loading} className="btn-lux btn-lux-danger flex-1">{loading ? COPY.modal.revokeLoading : COPY.modal.revokeButton}</button></div></form></ModalFrame>;
 }
@@ -108,7 +113,7 @@ export default function AdminDesaListAdminClient({ currentUserId, desaId, desaNa
   const [revokeTarget, setRevokeTarget] = useState<DesaAdminRow | null>(null);
   const [nowMs] = useState(() => Date.now());
   const totalActive = roster.verifiedCount + roster.limitedCount;
-  const inviteLimitReached = totalActive >= maxAdmins;
+  const inviteLimitReached = isAdminDesaInviteLimitReached(totalActive, maxAdmins);
   function refresh() { router.refresh(); }
   return (
     <div className="space-y-5">

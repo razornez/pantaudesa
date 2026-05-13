@@ -1,23 +1,14 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CalendarClock, ExternalLink, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { getAdminDesaContext } from "@/lib/data/admin-desa-context";
+import { requireAdminDesaContext } from "@/lib/admin-desa/require-context";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
-import { perfLog, perfStart } from "@/lib/perf";
 
 export const dynamic = "force-dynamic";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.profile;
 
 export default async function AdminDesaProfilePage() {
-  const tAuth = perfStart();
-  const session = await auth();
-  perfLog("admin-desa.profil", "auth()", tAuth);
-  if (!session?.user?.id) redirect("/login");
-
-  const ctx = await getAdminDesaContext(session.user.id);
-  if (!ctx) redirect("/profil/klaim-admin-desa?error=admin_desa_only");
+  const ctx = await requireAdminDesaContext("admin-desa.profil");
 
   const isVerified = ctx.member.status === "VERIFIED";
   const membershipLabel = isVerified ? COPY.membership.verified : COPY.membership.limited;

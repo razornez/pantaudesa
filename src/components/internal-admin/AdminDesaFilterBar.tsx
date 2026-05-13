@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { fetchDesaFilterOptions } from "./admin-desa-filter/api";
 
 export interface AdminDesaFilter {
   q: string;
@@ -21,58 +22,72 @@ interface Props {
 }
 
 /**
- * Reusable admin desa filter bar — search + provinsi + kabupaten + kecamatan.
+ * Reusable admin desa filter bar - search + provinsi + kabupaten + kecamatan.
  * Matches the filter UX on the public /desa page but backed by admin APIs.
  * Used in: Data per Desa tab, Versi & Audit tab, Log Aktivitas tab.
  */
 export default function AdminDesaFilterBar({ onChange }: Props) {
-  const [q, setQ]               = useState("");
+  const [q, setQ] = useState("");
   const [provinsi, setProvinsi] = useState("");
   const [kabupaten, setKabupaten] = useState("");
   const [kecamatan, setKecamatan] = useState("");
-  const [options, setOptions]   = useState<FilterOptions>({ provinsi: [], kabupaten: [], kecamatan: [] });
+  const [options, setOptions] = useState<FilterOptions>({
+    provinsi: [],
+    kabupaten: [],
+    kecamatan: [],
+  });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadOptions = useCallback((prov: string, kab: string) => {
-    const params = new URLSearchParams();
-    if (prov) params.set("provinsi", prov);
-    if (kab)  params.set("kabupaten", kab);
-    fetch(`/api/internal-admin/desa-filter-options?${params.toString()}`)
-      .then(r => r.json())
-      .then((d: FilterOptions) => setOptions(d))
+    fetchDesaFilterOptions({ provinsi: prov, kabupaten: kab })
+      .then((data) => setOptions(data))
       .catch(() => {});
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadOptions("", ""); }, [loadOptions]);
+  useEffect(() => {
+    loadOptions("", "");
+  }, [loadOptions]);
 
-  const emit = useCallback((next: AdminDesaFilter) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onChange(next), 300);
-  }, [onChange]);
+  const emit = useCallback(
+    (next: AdminDesaFilter) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => onChange(next), 300);
+    },
+    [onChange],
+  );
 
-  const handleQ = (v: string) => {
-    setQ(v);
-    emit({ q: v, provinsi, kabupaten, kecamatan });
+  const handleQ = (value: string) => {
+    setQ(value);
+    emit({ q: value, provinsi, kabupaten, kecamatan });
   };
-  const handleProvinsi = (v: string) => {
-    setProvinsi(v); setKabupaten(""); setKecamatan("");
-    loadOptions(v, "");
-    emit({ q, provinsi: v, kabupaten: "", kecamatan: "" });
+
+  const handleProvinsi = (value: string) => {
+    setProvinsi(value);
+    setKabupaten("");
+    setKecamatan("");
+    loadOptions(value, "");
+    emit({ q, provinsi: value, kabupaten: "", kecamatan: "" });
   };
-  const handleKabupaten = (v: string) => {
-    setKabupaten(v); setKecamatan("");
-    loadOptions(provinsi, v);
-    emit({ q, provinsi, kabupaten: v, kecamatan: "" });
+
+  const handleKabupaten = (value: string) => {
+    setKabupaten(value);
+    setKecamatan("");
+    loadOptions(provinsi, value);
+    emit({ q, provinsi, kabupaten: value, kecamatan: "" });
   };
-  const handleKecamatan = (v: string) => {
-    setKecamatan(v);
-    emit({ q, provinsi, kabupaten, kecamatan: v });
+
+  const handleKecamatan = (value: string) => {
+    setKecamatan(value);
+    emit({ q, provinsi, kabupaten, kecamatan: value });
   };
 
   const hasFilter = q || provinsi || kabupaten || kecamatan;
+
   const clearAll = () => {
-    setQ(""); setProvinsi(""); setKabupaten(""); setKecamatan("");
+    setQ("");
+    setProvinsi("");
+    setKabupaten("");
+    setKecamatan("");
     loadOptions("", "");
     onChange({ q: "", provinsi: "", kabupaten: "", kecamatan: "" });
   };
@@ -80,70 +95,156 @@ export default function AdminDesaFilterBar({ onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
-        {/* Search */}
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
-          <input type="text" value={q} onChange={e => handleQ(e.target.value)}
+          <Search
+            size={14}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            aria-hidden
+          />
+          <input
+            type="text"
+            value={q}
+            onChange={(event) => handleQ(event.target.value)}
             placeholder="Cari nama desa, kecamatan, kabupaten..."
-            className="field-lux text-sm pl-8 w-full" />
-          {q && (
-            <button type="button" onClick={() => handleQ("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+            className="field-lux w-full text-sm"
+            style={{ paddingLeft: "2.35rem", paddingRight: "2.75rem" }}
+          />
+          {q ? (
+            <button
+              type="button"
+              onClick={() => handleQ("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-600"
+            >
               <X size={12} aria-hidden />
             </button>
-          )}
+          ) : null}
         </div>
 
-        {/* Provinsi */}
-        <div className="relative">
-          <SlidersHorizontal size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
-          <select value={provinsi} onChange={e => handleProvinsi(e.target.value)}
-            aria-label="Filter provinsi"
-            className="select-lux text-sm pl-7 pr-6 min-w-[130px]">
-            <option value="">Semua Provinsi</option>
-            {options.provinsi.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
+        <FilterSelect
+          value={provinsi}
+          onChange={handleProvinsi}
+          ariaLabel="Filter provinsi"
+          minWidth="min-w-[130px]"
+          icon={<SlidersHorizontal size={13} aria-hidden />}
+        >
+          <option value="">Semua Provinsi</option>
+          {options.provinsi.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </FilterSelect>
 
-        {/* Kabupaten */}
-        <select value={kabupaten} onChange={e => handleKabupaten(e.target.value)}
-          aria-label="Filter kabupaten"
-          className="select-lux text-sm pr-6 min-w-[150px]">
+        <FilterSelect
+          value={kabupaten}
+          onChange={handleKabupaten}
+          ariaLabel="Filter kabupaten"
+          minWidth="min-w-[150px]"
+        >
           <option value="">Semua Kabupaten</option>
-          {options.kabupaten.map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
+          {options.kabupaten.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </FilterSelect>
 
-        {/* Kecamatan */}
-        <select value={kecamatan} onChange={e => handleKecamatan(e.target.value)}
-          aria-label="Filter kecamatan"
-          className="select-lux text-sm pr-6 min-w-[140px]">
+        <FilterSelect
+          value={kecamatan}
+          onChange={handleKecamatan}
+          ariaLabel="Filter kecamatan"
+          minWidth="min-w-[140px]"
+        >
           <option value="">Semua Kecamatan</option>
-          {options.kecamatan.map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
+          {options.kecamatan.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </FilterSelect>
       </div>
 
-      {/* Active filter chips */}
-      {hasFilter && (
+      {hasFilter ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          {provinsi  && <FilterChip label={`Provinsi: ${provinsi}`}  onRemove={() => handleProvinsi("")} />}
-          {kabupaten && <FilterChip label={`Kab: ${kabupaten}`}       onRemove={() => handleKabupaten("")} />}
-          {kecamatan && <FilterChip label={`Kec: ${kecamatan}`}       onRemove={() => handleKecamatan("")} />}
-          <button type="button" onClick={clearAll}
-            className="text-[10.5px] text-slate-400 hover:text-rose-600 transition-colors px-1">
-            Hapus semua filter ✕
+          {provinsi ? (
+            <FilterChip label={`Provinsi: ${provinsi}`} onRemove={() => handleProvinsi("")} />
+          ) : null}
+          {kabupaten ? (
+            <FilterChip label={`Kab: ${kabupaten}`} onRemove={() => handleKabupaten("")} />
+          ) : null}
+          {kecamatan ? (
+            <FilterChip label={`Kec: ${kecamatan}`} onRemove={() => handleKecamatan("")} />
+          ) : null}
+          <button
+            type="button"
+            onClick={clearAll}
+            className="px-1 text-[10.5px] text-slate-400 transition-colors hover:text-rose-600"
+          >
+            Hapus semua filter x
           </button>
         </div>
-      )}
+      ) : null}
+    </div>
+  );
+}
+
+function FilterSelect({
+  value,
+  onChange,
+  ariaLabel,
+  minWidth,
+  icon,
+  children,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  minWidth: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {icon ? (
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+          {icon}
+        </span>
+      ) : null}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={ariaLabel}
+        className={`select-lux appearance-none text-sm ${minWidth}`}
+        style={{
+          paddingLeft: icon ? "2.35rem" : "1rem",
+          paddingRight: "1.9rem",
+        }}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+        aria-hidden
+      />
     </div>
   );
 }
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-indigo-50 text-indigo-700"
-      style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.12)" }}>
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10.5px] font-medium text-indigo-700"
+      style={{ boxShadow: "inset 0 0 0 1px rgba(67,56,202,0.12)" }}
+    >
       {label}
-      <button type="button" onClick={onRemove} className="text-indigo-400 hover:text-indigo-700 ml-0.5">✕</button>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-0.5 text-indigo-400 hover:text-indigo-700"
+      >
+        x
+      </button>
     </span>
   );
 }

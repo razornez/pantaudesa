@@ -5,6 +5,7 @@ import { handleApiError } from "@/lib/api-error";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
+import { isVerifiedAdminMember } from "@/lib/admin-desa/policy";
 
 // POST /api/admin-claim/documents/:documentId/approve
 // VERIFIED admin approves a LIMITED-uploaded document:
@@ -50,12 +51,10 @@ export async function POST(
       where: {
         desaId: doc.desaId,
         userId,
-        status: "VERIFIED",
-        role: "VERIFIED_ADMIN",
       },
-      select: { id: true },
+      select: { id: true, status: true, role: true },
     });
-    if (!actor) {
+    if (!actor || !isVerifiedAdminMember(actor.status, actor.role)) {
       return NextResponse.json({
         error: "Hanya Admin Desa VERIFIED yang dapat menyetujui dokumen.",
       }, { status: 403 });

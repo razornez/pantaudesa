@@ -6,6 +6,8 @@ import { generateRawToken, hashToken, tokenExpiresAt } from "@/lib/admin-claim/t
 import { sendAdminInviteEmail } from "@/lib/email/admin-claim-email";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
+import { isVerifiedAdminMember } from "@/lib/admin-desa/policy";
+import { parseAdminDesaInviteBody } from "@/lib/admin-desa/validation";
 
 const MAX_ADMINS_PER_DESA = 5;
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -30,23 +32,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const desaId = body.desaId?.trim();
-    const email = body.email?.trim().toLowerCase();
-    if (!desaId || !email) {
-      return NextResponse.json({ error: "desaId and email are required" }, { status: 400 });
+    const parsedBody = parseAdminDesaInviteBody({
+      desaId: body.desaId,
+      email: body.email,
+      inviterEmail,
+    });
+    if (!parsedBody.ok) {
+      return NextResponse.json({ error: parsedBody.error }, { status: parsedBody.status });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
-    }
-    if (email === inviterEmail) {
-      return NextResponse.json({ error: "Kamu tidak bisa mengundang email akunmu sendiri." }, { status: 400 });
-    }
+    const { desaId, email } = parsedBody.value;
 
     const inviterMember = await db.desaAdminMember.findFirst({
-      where: { desaId, userId: inviterId, role: "VERIFIED_ADMIN", status: "VERIFIED" },
-      select: { id: true },
+      where: { desaId, userId: inviterId },
+      select: { id: true, role: true, status: true },
     });
-    if (!inviterMember) {
+    if (!inviterMember || !isVerifiedAdminMember(inviterMember.status, inviterMember.role)) {
       return NextResponse.json({ error: "Only verified desa admins can invite" }, { status: 403 });
     }
 
