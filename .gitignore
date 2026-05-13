@@ -48,7 +48,9 @@ next-env.d.ts
 
 # local dev logs and tooling caches
 .next-dev*.log
+.next-start*.log
 .claude/
+.tmp-manual-backoffice-qa/
 
 # local-only QA artefacts (screenshots/notes)
 .artifacts/

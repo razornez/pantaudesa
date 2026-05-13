@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "prisma:generate": "node scripts/prisma-generate-safe.mjs",
+    "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
