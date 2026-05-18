@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 import { handleApiError } from "@/lib/api-error";
 import { db } from "@/lib/db";
+import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
+import { getDesaFilterOptionsViaSupabase } from "@/lib/internal-admin/supabase-fallback";
 
 /** Returns distinct provinsi/kabupaten/kecamatan values for admin filter dropdowns. */
 export async function GET(req: NextRequest) {
   try {
     const session = await requireInternalAdminSession();
     if (session instanceof NextResponse) return session;
-    if (!db) return NextResponse.json({ error: "Database tidak tersedia." }, { status: 503 });
 
     const sp = req.nextUrl.searchParams;
     const provinsi = sp.get("provinsi")?.trim() ?? "";
     const kabupaten = sp.get("kabupaten")?.trim() ?? "";
+
+    if (!db) {
+      const fallback = await getDesaFilterOptionsViaSupabase({ provinsi, kabupaten });
+      return NextResponse.json(fallback);
+    }
 
     const provinsiWhere = { NOT: { provinsi: "" } };
     const kabupatenWhere = provinsi ? { provinsi } : {};
@@ -30,6 +36,17 @@ export async function GET(req: NextRequest) {
       kecamatan: kecamatanRows.map(r => r.kecamatan).filter(Boolean),
     });
   } catch (err) {
+    if (isDatabaseConnectivityError(err)) {
+      const sp = req.nextUrl.searchParams;
+      const provinsi = sp.get("provinsi")?.trim() ?? "";
+      const kabupaten = sp.get("kabupaten")?.trim() ?? "";
+      try {
+        const fallback = await getDesaFilterOptionsViaSupabase({ provinsi, kabupaten });
+        return NextResponse.json(fallback);
+      } catch {
+        // fall through to shared API error handler
+      }
+    }
     return handleApiError(err, "GET /api/internal-admin/desa-filter-options");
   }
 }

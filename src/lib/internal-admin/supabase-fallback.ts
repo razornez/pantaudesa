@@ -106,6 +106,38 @@ function uniq(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
+export async function getDesaFilterOptionsViaSupabase(input: {
+  provinsi: string;
+  kabupaten: string;
+}) {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("desa")
+    .select("id,nama,slug,kecamatan,kabupaten,provinsi")
+    .order("provinsi", { ascending: true })
+    .order("kabupaten", { ascending: true })
+    .order("kecamatan", { ascending: true })
+    .returns<DesaOptionRow[]>();
+
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const filteredKabupaten = input.provinsi
+    ? rows.filter((row) => lower(row.provinsi) === lower(input.provinsi))
+    : rows;
+  const filteredKecamatan = rows.filter((row) => {
+    if (input.provinsi && lower(row.provinsi) !== lower(input.provinsi)) return false;
+    if (input.kabupaten && lower(row.kabupaten) !== lower(input.kabupaten)) return false;
+    return true;
+  });
+
+  return {
+    provinsi: uniq(rows.map((row) => row.provinsi)).sort((a, b) => a.localeCompare(b, "id")),
+    kabupaten: uniq(filteredKabupaten.map((row) => row.kabupaten)).sort((a, b) => a.localeCompare(b, "id")),
+    kecamatan: uniq(filteredKecamatan.map((row) => row.kecamatan)).sort((a, b) => a.localeCompare(b, "id")),
+  };
+}
+
 export async function getInternalAdminRoleViaSupabase(userId: string): Promise<string | null> {
   const client = requireClient();
   const { data, error } = await client

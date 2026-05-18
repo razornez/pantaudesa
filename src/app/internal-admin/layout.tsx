@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { House, ShieldCheck } from "lucide-react";
+import InternalAdminLogoutButton from "@/components/internal-admin/InternalAdminLogoutButton";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import {
   INTERNAL_ADMIN_AREAS_SUMMARY,
@@ -62,6 +63,7 @@ export default async function InternalAdminLayout({
                     <House size={13} aria-hidden />
                     Beranda
                   </Link>
+                  <InternalAdminLogoutButton />
                 </div>
               </div>
             </div>

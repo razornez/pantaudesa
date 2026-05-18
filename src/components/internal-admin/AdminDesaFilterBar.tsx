@@ -19,6 +19,7 @@ interface FilterOptions {
 
 interface Props {
   onChange: (filter: AdminDesaFilter) => void;
+  initialFilter?: Partial<AdminDesaFilter>;
 }
 
 /**
@@ -26,11 +27,11 @@ interface Props {
  * Matches the filter UX on the public /desa page but backed by admin APIs.
  * Used in: Data per Desa tab, Versi & Audit tab, Log Aktivitas tab.
  */
-export default function AdminDesaFilterBar({ onChange }: Props) {
-  const [q, setQ] = useState("");
-  const [provinsi, setProvinsi] = useState("");
-  const [kabupaten, setKabupaten] = useState("");
-  const [kecamatan, setKecamatan] = useState("");
+export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
+  const [q, setQ] = useState(initialFilter?.q ?? "");
+  const [provinsi, setProvinsi] = useState(initialFilter?.provinsi ?? "");
+  const [kabupaten, setKabupaten] = useState(initialFilter?.kabupaten ?? "");
+  const [kecamatan, setKecamatan] = useState(initialFilter?.kecamatan ?? "");
   const [options, setOptions] = useState<FilterOptions>({
     provinsi: [],
     kabupaten: [],

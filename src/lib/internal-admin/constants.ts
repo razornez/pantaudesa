@@ -2,6 +2,7 @@ import {
   Database,
   FileText,
   FileUp,
+  Gauge,
   type LucideIcon,
   RefreshCcw,
   UserCog,
@@ -12,6 +13,7 @@ export const INTERNAL_ADMIN_NAV_ITEMS: ReadonlyArray<{
   label: string;
   icon: LucideIcon;
 }> = [
+  { href: "/internal-admin/dashboard", label: "Dashboard", icon: Gauge },
   { href: "/internal-admin/claims", label: "Pengajuan", icon: UserCog },
   { href: "/internal-admin/documents", label: "Dokumen", icon: FileText },
   { href: "/internal-admin/intake", label: "Intake", icon: FileUp },
@@ -20,7 +22,7 @@ export const INTERNAL_ADMIN_NAV_ITEMS: ReadonlyArray<{
 ] as const;
 
 export const INTERNAL_ADMIN_AREAS_SUMMARY =
-  "klaim, dokumen, perpanjangan" as const;
+  "dashboard, klaim, dokumen, perpanjangan" as const;
 
 export const CLAIM_QUEUE_PAGE_SIZE = 20;
 export const INTERNAL_DOCUMENT_QUEUE_PAGE_SIZE = 100;
