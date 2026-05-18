@@ -6,6 +6,7 @@ import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { createNotification, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 import { isVerifiedAdminMember } from "@/lib/admin-desa/policy";
+import { buildDocumentPipelineSnapshotFromStorage } from "@/lib/internal-admin/document-pipeline-snapshot";
 
 // POST /api/admin-claim/documents/:documentId/approve
 // VERIFIED admin approves a LIMITED-uploaded document:
@@ -34,6 +35,11 @@ export async function POST(
         status: true,
         title: true,
         uploadedById: true,
+        storageKey: true,
+        fileName: true,
+        fileType: true,
+        fileSize: true,
+        aiMappingResult: true,
       },
     });
     if (!doc) {
@@ -60,6 +66,15 @@ export async function POST(
       }, { status: 403 });
     }
 
+    const snapshot = await buildDocumentPipelineSnapshotFromStorage({
+      desaId: doc.desaId,
+      storageKey: doc.storageKey,
+      fileName: doc.fileName,
+      fileType: doc.fileType,
+      fileSize: doc.fileSize,
+      existingAiMappingResult: doc.aiMappingResult,
+    });
+
     const now = new Date();
     await db.adminDesaDocument.update({
       where: { id: documentId },
@@ -67,6 +82,8 @@ export async function POST(
         status: "PROCESSING",
         approvedById: userId,
         approvedAt: now,
+        aiMappingStatus: snapshot.aiMappingStatus,
+        aiMappingResult: snapshot.pipelineJson,
         updatedAt: now,
       },
     });

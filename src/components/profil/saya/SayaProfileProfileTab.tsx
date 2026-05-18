@@ -4,6 +4,7 @@ import type { BadgeTier } from "@/lib/user-profile";
 import type { AuthUser } from "@/lib/auth-context";
 import ProfileAdminAccessEntryCard from "@/components/profil/admin-claim/ProfileAdminAccessEntryCard";
 import InternalAdminAccessCard from "@/components/profil/InternalAdminAccessCard";
+import type { AdminClaimProfileSummaryData } from "@/lib/data/admin-claim-read";
 import { AvatarEditor } from "./AvatarEditor";
 import { BadgeMeaningCard } from "./BadgeMeaningCard";
 import { ChangePinCard } from "./ChangePinCard";
@@ -11,6 +12,7 @@ import { TrustCard } from "./TrustCard";
 
 interface SayaProfileProfileTabProps {
   user: AuthUser;
+  initialAdminClaimProfile: AdminClaimProfileSummaryData;
   nama: string;
   bio: string;
   avatarUrl?: string;
@@ -28,6 +30,7 @@ interface SayaProfileProfileTabProps {
 
 export function SayaProfileProfileTab({
   user,
+  initialAdminClaimProfile,
   nama,
   bio,
   avatarUrl,
@@ -98,7 +101,7 @@ export function SayaProfileProfileTab({
 
       <ChangePinCard onSuccess={onPinSuccess} onError={onPinError} />
       <InternalAdminAccessCard />
-      <ProfileAdminAccessEntryCard user={user} />
+      <ProfileAdminAccessEntryCard user={user} initialProfileData={initialAdminClaimProfile} />
 
       {user.role === "WARGA" && (
         <>

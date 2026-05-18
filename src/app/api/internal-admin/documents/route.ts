@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { requireInternalAdminSession } from "@/lib/auth/internal-admin";
 
-const ALLOWED = ["WAITING_VERIFIED_APPROVAL", "PROCESSING", "PUBLISHED", "FAILED"] as const;
+const ALLOWED = ["WAITING_VERIFIED_APPROVAL", "PROCESSING", "PUBLISHED", "REJECTED", "FAILED"] as const;
 type DocStatus = typeof ALLOWED[number];
 
 export async function GET(req: NextRequest) {

@@ -8,7 +8,7 @@ export const STATUS_META: Record<
   WAITING_VERIFIED_APPROVAL: {
     label: "Belum masuk review",
     pill: "pill-warn",
-    note: "Dokumen masih menunggu persetujuan admin utama desa sebelum bisa direview internal.",
+    note: "Admin verified desa diutamakan untuk mengecek dulu, tetapi admin internal tetap bisa ambil alih bila operasional perlu jalan.",
   },
   PROCESSING: {
     label: "Perlu review internal",
@@ -19,6 +19,11 @@ export const STATUS_META: Record<
     label: "Sudah dipublikasikan",
     pill: "pill-ok",
     note: "Data dari dokumen ini sudah diterapkan ke halaman desa dan tidak perlu aksi lanjut.",
+  },
+  REJECTED: {
+    label: "Ditolak verified",
+    pill: "pill-danger",
+    note: "Dokumen dihentikan oleh admin verified desa. Pengunggah perlu unggah dokumen baru dengan perbaikan.",
   },
   FAILED: {
     label: "Perlu unggahan ulang",
@@ -32,6 +37,7 @@ export const STATUS_TABS = [
   { value: "WAITING_VERIFIED_APPROVAL", label: "Menunggu" },
   { value: "PROCESSING", label: "Diproses" },
   { value: "PUBLISHED", label: "Sudah tayang" },
+  { value: "REJECTED", label: "Ditolak" },
   { value: "FAILED", label: "Gagal" },
 ] as const;
 

@@ -72,6 +72,7 @@ export const REVIEW_QUEUE_STATUSES = [
   "WAITING_VERIFIED_APPROVAL",
   "PROCESSING",
   "PUBLISHED",
+  "REJECTED",
   "FAILED",
 ] as const;
 

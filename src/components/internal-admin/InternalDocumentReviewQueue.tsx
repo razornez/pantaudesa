@@ -9,7 +9,6 @@ import { STATUS_TABS } from "@/components/internal-admin/review-queue/constants"
 import type { DocRow } from "@/components/internal-admin/review-queue/types";
 import { DocCard } from "@/components/internal-admin/review-queue/DocCard";
 import { MarkFailedModal } from "@/components/internal-admin/review-queue/MarkFailedModal";
-import { PublishModal } from "@/components/internal-admin/review-queue/PublishModal";
 import { buildStatusHref } from "@/components/internal-admin/review-queue/utils";
 
 export default function InternalDocumentReviewQueue({
@@ -24,7 +23,6 @@ export default function InternalDocumentReviewQueue({
   const pathname = usePathname();
   const router = useRouter();
   const { toasts, toast, removeToast } = useToast();
-  const [publishTarget, setPublishTarget] = useState<DocRow | null>(null);
   const [failTarget, setFailTarget] = useState<DocRow | null>(null);
 
   const summary = useMemo(
@@ -35,10 +33,11 @@ export default function InternalDocumentReviewQueue({
           if (doc.status === "WAITING_VERIFIED_APPROVAL") accumulator.waiting += 1;
           if (doc.status === "PROCESSING") accumulator.processing += 1;
           if (doc.status === "PUBLISHED") accumulator.published += 1;
+          if (doc.status === "REJECTED") accumulator.rejected += 1;
           if (doc.status === "FAILED") accumulator.failed += 1;
           return accumulator;
         },
-        { total: 0, waiting: 0, processing: 0, published: 0, failed: 0 },
+        { total: 0, waiting: 0, processing: 0, published: 0, rejected: 0, failed: 0 },
       ),
     [documents],
   );
@@ -47,7 +46,7 @@ export default function InternalDocumentReviewQueue({
     {
       label: "Belum masuk review",
       count: summary.waiting,
-      note: "Masih menunggu persetujuan admin utama desa.",
+      note: "Verified desa diutamakan, tetapi internal admin tetap bisa mengambil alih bila perlu.",
       className: "border-amber-200 bg-amber-50 text-amber-900",
     },
     {
@@ -63,6 +62,12 @@ export default function InternalDocumentReviewQueue({
       className: "border-emerald-200 bg-emerald-50 text-emerald-900",
     },
     {
+      label: "Ditolak verified",
+      count: summary.rejected,
+      note: "Dokumen dihentikan di level admin verified desa dan menunggu unggahan baru dari pengunggah.",
+      className: "border-rose-200 bg-rose-50 text-rose-900",
+    },
+    {
       label: "Perlu unggahan ulang",
       count: summary.failed,
       note: "Dokumen gagal dipakai dan menunggu perbaikan pengunggah.",
@@ -70,13 +75,8 @@ export default function InternalDocumentReviewQueue({
     },
   ];
 
-  const refresh = () => router.refresh();
-
   useEffect(() => {
     if (!focusDocumentId) return;
-
-    const focusedDocument =
-      documents.find((doc) => doc.id === focusDocumentId && doc.status === "PROCESSING") ?? null;
 
     const rafId = window.requestAnimationFrame(() => {
       const target = document.getElementById(`document-card-${focusDocumentId}`);
@@ -86,19 +86,10 @@ export default function InternalDocumentReviewQueue({
       });
     });
 
-    const openTimerId = focusedDocument
-      ? window.setTimeout(() => {
-          setPublishTarget(focusedDocument);
-        }, 900)
-      : null;
-
     return () => {
       window.cancelAnimationFrame(rafId);
-      if (openTimerId !== null) {
-        window.clearTimeout(openTimerId);
-      }
     };
-  }, [documents, focusDocumentId]);
+  }, [focusDocumentId]);
 
   return (
     <div className="space-y-5" data-testid="internal-documents-queue">
@@ -148,6 +139,11 @@ export default function InternalDocumentReviewQueue({
               {summary.published} tayang
             </span>
           ) : null}
+          {summary.rejected > 0 ? (
+            <span className="pill-danger rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
+              {summary.rejected} ditolak
+            </span>
+          ) : null}
           {summary.failed > 0 ? (
             <span className="pill-danger rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
               {summary.failed} gagal
@@ -161,8 +157,8 @@ export default function InternalDocumentReviewQueue({
         <p className="mt-1">
           1. Cari kartu dengan blok `Langkah berikutnya` yang sesuai kebutuhan Anda.
         </p>
-        <p>2. Buka `Review data` untuk cek dan koreksi isi dokumen.</p>
-        <p>3. Klik `Simpan dulu` jika belum final, atau `Publikasikan sekarang` jika sudah yakin.</p>
+        <p>2. Buka `Review data` untuk cek isi dokumen dan lihat hasil ekstraksi yang tersimpan.</p>
+        <p>3. Selesaikan keputusan final di halaman review: publish jika valid, atau tandai gagal jika dokumen bermasalah.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -208,7 +204,6 @@ export default function InternalDocumentReviewQueue({
             <DocCard
               key={doc.id}
               doc={doc}
-              onPublish={setPublishTarget}
               onMarkFailed={setFailTarget}
               onNotify={toast}
               isHighlighted={focusDocumentId === doc.id}
@@ -217,18 +212,6 @@ export default function InternalDocumentReviewQueue({
         </div>
       )}
 
-      {publishTarget ? (
-        <PublishModal
-          doc={publishTarget}
-          onNotify={toast}
-          onClose={() => setPublishTarget(null)}
-          onDone={() => {
-            setPublishTarget(null);
-            refresh();
-          }}
-        />
-      ) : null}
-
       {failTarget ? (
         <MarkFailedModal
           doc={failTarget}
@@ -236,7 +219,7 @@ export default function InternalDocumentReviewQueue({
           onClose={() => setFailTarget(null)}
           onDone={() => {
             setFailTarget(null);
-            refresh();
+            router.refresh();
           }}
         />
       ) : null}

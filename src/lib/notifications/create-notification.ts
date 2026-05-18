@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 export const NOTIF_TYPE = {
   DOCUMENT_UPLOADED_WAITING:  "DOCUMENT_UPLOADED_WAITING",   // to VERIFIED admins
   DOCUMENT_APPROVED:          "DOCUMENT_APPROVED",            // to uploader
+  DOCUMENT_REJECTED:          "DOCUMENT_REJECTED",            // to uploader
   DOCUMENT_PUBLISHED:         "DOCUMENT_PUBLISHED",           // to uploader
   DOCUMENT_FAILED:            "DOCUMENT_FAILED",              // to uploader
   INVITE_ACCEPTED:            "INVITE_ACCEPTED",              // to inviter

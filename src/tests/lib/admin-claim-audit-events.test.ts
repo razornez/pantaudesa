@@ -73,6 +73,7 @@ describe("audit event constants", () => {
     expect(AUDIT_EVENT.MEMBER_REVOKED).toBeDefined();
     expect(AUDIT_EVENT.MEMBER_VERIFIED).toBeDefined();
     expect(AUDIT_EVENT.DOCUMENT_APPROVED_BY_VERIFIED).toBeDefined();
+    expect(AUDIT_EVENT.DOCUMENT_REJECTED_BY_VERIFIED).toBeDefined();
   });
 
   it("all required events exist for fake report", () => {

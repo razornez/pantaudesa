@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   canApproveAdminDesaDocuments,
+  canRejectAdminDesaDocuments,
   canRevokeAdminDesaMember,
   canUploadAdminDesaDocuments,
   getUploadedDocumentInitialStatus,
@@ -17,6 +18,8 @@ describe("admin-desa policy", () => {
     expect(isVerifiedAdminMember("VERIFIED", "VERIFIED_ADMIN")).toBe(true);
     expect(canApproveAdminDesaDocuments("VERIFIED", "VERIFIED_ADMIN")).toBe(true);
     expect(canApproveAdminDesaDocuments("LIMITED", "LIMITED_ADMIN")).toBe(false);
+    expect(canRejectAdminDesaDocuments("VERIFIED", "VERIFIED_ADMIN")).toBe(true);
+    expect(canRejectAdminDesaDocuments("LIMITED", "LIMITED_ADMIN")).toBe(false);
   });
 
   test("upload access and initial document status remain aligned", () => {

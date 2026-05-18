@@ -1,5 +1,4 @@
 import type {
-  DraftApiPayload,
   PublishApiPayload,
   TemplateRibbonInfo,
 } from "./types";
@@ -37,33 +36,6 @@ export async function fetchDocumentPreviewUrl(documentId: string): Promise<strin
     throw new Error(getErrorMessage(data, "Preview dokumen belum bisa dibuka."));
   }
   return data.signedUrl;
-}
-
-export async function createDraftMapping(documentId: string): Promise<DraftApiPayload> {
-  const response = await fetch(`/api/internal-admin/documents/${documentId}/draft-mapping`, {
-    method: "POST",
-  });
-  const data = (await response.json()) as DraftApiPayload | ApiErrorPayload;
-  if (!response.ok || !("ok" in data) || !data.ok) {
-    throw new Error(getErrorMessage(data, "Draft mapping belum berhasil dibuat."));
-  }
-  return data;
-}
-
-export async function saveDraftMapping(
-  documentId: string,
-  input: { fields: Record<string, string | number | null>; notes?: string },
-): Promise<DraftApiPayload> {
-  const response = await fetch(`/api/internal-admin/documents/${documentId}/draft-mapping`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  const data = (await response.json()) as DraftApiPayload | ApiErrorPayload;
-  if (!response.ok || !("ok" in data) || !data.ok) {
-    throw new Error(getErrorMessage(data, "Draft review belum berhasil disimpan."));
-  }
-  return data;
 }
 
 export async function publishDocumentReview(

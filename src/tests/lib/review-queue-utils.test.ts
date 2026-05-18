@@ -23,6 +23,7 @@ function buildDoc(overrides?: Partial<DocRow>): DocRow {
     approvedAt: null,
     publishedAt: null,
     failedReason: null,
+    rejectedReason: null,
     aiMappingStatus: "DRAFT_READY_REVIEW",
     aiMappingResult: {
       fields: {

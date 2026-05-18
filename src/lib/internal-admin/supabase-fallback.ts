@@ -32,10 +32,11 @@ type DocumentRow = {
   fileName: string;
   fileType: string;
   fileSize: number;
-  status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "FAILED";
+  status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "REJECTED" | "FAILED";
   approvedAt: string | null;
   publishedAt: string | null;
   failedReason: string | null;
+  rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult: unknown;
   createdAt: string;
@@ -65,10 +66,11 @@ type QueueDocumentFallback = {
   fileName: string;
   fileType: string;
   fileSize: number;
-  status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "FAILED";
+  status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "REJECTED" | "FAILED";
   approvedAt: string | null;
   publishedAt: string | null;
   failedReason: string | null;
+  rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult: unknown;
   createdAt: string;
@@ -183,7 +185,7 @@ export async function listInternalDocumentsViaSupabase(
   let query = client
     .from("admin_desa_documents")
     .select(
-      "id,desaId,uploadedById,title,category,fileName,fileType,fileSize,status,approvedAt,publishedAt,failedReason,aiMappingStatus,aiMappingResult,createdAt,updatedAt",
+      "id,desaId,uploadedById,title,category,fileName,fileType,fileSize,status,approvedAt,publishedAt,failedReason,rejectedReason,aiMappingStatus,aiMappingResult,createdAt,updatedAt",
     )
     .order("status", { ascending: true })
     .order("updatedAt", { ascending: false })
@@ -233,7 +235,7 @@ export async function getIntakeHistoryViaSupabase() {
   const { data: submissions, error: submissionError } = await client
     .from("admin_desa_documents")
     .select(
-      "id,title,status,aiMappingStatus,fileName,fileType,fileSize,failedReason,publishedAt,createdAt,updatedAt,desaId",
+      "id,title,status,aiMappingStatus,fileName,fileType,fileSize,failedReason,rejectedReason,publishedAt,createdAt,updatedAt,desaId",
     )
     .eq("category", "intake_workbench")
     .order("updatedAt", { ascending: false })

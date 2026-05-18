@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { ErrorState } from "./error-state";
 import { getMappingStatus, getOpenAiStatus, getReviewStatus } from "./IntakeStatusHelpers";
 import { IntakeCoverageLens } from "./IntakeCoverageLens";
@@ -25,6 +26,8 @@ interface IntakeResultStepProps {
   onReviewTitleChange: (value: string) => void;
   onSubmitReview: () => void;
   onToggleInspector: () => void;
+  reviewActionSlot?: ReactNode;
+  finalReview?: boolean;
 }
 
 export function IntakeResultStep({
@@ -41,6 +44,8 @@ export function IntakeResultStep({
   onReviewTitleChange,
   onSubmitReview,
   onToggleInspector,
+  reviewActionSlot,
+  finalReview = false,
 }: IntakeResultStepProps) {
   return (
     <div className="space-y-6">
@@ -57,6 +62,7 @@ export function IntakeResultStep({
             aiStatus={getOpenAiStatus(result)}
             reviewStatus={getReviewStatus(result)}
             selectedDesa={selectedDesa}
+            finalReview={finalReview}
           />
         </div>
       ) : null}
@@ -65,18 +71,20 @@ export function IntakeResultStep({
       <IntakeInfoStrip result={result} onToggleInspector={onToggleInspector} />
 
       <div ref={reviewSectionRef}>
-        <IntakeReviewSubmitSection
-          mode={mode}
-          loading={loading}
-          result={result}
-          selectedDesa={selectedDesa}
-          selectedFile={selectedFile}
-          reviewTitle={reviewTitle}
-          submittedReview={submittedReview}
-          error={error}
-          onReviewTitleChange={onReviewTitleChange}
-          onSubmitReview={onSubmitReview}
-        />
+        {reviewActionSlot ?? (
+          <IntakeReviewSubmitSection
+            mode={mode}
+            loading={loading}
+            result={result}
+            selectedDesa={selectedDesa}
+            selectedFile={selectedFile}
+            reviewTitle={reviewTitle}
+            submittedReview={submittedReview}
+            error={error}
+            onReviewTitleChange={onReviewTitleChange}
+            onSubmitReview={onSubmitReview}
+          />
+        )}
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ export interface InternalDocumentQueueItem {
   approvedAt: string | null;
   publishedAt: string | null;
   failedReason: string | null;
+  rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult?: unknown;
   createdAt: string;
@@ -61,6 +62,7 @@ export async function loadInternalDocumentQueue(
         approvedAt: true,
         publishedAt: true,
         failedReason: true,
+        rejectedReason: true,
         aiMappingStatus: true,
         aiMappingResult: true,
         createdAt: true,

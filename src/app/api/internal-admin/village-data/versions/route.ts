@@ -9,6 +9,7 @@ const PAGE_SIZE = 20;
 const DOC_STATUS_LABEL: Record<string, string> = {
   PROCESSING:                 "Dokumen disubmit ke review",
   PUBLISHED:                  "Data diterbitkan dari dokumen",
+  REJECTED:                   "Dokumen ditolak oleh admin verified",
   FAILED:                     "Dokumen gagal diproses",
   WAITING_VERIFIED_APPROVAL:  "Menunggu persetujuan",
 };

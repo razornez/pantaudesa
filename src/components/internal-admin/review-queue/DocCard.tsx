@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, ExternalLink, Sparkles } from "lucide-react";
 import type { ToastType } from "@/components/ui/Toast";
-import { readAiMappingDraft } from "@/lib/admin-claim/ai-mapping";
 import { STATUS_META } from "./constants";
-import { createDraftMapping, fetchDocumentPreviewUrl } from "./api";
+import { fetchDocumentPreviewUrl } from "./api";
 import type { DocRow } from "./types";
 import {
   formatBytes,
@@ -21,7 +21,6 @@ import {
 
 interface DocCardProps {
   doc: DocRow;
-  onPublish: (doc: DocRow) => void;
   onMarkFailed: (doc: DocRow) => void;
   onNotify: (message: string, type?: ToastType) => void;
   isHighlighted: boolean;
@@ -29,7 +28,6 @@ interface DocCardProps {
 
 export function DocCard({
   doc,
-  onPublish,
   onMarkFailed,
   onNotify,
   isHighlighted,
@@ -46,34 +44,6 @@ export function DocCard({
     try {
       const signedUrl = await fetchDocumentPreviewUrl(doc.id);
       window.open(signedUrl, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function runDraftMapping() {
-    const existingDraft = readAiMappingDraft(doc.aiMappingResult);
-    if (existingDraft) {
-      onNotify("Review data ini sudah pernah disimpan. Saya buka lagi sekarang.", "success");
-      onPublish(doc);
-      return;
-    }
-
-    setBusy(true);
-
-    try {
-      const data = await createDraftMapping(doc.id);
-      onNotify(
-        data.reused ? "Draft review lama dibuka kembali." : "Review data siap diisi.",
-        "success",
-      );
-      onPublish({
-        ...doc,
-        aiMappingStatus: data.aiMappingStatus,
-        aiMappingResult: data.draft,
-      });
     } catch (error) {
       onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.", "error");
     } finally {
@@ -160,6 +130,13 @@ export function DocCard({
         </div>
       ) : null}
 
+      {doc.status === "REJECTED" && doc.rejectedReason ? (
+        <div className="notice-card notice-danger text-xs">
+          <p className="font-semibold">Alasan penolakan:</p>
+          <p className="mt-1">{doc.rejectedReason}</p>
+        </div>
+      ) : null}
+
       {doc.status === "PROCESSING" ? (
         <div className="flex flex-wrap gap-2">
           <button
@@ -170,14 +147,12 @@ export function DocCard({
           >
             <ExternalLink size={11} aria-hidden /> Preview
           </button>
-          <button
-            type="button"
-            onClick={runDraftMapping}
-            disabled={busy}
+          <Link
+            href={`/internal-admin/intake/${encodeURIComponent(doc.id)}`}
             className="btn-lux btn-lux-success text-xs"
           >
             <Sparkles size={11} aria-hidden /> {getDraftButtonLabel(doc)}
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => onMarkFailed(doc)}
@@ -207,6 +182,31 @@ export function DocCard({
           >
             <AlertTriangle size={11} aria-hidden /> Tandai gagal
           </button>
+          <Link
+            href={`/internal-admin/intake/${encodeURIComponent(doc.id)}`}
+            className="btn-lux btn-lux-success text-xs"
+          >
+            <Sparkles size={11} aria-hidden /> Ambil alih review
+          </Link>
+        </div>
+      ) : null}
+
+      {doc.status === "PUBLISHED" || doc.status === "FAILED" || doc.status === "REJECTED" ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={openPreview}
+            disabled={busy}
+            className="btn-lux btn-lux-ghost text-xs"
+          >
+            <ExternalLink size={11} aria-hidden /> Preview
+          </button>
+          <Link
+            href={`/internal-admin/intake/${encodeURIComponent(doc.id)}`}
+            className="btn-lux btn-lux-secondary text-xs"
+          >
+            Lihat hasil
+          </Link>
         </div>
       ) : null}
     </article>

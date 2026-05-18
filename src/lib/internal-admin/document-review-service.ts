@@ -52,6 +52,12 @@ function serviceError(status: number, error: string): ServiceResult<never> {
   return { ok: false, status, body: { error } };
 }
 
+function isFallbackReviewStatus(
+  status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "REJECTED" | "FAILED",
+) {
+  return status === "WAITING_VERIFIED_APPROVAL";
+}
+
 export async function createDocumentDraftMapping(params: {
   db: DbClient;
   documentId: string;
@@ -350,7 +356,7 @@ export async function publishReviewedDocument(params: {
     actorRole: "INTERNAL_ADMIN",
     entityType: "AdminDesaDocument",
     entityId: params.documentId,
-    previousStatus: "PROCESSING",
+    previousStatus: doc.status,
     nextStatus: "PUBLISHED",
     reasonText: note ?? undefined,
     beforeSnapshotJson: result.beforeSnapshot ?? undefined,
@@ -361,6 +367,7 @@ export async function publishReviewedDocument(params: {
       appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
       beforeSnapshot: result.beforeSnapshot,
       afterSnapshot: result.afterSnapshot,
+      reviewMode: isFallbackReviewStatus(doc.status) ? "internal_admin_fallback" : "standard",
     },
     ...params.actor.requestMeta,
   });
@@ -372,14 +379,17 @@ export async function publishReviewedDocument(params: {
     actorUserId: params.actor.userId,
     actorRole: "INTERNAL_ADMIN",
     eventType: AUDIT_EVENT.INTERNAL_DATA_PUBLISHED,
-    eventLabel: "Dipublikasikan ke data desa",
-    previousStatus: "PROCESSING",
+    eventLabel: isFallbackReviewStatus(doc.status)
+      ? "Dipublikasikan via fallback admin internal"
+      : "Dipublikasikan ke data desa",
+    previousStatus: doc.status,
     nextStatus: "PUBLISHED",
     note: note,
     metadata: {
       title: doc.title,
       versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
       appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
+      reviewMode: isFallbackReviewStatus(doc.status) ? "internal_admin_fallback" : "standard",
     },
   });
 
@@ -465,13 +475,16 @@ export async function markDocumentReviewFailed(params: {
     actorUserId: params.actor.userId,
     actorRole: "INTERNAL_ADMIN",
     eventType: AUDIT_EVENT.INTERNAL_DOCUMENT_FAILED,
-    eventLabel: "Ditandai gagal",
+    eventLabel: isFallbackReviewStatus(doc.status)
+      ? "Ditolak via fallback admin internal"
+      : "Ditandai gagal",
     previousStatus: doc.status,
     nextStatus: "FAILED",
     note: params.reason,
     metadata: {
       title: doc.title,
       versionNumber: failedVersion.versionNumber ?? null,
+      reviewMode: isFallbackReviewStatus(doc.status) ? "internal_admin_fallback" : "standard",
     },
   });
 

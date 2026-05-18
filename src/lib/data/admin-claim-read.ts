@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/lib/db";
 import {
   getAdminClaimEligibility,
@@ -5,6 +6,7 @@ import {
   isActiveMemberStatus,
   type AdminClaimEligibility,
 } from "@/lib/admin-claim/eligibility";
+import { perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf";
 
 export type AdminClaimDataStatus = "demo" | "source-found" | "needs-review";
 export type AdminClaimStatus =
@@ -69,7 +71,7 @@ export interface AdminClaimActiveMember {
   joinedAt: string;
 }
 
-export interface AdminClaimProfileData {
+interface AdminClaimProfileBaseData {
   source: "database" | "fallback";
   currentUser: {
     id: string;
@@ -78,13 +80,20 @@ export interface AdminClaimProfileData {
     email: string;
     role: AdminClaimRole;
   } | null;
-  selectedDesaId: string | null;
   currentState: AdminClaimStateCard;
   currentClaim: AdminClaimActiveClaim | null;
   currentMember: AdminClaimActiveMember | null;
+}
+
+export interface AdminClaimProfileSummaryData extends AdminClaimProfileBaseData {
+  detail: "summary";
+}
+
+export interface AdminClaimProfileData extends AdminClaimProfileBaseData {
+  detail: "full";
+  selectedDesaId: string | null;
   eligibility: AdminClaimEligibility;
   desaOptions: AdminClaimDesaOption[];
-  demoStates: AdminClaimStateCard[];
 }
 
 type DesaSourceRow = {
@@ -154,16 +163,6 @@ type MemberRow = {
     role: AdminClaimRole;
   };
 };
-
-const DEMO_EMAILS = [
-  "warga.demo@pantaudesa.local",
-  "pengaju.admin.demo@pantaudesa.local",
-  "admin.desa.limited.demo@pantaudesa.local",
-  "admin.desa.verified.demo@pantaudesa.local",
-  "admin.desa.rejected.demo@pantaudesa.local",
-  "admin.desa.suspended.demo@pantaudesa.local",
-  "platform.admin.demo@pantaudesa.local",
-] as const;
 
 const FALLBACK_DESA_OPTIONS: AdminClaimDesaOption[] = [
   {
@@ -541,28 +540,186 @@ function buildCurrentCard(
   };
 }
 
-function fallbackProfileData(): AdminClaimProfileData {
+function fallbackSummaryData(): AdminClaimProfileSummaryData {
   return {
+    detail: "summary",
     source: "fallback",
     currentUser: null,
-    selectedDesaId: FALLBACK_DESA_OPTIONS[1]?.id ?? FALLBACK_DESA_OPTIONS[0]?.id ?? null,
     currentState: FALLBACK_DEMO_STATES[0],
     currentClaim: null,
     currentMember: null,
-    eligibility: getAdminClaimEligibility({}),
-    desaOptions: FALLBACK_DESA_OPTIONS,
-    demoStates: FALLBACK_DEMO_STATES,
   };
 }
 
-export async function getAdminClaimProfileData(userId: string | null | undefined): Promise<AdminClaimProfileData> {
-  if (!db) return fallbackProfileData();
+function fallbackProfileData(): AdminClaimProfileData {
+  return {
+    ...fallbackSummaryData(),
+    detail: "full",
+    selectedDesaId: FALLBACK_DESA_OPTIONS[1]?.id ?? FALLBACK_DESA_OPTIONS[0]?.id ?? null,
+    eligibility: getAdminClaimEligibility({}),
+    desaOptions: FALLBACK_DESA_OPTIONS,
+  };
+}
+
+const currentUserSelect = {
+  id: true,
+  nama: true,
+  username: true,
+  email: true,
+  role: true,
+  desaAdminClaims: {
+    orderBy: { updatedAt: "desc" },
+    take: 1,
+    select: {
+      id: true,
+      status: true,
+      method: true,
+      officialEmail: true,
+      websiteUrl: true,
+      tokenHash: true,
+      tokenExpiresAt: true,
+      verifiedAt: true,
+      rejectedAt: true,
+      rejectionReason: true,
+      desa: {
+        select: {
+          id: true,
+          nama: true,
+          kecamatan: true,
+          kabupaten: true,
+          provinsi: true,
+          websiteUrl: true,
+          dataSources: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            select: {
+              sourceName: true,
+              accessStatus: true,
+              dataStatus: true,
+            },
+          },
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          nama: true,
+          username: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  },
+  desaAdminMembers: {
+    orderBy: { updatedAt: "desc" },
+    take: 1,
+    select: {
+      id: true,
+      role: true,
+      status: true,
+      joinedAt: true,
+      desa: {
+        select: {
+          id: true,
+          nama: true,
+          kecamatan: true,
+          kabupaten: true,
+          provinsi: true,
+          websiteUrl: true,
+          dataSources: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            select: {
+              sourceName: true,
+              accessStatus: true,
+              dataStatus: true,
+            },
+          },
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          nama: true,
+          username: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  },
+} as const;
+
+async function fetchCurrentUser(userId: string | null | undefined) {
+  if (!userId) return null;
+  return db?.user.findUnique({
+    where: { id: userId },
+    select: currentUserSelect,
+  }) ?? null;
+}
+
+function serializeCurrentUser(
+  currentUser: Awaited<ReturnType<typeof fetchCurrentUser>>,
+): AdminClaimProfileSummaryData["currentUser"] {
+  if (!currentUser) return null;
+  return {
+    id: currentUser.id,
+    nama: currentUser.nama ?? currentUser.username ?? currentUser.email,
+    username: currentUser.username ?? "",
+    email: currentUser.email,
+    role: currentUser.role as AdminClaimRole,
+  };
+}
+
+function serializeActiveClaim(currentClaim: ClaimRow | null): AdminClaimProfileSummaryData["currentClaim"] {
+  if (!currentClaim || !isActiveClaimStatus(currentClaim.status)) return null;
+  return {
+    id: currentClaim.id,
+    desaId: currentClaim.desa.id,
+    desaName: currentClaim.desa.nama,
+    status: currentClaim.status,
+    method: (currentClaim.method as AdminClaimMethod | null) ?? null,
+    officialEmail: currentClaim.officialEmail,
+    websiteUrl: currentClaim.websiteUrl,
+    tokenExpiresAt: currentClaim.tokenExpiresAt?.toISOString() ?? null,
+    hasActiveToken: Boolean(currentClaim.tokenHash && currentClaim.tokenExpiresAt),
+    verifiedAt: currentClaim.verifiedAt?.toISOString() ?? null,
+    rejectedAt: currentClaim.rejectedAt?.toISOString() ?? null,
+    rejectionReason: currentClaim.rejectionReason,
+  };
+}
+
+function serializeActiveMember(currentMember: MemberRow | null): AdminClaimProfileSummaryData["currentMember"] {
+  if (!currentMember || !isActiveMemberStatus(currentMember.status)) return null;
+  return {
+    id: currentMember.id,
+    desaId: currentMember.desa.id,
+    desaName: currentMember.desa.nama,
+    status: currentMember.status,
+    role: currentMember.role,
+    joinedAt: currentMember.joinedAt.toISOString(),
+  };
+}
+
+async function readAdminClaimProfile(
+  userId: string | null | undefined,
+  detail: "summary" | "full",
+): Promise<AdminClaimProfileSummaryData | AdminClaimProfileData> {
+  if (!db) return detail === "full" ? fallbackProfileData() : fallbackSummaryData();
+
+  const routeLabel = detail === "full" ? "admin-claim.profile.full" : "admin-claim.profile.summary";
+  const desaTake = detail === "full" ? 12 : 1;
+
+  perfQueryShape(routeLabel, "desa.findMany", `orderBy:namaAsc;take:${desaTake};select:desaOptionFields+latestSource`);
+  perfQueryShape(routeLabel, "user.findUnique", "where:id;select:currentUserClaimAndMember");
 
   try {
-    const [desaRows, currentUser, demoUsers, demoClaims, demoMembers] = await Promise.all([
+    const tQuery = perfStart();
+    const [desaRows, currentUser] = await Promise.all([
       db.desa.findMany({
         orderBy: [{ nama: "asc" }],
-        take: 12,
+        take: desaTake,
         select: {
           id: true,
           nama: true,
@@ -581,330 +738,42 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
           },
         },
       }),
-      userId
-        ? db.user.findUnique({
-            where: { id: userId },
-            select: {
-              id: true,
-              nama: true,
-              username: true,
-              email: true,
-              role: true,
-              desaAdminClaims: {
-                orderBy: { updatedAt: "desc" },
-                take: 1,
-                select: {
-                  id: true,
-                  status: true,
-                  method: true,
-                  officialEmail: true,
-                  websiteUrl: true,
-                  tokenHash: true,
-                  tokenExpiresAt: true,
-                  verifiedAt: true,
-                  rejectedAt: true,
-                  rejectionReason: true,
-                  desa: {
-                    select: {
-                      id: true,
-                      nama: true,
-                      kecamatan: true,
-                      kabupaten: true,
-                      provinsi: true,
-                      websiteUrl: true,
-                      dataSources: {
-                        orderBy: { updatedAt: "desc" },
-                        take: 1,
-                        select: {
-                          sourceName: true,
-                          accessStatus: true,
-                          dataStatus: true,
-                        },
-                      },
-                    },
-                  },
-                  user: {
-                    select: {
-                      id: true,
-                      nama: true,
-                      username: true,
-                      email: true,
-                      role: true,
-                    },
-                  },
-                },
-              },
-              desaAdminMembers: {
-                orderBy: { updatedAt: "desc" },
-                take: 1,
-                select: {
-                  id: true,
-                  role: true,
-                  status: true,
-                  joinedAt: true,
-                  desa: {
-                    select: {
-                      id: true,
-                      nama: true,
-                      kecamatan: true,
-                      kabupaten: true,
-                      provinsi: true,
-                      websiteUrl: true,
-                      dataSources: {
-                        orderBy: { updatedAt: "desc" },
-                        take: 1,
-                        select: {
-                          sourceName: true,
-                          accessStatus: true,
-                          dataStatus: true,
-                        },
-                      },
-                    },
-                  },
-                  user: {
-                    select: {
-                      id: true,
-                      nama: true,
-                      username: true,
-                      email: true,
-                      role: true,
-                    },
-                  },
-                },
-              },
-            },
-          })
-        : Promise.resolve(null),
-      db.user.findMany({
-        where: { email: { in: [...DEMO_EMAILS] } },
-        select: {
-          id: true,
-          nama: true,
-          username: true,
-          email: true,
-          role: true,
-          desaAdminClaims: {
-            orderBy: { updatedAt: "desc" },
-            take: 1,
-            select: {
-              id: true,
-              status: true,
-              method: true,
-              officialEmail: true,
-              websiteUrl: true,
-              tokenHash: true,
-              tokenExpiresAt: true,
-              verifiedAt: true,
-              rejectedAt: true,
-              rejectionReason: true,
-              desa: {
-                select: {
-                  id: true,
-                  nama: true,
-                  kecamatan: true,
-                  kabupaten: true,
-                  provinsi: true,
-                  websiteUrl: true,
-                  dataSources: {
-                    orderBy: { updatedAt: "desc" },
-                    take: 1,
-                    select: {
-                      sourceName: true,
-                      accessStatus: true,
-                      dataStatus: true,
-                    },
-                  },
-                },
-              },
-              user: {
-                select: {
-                  id: true,
-                  nama: true,
-                  username: true,
-                  email: true,
-                  role: true,
-                },
-              },
-            },
-          },
-          desaAdminMembers: {
-            orderBy: { updatedAt: "desc" },
-            take: 1,
-            select: {
-              id: true,
-              role: true,
-              status: true,
-              joinedAt: true,
-              desa: {
-                select: {
-                  id: true,
-                  nama: true,
-                  kecamatan: true,
-                  kabupaten: true,
-                  provinsi: true,
-                  websiteUrl: true,
-                  dataSources: {
-                    orderBy: { updatedAt: "desc" },
-                    take: 1,
-                    select: {
-                      sourceName: true,
-                      accessStatus: true,
-                      dataStatus: true,
-                    },
-                  },
-                },
-              },
-              user: {
-                select: {
-                  id: true,
-                  nama: true,
-                  username: true,
-                  email: true,
-                  role: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-      db.desaAdminClaim.findMany({
-        where: {
-          user: {
-            email: { in: [...DEMO_EMAILS] },
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          method: true,
-          officialEmail: true,
-          websiteUrl: true,
-          tokenHash: true,
-          tokenExpiresAt: true,
-          verifiedAt: true,
-          rejectedAt: true,
-          rejectionReason: true,
-          desa: {
-            select: {
-              id: true,
-              nama: true,
-              kecamatan: true,
-              kabupaten: true,
-              provinsi: true,
-              websiteUrl: true,
-              dataSources: {
-                orderBy: { updatedAt: "desc" },
-                take: 1,
-                select: {
-                  sourceName: true,
-                  accessStatus: true,
-                  dataStatus: true,
-                },
-              },
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              nama: true,
-              username: true,
-              email: true,
-              role: true,
-            },
-          },
-        },
-      }),
-      db.desaAdminMember.findMany({
-        where: {
-          user: {
-            email: { in: [...DEMO_EMAILS] },
-          },
-        },
-        select: {
-          id: true,
-          role: true,
-          status: true,
-          joinedAt: true,
-          desa: {
-            select: {
-              id: true,
-              nama: true,
-              kecamatan: true,
-              kabupaten: true,
-              provinsi: true,
-              websiteUrl: true,
-              dataSources: {
-                orderBy: { updatedAt: "desc" },
-                take: 1,
-                select: {
-                  sourceName: true,
-                  accessStatus: true,
-                  dataStatus: true,
-                },
-              },
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              nama: true,
-              username: true,
-              email: true,
-              role: true,
-            },
-          },
-        },
-      }),
+      fetchCurrentUser(userId),
     ]);
+    perfLogWithRows(routeLabel, "dbQuery", desaRows.length + (currentUser ? 1 : 0), tQuery);
 
     const desaOptions = desaRows.map(buildDesaOption);
+    const fallbackOptions = desaOptions.length > 0 ? desaOptions : FALLBACK_DESA_OPTIONS;
+    const normalizedUser = serializeCurrentUser(currentUser);
     const currentClaim = currentUser?.desaAdminClaims[0]
       ? currentUser.desaAdminClaims[0] as ClaimRow
       : null;
     const currentMember = currentUser?.desaAdminMembers[0]
       ? currentUser.desaAdminMembers[0] as MemberRow
       : null;
+    const activeClaim = serializeActiveClaim(currentClaim);
+    const activeMember = serializeActiveMember(currentMember);
     const currentState = buildCurrentCard(
-      currentUser
-        ? {
-            id: currentUser.id,
-            nama: currentUser.nama ?? currentUser.username ?? currentUser.email,
-            username: currentUser.username ?? "",
-            email: currentUser.email,
-            role: currentUser.role as AdminClaimRole,
-          }
-        : null,
+      normalizedUser,
       currentClaim,
       currentMember,
-      desaOptions,
+      fallbackOptions,
     );
+
+    const summary: AdminClaimProfileSummaryData = {
+      detail: "summary",
+      source: "database",
+      currentUser: normalizedUser,
+      currentState,
+      currentClaim: activeClaim,
+      currentMember: activeMember,
+    };
+
+    if (detail === "summary") {
+      return summary;
+    }
+
     const selectedDesaId = currentClaim?.desa.id ?? currentMember?.desa.id ?? desaOptions[0]?.id ?? null;
-    const activeClaim = currentClaim && isActiveClaimStatus(currentClaim.status)
-      ? {
-          id: currentClaim.id,
-          desaId: currentClaim.desa.id,
-          desaName: currentClaim.desa.nama,
-          status: currentClaim.status,
-          method: (currentClaim.method as AdminClaimMethod | null) ?? null,
-          officialEmail: currentClaim.officialEmail,
-          websiteUrl: currentClaim.websiteUrl,
-          tokenExpiresAt: currentClaim.tokenExpiresAt?.toISOString() ?? null,
-          hasActiveToken: Boolean(currentClaim.tokenHash && currentClaim.tokenExpiresAt),
-          verifiedAt: currentClaim.verifiedAt?.toISOString() ?? null,
-          rejectedAt: currentClaim.rejectedAt?.toISOString() ?? null,
-          rejectionReason: currentClaim.rejectionReason,
-        }
-      : null;
-    const activeMember = currentMember && isActiveMemberStatus(currentMember.status)
-      ? {
-          id: currentMember.id,
-          desaId: currentMember.desa.id,
-          desaName: currentMember.desa.nama,
-          status: currentMember.status,
-          role: currentMember.role,
-          joinedAt: currentMember.joinedAt.toISOString(),
-        }
-      : null;
     const eligibility = getAdminClaimEligibility({
       activeClaim: activeClaim
         ? {
@@ -925,113 +794,31 @@ export async function getAdminClaimProfileData(userId: string | null | undefined
       targetDesaId: selectedDesaId,
     });
 
-    const claimByEmail = new Map(demoClaims.map((claim) => [claim.user.email, claim]));
-    const memberByEmail = new Map(demoMembers.map((member) => [member.user.email, member]));
-    const userByEmail = new Map(demoUsers.map((user) => [user.email, user]));
-
-    const demoStateSpec = [
-      {
-        key: "warga-demo",
-        email: "warga.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[0],
-      },
-      {
-        key: "pending-demo",
-        email: "pengaju.admin.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[1],
-      },
-      {
-        key: "limited-demo",
-        email: "admin.desa.limited.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[2],
-      },
-      {
-        key: "verified-demo",
-        email: "admin.desa.verified.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[3],
-      },
-      {
-        key: "rejected-demo",
-        email: "admin.desa.rejected.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[4],
-      },
-      {
-        key: "suspended-demo",
-        email: "admin.desa.suspended.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[5],
-      },
-      {
-        key: "platform-demo",
-        email: "platform.admin.demo@pantaudesa.local",
-        fallback: FALLBACK_DEMO_STATES[6],
-      },
-    ] as const;
-
-    const demoStates = demoStateSpec.map((spec) => {
-      const user = userByEmail.get(spec.email);
-      const claim = claimByEmail.get(spec.email) as ClaimRow | undefined;
-      const member = memberByEmail.get(spec.email) as MemberRow | undefined;
-      if (!user) return spec.fallback;
-
-      const normalizedUser = {
-        id: user.id,
-        nama: user.nama ?? user.username ?? user.email,
-        username: user.username ?? "",
-        email: user.email,
-        role: user.role as AdminClaimRole,
-      };
-
-      const normalizedClaim = claim
-        ? ({
-            ...claim,
-            desa: claim.desa,
-            user: normalizedUser,
-          } as ClaimRow)
-        : null;
-      const normalizedMember = member
-        ? ({
-            ...member,
-            desa: member.desa,
-            user: normalizedUser,
-          } as MemberRow)
-        : null;
-
-      const card = buildCurrentCard(
-        normalizedUser,
-        normalizedClaim,
-        normalizedMember,
-        desaOptions,
-      );
-      return {
-        ...card,
-        key: spec.key,
-        isDemo: true,
-      };
-    });
-
     return {
-      source: "database",
-      currentUser: currentUser
-        ? {
-            id: currentUser.id,
-            nama: currentUser.nama ?? currentUser.username ?? currentUser.email,
-            username: currentUser.username ?? "",
-            email: currentUser.email,
-            role: currentUser.role as AdminClaimRole,
-          }
-        : null,
+      ...summary,
+      detail: "full",
       selectedDesaId,
-      currentState,
-      currentClaim: activeClaim,
-      currentMember: activeMember,
       eligibility,
       desaOptions,
-      demoStates,
     };
   } catch (error) {
-    console.error("[admin-claim-read] falling back to demo data:", error);
-    return fallbackProfileData();
+    console.error("[admin-claim-read] falling back to profile defaults:", error);
+    return detail === "full" ? fallbackProfileData() : fallbackSummaryData();
   }
 }
 
-export { FALLBACK_DEMO_STATES, FALLBACK_DESA_OPTIONS, DEMO_EMAILS };
+export const getAdminClaimProfileSummaryData = cache(async function getAdminClaimProfileSummaryData(
+  userId: string | null | undefined,
+): Promise<AdminClaimProfileSummaryData> {
+  const data = await readAdminClaimProfile(userId, "summary");
+  return data as AdminClaimProfileSummaryData;
+});
+
+export const getAdminClaimProfileData = cache(async function getAdminClaimProfileData(
+  userId: string | null | undefined,
+): Promise<AdminClaimProfileData> {
+  const data = await readAdminClaimProfile(userId, "full");
+  return data as AdminClaimProfileData;
+});
+
+export { FALLBACK_DEMO_STATES, FALLBACK_DESA_OPTIONS };

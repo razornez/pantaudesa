@@ -10,6 +10,7 @@ import {
 describe("internal admin page helpers", () => {
   it("parses a valid document status filter", () => {
     expect(parseDocumentStatusFilter("PROCESSING")).toBe("PROCESSING");
+    expect(parseDocumentStatusFilter("REJECTED")).toBe("REJECTED");
     expect(parseDocumentStatusFilter("INVALID")).toBeNull();
     expect(parseDocumentStatusFilter(undefined)).toBeNull();
   });

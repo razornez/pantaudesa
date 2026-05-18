@@ -80,8 +80,8 @@ export function getNextStepCopy(doc: DocRow): NextStepCopy {
 
   if (doc.status === "WAITING_VERIFIED_APPROVAL") {
     return {
-      title: "Tunggu persetujuan admin utama",
-      note: "Dokumen ini belum bisa direview internal sebelum lolos persetujuan admin utama desa.",
+      title: "Verified diutamakan, internal bisa fallback",
+      note: "Idealnya admin verified desa mengecek lebih dulu, tetapi review internal tetap bisa dibuka jika perlu percepatan atau jalur cadangan.",
       tone: "warn",
     };
   }
@@ -113,6 +113,14 @@ export function getNextStepCopy(doc: DocRow): NextStepCopy {
       title: "Selesai dipublikasikan",
       note: "Dokumen ini sudah selesai. Buka hanya jika Anda perlu memastikan hasil publish sebelumnya.",
       tone: "ok",
+    };
+  }
+
+  if (doc.status === "REJECTED") {
+    return {
+      title: "Ditolak di level verified",
+      note: "Dokumen ini dihentikan oleh admin verified desa sebelum masuk review internal. Tunggu unggahan baru dari pengunggah.",
+      tone: "danger",
     };
   }
 

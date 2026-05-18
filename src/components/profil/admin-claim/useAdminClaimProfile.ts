@@ -1,61 +1,77 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AdminClaimProfileData } from "@/lib/data/admin-claim-read";
+import { useCallback, useEffect, useMemo } from "react";
+import type {
+  AdminClaimProfileData,
+  AdminClaimProfileSummaryData,
+} from "@/lib/data/admin-claim-read";
+import {
+  canReuseAdminClaimProfile,
+  isFullAdminClaimProfile,
+  type AdminClaimProfileDetail,
+  type AdminClaimProfileSnapshot,
+} from "@/lib/admin-claim/profile-cache";
 import {
   getSelectedDesa,
   isDemoSession,
 } from "@/components/profil/admin-claim/adminClaimCopy";
-import { fetchAdminClaimProfile } from "@/components/profil/admin-claim/api";
+import { useAdminClaimProfileContext } from "@/components/profil/admin-claim/AdminClaimProfileProvider";
 
-export function useAdminClaimProfile() {
-  const [data, setData] = useState<AdminClaimProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [requestSeq, setRequestSeq] = useState(0);
+type DetailToData<T extends AdminClaimProfileDetail> = T extends "full"
+  ? AdminClaimProfileData
+  : AdminClaimProfileSummaryData;
 
-  const refresh = useCallback(async () => {
-    setRequestSeq((value) => value + 1);
-  }, []);
+export function useAdminClaimProfile<T extends AdminClaimProfileDetail = "summary">({
+  requiredDetail = "summary" as T,
+  initialData = null,
+}: {
+  requiredDetail?: T;
+  initialData?: DetailToData<T> | null;
+} = {}) {
+  const store = useAdminClaimProfileContext();
 
   useEffect(() => {
-    let mounted = true;
-    const controller = new AbortController();
+    if (initialData) {
+      store.hydrate(initialData);
+    }
+  }, [initialData, store]);
 
-    fetchAdminClaimProfile(controller.signal)
-      .then((payload) => {
-        if (!mounted) return;
-        setData(payload);
-        setLoadError(false);
-      })
-      .catch(() => {
-        if (!mounted || controller.signal.aborted) return;
-        setLoadError(true);
-        setData(null);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+  useEffect(() => {
+    if (initialData && canReuseAdminClaimProfile(initialData, requiredDetail)) {
+      return;
+    }
 
-    return () => {
-      mounted = false;
-      controller.abort();
-    };
-  }, [requestSeq]);
+    void store.ensure(requiredDetail).catch(() => {});
+  }, [initialData, requiredDetail, store]);
 
-  const defaultDesaId = data?.selectedDesaId ?? data?.desaOptions?.[0]?.id ?? null;
+  const data = useMemo(() => {
+    const current = store.data;
+    if (!canReuseAdminClaimProfile(current, requiredDetail)) {
+      return null;
+    }
+    return current as DetailToData<T>;
+  }, [requiredDetail, store.data]);
+
+  const fullData = isFullAdminClaimProfile(data as AdminClaimProfileSnapshot | null)
+    ? data as AdminClaimProfileData
+    : null;
+  const defaultDesaId = fullData?.selectedDesaId ?? fullData?.desaOptions?.[0]?.id ?? null;
   const defaultDesa = useMemo(
-    () => getSelectedDesa(data?.desaOptions ?? [], defaultDesaId),
-    [data?.desaOptions, defaultDesaId],
+    () => getSelectedDesa(fullData?.desaOptions ?? [], defaultDesaId),
+    [fullData?.desaOptions, defaultDesaId],
   );
+
+  const refresh = useCallback(async () => {
+    await store.refresh(requiredDetail);
+  }, [requiredDetail, store]);
 
   return {
     data,
-    loading,
-    loadError,
+    loading: !data && store.loading,
+    loadError: store.loadError,
     defaultDesaId,
     defaultDesa,
-    isDemoAccount: isDemoSession(data),
+    isDemoAccount: isDemoSession(data as AdminClaimProfileSnapshot | null),
     refresh,
   };
 }

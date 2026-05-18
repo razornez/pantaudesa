@@ -155,6 +155,7 @@ export async function buildIntakePipelineResult(input: {
 
 export function toIntakeReviewJson(result: IntakePipelineResult): Prisma.InputJsonObject {
   return {
+    ok: true,
     inputSource: result.inputSource,
     extract: {
       parser: result.extract.parser,

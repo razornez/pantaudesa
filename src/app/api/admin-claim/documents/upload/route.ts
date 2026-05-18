@@ -15,12 +15,14 @@ import {
   validateUpload,
   isValidCategory,
   getMaxFilesPerUpload,
+  normalizeUploadMimeType,
 } from "@/lib/storage/upload-validation";
 import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 import {
   getUploadedDocumentInitialStatus,
 } from "@/lib/admin-desa/policy";
 import { parseAdminDesaUploadFields } from "@/lib/admin-desa/validation";
+import { buildDocumentPipelineSnapshotFromBuffer } from "@/lib/internal-admin/document-pipeline-snapshot";
 
 // POST /api/admin-claim/documents/upload
 // multipart/form-data fields:
@@ -132,20 +134,28 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const normalizedFileType = normalizeUploadMimeType(file.name, file.type);
       const docTitle = multi ? `${title} (${i + 1}/${files.length})` : title;
       const documentId = `doc_${randomBytes(12).toString("hex")}`;
       const storageKey = buildDocumentStoragePath(member.desaId, documentId, file.name);
       const buffer = Buffer.from(await file.arrayBuffer());
+      const snapshot = await buildDocumentPipelineSnapshotFromBuffer({
+        desaId: member.desaId,
+        fileName: file.name,
+        fileType: normalizedFileType,
+        fileSize: file.size,
+        buffer,
+      });
 
       try {
-        await uploadDocumentBuffer(storageKey, buffer, file.type);
+        await uploadDocumentBuffer(storageKey, buffer, normalizedFileType);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         // Safe server-side log: no env values, just enough to debug.
         console.error("[upload] Supabase upload failed", {
           storageKey,
           fileName: file.name,
-          fileType: file.type,
+          fileType: normalizedFileType,
           fileSize: file.size,
           desaId: member.desaId,
           message: msg,
@@ -176,9 +186,11 @@ export async function POST(req: NextRequest) {
           category,
           storageKey,
           fileName: file.name.slice(0, 200),
-          fileType: file.type,
+          fileType: normalizedFileType,
           fileSize: file.size,
           status,
+          aiMappingStatus: snapshot.aiMappingStatus,
+          aiMappingResult: snapshot.pipelineJson,
         },
         select: { id: true, status: true, createdAt: true, title: true },
       });
@@ -196,7 +208,7 @@ export async function POST(req: NextRequest) {
           category,
           fileName: file.name,
           fileSize: file.size,
-          fileType: file.type,
+          fileType: normalizedFileType,
           desaName: member.desa.nama,
           action: "uploaded",
           batchIndex: i + 1,

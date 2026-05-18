@@ -163,6 +163,20 @@ export async function createDocumentSignedUrl(
   return data.signedUrl;
 }
 
+export async function downloadDocumentBuffer(storageKey: string): Promise<Buffer> {
+  const { client, bucket } = getStorageClient();
+  const { data, error } = await client.storage.from(bucket).download(storageKey);
+
+  if (error || !data) {
+    if (error && /object not found/i.test(error.message)) {
+      throw new StorageObjectNotFoundError();
+    }
+    throw new StorageOperationError(`Download failed: ${error?.message ?? "no data returned"}`);
+  }
+
+  return Buffer.from(await data.arrayBuffer());
+}
+
 export async function deleteDocumentObject(storageKey: string): Promise<void> {
   const { client, bucket } = getStorageClient();
   const { error } = await client.storage.from(bucket).remove([storageKey]);

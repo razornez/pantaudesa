@@ -9,6 +9,7 @@ export type DocStatus =
   | "WAITING_VERIFIED_APPROVAL"
   | "PROCESSING"
   | "PUBLISHED"
+  | "REJECTED"
   | "FAILED";
 
 export interface DocRow {
@@ -22,6 +23,7 @@ export interface DocRow {
   approvedAt: string | null;
   publishedAt: string | null;
   failedReason: string | null;
+  rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult?: unknown;
   createdAt: string;
@@ -33,13 +35,6 @@ export interface DocRow {
     username: string | null;
     email: string;
   } | null;
-}
-
-export interface DraftApiPayload {
-  ok: boolean;
-  reused: boolean;
-  aiMappingStatus: string | null;
-  draft: AiMappingDraft;
 }
 
 export interface PublishApiPayload {

@@ -19,6 +19,7 @@ import { SayaProfileNotificationsTab } from "@/components/profil/saya/SayaProfil
 import { SayaProfileProfileTab } from "@/components/profil/saya/SayaProfileProfileTab";
 import { SayaProfileVoicesTab } from "@/components/profil/saya/SayaProfileVoicesTab";
 import { updateUserProfile } from "@/components/profil/saya/api";
+import type { AdminClaimProfileSummaryData } from "@/lib/data/admin-claim-read";
 
 const desaMap = Object.fromEntries(mockDesa.map((desa) => [desa.id, desa.nama]));
 
@@ -26,12 +27,14 @@ type Tab = "profil" | "suara" | "notifikasi";
 
 export default function SayaProfilePage({
   initialProfile,
+  initialAdminClaimProfile,
 }: {
   initialProfile: {
     nama: string;
     bio: string;
     avatarUrl?: string;
   };
+  initialAdminClaimProfile: AdminClaimProfileSummaryData;
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -136,6 +139,7 @@ export default function SayaProfilePage({
       {tab === "profil" && (
         <SayaProfileProfileTab
           user={user}
+          initialAdminClaimProfile={initialAdminClaimProfile}
           nama={nama}
           bio={bio}
           avatarUrl={avatarUrl}

@@ -405,7 +405,130 @@ Rules:
 
 ---
 
-## 17. Screenshot QA Rules
+## 17. Operational Review Page Pattern
+
+Gunakan pola ini untuk halaman back office yang tugas utamanya adalah review, validasi, publish, reject, atau approval. Referensi kualitas: halaman Intake Step 2 standalone.
+
+### Design DNA
+
+Halaman review PantauDesa harus terasa seperti alat kerja yang tenang, padat, dan bisa dipercaya. Vibe yang dituju bukan dashboard analytics besar, bukan form panjang, dan bukan halaman marketing. User harus merasa sedang memeriksa bukti, membandingkan perubahan, lalu mengambil keputusan.
+
+Karakter visual:
+
+- Halaman harus decision-first: user langsung melihat apa yang berubah, apa yang perlu dicek, dan aksi final apa yang tersedia.
+- Informasi padat boleh ditampilkan jika hierarchy jelas: summary utama di header, detail operasional di komponen khusus, action final di section terpisah.
+- Komponen boleh variatif selama fungsinya berbeda: diff theatre, coverage lens, validation panel, gallery, info strip, inspector, dan final action boleh punya model visual masing-masing.
+- Variasi visual harus membantu scan, bukan dekorasi. Warna, border, chart, pill, tab, dan panel dipakai untuk membedakan jenis informasi.
+- Jangan membuat semua komponen berbentuk card datar berisi judul dan teks. Minimal satu permukaan utama harus punya bentuk khas yang membantu pekerjaan, misalnya diff row, chart coverage, segmented tab, timeline, segmented control, progress bar, audit trail, or inspector drawer.
+- Komponen utama boleh terasa berbeda, tetapi harus tetap satu bahasa: radius, border, shadow, label treatment, font size, dan color semantics tetap konsisten.
+
+### Page Anatomy
+
+Urutan yang direkomendasikan untuk halaman review operasional:
+
+1. Context header: dokumen, target desa, status, dan aksi navigasi singkat.
+2. Primary decision surface: diff, comparison, preview, atau evidence utama.
+3. Supporting confidence surface: coverage, validation, audit, source quality, atau risk signal.
+4. Secondary detail surface: gallery, detected fields, metadata, atau inspector.
+5. Final action surface: publish, approve, reject, mark failed, atau return to queue.
+
+Rules:
+
+- Surface utama harus muncul sebelum action final agar user mengambil keputusan dari bukti, bukan dari tombol.
+- Final action tidak boleh menjadi review surface kedua. Jangan tampilkan ulang daftar perubahan yang sudah muncul di diff.
+- History atau audit boleh ada, tetapi jangan mengambil fokus dari keputusan utama.
+- Jika sebuah halaman punya lebih dari satu panel besar, setiap panel harus punya job yang berbeda dan mudah disebut dalam satu kalimat.
+
+### Component Variety
+
+Komponen back office tidak boleh semuanya terasa seperti kotak informasi yang sama. Variasi yang sehat adalah variasi berbasis fungsi.
+
+Gunakan:
+
+- Diff theatre untuk perubahan before/after dan filter perubahan.
+- Coverage lens untuk ringkasan kelengkapan data dalam chart, bar, atau signal visual.
+- Validation panel untuk status aman/error/warning dan issue list.
+- Gallery atau preview strip untuk bukti dokumen dan hasil ekstraksi.
+- Info strip untuk metadata singkat dan debugging opsional.
+- Inspector drawer untuk data teknis yang tidak perlu tampil di permukaan utama.
+- Final action section untuk keputusan akhir saja.
+
+Hindari:
+
+- Empat sampai enam card berurutan yang semuanya hanya punya title, paragraph, dan badge.
+- Card di dalam card jika tidak ada alasan grouping yang kuat.
+- Summary besar yang mengulang angka dari tab/filter tepat di bawahnya.
+- Menambahkan panel baru hanya untuk menjelaskan panel sebelumnya.
+
+### Information Density
+
+Halaman boleh padat jika padatnya membantu pekerjaan.
+
+- Satu informasi penting hanya tampil di satu tempat utama.
+- Jangan ulang informasi yang sudah jelas di komponen lain. Jika diff sudah menjelaskan perubahan, final action tidak perlu mengulang daftar field yang sama.
+- Copy instruksi panjang hanya dipakai jika user benar-benar butuh konteks untuk mengambil keputusan. Jika konteks sudah ada di card lain, hapus.
+- Gunakan label kecil untuk scan cepat, bukan paragraf penjelas.
+- Gunakan progressive disclosure untuk data teknis: drawer, expand, modal, atau inspector.
+- Data teknis seperti parser, request id, raw JSON, dan confidence detail tidak masuk surface utama kecuali sedang debugging.
+
+### Color And Label Semantics
+
+Warna harus berfungsi sebagai bahasa operasional yang stabil.
+
+- Warna tidak boleh monoton. Gunakan beberapa tone fungsional yang konsisten, misalnya emerald untuk baru/siap, indigo untuk update/review, rose untuk reject/hapus, slate untuk netral/sama, amber untuk warning.
+- Legend warna harus modern dan compact. Desktop boleh memakai chip lengkap seperti `Warna hijau = Baru`; mobile harus dipadatkan menjadi satu baris seperti dot warna + label, tanpa horizontal scroll.
+- Label kecil harus punya background/border halus jika berperan sebagai badge. Jangan hilangkan affordance visual sampai terlihat seperti teks biasa.
+- Jangan bergantung pada warna saja. Setiap warna penting harus tetap punya label singkat seperti `Baru`, `Diperbarui`, `Dihapus`, atau `Sama`.
+- Badge tidak perlu muncul jika informasi yang sama sudah terlihat dari row, tab, atau diff state.
+
+### Mobile Behavior
+
+Mobile harus tetap terasa seperti alat kerja, bukan versi rusak dari desktop.
+
+- Mobile layout harus punya gutter kanan-kiri yang cukup. Jika teks atau legend tidak muat, ringkas label dan sedikit kecilkan font sebelum membuat scroll horizontal.
+- Legend/status utama di mobile harus muat satu baris jika jumlah item kecil. Untuk empat item diff, gunakan dot warna + label singkat.
+- Horizontal scroll hanya boleh untuk tab/chip yang memang interaktif dan jumlahnya tidak stabil. Jangan gunakan scroll horizontal untuk legend statis yang bisa diringkas.
+- Jangan biarkan heading dan chip membuat first card terlalu tinggi. Jika perlu, kecilkan type scale mobile 1-2px.
+- Filter tabs boleh turun baris, tetapi action utama dan informasi penting tidak boleh keluar dari viewport.
+- Gutter kanan di card mobile harus dicek khusus karena chip kecil sering terlihat mepet ke border.
+
+### Final Action And Provenance
+
+Action final adalah keputusan, bukan tempat mengedit sumber data.
+
+- Final action area harus minimal: tampilkan konteks singkat, input alasan reject jika perlu, dan tombol aksi utama. Jangan tampilkan ulang diff, coverage, atau legenda yang sudah ada di atas.
+- Untuk data provenance, reviewer tidak boleh terlihat sebagai sumber data jika hanya memverifikasi dokumen. Jika nilai berasal dari dokumen upload, UI publish harus menjaga bahwa nilai yang dipublish tetap berasal dari dokumen tersebut, bukan override manual reviewer.
+- Jika reviewer tidak setuju dengan nilai hasil ekstraksi, flow yang aman adalah reject atau minta upload perbaikan, bukan edit nilai agar terlihat berasal dari dokumen.
+- Tombol final harus jelas dan tidak mengirim user ke loop. Jika publish/reject terjadi di halaman ini, antrean hanya menjadi tempat kembali setelah keputusan.
+- Copy action harus menyebut keputusan nyata: `Publikasikan`, `Reject`, `Tandai gagal`, `Setujui`, atau `Tolak`. Hindari copy ambigu seperti `Lanjut review` jika review sudah sedang berlangsung.
+
+### Visual QA Expectations
+
+Sebelum halaman dianggap punya vibe yang sesuai:
+
+- Cek desktop dan mobile.
+- Cek first viewport, state setelah filter/tab berubah, dan area final action.
+- Cari horizontal overflow, teks wrap aneh, badge terlalu mepet, dan card yang terlalu tinggi.
+- Pastikan setiap komponen besar punya bentuk dan fungsi yang berbeda.
+- Pastikan warna terasa variatif tetapi tidak ramai.
+- Pastikan tidak ada informasi penting yang muncul dua kali di tempat berdekatan.
+
+Acceptance:
+
+```text
+[ ] Summary utama hanya muncul sekali
+[ ] Setiap komponen besar punya fungsi dan bentuk visual yang berbeda
+[ ] Tidak ada list/detail yang mengulang diff atau coverage
+[ ] Legend mobile muat satu baris tanpa horizontal scroll
+[ ] Badge/label kecil tetap punya background/border halus
+[ ] Warna dipakai sebagai semantic signal, bukan dekorasi acak
+[ ] Final action section tidak menjadi review surface kedua
+[ ] Provenance data jelas: reviewer tidak mengubah sumber data
+```
+
+---
+
+## 18. Screenshot QA Rules
 
 Saat diminta screenshot evidence:
 
@@ -418,14 +541,17 @@ Saat diminta screenshot evidence:
 
 ---
 
-## 18. UI/UX Completion Checklist
+## 19. UI/UX Completion Checklist
 
 ```text
 [ ] Mobile iPhone 12 mini dicek
 [ ] Tidak ada horizontal overflow tidak sengaja
 [ ] Tidak ada text wrap aneh pada badge/action penting
 [ ] Tidak ada summary redundan
+[ ] Tidak ada final action yang mengulang detail dari review surface utama
 [ ] Tidak ada card terlalu besar tanpa alasan
+[ ] Komponen review punya variasi visual sesuai fungsi
+[ ] Legend/status compact di mobile dan tetap jelas
 [ ] Modal mobile bisa scroll
 [ ] Button penting bisa dijangkau
 [ ] Empty state jujur
@@ -435,11 +561,12 @@ Saat diminta screenshot evidence:
 [ ] Tidak ada enum mentah tampil ke user
 [ ] Focus ring/accessibility tidak rusak
 [ ] Screenshot QA tidak diambil saat loading/login salah
+[ ] Provenance data tidak kabur karena override manual reviewer
 ```
 
 ---
 
-## 19. Done Means
+## 20. Done Means
 
 UI/UX task selesai jika:
 
@@ -448,5 +575,7 @@ UI/UX task selesai jika:
 - tidak ada data palsu
 - tidak ada layout berantakan
 - tidak ada info double
+- komponen utama terasa variatif tapi tetap satu bahasa desain
+- action final tidak membingungkan alur review
 - loading/error/empty state jelas
 - screenshot/regression sudah dicek bila diperlukan

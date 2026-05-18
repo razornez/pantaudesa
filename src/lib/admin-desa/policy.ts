@@ -4,6 +4,7 @@ export type AdminDesaDocumentStatus =
   | "WAITING_VERIFIED_APPROVAL"
   | "PROCESSING"
   | "PUBLISHED"
+  | "REJECTED"
   | "FAILED";
 
 export function isVerifiedAdminMember(
@@ -18,6 +19,13 @@ export function canUploadAdminDesaDocuments(status: AdminDesaMembershipStatus): 
 }
 
 export function canApproveAdminDesaDocuments(
+  status: AdminDesaMembershipStatus,
+  role: AdminDesaMemberRole,
+): boolean {
+  return isVerifiedAdminMember(status, role);
+}
+
+export function canRejectAdminDesaDocuments(
   status: AdminDesaMembershipStatus,
   role: AdminDesaMemberRole,
 ): boolean {

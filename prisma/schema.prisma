@@ -938,6 +938,7 @@ enum DocumentUploadStatus {
   WAITING_VERIFIED_APPROVAL // uploaded by LIMITED, waiting for VERIFIED approval
   PROCESSING                // in internal admin review / AI mapping queue
   PUBLISHED                 // approved, mapped, published
+  REJECTED                  // rejected by VERIFIED before internal review
   FAILED                    // rejected with user-safe reason
 }
 

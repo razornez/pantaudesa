@@ -11,6 +11,8 @@ function formatSubmissionStatus(status: string) {
       return "Perlu review internal";
     case "PUBLISHED":
       return "Sudah dipublikasikan";
+    case "REJECTED":
+      return "Ditolak verified";
     case "FAILED":
       return "Perlu unggah ulang";
     default:

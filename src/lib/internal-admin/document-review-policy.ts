@@ -2,6 +2,7 @@ type DocumentReviewStatus =
   | "WAITING_VERIFIED_APPROVAL"
   | "PROCESSING"
   | "PUBLISHED"
+  | "REJECTED"
   | "FAILED";
 
 interface PolicyError {
@@ -9,11 +10,11 @@ interface PolicyError {
   error: string;
 }
 
-function requireProcessingStatus(
+function requireReviewableStatus(
   status: DocumentReviewStatus,
   message: (status: DocumentReviewStatus) => string,
 ): PolicyError | null {
-  if (status === "PROCESSING") return null;
+  if (status === "PROCESSING" || status === "WAITING_VERIFIED_APPROVAL") return null;
   return {
     status: 422,
     error: message(status),
@@ -23,31 +24,31 @@ function requireProcessingStatus(
 export function validateDraftGenerationStatus(
   status: DocumentReviewStatus,
 ): PolicyError | null {
-  return requireProcessingStatus(
+  return requireReviewableStatus(
     status,
     (current) =>
-      `AI mapping hanya berlaku untuk dokumen PROCESSING. Status saat ini: ${current}.`,
+      `AI mapping hanya berlaku untuk dokumen yang masih bisa direview. Status saat ini: ${current}.`,
   );
 }
 
 export function validateDraftSaveStatus(status: DocumentReviewStatus): PolicyError | null {
-  return requireProcessingStatus(
+  return requireReviewableStatus(
     status,
     (current) =>
-      `Draft review hanya berlaku untuk dokumen PROCESSING. Status saat ini: ${current}.`,
+      `Draft review hanya berlaku untuk dokumen yang masih bisa direview. Status saat ini: ${current}.`,
   );
 }
 
 export function validatePublishStatus(status: DocumentReviewStatus): PolicyError | null {
-  return requireProcessingStatus(
+  return requireReviewableStatus(
     status,
     (current) =>
-      `Hanya dokumen PROCESSING yang dapat dipublikasikan. Status saat ini: ${current}.`,
+      `Hanya dokumen yang masih bisa direview yang dapat dipublikasikan. Status saat ini: ${current}.`,
   );
 }
 
 export function validateFailStatus(status: DocumentReviewStatus): PolicyError | null {
-  if (status === "PUBLISHED" || status === "FAILED") {
+  if (status === "PUBLISHED" || status === "FAILED" || status === "REJECTED") {
     return {
       status: 422,
       error: `Dokumen sudah dalam status final: ${status}.`,

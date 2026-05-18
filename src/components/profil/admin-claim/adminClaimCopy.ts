@@ -2,10 +2,11 @@ import type {
   AdminClaimActiveClaim,
   AdminClaimDataStatus,
   AdminClaimDesaOption,
-  AdminClaimProfileData,
+  AdminClaimProfileSummaryData,
   AdminClaimStateCard,
 } from "@/lib/data/admin-claim-read";
 import type { AdminClaimPageNotice } from "@/lib/admin-claim/eligibility";
+import type { AdminClaimProfileSnapshot } from "@/lib/admin-claim/profile-cache";
 
 export type ClaimStep = 1 | 2 | 3 | 4;
 export type ClaimMethod = "OFFICIAL_EMAIL" | "WEBSITE_TOKEN";
@@ -92,7 +93,9 @@ export const METHOD_COPY: Record<ClaimMethod, {
   },
 };
 
-export function isDemoSession(data: AdminClaimProfileData | null) {
+export function isDemoSession(
+  data: AdminClaimProfileSnapshot | AdminClaimProfileSummaryData | null,
+) {
   const email = data?.currentUser?.email?.toLowerCase() ?? "";
   return email.endsWith("@pantaudesa.local");
 }
@@ -108,7 +111,9 @@ export function getCurrentStatusTone(status: AdminClaimStateCard["status"]) {
   return CLAIM_STATUS_COPY[status];
 }
 
-export function getCurrentDataStatus(data: AdminClaimProfileData | null): AdminClaimDataStatus {
+export function getCurrentDataStatus(
+  data: AdminClaimProfileSnapshot | AdminClaimProfileSummaryData | null,
+): AdminClaimDataStatus {
   return data?.currentState?.dataStatus ?? "demo";
 }
 

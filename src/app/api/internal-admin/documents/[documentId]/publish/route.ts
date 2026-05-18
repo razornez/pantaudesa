@@ -10,8 +10,9 @@ import {
 } from "@/lib/internal-admin/document-review-validation";
 
 // POST /api/internal-admin/documents/:documentId/publish
-// Internal admin publishes a PROCESSING document. Optional body.fields applies
-// allowed field updates to the Desa record (versioning via audit before/after).
+// Internal admin publishes a reviewable document (PROCESSING or
+// WAITING_VERIFIED_APPROVAL fallback). Optional body.fields applies allowed
+// field updates to the Desa record (versioning via audit before/after).
 //
 // Body: { fields?: Record<AiMappableDesaField, string|number|null>, note?: string }
 export async function POST(

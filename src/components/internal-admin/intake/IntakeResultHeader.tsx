@@ -6,6 +6,10 @@ interface IntakeResultHeaderProps {
   onBackToInput: () => void;
   onRunPipeline: () => void;
   onContinueReview: () => void;
+  runPipelineLabel?: string;
+  runPipelineMobileLabel?: string;
+  continueLabel?: string;
+  continueMobileLabel?: string;
 }
 
 export function IntakeResultHeader({
@@ -14,6 +18,10 @@ export function IntakeResultHeader({
   onBackToInput,
   onRunPipeline,
   onContinueReview,
+  runPipelineLabel = "Ulangi pipeline",
+  runPipelineMobileLabel = "Ulangi",
+  continueLabel = "Kirim ke review",
+  continueMobileLabel = "Review",
 }: IntakeResultHeaderProps) {
   return (
     <header className="sticky top-0 z-40 glass" style={{ borderRadius: 0 }}>
@@ -57,8 +65,8 @@ export function IntakeResultHeader({
           className="btn-lux btn-lux-secondary text-xs inline-flex items-center gap-1.5"
         >
           <RotateCw size={13} aria-hidden />
-          <span className="hidden sm:inline">Ulangi pipeline</span>
-          <span className="sm:hidden">Ulangi</span>
+          <span className="hidden sm:inline">{runPipelineLabel}</span>
+          <span className="sm:hidden">{runPipelineMobileLabel}</span>
         </button>
         <button
           type="button"
@@ -67,8 +75,8 @@ export function IntakeResultHeader({
           className="btn-lux btn-lux-primary text-xs inline-flex items-center gap-1.5"
         >
           <Send size={13} aria-hidden />
-          <span className="hidden sm:inline">Kirim ke review</span>
-          <span className="sm:hidden">Review</span>
+          <span className="hidden sm:inline">{continueLabel}</span>
+          <span className="sm:hidden">{continueMobileLabel}</span>
         </button>
       </div>
     </header>

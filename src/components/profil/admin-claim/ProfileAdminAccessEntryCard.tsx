@@ -8,6 +8,7 @@ import { getCurrentDataStatus, getCurrentStatusTone } from "@/components/profil/
 import { useAdminClaimProfile } from "@/components/profil/admin-claim/useAdminClaimProfile";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 import type { AuthUser } from "@/lib/auth-context";
+import type { AdminClaimProfileSummaryData } from "@/lib/data/admin-claim-read";
 
 const COPY = BACK_OFFICE_COPY.user.profileAdminCard;
 
@@ -58,8 +59,17 @@ function AdminAccessCardSkeleton() {
   );
 }
 
-export default function ProfileAdminAccessEntryCard({ user }: { user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role"> }) {
-  const { data, loading, loadError, isDemoAccount } = useAdminClaimProfile();
+export default function ProfileAdminAccessEntryCard({
+  user,
+  initialProfileData,
+}: {
+  user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role">;
+  initialProfileData: AdminClaimProfileSummaryData;
+}) {
+  const { data, loading, loadError, isDemoAccount } = useAdminClaimProfile({
+    requiredDetail: "summary",
+    initialData: initialProfileData,
+  });
 
   if (loading) return <AdminAccessCardSkeleton />;
 

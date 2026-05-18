@@ -102,6 +102,18 @@ export async function approveAdminDesaDocument(documentId: string): Promise<void
   }
 }
 
+export async function rejectAdminDesaDocument(documentId: string, reason: string): Promise<void> {
+  const response = await fetch(`/api/admin-claim/documents/${documentId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+  const data = (await response.json()) as ApiErrorPayload;
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Dokumen belum berhasil ditolak."));
+  }
+}
+
 export async function fetchAdminDesaDocumentPreviewUrl(documentId: string): Promise<string> {
   const response = await fetch(`/api/admin-claim/documents/${documentId}/preview`);
   const data = (await response.json()) as PreviewDocumentPayload;

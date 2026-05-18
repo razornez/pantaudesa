@@ -24,6 +24,7 @@ import AdminClaimHelpSection from "@/components/profil/admin-claim/AdminClaimHel
 import { useAdminClaimProfile } from "@/components/profil/admin-claim/useAdminClaimProfile";
 import { useAdminClaimFlow } from "@/hooks/use-admin-claim-flow";
 import type { AuthUser } from "@/lib/auth-context";
+import type { AdminClaimProfileData } from "@/lib/data/admin-claim-read";
 import ContactAdminEntryCard from "@/components/support/ContactAdminEntryCard";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
 
@@ -32,11 +33,16 @@ const COPY = BACK_OFFICE_COPY.user.adminClaim;
 export default function AdminClaimWizard({
   user,
   initialNotice,
+  initialProfileData,
 }: {
   user: Pick<AuthUser, "id" | "nama" | "username" | "email" | "role">;
   initialNotice: AdminClaimPageNotice | null;
+  initialProfileData: AdminClaimProfileData;
 }) {
-  const { data, loading, loadError, defaultDesaId, defaultDesa, isDemoAccount, refresh } = useAdminClaimProfile();
+  const { data, loading, loadError, defaultDesaId, defaultDesa, isDemoAccount, refresh } = useAdminClaimProfile({
+    requiredDetail: "full",
+    initialData: initialProfileData,
+  });
   const [stepOverride, setStepOverride] = useState<ClaimStep | null>(null);
   const [methodOverride, setMethodOverride] = useState<ClaimMethod | null>(null);
   const [search, setSearch] = useState("");

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getAdminClaimPageNotice } from "@/lib/admin-claim/eligibility";
 import type { UserRole } from "@/lib/auth-context";
 import { BACK_OFFICE_COPY } from "@/lib/back-office-copy";
+import { getAdminClaimProfileData } from "@/lib/data/admin-claim-read";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,10 @@ export default async function KlaimAdminDesaPage({ searchParams }: PageProps) {
     redirect("/login");
   }
 
-  const params = await searchParams;
+  const [params, initialAdminClaimProfile] = await Promise.all([
+    searchParams,
+    getAdminClaimProfileData(session.user.id),
+  ]);
   const notice = getAdminClaimPageNotice(params);
   const user = {
     id: session.user.id,
@@ -41,7 +45,7 @@ export default async function KlaimAdminDesaPage({ searchParams }: PageProps) {
         {COPY.backToProfile}
       </Link>
 
-      <AdminClaimWizard user={user} initialNotice={notice} />
+      <AdminClaimWizard user={user} initialNotice={notice} initialProfileData={initialAdminClaimProfile} />
     </div>
   );
 }
