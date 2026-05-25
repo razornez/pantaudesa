@@ -13,6 +13,7 @@ import {
   mergeResolvedFieldsWithCatalogManifest,
   toRuntimeProgressSources,
 } from "@/lib/village-data/runtime-template-manifest";
+import { DEFAULT_TEMPLATE_KEY } from "@/lib/village-data/template-constants";
 
 const PAGE_SIZE = 20;
 
@@ -117,14 +118,14 @@ function buildDesaCoverageRows(input: {
     const publishedRows = input.publishedRowsByDesaId.get(item.id) ?? [];
     const shouldOverlayCatalog =
       (item.detailTemplateAssignment?.template.key ?? input.defaultTemplate?.key) ===
-      "CURRENT_PUBLIC_DETAIL_TEMPLATE";
+      DEFAULT_TEMPLATE_KEY;
 
     const runtimeManifest = buildRuntimeTemplateManifest({
       templateId: templateId ?? "fallback",
       templateKey:
         item.detailTemplateAssignment?.template.key ??
         input.defaultTemplate?.key ??
-        "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        DEFAULT_TEMPLATE_KEY,
       templateName:
         item.detailTemplateAssignment?.template.name ??
         input.defaultTemplate?.name ??

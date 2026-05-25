@@ -47,6 +47,15 @@ export interface ResolvedComponent {
   componentKey: string;
   label: string;
   displayOrder: number;
+  rendererType?: string;
+  previewVariant?: string;
+  detailSlot?: string;
+  navLabel?: string | null;
+  anchorId?: string | null;
+  publicGroupKey?: string | null;
+  publicTabKey?: string | null;
+  highlightFieldKeys?: string[];
+  renderConfig?: Record<string, unknown>;
   fields: ResolvedField[];
 }
 
@@ -132,6 +141,19 @@ const templateTreeSelect = {
       label: true,
       isDefaultVisible: true,
       displayOrder: true,
+      catalogComponent: {
+        select: {
+          rendererType: true,
+          previewVariant: true,
+          detailSlot: true,
+          navLabel: true,
+          anchorId: true,
+          publicGroupKey: true,
+          publicTabKey: true,
+          highlightFieldKeys: true,
+          renderConfigJson: true,
+        },
+      },
       fieldStandards: {
         where: { status: "ACTIVE" },
         orderBy: { displayOrder: "asc" as const },
@@ -184,6 +206,18 @@ function buildFallbackTemplate(): ResolvedTemplate {
     visibleComponents,
     hiddenComponents:  [],
   };
+}
+
+function toStringArray(input: unknown): string[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  const values = input.filter((item): item is string => typeof item === "string");
+  return values.length > 0 ? values : undefined;
+}
+
+function toRecord(input: unknown): Record<string, unknown> | undefined {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+    ? (input as Record<string, unknown>)
+    : undefined;
 }
 
 async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedTemplate | null> {
@@ -462,6 +496,15 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
           componentKey: comp.componentKey,
           label:        comp.label,
           displayOrder: comp.displayOrder,
+          rendererType: comp.catalogComponent?.rendererType,
+          previewVariant: comp.catalogComponent?.previewVariant,
+          detailSlot: comp.catalogComponent?.detailSlot,
+          navLabel: comp.catalogComponent?.navLabel,
+          anchorId: comp.catalogComponent?.anchorId,
+          publicGroupKey: comp.catalogComponent?.publicGroupKey,
+          publicTabKey: comp.catalogComponent?.publicTabKey,
+          highlightFieldKeys: toStringArray(comp.catalogComponent?.highlightFieldKeys),
+          renderConfig: toRecord(comp.catalogComponent?.renderConfigJson),
           fields:       mergedFields,
         });
       } else {
@@ -470,6 +513,15 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
           componentKey: comp.componentKey,
           label:        comp.label,
           displayOrder: comp.displayOrder,
+          rendererType: comp.catalogComponent?.rendererType,
+          previewVariant: comp.catalogComponent?.previewVariant,
+          detailSlot: comp.catalogComponent?.detailSlot,
+          navLabel: comp.catalogComponent?.navLabel,
+          anchorId: comp.catalogComponent?.anchorId,
+          publicGroupKey: comp.catalogComponent?.publicGroupKey,
+          publicTabKey: comp.catalogComponent?.publicTabKey,
+          highlightFieldKeys: toStringArray(comp.catalogComponent?.highlightFieldKeys),
+          renderConfig: toRecord(comp.catalogComponent?.renderConfigJson),
           fields:       mergedFields,
         });
       }

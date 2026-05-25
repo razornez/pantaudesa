@@ -22,6 +22,10 @@ export function isDatabaseConnectivityError(error: unknown): boolean {
     code === "P2024" ||
     code === "P2028" ||
     /Can't reach database server/i.test(message) ||
+    /connect ETIMEDOUT/i.test(message) ||
+    /ECONNRESET/i.test(message) ||
+    /ECONNREFUSED/i.test(message) ||
+    /EHOSTUNREACH/i.test(message) ||
     /Timed out fetching a new connection/i.test(message) ||
     /Timed out waiting for a connection from the pool/i.test(message) ||
     /Connection terminated unexpectedly/i.test(message) ||

@@ -707,7 +707,7 @@ model AIReviewResult {
 // ─── VillageDetailTemplate ───────────────────────────────────────────────────
 model VillageDetailTemplate {
   id          String   @id @default(cuid())
-  key         String   @unique   // "CURRENT_PUBLIC_DETAIL_TEMPLATE"
+  key         String   @unique   // "TEMPLATE_UMUM_DESA"
   name        String
   description String?  @db.Text
   version     Int      @default(1)
@@ -728,6 +728,17 @@ model VillageComponentCatalog {
   label         String
   description   String?  @db.Text
   componentType String   @default("section")
+  isDefaultVisible Boolean @default(true)
+  displayOrder  Int      @default(0)
+  rendererType  String   @default("identity_grid")
+  previewVariant String  @default("identity")
+  detailSlot    String   @default("first_view")
+  navLabel      String?
+  anchorId      String?
+  publicGroupKey String?
+  publicTabKey  String?
+  highlightFieldKeys Json?
+  renderConfigJson Json?
   status        String   @default("ACTIVE")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -898,7 +909,7 @@ enum DataDesaStatus {
   ARCHIVED
 }
 //
-// ─── Template design (10 komponen, semua di CURRENT_PUBLIC_DETAIL_TEMPLATE) ──
+// ─── Template design (runtime default TEMPLATE_UMUM_DESA) ───────────────────
 // 1.  identitas      — Identitas & Wilayah     (websiteUrl, kategori, tahunData, kec, kab, prov)
 // 2.  demografi      — Demografi                (jumlahPenduduk, jumlahKK, jumlahDusun, RT, RW)
 // 3.  sumber_dokumen — Sumber & Dokumen         (reads DataSource[], DokumenPublik[])
@@ -913,7 +924,7 @@ enum DataDesaStatus {
 // ─── Template assignments (seed via prisma/seed-templates.mjs) ───────────────
 // arjasari, baros          → DESA_WISATA_TEMPLATE   (profil fields publishable)
 // batukarut, lebakwangi    → DESA_TRANSPARAN_TEMPLATE (anggaran fields publishable)
-// 7 others + qa-desa-a,b,c → CURRENT_PUBLIC_DETAIL_TEMPLATE
+// all desa default assignment → TEMPLATE_UMUM_DESA
 // baros override           → anggaran component isVisible: false
 // ─────────────────────────────────────────────────────────────────────────────
 

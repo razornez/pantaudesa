@@ -29,6 +29,13 @@ describe("isDatabaseConnectivityError", () => {
     ).toBe(true);
   });
 
+  it("treats low-level socket failures as connectivity degradation", () => {
+    expect(isDatabaseConnectivityError(new Error("connect ETIMEDOUT 10.0.0.1:6543"))).toBe(
+      true,
+    );
+    expect(isDatabaseConnectivityError(new Error("read ECONNRESET"))).toBe(true);
+  });
+
   it("does not swallow ordinary validation errors", () => {
     expect(
       isDatabaseConnectivityError({

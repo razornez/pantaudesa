@@ -1,6 +1,7 @@
 export type RegisteredVillageComponentKey =
   | "identitas"
   | "demografi"
+  | "perangkat"
   | "sumber_dokumen"
   | "transparansi"
   | "anggaran"
@@ -8,11 +9,13 @@ export type RegisteredVillageComponentKey =
   | "kinerja"
   | "profil_desa"
   | "panduan_warga"
-  | "suara_warga";
+  | "suara_warga"
+  | "agenda_desa";
 
 export type ComponentRendererType =
   | "identity_grid"
   | "demography_metrics"
+  | "perangkat_contacts"
   | "source_snapshot"
   | "transparency_metrics"
   | "budget_summary"
@@ -20,7 +23,8 @@ export type ComponentRendererType =
   | "kinerja_breakdown"
   | "kelengkapan_tabs"
   | "citizen_guide"
-  | "voice_preview";
+  | "voice_preview"
+  | "agenda_preview";
 
 export type ComponentDetailSlot =
   | "first_view"
@@ -35,6 +39,7 @@ export type ComponentDetailSlot =
 export type ComponentPreviewVariant =
   | "identity"
   | "demography"
+  | "perangkat"
   | "source"
   | "transparency"
   | "budget"
@@ -42,7 +47,8 @@ export type ComponentPreviewVariant =
   | "kinerja"
   | "kelengkapan"
   | "guide"
-  | "voice";
+  | "voice"
+  | "agenda";
 
 export interface ComponentCatalogManifestField {
   fieldKey: string;
@@ -62,7 +68,12 @@ export interface ComponentCatalogManifestEntry {
   rendererType: ComponentRendererType;
   previewVariant: ComponentPreviewVariant;
   detailSlot: ComponentDetailSlot;
+  navLabel?: string;
+  anchorId?: string;
+  publicGroupKey?: string | null;
+  publicTabKey?: string | null;
   highlightFieldKeys?: string[];
+  renderConfig?: Record<string, unknown>;
   fields: ComponentCatalogManifestField[];
 }
 
@@ -107,12 +118,28 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     ],
   },
   {
+    componentKey: "perangkat",
+    label: "Perangkat Desa",
+    description: "Pejabat desa yang menjadi pihak pertama untuk ditanya warga",
+    componentType: "section",
+    isDefaultVisible: true,
+    displayOrder: 3,
+    rendererType: "perangkat_contacts",
+    previewVariant: "perangkat",
+    detailSlot: "transparansi",
+    highlightFieldKeys: ["kepalaDesa", "perangkatDesa"],
+    fields: [
+      { fieldKey: "kepalaDesa", label: "Nama kepala desa", valueType: "string", isPublishableNow: true, displayOrder: 1 },
+      { fieldKey: "perangkatDesa", label: "Daftar perangkat desa", valueType: "json", isPublishableNow: true, displayOrder: 2 },
+    ],
+  },
+  {
     componentKey: "sumber_dokumen",
     label: "Sumber & Dokumen",
     description: "Sumber publik dan dokumen pendukung desa",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 3,
+    displayOrder: 4,
     rendererType: "source_snapshot",
     previewVariant: "source",
     detailSlot: "sumber_dokumen",
@@ -124,7 +151,7 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Skor transparansi inti yang ditayangkan ke publik",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 4,
+    displayOrder: 5,
     rendererType: "transparency_metrics",
     previewVariant: "transparency",
     detailSlot: "transparansi",
@@ -145,7 +172,7 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Ringkasan anggaran dan realisasi belanja desa",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 5,
+    displayOrder: 6,
     rendererType: "budget_summary",
     previewVariant: "budget",
     detailSlot: "ringkasan_anggaran",
@@ -162,7 +189,7 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Rincian sumber pendapatan APBDes",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 6,
+    displayOrder: 7,
     rendererType: "pendapatan_breakdown",
     previewVariant: "pendapatan",
     detailSlot: "ringkasan_anggaran",
@@ -180,7 +207,7 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Output fisik, rincian APBDes, dan riwayat anggaran",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 7,
+    displayOrder: 8,
     rendererType: "kinerja_breakdown",
     previewVariant: "kinerja",
     detailSlot: "kinerja_anggaran",
@@ -194,16 +221,14 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
   {
     componentKey: "profil_desa",
     label: "Profil & Kelengkapan Desa",
-    description: "Kontak, perangkat desa, potensi, profil wilayah, aset, fasilitas, lembaga, dan BUMDes",
+    description: "Kontak, potensi, profil wilayah, aset, fasilitas, lembaga, dan BUMDes",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 8,
+    displayOrder: 9,
     rendererType: "kelengkapan_tabs",
     previewVariant: "kelengkapan",
     detailSlot: "kelengkapan_desa",
     highlightFieldKeys: [
-      "kepalaDesa",
-      "perangkatDesa",
       "fasilitasUmum",
       "asetDesa",
       "lembagaDesa",
@@ -212,17 +237,15 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     fields: [
       { fieldKey: "teleponDesa", label: "Telepon desa", valueType: "string", isPublishableNow: true, displayOrder: 1 },
       { fieldKey: "emailDesa", label: "Email desa", valueType: "string", isPublishableNow: true, displayOrder: 2 },
-      { fieldKey: "kepalaDesa", label: "Nama kepala desa", valueType: "string", isPublishableNow: true, displayOrder: 3 },
-      { fieldKey: "perangkatDesa", label: "Daftar perangkat desa", valueType: "json", isPublishableNow: true, displayOrder: 4 },
-      { fieldKey: "potensiUnggulan", label: "Potensi unggulan", valueType: "text", isPublishableNow: true, displayOrder: 5 },
-      { fieldKey: "luasWilayah", label: "Luas wilayah", valueType: "number", isPublishableNow: true, displayOrder: 6 },
-      { fieldKey: "mataPencaharian", label: "Mata pencaharian", valueType: "text", isPublishableNow: true, displayOrder: 7 },
-      { fieldKey: "luasSawah", label: "Luas sawah", valueType: "number", isPublishableNow: true, displayOrder: 8 },
-      { fieldKey: "luasHutan", label: "Luas hutan/kebun", valueType: "number", isPublishableNow: true, displayOrder: 9 },
-      { fieldKey: "fasilitasUmum", label: "Fasilitas umum", valueType: "json", isPublishableNow: true, displayOrder: 10 },
-      { fieldKey: "asetDesa", label: "Aset desa", valueType: "json", isPublishableNow: true, displayOrder: 11 },
-      { fieldKey: "lembagaDesa", label: "Lembaga desa", valueType: "json", isPublishableNow: true, displayOrder: 12 },
-      { fieldKey: "bumdes", label: "BUMDes", valueType: "json", isPublishableNow: true, displayOrder: 13 },
+      { fieldKey: "potensiUnggulan", label: "Potensi unggulan", valueType: "text", isPublishableNow: true, displayOrder: 3 },
+      { fieldKey: "luasWilayah", label: "Luas wilayah", valueType: "number", isPublishableNow: true, displayOrder: 4 },
+      { fieldKey: "mataPencaharian", label: "Mata pencaharian", valueType: "text", isPublishableNow: true, displayOrder: 5 },
+      { fieldKey: "luasSawah", label: "Luas sawah", valueType: "number", isPublishableNow: true, displayOrder: 6 },
+      { fieldKey: "luasHutan", label: "Luas hutan/kebun", valueType: "number", isPublishableNow: true, displayOrder: 7 },
+      { fieldKey: "fasilitasUmum", label: "Fasilitas umum", valueType: "json", isPublishableNow: true, displayOrder: 8 },
+      { fieldKey: "asetDesa", label: "Aset desa", valueType: "json", isPublishableNow: true, displayOrder: 9 },
+      { fieldKey: "lembagaDesa", label: "Lembaga desa", valueType: "json", isPublishableNow: true, displayOrder: 10 },
+      { fieldKey: "bumdes", label: "BUMDes", valueType: "json", isPublishableNow: true, displayOrder: 11 },
     ],
   },
   {
@@ -231,7 +254,7 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Panduan hak warga, langkah membaca, dan jalur tanya",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 9,
+    displayOrder: 10,
     rendererType: "citizen_guide",
     previewVariant: "guide",
     detailSlot: "panduan_warga",
@@ -243,10 +266,26 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     description: "Cerita dan suara warga tentang kondisi desa",
     componentType: "section",
     isDefaultVisible: true,
-    displayOrder: 10,
+    displayOrder: 11,
     rendererType: "voice_preview",
     previewVariant: "voice",
     detailSlot: "suara_warga",
+    fields: [],
+  },
+  {
+    componentKey: "agenda_desa",
+    label: "Agenda Desa",
+    description: "Agenda kegiatan publik desa sebagai komponen opsional untuk uji template",
+    componentType: "section",
+    isDefaultVisible: true,
+    displayOrder: 12,
+    rendererType: "agenda_preview",
+    previewVariant: "agenda",
+    detailSlot: "panduan_warga",
+    navLabel: "Agenda Desa",
+    anchorId: "agenda-desa",
+    publicGroupKey: "panduan_warga",
+    publicTabKey: "agenda_desa",
     fields: [],
   },
 ];

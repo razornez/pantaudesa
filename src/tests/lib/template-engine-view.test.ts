@@ -20,7 +20,7 @@ describe("template field engine view model", () => {
       resolveEffectiveTemplateFieldEngine: vi.fn().mockResolvedValue({
         resolvedTemplate: {
           templateId: "tpl_runtime",
-          templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+          templateKey: "TEMPLATE_UMUM_DESA",
           templateName: "Template Umum Desa",
           visibleComponents: [
             {

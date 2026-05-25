@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { FileText, ExternalLink, BarChart3, Users2 } from "lucide-react";
 import { Desa } from "@/lib/types";
@@ -11,23 +11,48 @@ import PerangkatDesaSection from "./PerangkatDesaSection";
 
 type Tab = "transparansi" | "perangkat" | "dokumen";
 
-export default function TransparansiCard({ desa, showPerangkat = true }: { desa: Desa; showPerangkat?: boolean }) {
-  const [tab, setTab] = useState<Tab>("dokumen");
+export default function TransparansiCard({
+  desa,
+  showDokumen = true,
+  showTransparansi = true,
+  showPerangkat = true,
+}: {
+  desa: Desa;
+  showDokumen?: boolean;
+  showTransparansi?: boolean;
+  showPerangkat?: boolean;
+}) {
   const tersediaCount = desa.dokumen?.filter(d => d.tersedia).length ?? 0;
   const totalDok      = desa.dokumen?.length ?? 0;
 
-  const allTabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
+  const allTabs = useMemo<{ id: Tab; label: string; icon: React.ElementType; badge?: string }[]>(() => [
+    { id: "perangkat",    label: "Perangkat",    icon: Users2 },
     { id: "dokumen",      label: "Dokumen",       icon: FileText,
       badge: totalDok > 0 ? `${tersediaCount}/${totalDok}` : undefined },
     { id: "transparansi", label: "Transparansi", icon: BarChart3 },
-    { id: "perangkat",    label: "Perangkat",    icon: Users2 },
-  ];
-  const tabs = allTabs.filter(t => t.id !== "perangkat" || showPerangkat);
+  ], [totalDok, tersediaCount]);
+  const tabs = useMemo(
+    () =>
+      allTabs.filter((tabItem) => {
+        if (tabItem.id === "perangkat") return showPerangkat;
+        if (tabItem.id === "dokumen") return showDokumen;
+        if (tabItem.id === "transparansi") return showTransparansi;
+        return true;
+      }),
+    [allTabs, showDokumen, showPerangkat, showTransparansi],
+  );
+  const [tab, setTab] = useState<Tab>(tabs[0]?.id ?? "dokumen");
+  const activeTab = tabs.some((tabItem) => tabItem.id === tab)
+    ? tab
+    : (tabs[0]?.id ?? "dokumen");
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       {/* Tab bar — clean, no illustration header */}
-      <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/40">
+      <div
+        className="grid border-b border-slate-100 bg-slate-50/40"
+        style={{ gridTemplateColumns: `repeat(${Math.max(tabs.length, 1)}, minmax(0, 1fr))` }}
+      >
         {tabs.map(t => {
           const Icon = t.icon;
           return (
@@ -35,7 +60,7 @@ export default function TransparansiCard({ desa, showPerangkat = true }: { desa:
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex min-h-[44px] min-w-0 items-center justify-center gap-1 px-2 py-3 text-[11px] font-bold border-b-2 transition-all sm:gap-1.5 sm:px-4 sm:text-xs ${
-                tab === t.id
+                activeTab === t.id
                   ? "border-indigo-500 text-indigo-600 bg-white"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
@@ -56,7 +81,7 @@ export default function TransparansiCard({ desa, showPerangkat = true }: { desa:
       <div className="p-4 sm:p-5">
 
         {/* Transparansi — hanya skor, tanpa banner gambar */}
-        {tab === "transparansi" && desa.skorTransparansi && (
+        {activeTab === "transparansi" && showTransparansi && desa.skorTransparansi && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center">
@@ -72,7 +97,7 @@ export default function TransparansiCard({ desa, showPerangkat = true }: { desa:
         )}
 
         {/* Perangkat — header teks berwarna, tanpa banner gambar */}
-        {tab === "perangkat" && showPerangkat && (
+        {activeTab === "perangkat" && showPerangkat && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -97,7 +122,7 @@ export default function TransparansiCard({ desa, showPerangkat = true }: { desa:
         )}
 
         {/* Dokumen — thumbnail kecil tetap, lebih compact */}
-        {tab === "dokumen" && desa.dokumen && (
+        {activeTab === "dokumen" && showDokumen && desa.dokumen && (
           <div>
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
               <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-indigo-50">

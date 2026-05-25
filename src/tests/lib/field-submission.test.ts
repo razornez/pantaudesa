@@ -5,7 +5,7 @@ import type { EffectiveTemplateFieldEngine } from "@/lib/village-data/field-engi
 const engine = {
   resolvedTemplate: {
     templateId: "tpl_1",
-    templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+    templateKey: "TEMPLATE_UMUM_DESA",
     templateName: "Template Publik Saat Ini",
     visibleComponents: [],
     hiddenComponents: [],

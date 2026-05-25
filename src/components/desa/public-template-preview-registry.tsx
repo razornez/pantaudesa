@@ -346,22 +346,71 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
+  perangkat: (input) => (
+    <PreviewShell
+      eyebrow="Preview detail publik"
+      title={input.label}
+      body="Perangkat sekarang hidup di shell tab dokumen/transparansi agar warga langsung melihat pihak yang harus ditanya lebih dulu."
+      tone="border-indigo-100 bg-white"
+      chips={renderPreviewFieldChips(input)}
+    >
+      <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white">
+        <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/50">
+          {["Perangkat", "Dokumen", "Transparansi"].map((tab, index) => (
+            <div
+              key={tab}
+              className={`px-3 py-2 text-center text-[9px] font-bold ${
+                index === 0
+                  ? "border-b-2 border-indigo-500 bg-white text-indigo-700"
+                  : "text-slate-500"
+              }`}
+            >
+              {tab}
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3 p-4">
+          <div>
+            <p className="text-[10px] font-black text-slate-950">Siapa yang Harus Kamu Tanya?</p>
+            <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">
+              Pejabat desa yang bertanggung jawab atas pengelolaan anggaran ini.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              ["Kepala Desa", "Ode Mandra"],
+              ["Sekretaris Desa", "Rini Wulandari"],
+              ["Bendahara Desa", "Tono Setiawan"],
+              ["Kaur Perencanaan", "Rika Novitasari"],
+            ].map(([role, name]) => (
+              <div key={role} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+                <p className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[8px] font-semibold text-indigo-700">
+                  {role}
+                </p>
+                <p className="mt-2 text-[10px] font-black text-slate-900">{name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </PreviewShell>
+  ),
   profil_desa: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
-      body="Kelengkapan desa tetap memakai tab visual yang sama seperti halaman publik, dengan Perangkat, Aset, Fasilitas, Lembaga, dan BUMDes."
+      body="Kelengkapan desa sekarang fokus ke aset, fasilitas, lembaga, dan BUMDes setelah perangkat dipindah ke shell tab dokumen/transparansi."
       tone="border-emerald-100 bg-white"
       chips={renderPreviewFieldChips(input)}
     >
       <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white">
         <div className="bg-[#202B45] px-4 py-3 text-white">
           <p className="text-[9px] font-black uppercase tracking-[0.16em] text-indigo-100">Kelengkapan desa</p>
-          <p className="text-[11px] font-black">Perangkat, Aset & Organisasi Desa</p>
+          <p className="text-[11px] font-black">Aset, Fasilitas & Organisasi Masyarakat</p>
         </div>
         <div className="space-y-3 p-4">
           <div className="flex flex-wrap gap-2">
-            {["Perangkat", "Aset", "Fasilitas", "Lembaga", "BUMDes"].map((tab, index) => (
+            {["Aset", "Fasilitas", "Lembaga", "BUMDes"].map((tab, index) => (
               <span
                 key={tab}
                 className={`rounded-full px-2.5 py-1 text-[9px] font-semibold ${
@@ -373,10 +422,10 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
             ))}
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {["Kepala Desa", "Sekretaris Desa", "Kaur Keuangan"].map((role) => (
-              <div key={role} className="rounded-2xl border border-slate-100 bg-white p-3">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">{role}</p>
-                <p className="mt-1 text-[10px] font-black text-slate-900">Nama perangkat</p>
+            {["Tanah kas desa", "Gedung serbaguna", "Mobil siaga desa"].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-100 bg-white p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Preview item</p>
+                <p className="mt-1 text-[10px] font-black text-slate-900">{item}</p>
               </div>
             ))}
           </div>
@@ -399,6 +448,36 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
             <p className="mt-1 text-[10px] font-semibold text-slate-900">{step}</p>
           </div>
         ))}
+      </div>
+    </PreviewShell>
+  ),
+  agenda_desa: (input) => (
+    <PreviewShell
+      eyebrow="Preview detail publik"
+      title={input.label}
+      body="Komponen catalog-only untuk uji pasang template. Zero-field, jadi tidak menambah total field publik."
+      tone="border-sky-100 bg-sky-50/45"
+      chips={renderPreviewFieldChips(input)}
+    >
+      <div className="rounded-2xl border border-sky-100 bg-white p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black text-slate-950">Agenda publik desa</p>
+            <p className="mt-1 text-[9px] leading-relaxed text-slate-500">
+              Slot opsional yang bisa dipasang manual dari catalog.
+            </p>
+          </div>
+          <span className="rounded-full bg-sky-50 px-2 py-1 text-[8px] font-bold text-sky-700">
+            Zero field
+          </span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {["Musyawarah", "Layanan", "Kegiatan"].map((item) => (
+            <div key={item} className="rounded-xl bg-slate-50 px-3 py-2 text-[9px] font-semibold text-slate-700">
+              {item}
+            </div>
+          ))}
+        </div>
       </div>
     </PreviewShell>
   ),

@@ -1,12 +1,14 @@
 import { PrismaClient } from "@/generated/prisma";
 import { attachPrismaPerfLogging } from "@/lib/perf";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient | null;
+  prismaDatasourceUrl?: string;
+};
 
 function localDirectUrlOptInEnabled(): boolean {
   if (!process.env.DIRECT_URL) return false;
-  if (process.env.PANTAUDESA_LOCAL_DB_USE_DIRECT_URL === "false") return false;
-  return true;
+  return process.env.PANTAUDESA_LOCAL_DB_USE_DIRECT_URL === "true";
 }
 
 function getPrismaDatasourceUrl(): string {
@@ -40,8 +42,7 @@ function localDirectUrlRuntimeEnabled(): boolean {
   return !process.env.VERCEL && !process.env.VERCEL_ENV && localDirectUrlOptInEnabled();
 }
 
-function createClient(): PrismaClient | null {
-  const url = getPrismaDatasourceUrl();
+function createClient(url: string): PrismaClient | null {
   const valid =
     url.startsWith("postgresql://") ||
     url.startsWith("postgres://") ||
@@ -68,7 +69,25 @@ function createClient(): PrismaClient | null {
   }
 }
 
-export const db: PrismaClient = (globalForPrisma.prisma ?? createClient()) as PrismaClient;
+function getOrCreatePrismaClient(): PrismaClient | null {
+  const url = getPrismaDatasourceUrl();
+  const existing = globalForPrisma.prisma;
+
+  if (existing && globalForPrisma.prismaDatasourceUrl === url) {
+    return existing;
+  }
+
+  if (existing && globalForPrisma.prismaDatasourceUrl !== url) {
+    void existing.$disconnect().catch(() => {});
+  }
+
+  const client = createClient(url);
+  globalForPrisma.prisma = client;
+  globalForPrisma.prismaDatasourceUrl = url;
+  return client;
+}
+
+export const db: PrismaClient = getOrCreatePrismaClient() as PrismaClient;
 
 if (process.env.NODE_ENV !== "production" && db) globalForPrisma.prisma = db;
 

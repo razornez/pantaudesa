@@ -1,14 +1,14 @@
 /**
  * Village data template constants.
  *
- * MVP: all desa use CURRENT_PUBLIC_DETAIL_TEMPLATE.
+ * Runtime: all desa use TEMPLATE_UMUM_DESA unless explicitly reassigned.
  * Future: each desa can be assigned a different template via
  * DesaDetailTemplateAssignment (schema proposal in prisma/schema.prisma).
  */
 
-export const DEFAULT_TEMPLATE_KEY = "CURRENT_PUBLIC_DETAIL_TEMPLATE";
+export const DEFAULT_TEMPLATE_KEY = "TEMPLATE_UMUM_DESA";
 
-export const DEFAULT_TEMPLATE_NAME = "Template Detail Desa Publik (Saat Ini)";
+export const DEFAULT_TEMPLATE_NAME = "Template Umum Desa";
 
 /**
  * Resolve which template key applies to a given desa.

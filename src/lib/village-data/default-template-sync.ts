@@ -16,6 +16,30 @@ let syncPromise: Promise<void> | null = null;
 let lastSyncAt = 0;
 const SYNC_TTL_MS = 30_000;
 
+function componentAnchorId(componentKey: string) {
+  return componentKey.replaceAll("_", "-");
+}
+
+function catalogRuntimeMetadata(component: ComponentCatalogManifestEntry) {
+  return {
+    isDefaultVisible: component.isDefaultVisible,
+    displayOrder: component.displayOrder,
+    rendererType: component.rendererType,
+    previewVariant: component.previewVariant,
+    detailSlot: component.detailSlot,
+    navLabel: component.navLabel ?? component.label,
+    anchorId: component.anchorId ?? componentAnchorId(component.componentKey),
+    publicGroupKey: component.publicGroupKey ?? component.detailSlot,
+    publicTabKey: component.publicTabKey ?? component.componentKey,
+    highlightFieldKeys: component.highlightFieldKeys
+      ? (component.highlightFieldKeys as Prisma.InputJsonValue)
+      : Prisma.JsonNull,
+    renderConfigJson: component.renderConfig
+      ? (component.renderConfig as Prisma.InputJsonValue)
+      : Prisma.JsonNull,
+  };
+}
+
 function canSynchronizeDefaultTemplate() {
   const runtimeDb = db as unknown as Record<string, unknown> | null;
   if (!runtimeDb) return false;
@@ -63,6 +87,7 @@ async function syncCatalogComponent(
   withCatalogTables: boolean,
 ) {
   if (!db || !withCatalogTables) return null;
+  const runtimeMetadata = catalogRuntimeMetadata(component);
 
   const catalogComponent = await db.villageComponentCatalog.upsert({
     where: { componentKey: component.componentKey },
@@ -71,12 +96,14 @@ async function syncCatalogComponent(
       label: component.label,
       description: component.description,
       componentType: component.componentType,
+      ...runtimeMetadata,
       status: "ACTIVE",
     },
     update: {
       label: component.label,
       description: component.description,
       componentType: component.componentType,
+      ...runtimeMetadata,
       status: "ACTIVE",
     },
     select: { id: true },
@@ -116,50 +143,39 @@ async function syncCatalogComponent(
   return catalogComponent.id;
 }
 
-async function migrateLegacyPerangkatIntoProfilComponent(input: {
+async function migratePerangkatFieldsToDedicatedComponent(input: {
   templateId: string;
-  legacyComponentId: string | null;
-  profilComponentId: string | null;
-  profilFieldIdMap: Map<string, string>;
+  sourceComponentIds: string[];
+  perangkatComponentId: string | null;
+  perangkatFieldIdMap: Map<string, string>;
 }) {
-  if (!db || !input.legacyComponentId || !input.profilComponentId) return;
+  if (!db || !input.perangkatComponentId) return;
 
   const migratedFieldKeys = ["kepalaDesa", "perangkatDesa"] as const;
+  const sourceComponentIds = [...new Set(input.sourceComponentIds)].filter(
+    (componentId) => componentId && componentId !== input.perangkatComponentId,
+  );
+  if (sourceComponentIds.length === 0) return;
 
-  const [legacyRows, legacyOverrides] = await Promise.all([
-    db.dataDesa.findMany({
-      where: {
-        templateId: input.templateId,
-        componentId: input.legacyComponentId,
-        fieldKey: { in: [...migratedFieldKeys] },
-      },
-      select: {
-        id: true,
-        desaId: true,
-        fieldKey: true,
-      },
-    }),
-    db.desaDetailComponentVisibility.findMany({
-      where: {
-        templateId: input.templateId,
-        componentId: input.legacyComponentId,
-      },
-      select: {
-        id: true,
-        desaId: true,
-        isVisible: true,
-        reason: true,
-        updatedById: true,
-      },
-    }),
-  ]);
+  const sourceRows = await db.dataDesa.findMany({
+    where: {
+      templateId: input.templateId,
+      componentId: { in: sourceComponentIds },
+      fieldKey: { in: [...migratedFieldKeys] },
+    },
+    select: {
+      id: true,
+      desaId: true,
+      fieldKey: true,
+    },
+  });
 
-  for (const row of legacyRows) {
-    const targetFieldStandardId = input.profilFieldIdMap.get(row.fieldKey) ?? null;
+  for (const row of sourceRows) {
+    const targetFieldStandardId = input.perangkatFieldIdMap.get(row.fieldKey) ?? null;
     const existingTargetRow = await db.dataDesa.findFirst({
       where: {
         templateId: input.templateId,
-        componentId: input.profilComponentId,
+        componentId: input.perangkatComponentId,
         desaId: row.desaId,
         fieldKey: row.fieldKey,
         isActive: true,
@@ -175,7 +191,7 @@ async function migrateLegacyPerangkatIntoProfilComponent(input: {
           status: "ARCHIVED",
           isActive: false,
           reviewNote:
-            "Archived during template sync after perangkat fields moved into profil_desa.",
+            "Archived during template sync after perangkat fields moved into the dedicated perangkat component.",
         },
       });
       continue;
@@ -184,41 +200,8 @@ async function migrateLegacyPerangkatIntoProfilComponent(input: {
     await db.dataDesa.updateMany({
       where: { id: row.id },
       data: {
-        componentId: input.profilComponentId,
+        componentId: input.perangkatComponentId,
         fieldStandardId: targetFieldStandardId,
-      },
-    });
-  }
-
-  for (const override of legacyOverrides) {
-    await db.desaDetailComponentVisibility.upsert({
-      where: {
-        desaId_componentId: {
-          desaId: override.desaId,
-          componentId: input.profilComponentId,
-        },
-      },
-      create: {
-        desaId: override.desaId,
-        templateId: input.templateId,
-        componentId: input.profilComponentId,
-        isVisible: override.isVisible,
-        reason: override.reason,
-        updatedById: override.updatedById,
-      },
-      update: {
-        isVisible: override.isVisible,
-        reason: override.reason,
-        updatedById: override.updatedById,
-      },
-    });
-  }
-
-  if (legacyOverrides.length > 0) {
-    await db.desaDetailComponentVisibility.deleteMany({
-      where: {
-        templateId: input.templateId,
-        componentId: input.legacyComponentId,
       },
     });
   }
@@ -357,11 +340,11 @@ async function synchronizeDefaultTemplateInternal() {
     }
   }
 
-  await migrateLegacyPerangkatIntoProfilComponent({
+  await migratePerangkatFieldsToDedicatedComponent({
     templateId: template.id,
-    legacyComponentId: existingByKey.get("perangkat")?.id ?? null,
-    profilComponentId: placementIdByKey.get("profil_desa") ?? null,
-    profilFieldIdMap: fieldStandardIdByComponentKey.get("profil_desa") ?? new Map(),
+    sourceComponentIds: [existingByKey.get("profil_desa")?.id ?? ""],
+    perangkatComponentId: placementIdByKey.get("perangkat") ?? null,
+    perangkatFieldIdMap: fieldStandardIdByComponentKey.get("perangkat") ?? new Map(),
   });
 
   for (const component of existingComponents) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  CalendarDays,
   CheckCircle2,
   Clock,
   FileText,
@@ -30,6 +31,7 @@ import { formatRupiahFull } from "@/lib/utils";
 import APBDesBreakdown from "@/components/desa/APBDesBreakdown";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
 import OutputFisikCards from "@/components/desa/OutputFisikCards";
+import PerangkatDesaSection from "@/components/desa/PerangkatDesaSection";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
 import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import RiwayatChart from "@/components/desa/RiwayatChart";
@@ -194,6 +196,41 @@ function buildPerangkatSectionData(
   return toPublishedPerangkatDesaArray(
     publishedValues.perangkatDesa,
     readPublishedString(publishedValues, "kepalaDesa"),
+  );
+}
+
+function renderPerangkatSection({ publishedValues }: PublicTemplateSectionContext) {
+  const perangkat = buildPerangkatSectionData(publishedValues);
+
+  if (perangkat.length === 0) {
+    return (
+      <SectionShell
+        title="Perangkat desa"
+        subtitle="Komponen template perangkat"
+      >
+        <EmptySectionState
+          title="Perangkat desa belum diterbitkan"
+          body="Nama kepala desa dan perangkat lain akan tampil di tab ini setelah field perangkat dari template aktif diterbitkan."
+        />
+      </SectionShell>
+    );
+  }
+
+  return (
+    <SectionShell
+      title="Perangkat desa"
+      subtitle="Komponen template perangkat"
+    >
+      <div
+        className="rounded-3xl bg-white p-5 sm:p-6"
+        style={{
+          boxShadow:
+            "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04)",
+        }}
+      >
+        <PerangkatDesaSection perangkat={perangkat} />
+      </div>
+    </SectionShell>
   );
 }
 
@@ -620,8 +657,8 @@ function renderKinerjaSection({ publishedValues }: PublicTemplateSectionContext)
   );
 }
 
-function renderProfilSection({ publishedValues }: PublicTemplateSectionContext) {
-  const profil = buildPublishedProfilSection(publishedValues);
+function renderProfilSection({ desa, publishedValues }: PublicTemplateSectionContext) {
+  const profil = buildPublishedProfilSection(publishedValues, desa.profil);
   if (!profil) {
     return (
       <SectionShell
@@ -630,17 +667,12 @@ function renderProfilSection({ publishedValues }: PublicTemplateSectionContext) 
       >
         <EmptySectionState
           title="Profil desa belum terbit"
-          body="Section ini menunggu kontak, perangkat desa, potensi, profil wilayah, aset, fasilitas, lembaga, atau BUMDes dari template aktif."
+          body="Section ini menunggu kontak, potensi, profil wilayah, aset, fasilitas, lembaga, atau BUMDes dari template aktif."
         />
       </SectionShell>
     );
   }
 
-  const perangkat = buildPerangkatSectionData(publishedValues);
-  const profilWithPerangkat = {
-    ...profil,
-    perangkat,
-  };
   const contactChips = buildProfilContactChips(profil);
   const summaryCards = [
     { label: "Potensi unggulan", value: profil.potensiUnggulan || "Belum terisi" },
@@ -717,12 +749,11 @@ function renderProfilSection({ publishedValues }: PublicTemplateSectionContext) 
           </div>
         </div>
 
-        {(profilWithPerangkat.perangkat?.length ||
-          profilWithPerangkat.aset.length > 0 ||
-          profilWithPerangkat.fasilitas.length > 0 ||
-          profilWithPerangkat.lembaga.length > 0 ||
-          profilWithPerangkat.bumdes) ? (
-          <KelengkapanDesa profil={profilWithPerangkat} />
+        {(profil.aset.length > 0 ||
+          profil.fasilitas.length > 0 ||
+          profil.lembaga.length > 0 ||
+          profil.bumdes) ? (
+          <KelengkapanDesa profil={profil} />
         ) : null}
       </div>
     </SectionShell>
@@ -746,6 +777,44 @@ function renderPanduanWargaSection({ desa }: PublicTemplateSectionContext) {
         <SeharusnyaAdaSection desa={desa} />
         <ResponsibilityGuideCard />
         <PreReportChecklistCard kabupaten={desa.kabupaten} />
+      </div>
+    </SectionShell>
+  );
+}
+
+function renderAgendaDesaSection() {
+  return (
+    <SectionShell title="Agenda desa" subtitle="Komponen template agenda">
+      <div className="rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/45 to-indigo-50/40 p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-sky-700 shadow-sm ring-1 ring-sky-100">
+              <CalendarDays size={14} aria-hidden />
+              Komponen opsional
+            </div>
+            <h2 className="mt-4 text-lg font-black text-slate-950">
+              Agenda publik desa belum diterbitkan.
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Komponen ini sengaja tersedia di catalog sebagai uji template. Jika
+              dipasang ke template aktif, section ini akan tampil tanpa menambah
+              field count karena belum memiliki field DB.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 text-xs font-semibold text-slate-600 shadow-sm">
+            Zero-field component
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {["Musyawarah desa", "Layanan administrasi", "Kegiatan warga"].map((item) => (
+            <div key={item} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+              <p className="text-xs font-black text-slate-900">{item}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Contoh statis untuk membuktikan slot template bisa ditambahkan manual.
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </SectionShell>
   );
@@ -970,12 +1039,64 @@ function previewKinerjaSection(input: PublicTemplatePreviewInput) {
   );
 }
 
+function previewPerangkatSection(input: PublicTemplatePreviewInput) {
+  return (
+    <PreviewShell
+      eyebrow="Preview detail publik"
+      title={input.label}
+      body="Perangkat pindah ke shell tab dokumen/transparansi agar warga langsung tahu siapa yang harus ditanya lebih dulu."
+      tone="border-indigo-100 bg-white"
+      chips={renderPreviewFieldChips(input)}
+    >
+      <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white">
+        <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/50">
+          {["Perangkat", "Dokumen", "Transparansi"].map((tab, index) => (
+            <div
+              key={tab}
+              className={`px-3 py-2 text-center text-[10px] font-bold ${
+                index === 0
+                  ? "border-b-2 border-indigo-500 bg-white text-indigo-700"
+                  : "text-slate-500"
+              }`}
+            >
+              {tab}
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3 p-4">
+          <div>
+            <p className="text-[11px] font-black text-slate-950">Siapa yang Harus Kamu Tanya?</p>
+            <p className="mt-1 text-[9px] leading-relaxed text-slate-500">
+              Pejabat desa yang bertanggung jawab atas pengelolaan anggaran ini.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              ["Kepala Desa", "Ode Mandra"],
+              ["Sekretaris Desa", "Rini Wulandari"],
+              ["Bendahara Desa", "Tono Setiawan"],
+              ["Kaur Perencanaan", "Rika Novitasari"],
+            ].map(([role, name]) => (
+              <div key={role} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+                <p className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+                  {role}
+                </p>
+                <p className="mt-2 text-[11px] font-black text-slate-900">{name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </PreviewShell>
+  );
+}
+
 function previewProfilSection(input: PublicTemplatePreviewInput) {
   return (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
-      body="Kelengkapan desa tetap memakai tab visual yang sama seperti halaman publik, dengan Perangkat, Aset, Fasilitas, Lembaga, dan BUMDes."
+      body="Kelengkapan desa sekarang fokus ke aset, fasilitas, lembaga, dan BUMDes setelah perangkat dipindah ke shell tab dokumen/transparansi."
       tone="border-emerald-100 bg-white"
       chips={renderPreviewFieldChips(input)}
     >
@@ -986,7 +1107,7 @@ function previewProfilSection(input: PublicTemplatePreviewInput) {
         </div>
         <div className="space-y-3 p-4">
           <div className="flex flex-wrap gap-2">
-            {["Perangkat", "Aset", "Fasilitas", "Lembaga", "BUMDes"].map((tab, index) => (
+            {["Aset", "Fasilitas", "Lembaga", "BUMDes"].map((tab, index) => (
               <span
                 key={tab}
                 className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
@@ -998,10 +1119,10 @@ function previewProfilSection(input: PublicTemplatePreviewInput) {
             ))}
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {["Kepala Desa", "Sekretaris Desa", "Kaur Keuangan"].map((role) => (
-              <div key={role} className="rounded-2xl border border-slate-100 bg-white p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{role}</p>
-                <p className="mt-1 text-[13px] font-black text-slate-900">Nama perangkat</p>
+            {["Tanah kas desa", "Gedung serbaguna", "Mobil siaga desa"].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-100 bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Preview item</p>
+                <p className="mt-1 text-[13px] font-black text-slate-900">{item}</p>
               </div>
             ))}
           </div>
@@ -1027,6 +1148,37 @@ function previewPanduanSection(input: PublicTemplatePreviewInput) {
             <p className="mt-1 text-[12px] font-semibold text-slate-900">{step}</p>
           </div>
         ))}
+      </div>
+    </PreviewShell>
+  );
+}
+
+function previewAgendaSection(input: PublicTemplatePreviewInput) {
+  return (
+    <PreviewShell
+      eyebrow="Preview detail publik"
+      title={input.label}
+      body="Komponen catalog-only untuk uji pasang template. Tidak menambah field count karena belum punya field DB."
+      tone="border-sky-100 bg-sky-50/40"
+      chips={renderPreviewFieldChips(input)}
+    >
+      <div className="rounded-2xl border border-sky-100 bg-white p-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+            <CalendarDays size={14} aria-hidden />
+          </span>
+          <div>
+            <p className="text-[11px] font-black text-slate-950">Agenda publik desa</p>
+            <p className="text-[9px] text-slate-500">Preview statis komponen opsional</p>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {["Musyawarah", "Layanan", "Kegiatan"].map((item) => (
+            <div key={item} className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-semibold text-slate-700">
+              {item}
+            </div>
+          ))}
+        </div>
       </div>
     </PreviewShell>
   );
@@ -1168,6 +1320,14 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
     render: renderDemografiSection,
     preview: previewDemografiSection,
   },
+  perangkat: {
+    componentKey: "perangkat",
+    navLabel: "Perangkat",
+    anchorId: "dokumen-desa",
+    detailSlot: "transparansi",
+    render: renderPerangkatSection,
+    preview: previewPerangkatSection,
+  },
   sumber_dokumen: {
     componentKey: "sumber_dokumen",
     navLabel: "Sumber & Dokumen",
@@ -1223,6 +1383,14 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
     detailSlot: "panduan_warga",
     render: renderPanduanWargaSection,
     preview: previewPanduanSection,
+  },
+  agenda_desa: {
+    componentKey: "agenda_desa",
+    navLabel: "Agenda Desa",
+    anchorId: "agenda-desa",
+    detailSlot: "panduan_warga",
+    render: renderAgendaDesaSection,
+    preview: previewAgendaSection,
   },
   suara_warga: {
     componentKey: "suara_warga",

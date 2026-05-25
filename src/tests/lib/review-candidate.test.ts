@@ -50,7 +50,7 @@ describe("buildReviewCandidateForDocument", () => {
     const engine = {
       resolvedTemplate: {
         templateId: "tpl_current",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Umum Desa",
         visibleComponents: [],
         hiddenComponents: [],
@@ -119,7 +119,7 @@ describe("buildReviewCandidateForDocument", () => {
     mockRestoreTemplateFieldEngineFromSnapshot.mockReturnValue({
       resolvedTemplate: {
         templateId: "tpl_snapshot",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Snapshot",
         visibleComponents: [],
         hiddenComponents: [],
@@ -152,7 +152,7 @@ describe("buildReviewCandidateForDocument", () => {
     mockResolveEffectiveTemplateFieldEngine.mockResolvedValue({
       resolvedTemplate: {
         templateId: "tpl_current",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Umum Desa",
         visibleComponents: [],
         hiddenComponents: [],
@@ -212,7 +212,7 @@ describe("buildReviewCandidateForDocument", () => {
     mockResolveEffectiveTemplateFieldEngine.mockResolvedValue({
       resolvedTemplate: {
         templateId: "tpl_current",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Umum Desa",
         visibleComponents: [],
         hiddenComponents: [],
@@ -280,7 +280,7 @@ describe("buildReviewCandidateForDocument", () => {
     mockResolveEffectiveTemplateFieldEngine.mockResolvedValue({
       resolvedTemplate: {
         templateId: "tpl_current",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Umum Desa",
         visibleComponents: [],
         hiddenComponents: [],

@@ -40,7 +40,7 @@ describe("resolveDesaTemplate", () => {
     vi.doMock("@/lib/supabase-admin", () => ({
       getSupabaseAdminClient: () => null,
     }));
-    const defaultTemplate = buildTemplate("tpl_default", "CURRENT_PUBLIC_DETAIL_TEMPLATE");
+    const defaultTemplate = buildTemplate("tpl_default", "TEMPLATE_UMUM_DESA");
     vi.doMock("@/lib/db", () => ({
       db: {
         desaDetailTemplateAssignment: {
@@ -59,7 +59,7 @@ describe("resolveDesaTemplate", () => {
     const result = await resolveDesaTemplate("qa-desa-a");
 
     expect(result.templateId).toBe("tpl_default");
-    expect(result.templateKey).toBe("CURRENT_PUBLIC_DETAIL_TEMPLATE");
+    expect(result.templateKey).toBe("TEMPLATE_UMUM_DESA");
     expect(result.visibleComponents[0]?.componentId).toBe("tpl_default-component");
     expect(result.visibleComponents[0]?.fields[0]?.fieldStandardId).toBe("tpl_default-field");
   });
@@ -69,7 +69,7 @@ describe("resolveDesaTemplate", () => {
       getSupabaseAdminClient: () => null,
     }));
     const assignedTemplate = buildTemplate("tpl_assigned", "DESA_WISATA_TEMPLATE", "potensiUnggulan");
-    const defaultTemplate = buildTemplate("tpl_default", "CURRENT_PUBLIC_DETAIL_TEMPLATE");
+    const defaultTemplate = buildTemplate("tpl_default", "TEMPLATE_UMUM_DESA");
     vi.doMock("@/lib/db", () => ({
       db: {
         desaDetailTemplateAssignment: {
@@ -168,7 +168,7 @@ describe("resolveDesaTemplate", () => {
     const { getPublishedDataDesa } = await import("@/lib/village-data/template-resolver");
     const result = await getPublishedDataDesa("qa-desa-a", {
       templateId: "tpl_current",
-      templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+      templateKey: "TEMPLATE_UMUM_DESA",
       templateName: "Template Umum Desa",
       visibleComponents: [
         {

@@ -11,6 +11,15 @@ import {
 export interface RuntimeTemplateManifestComponent extends ResolvedComponent {
   isVisible: boolean;
   fieldCount: number;
+  rendererType: string;
+  previewVariant: string;
+  detailSlot: string;
+  navLabel: string;
+  anchorId: string;
+  publicGroupKey: string | null;
+  publicTabKey: string | null;
+  highlightFieldKeys: string[];
+  renderConfig: Record<string, unknown>;
 }
 
 export interface RuntimeTemplateManifest {
@@ -26,6 +35,10 @@ export interface RuntimeTemplateManifest {
   totalFieldCount: number;
   publishableCount: number;
 }
+
+export type TemplateRuntimeContract = RuntimeTemplateManifest;
+export type RuntimeComponentContract = RuntimeTemplateManifestComponent;
+export type RuntimeFieldContract = ResolvedField;
 
 export function mergeResolvedFieldsWithCatalogManifest(input: {
   componentId: string;
@@ -69,22 +82,50 @@ function sortComponents(
   return [...components].sort((left, right) => left.displayOrder - right.displayOrder);
 }
 
+function componentWithContractMetadata(
+  component: ResolvedComponent,
+  isVisible: boolean,
+): RuntimeTemplateManifestComponent {
+  const fallback = DEFAULT_COMPONENT_CATALOG_BY_KEY.get(
+    component.componentKey as RegisteredVillageComponentKey,
+  );
+
+  return {
+    ...component,
+    isVisible,
+    fieldCount: component.fields.length,
+    rendererType: component.rendererType ?? fallback?.rendererType ?? "identity_grid",
+    previewVariant: component.previewVariant ?? fallback?.previewVariant ?? "identity",
+    detailSlot: component.detailSlot ?? fallback?.detailSlot ?? "first_view",
+    navLabel: component.navLabel ?? fallback?.navLabel ?? component.label,
+    anchorId:
+      component.anchorId ??
+      fallback?.anchorId ??
+      component.componentKey.replaceAll("_", "-"),
+    publicGroupKey:
+      component.publicGroupKey ??
+      fallback?.publicGroupKey ??
+      component.detailSlot ??
+      fallback?.detailSlot ??
+      null,
+    publicTabKey: component.publicTabKey ?? fallback?.publicTabKey ?? component.componentKey,
+    highlightFieldKeys: component.highlightFieldKeys ?? fallback?.highlightFieldKeys ?? [],
+    renderConfig: component.renderConfig ?? fallback?.renderConfig ?? {},
+  };
+}
+
 export function buildRuntimeTemplateManifest(
   resolvedTemplate: ResolvedTemplate,
 ): RuntimeTemplateManifest {
   const visibleComponents = sortComponents(
-    resolvedTemplate.visibleComponents.map((component) => ({
-      ...component,
-      isVisible: true,
-      fieldCount: component.fields.length,
-    })),
+    resolvedTemplate.visibleComponents.map((component) =>
+      componentWithContractMetadata(component, true),
+    ),
   );
   const hiddenComponents = sortComponents(
-    resolvedTemplate.hiddenComponents.map((component) => ({
-      ...component,
-      isVisible: false,
-      fieldCount: component.fields.length,
-    })),
+    resolvedTemplate.hiddenComponents.map((component) =>
+      componentWithContractMetadata(component, false),
+    ),
   );
   const components = [...visibleComponents, ...hiddenComponents];
   const fieldMap = new Map<string, ResolvedField>();

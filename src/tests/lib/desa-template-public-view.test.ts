@@ -32,7 +32,7 @@ describe("desa template public view", () => {
     expect(profil?.potensiUnggulan).toBe("Kopi rakyat dan wisata sungai.");
   });
 
-  it("treats perangkat desa as part of the published profile component", () => {
+  it("does not keep perangkat fields inside the published profile component", () => {
     const profil = buildPublishedProfilSection({
       kepalaDesa: "Bapak Asep",
       perangkatDesa: [
@@ -41,12 +41,51 @@ describe("desa template public view", () => {
       ],
     });
 
-    expect(profil).not.toBeNull();
-    expect(profil?.perangkat).toEqual([
-      { jabatan: "Kepala Desa", nama: "Bapak Asep" },
-      { jabatan: "Sekretaris Desa", nama: "Ibu Sari" },
-      { jabatan: "Kaur Keuangan", nama: "Pak Rudi" },
-    ]);
+    expect(profil).toBeNull();
+  });
+
+  it("keeps legacy public profile data as a fallback without re-owning perangkat", () => {
+    const profil = buildPublishedProfilSection(
+      {},
+      {
+        website: "https://batukarut.desa.id",
+        email: "halo@batukarut.desa.id",
+        telepon: "022-87991234",
+        luasWilayah: 12.4,
+        jumlahDusun: 4,
+        jumlahRt: 11,
+        jumlahRw: 5,
+        jumlahKk: 987,
+        mataPencaharian: "Pertanian dan jasa lokal",
+        potensiUnggulan: "Wisata sungai dan kopi rakyat",
+        terakhirDiperbarui: new Date("2026-05-20T00:00:00.000Z"),
+        aset: [
+          {
+            jenis: "kendaraan",
+            nama: "Mobil siaga desa",
+            lokasi: "Kantor Desa",
+            nilai: 285_000_000,
+            tahunBeli: 2021,
+            kondisi: "sedang",
+          },
+        ],
+        fasilitas: [],
+        lembaga: [],
+        perangkat: [{ jabatan: "Kepala Desa", nama: "Bapak Asep" }],
+        historyBelanja: [],
+        badge: {
+          level: 3,
+          label: "Data publik",
+          deskripsi: "Fallback publik",
+          warna: "indigo",
+          icon: "info",
+        },
+      },
+    );
+
+    expect(profil?.aset).toHaveLength(1);
+    expect(profil?.potensiUnggulan).toBe("Wisata sungai dan kopi rakyat");
+    expect(profil?.perangkat).toBeUndefined();
   });
 
   it("merges kepala desa into published perangkat array without creating static filler", () => {

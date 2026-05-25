@@ -140,8 +140,8 @@ export const DETAIL_FIELD_STANDARDS: DetailFieldStandard[] = [
     validationRequirement: "Nama wilayah tidak kosong",
   },
   {
-    sectionKey: "profil",
-    sectionLabel: "Profil desa",
+    sectionKey: "perangkat",
+    sectionLabel: "Perangkat desa",
     fieldKey: "kepalaDesa",
     fieldLabel: "Nama kepala desa",
     currentModelSource: "PerangkatDesa[nama/jabatan]",
@@ -154,8 +154,8 @@ export const DETAIL_FIELD_STANDARDS: DetailFieldStandard[] = [
     validationRequirement: "Nama + jabatan harus jelas",
   },
   {
-    sectionKey: "profil",
-    sectionLabel: "Profil desa",
+    sectionKey: "perangkat",
+    sectionLabel: "Perangkat desa",
     fieldKey: "perangkatDesa",
     fieldLabel: "Daftar perangkat desa",
     currentModelSource: "PerangkatDesa[]",

@@ -1,3 +1,4 @@
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/index.js";
 import {
   COMPONENT_CATALOG,
@@ -5,7 +6,66 @@ import {
   LEGACY_TEMPLATE_MANIFESTS,
 } from "./template-catalog.manifest.mjs";
 
+loadEnv({ path: ".env.local", override: false });
+loadEnv({ path: ".env", override: false });
+
+// Template sync should use the most reliable local connection. In this
+// workspace the session/direct pooler can be unavailable while DATABASE_URL
+// works, so direct usage must be explicit instead of the default.
+if (process.env.TEMPLATE_SYNC_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEMPLATE_SYNC_DATABASE_URL;
+} else if (
+  process.env.DIRECT_URL &&
+  process.env.TEMPLATE_SYNC_USE_DIRECT_URL === "true"
+) {
+  process.env.DATABASE_URL = process.env.DIRECT_URL;
+}
+
 const db = new PrismaClient();
+const args = new Set(process.argv.slice(2));
+const dryRun = args.has("--dry-run") || process.env.TEMPLATE_SYNC_DRY_RUN === "true";
+const stageTimeoutMs = Number(process.env.TEMPLATE_SYNC_STAGE_TIMEOUT_MS ?? 120_000);
+
+function safeDatabaseTarget() {
+  const rawUrl = process.env.DATABASE_URL ?? "";
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.hostname}:${parsed.port || "5432"}/${parsed.pathname.replace(/^\//, "")}`;
+  } catch {
+    return "invalid-or-missing-database-url";
+  }
+}
+
+async function runStage(label, task, options = {}) {
+  const timeoutMs = options.timeoutMs ?? stageTimeoutMs;
+  const startedAt = Date.now();
+  console.log(`[template:sync] start ${label}`);
+
+  let timeout;
+  try {
+    const result = await Promise.race([
+      task(),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `${label} timed out after ${timeoutMs}ms. Check DATABASE_URL/TEMPLATE_SYNC_DATABASE_URL and Supabase connectivity before retrying.`,
+            ),
+          );
+        }, timeoutMs);
+      }),
+    ]);
+    console.log(`[template:sync] done ${label} in ${Date.now() - startedAt}ms`);
+    return result;
+  } catch (error) {
+    console.error(
+      `[template:sync] failed ${label} after ${Date.now() - startedAt}ms`,
+    );
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 async function supportsCatalogRelations() {
   try {
@@ -16,49 +76,39 @@ async function supportsCatalogRelations() {
   }
 }
 
-async function migrateLegacyPerangkatIntoProfilComponent({
+async function migratePerangkatFieldsToDedicatedComponent({
   templateId,
-  legacyComponentId,
-  profilComponentId,
-  profilFieldIdMap,
+  sourceComponentIds,
+  perangkatComponentId,
+  perangkatFieldIdMap,
 }) {
-  if (!legacyComponentId || !profilComponentId) return;
+  if (!perangkatComponentId) return;
 
   const migratedFieldKeys = ["kepalaDesa", "perangkatDesa"];
-  const [legacyRows, legacyOverrides] = await Promise.all([
-    db.dataDesa.findMany({
-      where: {
-        templateId,
-        componentId: legacyComponentId,
-        fieldKey: { in: migratedFieldKeys },
-      },
-      select: {
-        id: true,
-        desaId: true,
-        fieldKey: true,
-      },
-    }),
-    db.desaDetailComponentVisibility.findMany({
-      where: {
-        templateId,
-        componentId: legacyComponentId,
-      },
-      select: {
-        id: true,
-        desaId: true,
-        isVisible: true,
-        reason: true,
-        updatedById: true,
-      },
-    }),
-  ]);
+  const normalizedSourceIds = [...new Set(sourceComponentIds)].filter(
+    (componentId) => componentId && componentId !== perangkatComponentId,
+  );
+  if (normalizedSourceIds.length === 0) return;
 
-  for (const row of legacyRows) {
-    const targetFieldStandardId = profilFieldIdMap.get(row.fieldKey) ?? null;
+  const sourceRows = await db.dataDesa.findMany({
+    where: {
+      templateId,
+      componentId: { in: normalizedSourceIds },
+      fieldKey: { in: migratedFieldKeys },
+    },
+    select: {
+      id: true,
+      desaId: true,
+      fieldKey: true,
+    },
+  });
+
+  for (const row of sourceRows) {
+    const targetFieldStandardId = perangkatFieldIdMap.get(row.fieldKey) ?? null;
     const existingTargetRow = await db.dataDesa.findFirst({
       where: {
         templateId,
-        componentId: profilComponentId,
+        componentId: perangkatComponentId,
         desaId: row.desaId,
         fieldKey: row.fieldKey,
         isActive: true,
@@ -74,7 +124,7 @@ async function migrateLegacyPerangkatIntoProfilComponent({
           status: "ARCHIVED",
           isActive: false,
           reviewNote:
-            "Archived during template seed sync after perangkat fields moved into profil_desa.",
+            "Archived during template seed sync after perangkat fields moved into the dedicated perangkat component.",
         },
       });
       continue;
@@ -83,44 +133,31 @@ async function migrateLegacyPerangkatIntoProfilComponent({
     await db.dataDesa.updateMany({
       where: { id: row.id },
       data: {
-        componentId: profilComponentId,
+        componentId: perangkatComponentId,
         fieldStandardId: targetFieldStandardId,
       },
     });
   }
+}
 
-  for (const override of legacyOverrides) {
-    await db.desaDetailComponentVisibility.upsert({
-      where: {
-        desaId_componentId: {
-          desaId: override.desaId,
-          componentId: profilComponentId,
-        },
-      },
-      create: {
-        desaId: override.desaId,
-        templateId,
-        componentId: profilComponentId,
-        isVisible: override.isVisible,
-        reason: override.reason,
-        updatedById: override.updatedById,
-      },
-      update: {
-        isVisible: override.isVisible,
-        reason: override.reason,
-        updatedById: override.updatedById,
-      },
-    });
-  }
+function componentAnchorId(componentKey) {
+  return componentKey.replaceAll("_", "-");
+}
 
-  if (legacyOverrides.length > 0) {
-    await db.desaDetailComponentVisibility.deleteMany({
-      where: {
-        templateId,
-        componentId: legacyComponentId,
-      },
-    });
-  }
+function catalogRuntimeMetadata(componentDef) {
+  return {
+    isDefaultVisible: componentDef.isDefaultVisible ?? true,
+    displayOrder: componentDef.displayOrder ?? 0,
+    rendererType: componentDef.rendererType,
+    previewVariant: componentDef.previewVariant,
+    detailSlot: componentDef.detailSlot,
+    navLabel: componentDef.navLabel ?? componentDef.label,
+    anchorId: componentDef.anchorId ?? componentAnchorId(componentDef.componentKey),
+    publicGroupKey: componentDef.publicGroupKey ?? componentDef.detailSlot ?? null,
+    publicTabKey: componentDef.publicTabKey ?? componentDef.componentKey,
+    highlightFieldKeys: componentDef.highlightFieldKeys ?? null,
+    renderConfigJson: componentDef.renderConfig ?? null,
+  };
 }
 
 async function seedComponentCatalog(withCatalogTables) {
@@ -137,6 +174,7 @@ async function seedComponentCatalog(withCatalogTables) {
   }
 
   for (const componentDef of COMPONENT_CATALOG) {
+    const runtimeMetadata = catalogRuntimeMetadata(componentDef);
     const component = await db.villageComponentCatalog.upsert({
       where: { componentKey: componentDef.componentKey },
       create: {
@@ -144,12 +182,14 @@ async function seedComponentCatalog(withCatalogTables) {
         label: componentDef.label,
         description: componentDef.description,
         componentType: componentDef.componentType,
+        ...runtimeMetadata,
         status: "ACTIVE",
       },
       update: {
         label: componentDef.label,
         description: componentDef.description,
         componentType: componentDef.componentType,
+        ...runtimeMetadata,
         status: "ACTIVE",
       },
     });
@@ -333,11 +373,11 @@ async function syncTemplatePlacements(templateId, orderedComponentDefs, catalogB
     }
   }
 
-  await migrateLegacyPerangkatIntoProfilComponent({
+  await migratePerangkatFieldsToDedicatedComponent({
     templateId,
-    legacyComponentId: existingByKey.get("perangkat")?.id ?? null,
-    profilComponentId: placementIdByKey.get("profil_desa") ?? null,
-    profilFieldIdMap: fieldStandardIdByComponentKey.get("profil_desa") ?? new Map(),
+    sourceComponentIds: [existingByKey.get("profil_desa")?.id ?? ""],
+    perangkatComponentId: placementIdByKey.get("perangkat") ?? null,
+    perangkatFieldIdMap: fieldStandardIdByComponentKey.get("perangkat") ?? new Map(),
   });
 
   for (const placement of existingPlacements) {
@@ -478,6 +518,7 @@ async function upsertPublishedTemplateField({
   fieldKey,
   valueText = null,
   valueJson = null,
+  sourceLabel = "Legacy perangkat_desa backfill",
   reviewNote,
   overwriteMeaningful = false,
 }) {
@@ -508,7 +549,7 @@ async function upsertPublishedTemplateField({
     fieldKey,
     valueText,
     valueJson,
-    sourceLabel: "Legacy perangkat_desa backfill",
+    sourceLabel,
     reviewNote,
     status: "PUBLISHED",
     isActive: true,
@@ -533,10 +574,10 @@ async function upsertPublishedTemplateField({
 }
 
 async function backfillLegacyPerangkatFields(templateId) {
-  const profilComponent = await db.villageDetailComponent.findFirst({
+  const perangkatComponent = await db.villageDetailComponent.findFirst({
     where: {
       templateId,
-      componentKey: "profil_desa",
+      componentKey: "perangkat",
       status: "ACTIVE",
     },
     select: {
@@ -554,10 +595,10 @@ async function backfillLegacyPerangkatFields(templateId) {
     },
   });
 
-  if (!profilComponent) return;
+  if (!perangkatComponent) return;
 
   const fieldIdMap = new Map(
-    profilComponent.fieldStandards.map((field) => [field.fieldKey, field.id]),
+    perangkatComponent.fieldStandards.map((field) => [field.fieldKey, field.id]),
   );
   const perangkatFieldId = fieldIdMap.get("perangkatDesa") ?? null;
   const kepalaDesaFieldId = fieldIdMap.get("kepalaDesa") ?? null;
@@ -624,12 +665,12 @@ async function backfillLegacyPerangkatFields(templateId) {
       await upsertPublishedTemplateField({
         desaId,
         templateId,
-        componentId: profilComponent.id,
+        componentId: perangkatComponent.id,
         fieldStandardId: perangkatFieldId,
         fieldKey: "perangkatDesa",
         valueJson: normalizedPerangkat,
         reviewNote:
-          "Backfilled from legacy perangkat_desa rows after perangkat ownership moved into profil_desa.",
+          "Backfilled from legacy perangkat_desa rows after perangkat ownership moved into the dedicated perangkat component.",
         overwriteMeaningful: true,
       });
     }
@@ -641,32 +682,202 @@ async function backfillLegacyPerangkatFields(templateId) {
       await upsertPublishedTemplateField({
         desaId,
         templateId,
-        componentId: profilComponent.id,
+        componentId: perangkatComponent.id,
         fieldStandardId: kepalaDesaFieldId,
         fieldKey: "kepalaDesa",
         valueText: kepalaDesa,
         reviewNote:
-          "Backfilled kepalaDesa from legacy perangkat_desa rows after perangkat ownership moved into profil_desa.",
+          "Backfilled kepalaDesa from legacy perangkat_desa rows after perangkat ownership moved into the dedicated perangkat component.",
       });
     }
   }
 }
 
+const batukarutProfilBackfill = {
+  teleponDesa: "022-87991234",
+  emailDesa: "halo@batukarut.desa.id",
+  potensiUnggulan: "Wisata sungai, kopi rakyat, dan hortikultura dataran tinggi.",
+  luasWilayah: 12.4,
+  mataPencaharian: "Pertanian hortikultura, UMKM desa, dan jasa lokal",
+  luasSawah: 186,
+  luasHutan: 94,
+  fasilitasUmum: [
+    {
+      jenis: "pendidikan",
+      nama: "PAUD Melati Batukarut",
+      jumlah: 1,
+      kondisi: "baik",
+      ket: "Aktif melayani pendidikan anak usia dini.",
+    },
+    {
+      jenis: "kesehatan",
+      nama: "Posyandu Mawar",
+      jumlah: 2,
+      kondisi: "baik",
+      ket: "Kegiatan bulanan kader kesehatan desa.",
+    },
+    {
+      jenis: "olahraga",
+      nama: "Lapangan serbaguna",
+      jumlah: 1,
+      kondisi: "sedang",
+      ket: "Dipakai untuk olahraga dan kegiatan warga.",
+    },
+  ],
+  asetDesa: [
+    {
+      jenis: "tanah",
+      nama: "Tanah kas desa Blok Cimeong",
+      lokasi: "Dusun Cimeong",
+      nilai: 950_000_000,
+      tahunBeli: 2012,
+      kondisi: "baik",
+    },
+    {
+      jenis: "bangunan",
+      nama: "Gedung serbaguna desa",
+      lokasi: "Dusun Tengah",
+      nilai: 780_000_000,
+      tahunBeli: 2018,
+      kondisi: "baik",
+    },
+    {
+      jenis: "kendaraan",
+      nama: "Mobil siaga desa",
+      lokasi: "Kantor Desa",
+      nilai: 285_000_000,
+      tahunBeli: 2021,
+      kondisi: "sedang",
+    },
+  ],
+  lembagaDesa: [
+    {
+      jenis: "pemerintahan",
+      nama: "BPD Batukarut",
+      jumlahAnggota: 7,
+      ketua: "Dadan Hidayat",
+      statusAktif: true,
+    },
+    {
+      jenis: "pemberdayaan",
+      nama: "PKK Desa Batukarut",
+      jumlahAnggota: 18,
+      ketua: "Nani Rohaeni",
+      statusAktif: true,
+    },
+    {
+      jenis: "ekonomi",
+      nama: "Karang Taruna Mandiri",
+      jumlahAnggota: 24,
+      ketua: "Yudi Hermawan",
+      statusAktif: true,
+    },
+  ],
+  bumdes: {
+    nama: "BUMDes Batu Maju",
+    bidangUsaha: ["Unit wisata sungai", "Perdagangan hasil tani", "Sewa alat desa"],
+    modal: 175_000_000,
+    omsetPerTahun: 245_000_000,
+    status: "aktif",
+  },
+};
+
+async function backfillDemoProfilFields(templateId) {
+  const profilComponent = await db.villageDetailComponent.findFirst({
+    where: {
+      templateId,
+      componentKey: "profil_desa",
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      fieldStandards: {
+        where: { status: "ACTIVE" },
+        select: {
+          id: true,
+          fieldKey: true,
+          valueType: true,
+        },
+      },
+    },
+  });
+
+  if (!profilComponent) return;
+
+  const batukarut = await db.desa.findUnique({
+    where: { id: "demo-desa-batukarut" },
+    select: { id: true },
+  });
+  if (!batukarut) return;
+
+  const fieldMap = new Map(
+    profilComponent.fieldStandards.map((field) => [field.fieldKey, field]),
+  );
+
+  for (const [fieldKey, value] of Object.entries(batukarutProfilBackfill)) {
+    const field = fieldMap.get(fieldKey);
+    if (!field) continue;
+
+    const isTextValue = typeof value === "string";
+    await upsertPublishedTemplateField({
+      desaId: batukarut.id,
+      templateId,
+      componentId: profilComponent.id,
+      fieldStandardId: field.id,
+      fieldKey,
+      valueText: isTextValue ? value : null,
+      valueJson: isTextValue ? null : value,
+      sourceLabel: "Seed dummy contoh Batukarut",
+      reviewNote:
+        "Backfilled demo profil_desa values so the public detail shell renders from DataDesa/template fields instead of UI fallback.",
+    });
+  }
+}
+
 async function main() {
-  const withCatalogTables = await supportsCatalogRelations();
-  console.log("Seeding template catalog...");
-  const catalogByKey = await seedComponentCatalog(withCatalogTables);
+  console.log(`[template:sync] target ${safeDatabaseTarget()}`);
+  if (dryRun) {
+    console.log("[template:sync] dry-run enabled; no database writes will be made.");
+  }
 
-  console.log("Seeding templates...");
-  const defaultTemplate = await seedTemplates(catalogByKey);
+  await runStage("preflight Prisma SELECT 1", async () => {
+    await db.$queryRaw`SELECT 1`;
+  }, { timeoutMs: 30_000 });
 
-  console.log("Seeding desa assignments...");
-  await seedAssignments(defaultTemplate.id);
+  const withCatalogTables = await runStage(
+    "detect catalog relation support",
+    supportsCatalogRelations,
+    { timeoutMs: 30_000 },
+  );
 
-  console.log("Backfilling perangkat template fields...");
-  await backfillLegacyPerangkatFields(defaultTemplate.id);
+  if (dryRun) {
+    console.log(
+      `[template:sync] dry-run summary: catalogComponents=${COMPONENT_CATALOG.length}, defaultTemplate=${DEFAULT_TEMPLATE_MANIFEST.key}, catalogTables=${withCatalogTables}`,
+    );
+    return;
+  }
 
-  console.log("Template seeding complete.");
+  const catalogByKey = await runStage("seed component catalog", async () =>
+    seedComponentCatalog(withCatalogTables),
+  );
+
+  const defaultTemplate = await runStage("seed templates and placements", async () =>
+    seedTemplates(catalogByKey),
+  );
+
+  await runStage("seed desa assignments", async () =>
+    seedAssignments(defaultTemplate.id),
+  );
+
+  await runStage("backfill perangkat template fields", async () =>
+    backfillLegacyPerangkatFields(defaultTemplate.id),
+  );
+
+  await runStage("backfill Batukarut profil template fields", async () =>
+    backfillDemoProfilFields(defaultTemplate.id),
+  );
+
+  console.log("[template:sync] complete");
 }
 
 main()

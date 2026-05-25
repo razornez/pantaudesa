@@ -24,6 +24,7 @@ export function DesaDataTab() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateReloadToken, setTemplateReloadToken] = useState(0);
   const didLoadInitialRef = useRef(false);
   const latestInitialRequestRef = useRef(0);
   const templateLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -43,11 +44,11 @@ export function DesaDataTab() {
       });
   }, []);
 
-  const ensureTemplatesLoaded = useCallback(async () => {
-    if (templates.length > 0) return;
+  const ensureTemplatesLoaded = useCallback(async (force = false) => {
+    if (!force && templates.length > 0) return;
     if (templateLoadPromiseRef.current) {
       await templateLoadPromiseRef.current;
-      return;
+      if (!force) return;
     }
 
     setTemplatesLoading(true);
@@ -98,8 +99,9 @@ export function DesaDataTab() {
   };
 
   const handleTemplateMutation = () => {
+    setTemplateReloadToken((token) => token + 1);
     fetchData(filter, page);
-    void ensureTemplatesLoaded();
+    void ensureTemplatesLoaded(true);
   };
 
   if (error) return <ErrorNotice message={error} />;
@@ -118,6 +120,7 @@ export function DesaDataTab() {
         onPageChange={handlePageChange}
         templateOptions={templates}
         templatesLoading={templatesLoading}
+        templateReloadToken={templateReloadToken}
         onTemplateSwitchOpen={ensureTemplatesLoaded}
         onTemplateMutation={handleTemplateMutation}
       />

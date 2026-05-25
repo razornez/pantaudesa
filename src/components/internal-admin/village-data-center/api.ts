@@ -101,6 +101,22 @@ interface DesaDataPayload {
   total?: number;
 }
 
+const TEMPLATE_WORKSPACE_CACHE_MS = 750;
+const templateWorkspaceInflight = new Map<string, Promise<TemplateWorkspaceData>>();
+const templateWorkspaceRecent = new Map<
+  string,
+  { createdAt: number; payload: TemplateWorkspaceData }
+>();
+
+function templateWorkspaceCacheKey(templateId?: string | null) {
+  return templateId ?? "__default__";
+}
+
+function clearTemplateWorkspaceClientCache() {
+  templateWorkspaceInflight.clear();
+  templateWorkspaceRecent.clear();
+}
+
 export interface DesaOptionPayload {
   id: string;
   nama: string;
@@ -346,17 +362,36 @@ export async function fetchTemplateFields(desaId: string): Promise<TemplateField
 export async function fetchTemplateWorkspace(
   templateId?: string | null,
 ): Promise<TemplateWorkspaceData> {
+  const cacheKey = templateWorkspaceCacheKey(templateId);
+  const recent = templateWorkspaceRecent.get(cacheKey);
+  if (recent && Date.now() - recent.createdAt < TEMPLATE_WORKSPACE_CACHE_MS) {
+    return recent.payload;
+  }
+
+  const inflight = templateWorkspaceInflight.get(cacheKey);
+  if (inflight) return inflight;
+
   const params = new URLSearchParams();
   if (templateId) params.set("templateId", templateId);
 
-  const response = await fetch(
+  const request = fetch(
     `/api/internal-admin/village-data/templates${params.size ? `?${params.toString()}` : ""}`,
-  );
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(payload?.error ?? "Gagal memuat workspace template.");
-  }
-  return (await response.json()) as TemplateWorkspaceData;
+  )
+    .then(async (response) => {
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Gagal memuat workspace template.");
+      }
+      const payload = (await response.json()) as TemplateWorkspaceData;
+      templateWorkspaceRecent.set(cacheKey, { createdAt: Date.now(), payload });
+      return payload;
+    })
+    .finally(() => {
+      templateWorkspaceInflight.delete(cacheKey);
+    });
+
+  templateWorkspaceInflight.set(cacheKey, request);
+  return request;
 }
 
 export async function createTemplateWorkspace(input: {
@@ -377,6 +412,7 @@ export async function createTemplateWorkspace(input: {
     throw new Error(payload?.error ?? "Gagal membuat template.");
   }
 
+  clearTemplateWorkspaceClientCache();
   return { templateId: payload.templateId, message: payload.message };
 }
 
@@ -405,6 +441,7 @@ export async function updateTemplateWorkspaceMeta(input: {
     throw new Error(payload?.error ?? "Gagal memperbarui template.");
   }
 
+  clearTemplateWorkspaceClientCache();
   return { templateId: payload.templateId, message: payload.message };
 }
 
@@ -429,6 +466,7 @@ export async function saveTemplateWorkspaceComponents(input: {
     throw new Error(payload?.error ?? "Gagal menyimpan komponen template.");
   }
 
+  clearTemplateWorkspaceClientCache();
   return { templateId: payload.templateId, message: payload.message };
 }
 
@@ -450,6 +488,7 @@ export async function deleteTemplateWorkspace(
     throw new Error(payload?.error ?? "Gagal menghapus template.");
   }
 
+  clearTemplateWorkspaceClientCache();
   return { templateId: payload.templateId, message: payload.message };
 }
 

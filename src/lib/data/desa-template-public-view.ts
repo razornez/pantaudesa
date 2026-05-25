@@ -384,13 +384,14 @@ export function toPublishedApbdesItems(
 
 export function buildPublishedProfilSection(
   publishedValues: Record<string, unknown>,
+  fallbackProfil?: ProfilDesa | null,
 ): ProfilDesa | null {
+  const hasPublishedKey = (key: string) =>
+    Object.prototype.hasOwnProperty.call(publishedValues, key);
   const hasProfileData = hasAnyPublishedValue(publishedValues, [
     "teleponDesa",
     "emailDesa",
     "potensiUnggulan",
-    "kepalaDesa",
-    "perangkatDesa",
     "luasWilayah",
     "mataPencaharian",
     "luasSawah",
@@ -404,40 +405,77 @@ export function buildPublishedProfilSection(
     "jumlahRw",
     "jumlahKK",
   ]);
+  const hasFallbackData = fallbackProfil
+    ? Boolean(
+        fallbackProfil.email ||
+          fallbackProfil.telepon ||
+          fallbackProfil.website ||
+          fallbackProfil.potensiUnggulan ||
+          fallbackProfil.mataPencaharian ||
+          fallbackProfil.luasWilayah ||
+          fallbackProfil.luasSawah ||
+          fallbackProfil.luasHutan ||
+          fallbackProfil.jumlahDusun ||
+          fallbackProfil.jumlahRt ||
+          fallbackProfil.jumlahRw ||
+          fallbackProfil.jumlahKk ||
+          fallbackProfil.aset.length > 0 ||
+          fallbackProfil.fasilitas.length > 0 ||
+          fallbackProfil.lembaga.length > 0 ||
+          fallbackProfil.bumdes,
+      )
+    : false;
 
-  if (!hasProfileData) return null;
+  if (!hasProfileData && !hasFallbackData) return null;
+
+  const publishedAset = toPublishedAsetDesaArray(publishedValues.asetDesa);
+  const publishedFasilitas = toPublishedFasilitasDesaArray(publishedValues.fasilitasUmum);
+  const publishedLembaga = toPublishedLembagaDesaArray(publishedValues.lembagaDesa);
+  const publishedBumdes = toPublishedBumdesInfo(publishedValues.bumdes);
+  const readProfileString = (key: string, fallbackValue?: string) =>
+    readPublishedString(publishedValues, key) ??
+    (hasPublishedKey(key) ? undefined : fallbackValue);
+  const readProfileNumber = (key: string, fallbackValue?: number) =>
+    readPublishedNumber(publishedValues, key) ??
+    (hasPublishedKey(key) ? undefined : fallbackValue);
 
   return {
-    website: readPublishedString(publishedValues, "websiteUrl") ?? undefined,
-    email: readPublishedString(publishedValues, "emailDesa") ?? undefined,
-    telepon: readPublishedString(publishedValues, "teleponDesa") ?? undefined,
-    luasWilayah: readPublishedNumber(publishedValues, "luasWilayah") ?? 0,
-    luasSawah: readPublishedNumber(publishedValues, "luasSawah") ?? undefined,
-    luasHutan: readPublishedNumber(publishedValues, "luasHutan") ?? undefined,
-    jumlahDusun: readPublishedNumber(publishedValues, "jumlahDusun") ?? 0,
-    jumlahRt: readPublishedNumber(publishedValues, "jumlahRt") ?? 0,
-    jumlahRw: readPublishedNumber(publishedValues, "jumlahRw") ?? 0,
-    jumlahKk: readPublishedNumber(publishedValues, "jumlahKK") ?? 0,
-    mataPencaharian:
-      readPublishedString(publishedValues, "mataPencaharian") ?? "",
-    potensiUnggulan:
-      readPublishedString(publishedValues, "potensiUnggulan") ?? "",
-    terakhirDiperbarui: new Date(0),
-    aset: toPublishedAsetDesaArray(publishedValues.asetDesa),
-    fasilitas: toPublishedFasilitasDesaArray(publishedValues.fasilitasUmum),
-    lembaga: toPublishedLembagaDesaArray(publishedValues.lembagaDesa),
-    perangkat: toPublishedPerangkatDesaArray(
-      publishedValues.perangkatDesa,
-      readPublishedString(publishedValues, "kepalaDesa"),
-    ),
-    bumdes: toPublishedBumdesInfo(publishedValues.bumdes) ?? undefined,
-    historyBelanja: [],
+    website: readProfileString("websiteUrl", fallbackProfil?.website),
+    email: readProfileString("emailDesa", fallbackProfil?.email),
+    telepon: readProfileString("teleponDesa", fallbackProfil?.telepon),
+    luasWilayah: readProfileNumber("luasWilayah", fallbackProfil?.luasWilayah) ?? 0,
+    luasSawah: readProfileNumber("luasSawah", fallbackProfil?.luasSawah),
+    luasHutan: readProfileNumber("luasHutan", fallbackProfil?.luasHutan),
+    jumlahDusun: readProfileNumber("jumlahDusun", fallbackProfil?.jumlahDusun) ?? 0,
+    jumlahRt: readProfileNumber("jumlahRt", fallbackProfil?.jumlahRt) ?? 0,
+    jumlahRw: readProfileNumber("jumlahRw", fallbackProfil?.jumlahRw) ?? 0,
+    jumlahKk: readProfileNumber("jumlahKK", fallbackProfil?.jumlahKk) ?? 0,
+    mataPencaharian: readProfileString(
+      "mataPencaharian",
+      fallbackProfil?.mataPencaharian,
+    ) ?? "",
+    potensiUnggulan: readProfileString(
+      "potensiUnggulan",
+      fallbackProfil?.potensiUnggulan,
+    ) ?? "",
+    terakhirDiperbarui: fallbackProfil?.terakhirDiperbarui ?? new Date(0),
+    aset: hasPublishedKey("asetDesa") ? publishedAset : fallbackProfil?.aset ?? [],
+    fasilitas: hasPublishedKey("fasilitasUmum")
+      ? publishedFasilitas
+      : fallbackProfil?.fasilitas ?? [],
+    lembaga: hasPublishedKey("lembagaDesa")
+      ? publishedLembaga
+      : fallbackProfil?.lembaga ?? [],
+    bumdes: hasPublishedKey("bumdes") ? publishedBumdes ?? undefined : fallbackProfil?.bumdes,
+    historyBelanja: fallbackProfil?.historyBelanja ?? [],
     badge: {
-      level: 3,
-      label: "Data publik",
-      deskripsi: "Section ini membaca field template aktif yang sudah terbit.",
-      warna: "indigo",
-      icon: "info",
+      level: fallbackProfil?.badge.level ?? 3,
+      label: fallbackProfil?.badge.label ?? "Data publik",
+      deskripsi:
+        fallbackProfil?.badge.deskripsi ??
+        "Section ini membaca field template aktif yang sudah terbit.",
+      warna: fallbackProfil?.badge.warna ?? "indigo",
+      icon: fallbackProfil?.badge.icon ?? "info",
     },
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Database, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Database, ExternalLink, Loader2 } from "lucide-react";
 import type { AdminDesaFilter } from "@/components/internal-admin/AdminDesaFilterBar";
 import { switchDesaTemplate } from "./api";
 import type { DesaRow, TemplateSummary } from "./types";
@@ -31,7 +31,7 @@ function TemplateSwitchPopover({
   const [selectedTemplateId, setSelectedTemplateId] = useState(currentTemplateId ?? "");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [applying, setApplying] = useState(false);
 
   return (
     <details
@@ -76,7 +76,7 @@ function TemplateSwitchPopover({
           <select
             value={selectedTemplateId}
             onChange={(event) => setSelectedTemplateId(event.target.value)}
-            disabled={templatesLoading}
+            disabled={templatesLoading || applying}
             className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[12px] font-medium text-slate-900 outline-none focus:bg-white"
             style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
           >
@@ -102,44 +102,50 @@ function TemplateSwitchPopover({
           <button
             type="button"
             onClick={() => {
+              if (applying) return;
               const details = document.activeElement?.closest("details");
               if (details instanceof HTMLDetailsElement) details.open = false;
             }}
-            className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-200"
+            disabled={applying}
+            className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Tutup
           </button>
           <button
             type="button"
             disabled={
-              isPending ||
+              applying ||
+              templatesLoading ||
               !selectedTemplateId ||
               selectedTemplateId === (currentTemplateId ?? "")
             }
             onClick={() => {
-              startTransition(() => {
-                setError(null);
-                setNotice(null);
-                void switchDesaTemplate({
-                  desaId,
-                  templateId: selectedTemplateId,
+              setApplying(true);
+              setError(null);
+              setNotice(null);
+              void switchDesaTemplate({
+                desaId,
+                templateId: selectedTemplateId,
+              })
+                .then((result) => {
+                  setNotice(result.message);
+                  onApplied();
                 })
-                  .then((result) => {
-                    setNotice(result.message);
-                    onApplied();
-                  })
-                  .catch((mutationError) => {
-                    setError(
-                      mutationError instanceof Error
-                        ? mutationError.message
-                        : "Gagal mengganti template desa.",
-                    );
-                  });
-              });
+                .catch((mutationError) => {
+                  setError(
+                    mutationError instanceof Error
+                      ? mutationError.message
+                      : "Gagal mengganti template desa.",
+                  );
+                })
+                .finally(() => {
+                  setApplying(false);
+                });
             }}
-            className="rounded-xl bg-[#1E1B4B] px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#15123a] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#1E1B4B] px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#15123a] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Terapkan
+            {applying ? <Loader2 size={12} className="animate-spin" aria-hidden /> : null}
+            {applying ? "Menerapkan..." : "Terapkan"}
           </button>
         </div>
       </div>
@@ -158,6 +164,7 @@ interface DesaDataResultsProps {
   onPageChange: (page: number) => void;
   templateOptions: TemplateSummary[];
   templatesLoading: boolean;
+  templateReloadToken: number;
   onTemplateSwitchOpen: () => void;
   onTemplateMutation: () => void;
 }
@@ -173,6 +180,7 @@ export function DesaDataResults({
   onPageChange,
   templateOptions,
   templatesLoading,
+  templateReloadToken,
   onTemplateSwitchOpen,
   onTemplateMutation,
 }: DesaDataResultsProps) {
@@ -258,7 +266,7 @@ export function DesaDataResults({
                           {item.detailTemplateAssignment?.template.name ?? "Default template"} ·{" "}
                           <span className="opacity-60">
                             {item.detailTemplateAssignment?.template.key ??
-                              "CURRENT_PUBLIC_DETAIL_TEMPLATE"}
+                              "TEMPLATE_UMUM_DESA"}
                           </span>
                         </p>
                       </div>
@@ -332,6 +340,7 @@ export function DesaDataResults({
                             <ExternalLink size={11} aria-hidden /> Buka di Intake
                           </a>
                           <TemplateSwitchPopover
+                            key={`${item.id}:${item.detailTemplateAssignment?.template.id ?? "default"}`}
                             desaId={item.id}
                             currentTemplateId={
                               item.detailTemplateAssignment?.template.id ?? null
@@ -349,7 +358,10 @@ export function DesaDataResults({
                         </div>
                       </div>
 
-                      <ComponentVisibilityPanel desaId={item.id} />
+                      <ComponentVisibilityPanel
+                        key={`${item.id}:${item.detailTemplateAssignment?.template.id ?? "default"}:${templateReloadToken}`}
+                        desaId={item.id}
+                      />
                     </div>
                   ) : null}
                 </div>

@@ -1,86 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
+import type { ResolvedTemplate } from "@/lib/village-data/template-resolver";
 
 describe("runtime template manifest", () => {
-  it("counts only visible template-backed fields in visibleFieldCount", () => {
+  it("hydrates component render metadata from resolved catalog values", () => {
     const manifest = buildRuntimeTemplateManifest({
-      templateId: "tpl_runtime",
-      templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
-      templateName: "Template Umum Desa",
+      templateId: "template-1",
+      templateKey: "CUSTOM",
+      templateName: "Custom",
       visibleComponents: [
         {
-          componentId: "cmp_identitas",
-          componentKey: "identitas",
-          label: "Identitas",
-          displayOrder: 1,
-          fields: [
-            {
-              fieldKey: "websiteUrl",
-              label: "Website resmi",
-              valueType: "url",
-              isPublishableNow: true,
-              componentKey: "identitas",
-              componentLabel: "Identitas",
-            },
-            {
-              fieldKey: "kategori",
-              label: "Kategori desa",
-              valueType: "string",
-              isPublishableNow: true,
-              componentKey: "identitas",
-              componentLabel: "Identitas",
-            },
-          ],
-        },
-      ],
-      hiddenComponents: [
-        {
-          componentId: "cmp_hidden",
-          componentKey: "demografi",
-          label: "Demografi",
-          displayOrder: 2,
-          fields: [
-            {
-              fieldKey: "jumlahPenduduk",
-              label: "Jumlah penduduk",
-              valueType: "number",
-              isPublishableNow: true,
-              componentKey: "demografi",
-              componentLabel: "Demografi",
-            },
-          ],
-        },
-      ],
-    });
-
-    expect(manifest.visibleFieldCount).toBe(2);
-    expect(manifest.totalFieldCount).toBe(3);
-    expect(manifest.componentOrder).toEqual(["identitas", "demografi"]);
-  });
-
-  it("keeps publishable count in sync with the same manifest field map", () => {
-    const manifest = buildRuntimeTemplateManifest({
-      templateId: "tpl_publishable",
-      templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
-      templateName: "Template Umum Desa",
-      visibleComponents: [
-        {
-          componentId: "cmp_kinerja",
+          componentId: "component-1",
           componentKey: "kinerja",
           label: "Kinerja",
           displayOrder: 1,
+          rendererType: "kinerja_breakdown",
+          previewVariant: "kinerja",
+          detailSlot: "transparansi",
+          navLabel: "Kinerja",
+          anchorId: "kinerja-transparansi",
+          publicGroupKey: "transparansi",
+          publicTabKey: "kinerja",
+          highlightFieldKeys: ["outputFisik"],
+          renderConfig: { density: "compact" },
           fields: [
             {
+              componentId: "component-1",
+              fieldStandardId: "field-1",
               fieldKey: "outputFisik",
               label: "Output fisik",
-              valueType: "json",
-              isPublishableNow: true,
-              componentKey: "kinerja",
-              componentLabel: "Kinerja",
-            },
-            {
-              fieldKey: "apbdesItems",
-              label: "Rincian APBDes",
               valueType: "json",
               isPublishableNow: true,
               componentKey: "kinerja",
@@ -90,10 +38,44 @@ describe("runtime template manifest", () => {
         },
       ],
       hiddenComponents: [],
+    } satisfies ResolvedTemplate);
+
+    expect(manifest.visibleComponents[0]).toMatchObject({
+      rendererType: "kinerja_breakdown",
+      previewVariant: "kinerja",
+      detailSlot: "transparansi",
+      publicGroupKey: "transparansi",
+      publicTabKey: "kinerja",
+      anchorId: "kinerja-transparansi",
+      highlightFieldKeys: ["outputFisik"],
+      renderConfig: { density: "compact" },
+    });
+    expect(manifest.totalFieldCount).toBe(1);
+  });
+
+  it("falls back to catalog manifest metadata when DB metadata is not present", () => {
+    const manifest = buildRuntimeTemplateManifest({
+      templateId: "template-1",
+      templateKey: "TEMPLATE_UMUM_DESA",
+      templateName: "Default",
+      visibleComponents: [
+        {
+          componentId: "component-1",
+          componentKey: "profil_desa",
+          label: "Profil & Kelengkapan Desa",
+          displayOrder: 1,
+          fields: [],
+        },
+      ],
+      hiddenComponents: [],
     });
 
-    expect(manifest.publishableCount).toBe(2);
-    expect(manifest.fieldMap.has("outputFisik")).toBe(true);
-    expect(manifest.fieldMap.has("apbdesItems")).toBe(true);
+    expect(manifest.visibleComponents[0]).toMatchObject({
+      rendererType: "kelengkapan_tabs",
+      previewVariant: "kelengkapan",
+      detailSlot: "kelengkapan_desa",
+      navLabel: "Profil & Kelengkapan Desa",
+      publicTabKey: "profil_desa",
+    });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   BookTemplate,
@@ -261,7 +261,7 @@ export function StandardsTab() {
   const [draftDescription, setDraftDescription] = useState("");
   const [canvasKeys, setCanvasKeys] = useState<string[]>([]);
   const [mobileStep, setMobileStep] = useState<MobileWorkspaceStep>("template");
-  const [isPending, startTransition] = useTransition();
+  const [templateLoadingId, setTemplateLoadingId] = useState<string | null>(null);
   const [activeMutation, setActiveMutation] = useState<null | "create" | "save" | "delete">(null);
   const { toasts, toast, removeToast } = useToast();
   const topPreviewScrollRef = useRef<HTMLDivElement | null>(null);
@@ -270,6 +270,7 @@ export function StandardsTab() {
 
   const reloadWorkspace = async (templateId?: string | null) => {
     setLoading(true);
+    setTemplateLoadingId(templateId ?? null);
     setError(null);
     try {
       const payload = await fetchTemplateWorkspace(templateId);
@@ -287,6 +288,7 @@ export function StandardsTab() {
       );
     } finally {
       setLoading(false);
+      setTemplateLoadingId(null);
     }
   };
 
@@ -322,6 +324,10 @@ export function StandardsTab() {
 
   const selectedTemplate = workspace?.selectedTemplate ?? null;
   const availableComponents = workspace?.availableComponents ?? EMPTY_TEMPLATE_COMPONENTS;
+  const readOnly = Boolean(workspace?.readOnly);
+  const readOnlyReason =
+    workspace?.readOnlyReason ??
+    "Workspace template sedang read-only. Pulihkan koneksi database untuk menyimpan perubahan.";
   const componentMap = useMemo(
     () =>
       new Map(
@@ -359,10 +365,9 @@ export function StandardsTab() {
       (selectedTemplate?.components.map((component) => component.componentKey).join("|") ?? "");
 
   const applyTemplateSelection = (template: TemplateSummary) => {
+    if (templateLoadingId || activeMutation) return;
     setSelectedTemplateId(template.id);
-    startTransition(() => {
-      void reloadWorkspace(template.id);
-    });
+    void reloadWorkspace(template.id);
   };
 
   const syncPreviewScroll = (source: "top" | "bottom") => {
@@ -385,16 +390,28 @@ export function StandardsTab() {
   };
 
   const handleAddComponent = (componentKey: string) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     setCanvasKeys((current) =>
       current.includes(componentKey) ? current : [...current, componentKey],
     );
   };
 
   const handleRemoveComponent = (componentKey: string) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     setCanvasKeys((current) => current.filter((key) => key !== componentKey));
   };
 
   const handleDropOnCanvas = (payload: DragPayload, index: number) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     if (payload.source === "catalog" && !canvasKeys.includes(payload.componentKey)) {
       setCanvasKeys((current) => moveKeyToIndex(current, payload.componentKey, index));
       return;
@@ -404,6 +421,10 @@ export function StandardsTab() {
   };
 
   const handleDropAtCanvasEnd = (payload: DragPayload) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     if (payload.source === "catalog" && !canvasKeys.includes(payload.componentKey)) {
       setCanvasKeys((current) => [...current, payload.componentKey]);
       return;
@@ -413,14 +434,26 @@ export function StandardsTab() {
   };
 
   const handleMoveComponentUp = (componentKey: string) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     setCanvasKeys((current) => moveKeyByOffset(current, componentKey, -1));
   };
 
   const handleMoveComponentDown = (componentKey: string) => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     setCanvasKeys((current) => moveKeyByOffset(current, componentKey, 1));
   };
 
   const handleCreateTemplate = () => {
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     const seedNumber = (workspace?.templates.length ?? 0) + 1;
     setActiveMutation("create");
     setError(null);
@@ -447,6 +480,10 @@ export function StandardsTab() {
 
   const handleSave = () => {
     if (!selectedTemplateId) return;
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
+      return;
+    }
     setActiveMutation("save");
     setError(null);
     void updateTemplateWorkspaceMeta({
@@ -463,9 +500,9 @@ export function StandardsTab() {
           componentResult,
         })),
       )
-      .then(({ componentResult }) => {
-        toast(componentResult.message, "success");
-        return reloadWorkspace(selectedTemplateId);
+      .then(async ({ metaResult, componentResult }) => {
+        await reloadWorkspace(selectedTemplateId);
+        toast(componentResult.message || metaResult.message || "Template berhasil disimpan.", "success");
       })
       .catch((mutationError) => {
         toast(
@@ -482,6 +519,11 @@ export function StandardsTab() {
 
   const handleDelete = () => {
     if (!selectedTemplateId || !selectedTemplate) {
+      return;
+    }
+
+    if (readOnly) {
+      toast(readOnlyReason, "warning");
       return;
     }
 
@@ -518,6 +560,36 @@ export function StandardsTab() {
   if (loading && !workspace) return <SkeletonCards count={3} height="h-36" />;
   if (error && !workspace) return <ErrorNotice message={error} />;
 
+  const templateSelectionLoading = Boolean(templateLoadingId);
+  const templateSelectionLoadingCard = (
+    <section
+      className="rounded-3xl bg-white p-4 sm:p-5"
+      style={{
+        boxShadow:
+          "inset 0 0 0 1px rgba(15,23,42,0.06), 0 1px 1px rgba(15,23,42,0.03), 0 2px 4px rgba(15,23,42,0.04), 0 8px 20px -8px rgba(15,23,42,0.06)",
+      }}
+    >
+      <div className="flex items-center gap-3 rounded-2xl bg-indigo-50/70 px-4 py-3 text-indigo-800">
+        <Loader2 size={15} className="animate-spin" aria-hidden />
+        <div>
+          <p className="text-[12px] font-semibold">Memuat komponen template...</p>
+          <p className="mt-0.5 text-[11px] text-indigo-700/75">
+            Editor sedang mengambil urutan, metadata, dan canvas terbaru.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="h-12 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-12 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <div className="h-7 w-28 animate-pulse rounded-full bg-slate-100" />
+        <div className="h-7 w-20 animate-pulse rounded-full bg-slate-100" />
+        <div className="h-7 w-24 animate-pulse rounded-full bg-slate-100" />
+      </div>
+    </section>
+  );
+
   const templateListPanel = (
     <aside
       className="rounded-3xl bg-white p-4 sm:p-5"
@@ -536,7 +608,8 @@ export function StandardsTab() {
         <button
           type="button"
           onClick={handleCreateTemplate}
-          disabled={Boolean(activeMutation) || isPending}
+          disabled={Boolean(activeMutation) || Boolean(templateLoadingId) || readOnly}
+          title={readOnly ? readOnlyReason : "Buat template"}
           className="inline-flex items-center gap-1.5 rounded-xl bg-[#1E1B4B] px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#15123a] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {activeMutation === "create" ? (
@@ -551,6 +624,7 @@ export function StandardsTab() {
       <div className="mt-4 space-y-2">
         {(workspace?.templates ?? []).map((template) => {
           const active = template.id === selectedTemplateId;
+          const templateIsLoading = templateLoadingId === template.id;
           const blockedReason =
             template.id === selectedTemplate?.id
               ? selectedTemplate.deleteBlockedReason
@@ -563,11 +637,12 @@ export function StandardsTab() {
               key={template.id}
               type="button"
               onClick={() => applyTemplateSelection(template)}
+              disabled={Boolean(activeMutation) || Boolean(templateLoadingId)}
               className={`w-full rounded-2xl px-4 py-3 text-left transition-colors ${
                 active
                   ? "bg-indigo-50 text-slate-900"
                   : "bg-slate-50/70 text-slate-700 hover:bg-slate-100"
-              }`}
+              } disabled:cursor-wait disabled:opacity-70`}
               style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.05)" }}
             >
               <div className="flex items-start justify-between gap-3">
@@ -579,10 +654,14 @@ export function StandardsTab() {
                     {template.key}
                   </p>
                 </div>
-                <ChevronRight
-                  size={14}
-                  className={active ? "text-indigo-600" : "text-slate-400"}
-                />
+                {templateIsLoading ? (
+                  <Loader2 size={14} className="animate-spin text-indigo-600" aria-hidden />
+                ) : (
+                  <ChevronRight
+                    size={14}
+                    className={active ? "text-indigo-600" : "text-slate-400"}
+                  />
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <span className="inline-flex rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-600">
@@ -612,7 +691,9 @@ export function StandardsTab() {
     </aside>
   );
 
-  const templateEditorHeader = selectedTemplate ? (
+  const templateEditorHeader = templateSelectionLoading ? (
+    templateSelectionLoadingCard
+  ) : selectedTemplate ? (
     <div className="space-y-4 rounded-3xl bg-white p-4 sm:p-5"
       style={{
         boxShadow:
@@ -626,6 +707,7 @@ export function StandardsTab() {
               <input
                 value={draftName}
                 onChange={(event) => setDraftName(event.target.value)}
+                readOnly={readOnly}
                 className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:bg-white"
                 style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
               />
@@ -635,6 +717,7 @@ export function StandardsTab() {
               <input
                 value={draftDescription}
                 onChange={(event) => setDraftDescription(event.target.value)}
+                readOnly={readOnly}
                 className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:bg-white"
                 style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
                 placeholder="Misalnya: Template umum untuk detail desa publik."
@@ -661,8 +744,8 @@ export function StandardsTab() {
           <button
             type="button"
             onClick={handleDelete}
-            disabled={Boolean(activeMutation)}
-            title={selectedTemplate.deleteBlockedReason ?? "Hapus template"}
+            disabled={Boolean(activeMutation) || readOnly}
+            title={readOnly ? readOnlyReason : selectedTemplate.deleteBlockedReason ?? "Hapus template"}
             className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
             style={{ boxShadow: "inset 0 0 0 1px rgba(225,29,72,0.10)" }}
           >
@@ -676,7 +759,8 @@ export function StandardsTab() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={Boolean(activeMutation) || !dirty}
+            disabled={Boolean(activeMutation) || !dirty || readOnly}
+            title={readOnly ? readOnlyReason : "Simpan template"}
             className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#1E1B4B] px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#15123a] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
           >
             {activeMutation === "save" ? (
@@ -695,6 +779,15 @@ export function StandardsTab() {
           style={{ boxShadow: "inset 0 0 0 1px rgba(217,119,6,0.14)" }}
         >
           {selectedTemplate.deleteBlockedReason}
+        </div>
+      ) : null}
+
+      {readOnly ? (
+        <div
+          className="rounded-2xl bg-sky-50 px-4 py-3 text-[12px] leading-relaxed text-sky-800"
+          style={{ boxShadow: "inset 0 0 0 1px rgba(14,165,233,0.14)" }}
+        >
+          {readOnlyReason} Preview tetap memakai manifest lokal agar urutan dan bentuk komponen bisa dicek.
         </div>
       ) : null}
     </div>
@@ -786,7 +879,20 @@ export function StandardsTab() {
           }}
           className="w-full space-y-3 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/60 p-2.5 sm:min-w-[720px] sm:rounded-[28px] sm:p-4"
         >
-          {canvasComponents.length > 0 ? (
+          {templateSelectionLoading ? (
+            <div className="space-y-3 rounded-[22px] bg-white p-4 sm:rounded-[24px]">
+              <div className="flex items-center gap-2 text-indigo-700">
+                <Loader2 size={14} className="animate-spin" aria-hidden />
+                <p className="text-[12px] font-semibold">Memuat preview urutan...</p>
+              </div>
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="h-24 animate-pulse rounded-[22px] border border-slate-100 bg-slate-50"
+                />
+              ))}
+            </div>
+          ) : canvasComponents.length > 0 ? (
             canvasComponents.map((component, index) => (
               <TemplateCanvasCard
                 key={`${component.componentKey}-${index}`}

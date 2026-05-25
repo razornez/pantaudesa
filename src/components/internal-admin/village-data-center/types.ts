@@ -61,7 +61,12 @@ export interface TemplateCatalogComponent {
   rendererType: string;
   previewVariant: string;
   detailSlot: string;
+  navLabel: string;
+  anchorId: string;
+  publicGroupKey: string | null;
+  publicTabKey: string | null;
   highlightFieldKeys?: string[];
+  renderConfig: Record<string, unknown>;
   fieldCount: number;
   fields: TemplateCatalogField[];
   source: "db" | "manifest";
@@ -95,6 +100,8 @@ export interface TemplateWorkspaceData {
   selectedTemplate: TemplateDetail | null;
   availableComponents: TemplateCatalogComponent[];
   catalogSource: "db" | "manifest";
+  readOnly?: boolean;
+  readOnlyReason?: string | null;
 }
 
 export interface DesaComponent {

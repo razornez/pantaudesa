@@ -1,6 +1,9 @@
 import { Prisma } from "@/generated/prisma";
 import { db } from "@/lib/db";
-import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
+import {
+  getDatabaseUnavailableMessage,
+  isDatabaseConnectivityError,
+} from "@/lib/db-connectivity";
 import {
   analyzeTemplateCompositionInput,
   isKnownTemplateComponentKey as isKnownComponentKey,
@@ -39,7 +42,12 @@ export interface TemplateCatalogComponentSummary {
   rendererType: ComponentRendererType;
   previewVariant: ComponentPreviewVariant;
   detailSlot: ComponentDetailSlot;
+  navLabel: string;
+  anchorId: string;
+  publicGroupKey: string | null;
+  publicTabKey: string | null;
   highlightFieldKeys?: string[];
+  renderConfig: Record<string, unknown>;
   fieldCount: number;
   fields: TemplateCatalogFieldSummary[];
   source: "db" | "manifest";
@@ -69,7 +77,12 @@ export interface TemplateEditorComponent {
   rendererType: ComponentRendererType;
   previewVariant: ComponentPreviewVariant;
   detailSlot: ComponentDetailSlot;
+  navLabel: string;
+  anchorId: string;
+  publicGroupKey: string | null;
+  publicTabKey: string | null;
   highlightFieldKeys?: string[];
+  renderConfig: Record<string, unknown>;
   fieldCount: number;
   fields: TemplateCatalogFieldSummary[];
   source: "db" | "manifest";
@@ -86,6 +99,8 @@ export interface TemplateWorkspaceData {
   selectedTemplate: TemplateDetail | null;
   availableComponents: TemplateCatalogComponentSummary[];
   catalogSource: "db" | "manifest";
+  readOnly?: boolean;
+  readOnlyReason?: string | null;
 }
 
 export interface SaveTemplateComponentsInput {
@@ -121,10 +136,21 @@ function isMissingCatalogRelationColumnError(error: unknown) {
 }
 
 const LEGACY_DEFAULT_TEMPLATE_KEYS = new Set([
-  "CURRENT_PUBLIC_DETAIL_TEMPLATE",
-  "DESA_TRANSPARAN_TEMPLATE",
-  "DESA_WISATA_TEMPLATE",
+  "TEMPLATE_UMUM_DESA",
 ]);
+const MANIFEST_FALLBACK_TEMPLATE_ID = "manifest:TEMPLATE_UMUM_DESA";
+export const TEMPLATE_MUTATION_TRANSACTION_OPTIONS = {
+  maxWait: 20_000,
+  timeout: 120_000,
+} as const;
+
+export function isTemplateComponentRemovalBlocked(input: {
+  dataDesaCount: number;
+  visibilityOverrideCount: number;
+}) {
+  void input.visibilityOverrideCount;
+  return input.dataDesaCount > 0;
+}
 
 let catalogSupportCache: boolean | null = null;
 let catalogRelationSupportCache:
@@ -147,7 +173,12 @@ function createFallbackCatalogComponent(
     rendererType: component.rendererType,
     previewVariant: component.previewVariant,
     detailSlot: component.detailSlot,
+    navLabel: component.navLabel ?? component.label,
+    anchorId: component.anchorId ?? component.componentKey.replaceAll("_", "-"),
+    publicGroupKey: component.publicGroupKey ?? component.detailSlot,
+    publicTabKey: component.publicTabKey ?? component.componentKey,
     highlightFieldKeys: component.highlightFieldKeys,
+    renderConfig: component.renderConfig ?? {},
     fieldCount: component.fields.length,
     fields: component.fields.map((field) => ({
       fieldKey: field.fieldKey,
@@ -160,10 +191,70 @@ function createFallbackCatalogComponent(
   };
 }
 
+function toStringArray(input: unknown): string[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  const values = input.filter((item): item is string => typeof item === "string");
+  return values.length > 0 ? values : undefined;
+}
+
+function toRecord(input: unknown): Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+    ? (input as Record<string, unknown>)
+    : {};
+}
+
 function getDefaultCatalogList(): TemplateCatalogComponentSummary[] {
   return DEFAULT_COMPONENT_CATALOG_MANIFEST.map(createFallbackCatalogComponent).sort(
     (left, right) => left.displayOrder - right.displayOrder,
   );
+}
+
+function buildManifestTemplateDetail(
+  catalogComponents: TemplateCatalogComponentSummary[],
+): TemplateDetail {
+  const updatedAt = new Date().toISOString();
+  return {
+    id: MANIFEST_FALLBACK_TEMPLATE_ID,
+    key: DEFAULT_TEMPLATE_KEY,
+    name: "Template Umum Desa",
+    description:
+      "Fallback manifest lokal saat koneksi database runtime belum tersedia.",
+    status: "READ_ONLY",
+    isDefault: true,
+    version: 1,
+    componentCount: catalogComponents.length,
+    assignedDesaCount: 0,
+    updatedAt,
+    deleteBlockedReason:
+      "Mode fallback manifest bersifat read-only. Pulihkan koneksi database untuk menghapus template.",
+    components: catalogComponents.map((component, index) => ({
+      componentId: null,
+      ...component,
+      displayOrder: index + 1,
+    })),
+  };
+}
+
+function buildReadOnlyManifestWorkspace(
+  catalog: {
+    source: "db" | "manifest";
+    components: TemplateCatalogComponentSummary[];
+  },
+  reason = getDatabaseUnavailableMessage(),
+): TemplateWorkspaceData {
+  const components =
+    catalog.components.length > 0 ? catalog.components : getDefaultCatalogList();
+  const selectedTemplate = buildManifestTemplateDetail(components);
+
+  return {
+    templates: [selectedTemplate],
+    selectedTemplateId: selectedTemplate.id,
+    selectedTemplate,
+    availableComponents: components,
+    catalogSource: catalog.source,
+    readOnly: true,
+    readOnlyReason: reason,
+  };
 }
 
 async function supportsComponentCatalogTables(): Promise<boolean> {
@@ -250,6 +341,17 @@ async function loadCatalogComponents(): Promise<{
         label: true,
         description: true,
         componentType: true,
+        isDefaultVisible: true,
+        displayOrder: true,
+        rendererType: true,
+        previewVariant: true,
+        detailSlot: true,
+        navLabel: true,
+        anchorId: true,
+        publicGroupKey: true,
+        publicTabKey: true,
+        highlightFieldKeys: true,
+        renderConfigJson: true,
         fields: {
           where: { status: "ACTIVE" },
           orderBy: [{ displayOrder: "asc" }],
@@ -272,12 +374,21 @@ async function loadCatalogComponents(): Promise<{
           label: row.label,
           description: row.description ?? fallback.description,
           componentType: row.componentType,
-          isDefaultVisible: fallback.isDefaultVisible,
-          displayOrder: fallback.displayOrder,
-          rendererType: fallback.rendererType,
-          previewVariant: fallback.previewVariant,
-          detailSlot: fallback.detailSlot,
-          highlightFieldKeys: fallback.highlightFieldKeys,
+          isDefaultVisible: row.isDefaultVisible,
+          displayOrder: row.displayOrder,
+          rendererType: row.rendererType as ComponentRendererType,
+          previewVariant: row.previewVariant as ComponentPreviewVariant,
+          detailSlot: row.detailSlot as ComponentDetailSlot,
+          navLabel: row.navLabel ?? fallback.navLabel ?? row.label,
+          anchorId:
+            row.anchorId ??
+            fallback.anchorId ??
+            row.componentKey.replaceAll("_", "-"),
+          publicGroupKey: row.publicGroupKey ?? fallback.publicGroupKey ?? row.detailSlot,
+          publicTabKey: row.publicTabKey ?? fallback.publicTabKey ?? row.componentKey,
+          highlightFieldKeys:
+            toStringArray(row.highlightFieldKeys) ?? fallback.highlightFieldKeys,
+          renderConfig: toRecord(row.renderConfigJson),
           fieldCount: row.fields.length,
           fields: row.fields.map((field) => ({
             fieldKey: field.fieldKey,
@@ -426,7 +537,12 @@ async function buildTemplateDetail(
           rendererType: fallback?.rendererType ?? "identity_grid",
           previewVariant: fallback?.previewVariant ?? "identity",
           detailSlot: fallback?.detailSlot ?? "first_view",
+          navLabel: fallback?.navLabel ?? component.label,
+          anchorId: fallback?.anchorId ?? component.componentKey.replaceAll("_", "-"),
+          publicGroupKey: fallback?.publicGroupKey ?? fallback?.detailSlot ?? null,
+          publicTabKey: fallback?.publicTabKey ?? component.componentKey,
           highlightFieldKeys: fallback?.highlightFieldKeys,
+          renderConfig: fallback?.renderConfig ?? {},
           fieldCount: fields.length,
           fields,
           source: fallback?.source ?? "manifest",
@@ -571,59 +687,80 @@ async function buildCatalogIdMaps() {
 export async function getTemplateWorkspace(
   selectedTemplateId?: string | null,
 ): Promise<TemplateWorkspaceData> {
-  const catalog = await loadCatalogComponents();
+  let catalog: {
+    source: "db" | "manifest";
+    components: TemplateCatalogComponentSummary[];
+  };
 
-  if (!db) {
-    return {
-      templates: [],
-      selectedTemplateId: null,
-      selectedTemplate: null,
-      availableComponents: catalog.components,
-      catalogSource: catalog.source,
-    };
+  try {
+    catalog = await loadCatalogComponents();
+  } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      return buildReadOnlyManifestWorkspace({
+        source: "manifest",
+        components: getDefaultCatalogList(),
+      });
+    }
+    throw error;
   }
 
-  const templates = (
-    await db.villageDetailTemplate.findMany({
-      orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
-      select: {
-        id: true,
-        key: true,
-        name: true,
-        description: true,
-        status: true,
-        isDefault: true,
-        version: true,
-        updatedAt: true,
-        _count: {
-          select: {
-            components: true,
-            desaAssignments: true,
+  if (!db) {
+    return buildReadOnlyManifestWorkspace(
+      catalog,
+      "Database belum dikonfigurasi. Workspace template ditampilkan dari manifest lokal.",
+    );
+  }
+
+  try {
+    const templates = (
+      await db.villageDetailTemplate.findMany({
+        orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
+        select: {
+          id: true,
+          key: true,
+          name: true,
+          description: true,
+          status: true,
+          isDefault: true,
+          version: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              components: true,
+              desaAssignments: true,
+            },
           },
         },
-      },
-    })
-  ).map(toTemplateSummary);
+      })
+    ).map(toTemplateSummary);
 
-  const effectiveTemplateId =
-    selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)
-      ? selectedTemplateId
-      : templates[0]?.id ?? null;
+    const effectiveTemplateId =
+      selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)
+        ? selectedTemplateId
+        : templates[0]?.id ?? null;
 
-  const selectedTemplate = effectiveTemplateId
-    ? await buildTemplateDetail(
-        effectiveTemplateId,
-        new Map(catalog.components.map((component) => [component.componentKey, component])),
-      )
-    : null;
+    const selectedTemplate = effectiveTemplateId
+      ? await buildTemplateDetail(
+          effectiveTemplateId,
+          new Map(catalog.components.map((component) => [component.componentKey, component])),
+        )
+      : null;
 
-  return {
-    templates,
-    selectedTemplateId: effectiveTemplateId,
-    selectedTemplate,
-    availableComponents: catalog.components,
-    catalogSource: catalog.source,
-  };
+    return {
+      templates,
+      selectedTemplateId: effectiveTemplateId,
+      selectedTemplate,
+      availableComponents: catalog.components,
+      catalogSource: catalog.source,
+      readOnly: false,
+      readOnlyReason: null,
+    };
+  } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      return buildReadOnlyManifestWorkspace(catalog);
+    }
+    throw error;
+  }
 }
 
 export async function createTemplate(input: {
@@ -803,21 +940,26 @@ export async function replaceTemplateComponents(
 
       const blockedRemovals = componentsToRemove.filter(
         (component) =>
-          component._count.dataDesa > 0 ||
-          component._count.desaVisibility > 0,
+          isTemplateComponentRemovalBlocked({
+            dataDesaCount: component._count.dataDesa,
+            visibilityOverrideCount: component._count.desaVisibility,
+          }),
       );
 
       if (blockedRemovals.length > 0) {
         throw new TemplateManagementError(
           `Komponen ${blockedRemovals
             .map((component) => component.label)
-            .join(", ")} tidak bisa dilepas karena masih punya data atau override desa yang aktif.`,
+            .join(", ")} tidak bisa dilepas karena masih punya data publik aktif.`,
           409,
           "component_removal_blocked",
         );
       }
 
       for (const component of componentsToRemove) {
+        await tx.desaDetailComponentVisibility.deleteMany({
+          where: { componentId: component.id },
+        });
         await tx.detailFieldStandard.deleteMany({
           where: { componentId: component.id },
         });
@@ -883,7 +1025,7 @@ export async function replaceTemplateComponents(
         where: { id: input.templateId },
         data: { version: { increment: 1 } },
       });
-    });
+    }, TEMPLATE_MUTATION_TRANSACTION_OPTIONS);
   };
 
   try {
@@ -968,7 +1110,7 @@ export async function deleteTemplate(
     await tx.detailFieldStandard.deleteMany({ where: { templateId } });
     await tx.villageDetailComponent.deleteMany({ where: { templateId } });
     await tx.villageDetailTemplate.delete({ where: { id: templateId } });
-  });
+  }, TEMPLATE_MUTATION_TRANSACTION_OPTIONS);
 
   invalidateAllTemplateCaches();
 
@@ -1034,7 +1176,7 @@ export async function switchTemplateForDesa(input: {
     await tx.desaDetailComponentVisibility.deleteMany({
       where: { desaId: input.desaId },
     });
-  });
+  }, TEMPLATE_MUTATION_TRANSACTION_OPTIONS);
 
   invalidateTemplateCache(input.desaId);
 

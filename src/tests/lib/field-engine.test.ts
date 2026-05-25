@@ -10,7 +10,7 @@ describe("createActiveTemplateFieldBindingMap", () => {
     const engine: EffectiveTemplateFieldEngine = {
       resolvedTemplate: {
         templateId: "tpl_current",
-        templateKey: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
+        templateKey: "TEMPLATE_UMUM_DESA",
         templateName: "Template Umum Desa",
         visibleComponents: [],
         hiddenComponents: [],

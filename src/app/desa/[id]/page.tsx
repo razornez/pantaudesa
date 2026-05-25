@@ -23,6 +23,12 @@ import {
 import { getPublishedTemplateData } from "@/lib/data/village-template-read";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
 import { perfStart, publicPerfLog } from "@/lib/perf";
+import {
+  buildPublicDetailRenderPlan,
+  getOrderedVisibleSlots,
+  isLegacyPublicDetailComponent,
+  type PublicDetailSlotKey,
+} from "@/lib/village-data/public-detail-composition";
 import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
@@ -50,16 +56,6 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-type PublicDetailSlotKey =
-  | "first_view"
-  | "sumber_dokumen"
-  | "transparansi"
-  | "ringkasan_anggaran"
-  | "kinerja_anggaran"
-  | "kelengkapan_desa"
-  | "panduan_warga"
-  | "suara_warga";
-
 const SLOT_META: Record<
   PublicDetailSlotKey,
   {
@@ -86,19 +82,9 @@ const SLOT_META: Record<
   suara_warga: { anchorId: "suara-warga", navLabel: "Suara Warga" },
 };
 
-function getOrderedVisibleSlots(componentKeys: string[]): PublicDetailSlotKey[] {
-  const slots: PublicDetailSlotKey[] = [];
-  const seen = new Set<PublicDetailSlotKey>();
-
-  for (const componentKey of componentKeys) {
-    const slot = PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]
-      ?.detailSlot as PublicDetailSlotKey | undefined;
-    if (!slot || seen.has(slot)) continue;
-    seen.add(slot);
-    slots.push(slot);
-  }
-
-  return slots;
+function getPublicDetailSlot(componentKey: string) {
+  return PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]
+    ?.detailSlot as PublicDetailSlotKey | undefined;
 }
 
 function buildNavItems(slots: PublicDetailSlotKey[]): DetailSectionNavItem[] {
@@ -161,7 +147,7 @@ export default async function DesaDetailPage({ params }: Props) {
       publishedValues.perangkatDesa,
       readPublishedString(publishedValues, "kepalaDesa"),
     ),
-    profil: buildPublishedProfilSection(publishedValues) ?? undefined,
+    profil: buildPublishedProfilSection(publishedValues, desa.profil) ?? undefined,
     apbdes: toPublishedApbdesItems(publishedValues.apbdesItems),
     outputFisik: toPublishedOutputFisikArray(publishedValues.outputFisik),
     riwayat: toPublishedRiwayatArray(publishedValues.riwayatAPBDes),
@@ -184,7 +170,14 @@ export default async function DesaDetailPage({ params }: Props) {
   const visibleComponentKeys = runtimeManifest.visibleComponents.map(
     (component) => component.componentKey,
   );
-  const visibleSlots = getOrderedVisibleSlots(visibleComponentKeys);
+  const visibleSlots = getOrderedVisibleSlots(
+    visibleComponentKeys,
+    getPublicDetailSlot,
+  );
+  const renderPlan = buildPublicDetailRenderPlan(
+    visibleComponentKeys,
+    getPublicDetailSlot,
+  );
   const navItems = buildNavItems(visibleSlots);
   const showBudgetSummary =
     visibleComponentKeys.includes("anggaran") ||
@@ -192,6 +185,7 @@ export default async function DesaDetailPage({ params }: Props) {
   const showBudgetMetrics = visibleComponentKeys.includes("anggaran");
   const showPendapatanBreakdown = visibleComponentKeys.includes("pendapatan");
   const showSourceSection = visibleComponentKeys.includes("sumber_dokumen");
+  const showPerangkatSection = visibleComponentKeys.includes("perangkat");
   const showTransparansiSection = visibleComponentKeys.includes("transparansi");
   const showKinerjaSection = visibleComponentKeys.includes("kinerja");
   const showProfilSection = visibleComponentKeys.includes("profil_desa");
@@ -260,43 +254,79 @@ export default async function DesaDetailPage({ params }: Props) {
     },
   ] as const;
 
+  const registryOnlySectionEntries = await Promise.all(
+    visibleComponentKeys
+      .filter((componentKey) => !isLegacyPublicDetailComponent(componentKey))
+      .map(async (componentKey) => {
+        const section = await PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]?.render({
+          desa: desaView,
+          publishedValues,
+          sourceSummaries: templateData.sourceSummaries,
+        });
+        return [componentKey, section] as const;
+      }),
+  );
+  const registryOnlySectionsByComponentKey = new Map(
+    registryOnlySectionEntries.filter(
+      (entry) => entry[1] !== null && entry[1] !== undefined && entry[1] !== false,
+    ) as Array<readonly [string, ReactNode]>,
+  );
+
+  const renderSlotSections = (
+    _slot: PublicDetailSlotKey,
+    legacySection?: ReactNode,
+  ) => {
+    if (!legacySection) return null;
+
+    return (
+      <div className="space-y-5">
+        {legacySection}
+      </div>
+    );
+  };
+
   const slotSections: Partial<Record<PublicDetailSlotKey, ReactNode>> = {
     ...(showFirstView
       ? {
-          first_view: (
+          first_view: renderSlotSections("first_view", (
             <div id={SLOT_META.first_view.anchorId}>
               <DesaDetailFirstView
                 desa={desaView}
                 hiddenComponentKeys={hiddenComponentKeys}
               />
             </div>
-          ),
+          )),
         }
       : {}),
     ...(showSourceSection
       ? {
-          sumber_dokumen: (
+          sumber_dokumen: renderSlotSections("sumber_dokumen", (
             <section
               id={SLOT_META.sumber_dokumen.anchorId}
               className="space-y-5"
             >
               <SourceDocumentSnapshotSection desa={desaView} />
             </section>
-          ),
+          )),
         }
       : {}),
-    ...(showTransparansiSection
+    ...(showTransparansiSection || showPerangkatSection
       ? {
-          transparansi: (
+          transparansi: renderSlotSections("transparansi", (
             <section id={SLOT_META.transparansi.anchorId}>
-              <TransparansiCard desa={desaView} showPerangkat={false} />
+              <TransparansiCard
+                desa={desaView}
+                showDokumen={showSourceSection}
+                showTransparansi={showTransparansiSection}
+                showPerangkat={showPerangkatSection}
+              />
             </section>
-          ),
+          )),
         }
       : {}),
     ...(showBudgetSummary
       ? {
-          ringkasan_anggaran: (
+          ringkasan_anggaran: renderSlotSections("ringkasan_anggaran", (
             <section id={SLOT_META.ringkasan_anggaran.anchorId} className="space-y-5">
               <div className="space-y-3">
                 {desa.dataStatus === "demo" ? (
@@ -402,21 +432,21 @@ export default async function DesaDetailPage({ params }: Props) {
                 ) : null}
               </div>
             </section>
-          ),
+          )),
         }
       : {}),
     ...(showKinerjaSection
       ? {
-          kinerja_anggaran: (
+          kinerja_anggaran: renderSlotSections("kinerja_anggaran", (
             <section id={SLOT_META.kinerja_anggaran.anchorId}>
               <KinerjaAnggaranCard desa={desaView} />
             </section>
-          ),
+          )),
         }
       : {}),
     ...(showProfilSection
       ? {
-          kelengkapan_desa: (
+          kelengkapan_desa: renderSlotSections("kelengkapan_desa", (
             <section id={SLOT_META.kelengkapan_desa.anchorId}>
               {profil ? (
                 <KelengkapanDesa profil={profil} />
@@ -432,12 +462,12 @@ export default async function DesaDetailPage({ params }: Props) {
                 </div>
               )}
             </section>
-          ),
+          )),
         }
       : {}),
     ...(showPanduanSection
       ? {
-          panduan_warga: (
+          panduan_warga: renderSlotSections("panduan_warga", (
             <section
               id={SLOT_META.panduan_warga.anchorId}
               className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5"
@@ -489,12 +519,12 @@ export default async function DesaDetailPage({ params }: Props) {
                 <PreReportChecklistCard kabupaten={desaView.kabupaten} />
               </div>
             </section>
-          ),
+          )),
         }
       : {}),
     ...(showSuaraSection
       ? {
-          suara_warga: (
+          suara_warga: renderSlotSections("suara_warga", (
             <section id={SLOT_META.suara_warga.anchorId} className="space-y-3">
               <div className="max-w-2xl">
                 <p className="text-xs font-black uppercase tracking-widest text-indigo-600">
@@ -568,7 +598,7 @@ export default async function DesaDetailPage({ params }: Props) {
                 </div>
               </Link>
             </section>
-          ),
+          )),
         }
       : {}),
   };
@@ -587,7 +617,17 @@ export default async function DesaDetailPage({ params }: Props) {
       </div>
 
       <DetailSectionNav sections={navItems} />
-      {visibleSlots.map((slot) => slotSections[slot] ? <div key={slot}>{slotSections[slot]}</div> : null)}
+      {renderPlan.map((item, index) => {
+        if (item.kind === "legacy_slot") {
+          const section = slotSections[item.slot];
+          return section ? <div key={`slot-${item.slot}`}>{section}</div> : null;
+        }
+
+        const section = registryOnlySectionsByComponentKey.get(item.componentKey);
+        return section ? (
+          <div key={`component-${item.componentKey}-${index}`}>{section}</div>
+        ) : null;
+      })}
     </div>
   );
 }
