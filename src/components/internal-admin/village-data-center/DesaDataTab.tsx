@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AdminDesaFilterBar, {
   type AdminDesaFilter,
 } from "@/components/internal-admin/AdminDesaFilterBar";
-import type { DesaRow } from "./types";
-import { fetchDesaData } from "./api";
+import type { DesaRow, TemplateSummary } from "./types";
+import { fetchDesaData, fetchTemplateWorkspace } from "./api";
 import { ErrorNotice } from "./shared";
 import { DesaDataResults } from "./DesaDataResults";
 
@@ -22,6 +22,11 @@ export function DesaDataTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const didLoadInitialRef = useRef(false);
+  const latestInitialRequestRef = useRef(0);
+  const templateLoadPromiseRef = useRef<Promise<void> | null>(null);
 
   const fetchData = useCallback((nextFilter: AdminDesaFilter, nextPage: number) => {
     setLoading(true);
@@ -32,33 +37,53 @@ export function DesaDataTab() {
         setError(null);
         setLoading(false);
       })
-      .catch(() => {
-        setError("Gagal memuat data desa.");
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : "Gagal memuat data desa.");
         setLoading(false);
       });
   }, []);
 
+  const ensureTemplatesLoaded = useCallback(async () => {
+    if (templates.length > 0) return;
+    if (templateLoadPromiseRef.current) {
+      await templateLoadPromiseRef.current;
+      return;
+    }
+
+    setTemplatesLoading(true);
+    const loadPromise = fetchTemplateWorkspace()
+      .then((payload) => {
+        setTemplates(payload.templates ?? []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        templateLoadPromiseRef.current = null;
+        setTemplatesLoading(false);
+      });
+
+    templateLoadPromiseRef.current = loadPromise;
+    await loadPromise;
+  }, [templates.length]);
+
   useEffect(() => {
-    let cancelled = false;
+    if (didLoadInitialRef.current) return;
+    didLoadInitialRef.current = true;
+    const requestId = latestInitialRequestRef.current + 1;
+    latestInitialRequestRef.current = requestId;
 
     fetchDesaData({ q: "", provinsi: "", kabupaten: "", kecamatan: "" }, 1)
       .then((payload) => {
-        if (!cancelled) {
-          setDesa(payload.desa ?? []);
-          setTotal(payload.total ?? 0);
-          setLoading(false);
-        }
+        if (latestInitialRequestRef.current !== requestId) return;
+        setDesa(payload.desa ?? []);
+        setTotal(payload.total ?? 0);
+        setError(null);
+        setLoading(false);
       })
-      .catch(() => {
-        if (!cancelled) {
-          setError("Gagal memuat data desa.");
-          setLoading(false);
-        }
+      .catch((loadError) => {
+        if (latestInitialRequestRef.current !== requestId) return;
+        setError(loadError instanceof Error ? loadError.message : "Gagal memuat data desa.");
+        setLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const handleFilterChange = (nextFilter: AdminDesaFilter) => {
@@ -72,11 +97,16 @@ export function DesaDataTab() {
     fetchData(filter, nextPage);
   };
 
+  const handleTemplateMutation = () => {
+    fetchData(filter, page);
+    void ensureTemplatesLoaded();
+  };
+
   if (error) return <ErrorNotice message={error} />;
 
   return (
     <div className="space-y-4">
-      <AdminDesaFilterBar onChange={handleFilterChange} />
+      <AdminDesaFilterBar onChange={handleFilterChange} loadOptionsOnMount={false} />
       <DesaDataResults
         desa={desa}
         filter={filter}
@@ -86,6 +116,10 @@ export function DesaDataTab() {
         expanded={expanded}
         onExpandedChange={setExpanded}
         onPageChange={handlePageChange}
+        templateOptions={templates}
+        templatesLoading={templatesLoading}
+        onTemplateSwitchOpen={ensureTemplatesLoaded}
+        onTemplateMutation={handleTemplateMutation}
       />
     </div>
   );

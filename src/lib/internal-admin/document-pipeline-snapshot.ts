@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma";
 import {
+  AI_MAPPABLE_DESA_FIELDS,
   readAiMappingDraft,
   type AiMappingDraft,
 } from "@/lib/admin-claim/ai-mapping";
@@ -116,6 +117,92 @@ async function buildPipelineSnapshotFromExtractedPayload(input: {
     pipeline,
     pipelineJson,
     aiMappingStatus: "DRAFT_READY_REVIEW" as const,
+  };
+}
+
+function createStructuredExtractedText(input: {
+  title: string;
+  sourceLabel?: string | null;
+  sourceUrl?: string | null;
+  values: Record<string, unknown>;
+}) {
+  const lines = [input.title];
+  if (input.sourceLabel) lines.push(`Sumber: ${input.sourceLabel}`);
+  if (input.sourceUrl) lines.push(`URL sumber: ${input.sourceUrl}`);
+
+  for (const [fieldKey, value] of Object.entries(input.values)) {
+    if (value === null || value === undefined || value === "") continue;
+    lines.push(`${fieldKey}: ${typeof value === "string" ? value : JSON.stringify(value)}`);
+  }
+
+  return lines.join("\n");
+}
+
+function createStructuredLocalMapping(values: Record<string, unknown>): AutoMappingResult {
+  const fields: Record<string, string | number | null> = {};
+
+  for (const key of AI_MAPPABLE_DESA_FIELDS) {
+    const value = values[key];
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number"
+    ) {
+      if (value !== undefined) fields[key] = value;
+    }
+  }
+
+  return {
+    fields,
+    evidence: Object.entries(fields).map(([field, value]) => ({
+      field: field as keyof typeof fields,
+      matchedText:
+        value === null ? "Nilai kosong dikirim dari structured submission." : String(value),
+      rule: "structured-source-backed-input",
+    })),
+    unmatched: AI_MAPPABLE_DESA_FIELDS.filter((field) => fields[field] === undefined),
+    source: "structured-source-backed-input",
+    generatedAt: new Date().toISOString(),
+  } as AutoMappingResult;
+}
+
+export async function buildStructuredPipelineSnapshot(input: {
+  desaId: string;
+  title: string;
+  sourceLabel?: string | null;
+  sourceUrl?: string | null;
+  values: Record<string, unknown>;
+}): Promise<{
+  pipeline: IntakePipelineResult;
+  pipelineJson: Prisma.InputJsonObject;
+  aiMappingStatus: "DRAFT_READY_REVIEW";
+  normalizedSourceText: string;
+}> {
+  const extractedText = createStructuredExtractedText({
+    title: input.title,
+    sourceLabel: input.sourceLabel,
+    sourceUrl: input.sourceUrl,
+    values: input.values,
+  });
+
+  const pipeline = await buildIntakePipelineResult({
+    inputSource: "paste",
+    extractedText,
+    extractMeta: {
+      parser: "structured source-backed submission",
+      durationMs: 0,
+      truncated: false,
+    },
+    desaId: input.desaId,
+    localMapping: createStructuredLocalMapping(input.values),
+    openaiResult: buildSkippedOpenAiResult(),
+  });
+
+  return {
+    pipeline,
+    pipelineJson: toIntakeReviewJson(pipeline),
+    aiMappingStatus: "DRAFT_READY_REVIEW",
+    normalizedSourceText: extractedText,
   };
 }
 

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma";
 import { writeAuditEvent } from "@/lib/admin-claim/audit";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import {
@@ -29,6 +30,11 @@ import {
   getRequestActorMeta,
   toDesaVersionSnapshot,
 } from "@/lib/internal-admin/document-review";
+import { buildReviewCandidateForDocument } from "@/lib/internal-admin/review-candidate";
+import {
+  createActiveTemplateFieldBindingMap,
+  resolveEffectiveTemplateFieldEngine,
+} from "@/lib/village-data/field-engine";
 import {
   validateDraftGenerationStatus,
   validateDraftSaveStatus,
@@ -38,10 +44,85 @@ import {
 import type { DraftMappingPatchBody, PublishReviewBody } from "@/lib/internal-admin/document-review-validation";
 
 type DbClient = Exclude<typeof db, null>;
+type JsonishValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Prisma.InputJsonObject
+  | Prisma.InputJsonArray;
 
 interface ActorContext {
   userId: string;
   requestMeta: ReturnType<typeof getRequestActorMeta>;
+}
+
+function normalizeComparableValue(value: unknown) {
+  if (value === null || value === undefined) return "__null__";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
+  return JSON.stringify(value);
+}
+
+function resolveRequestedFieldValidation(
+  field: Awaited<ReturnType<typeof buildReviewCandidateForDocument>>["fields"][number],
+  requestedValue: unknown,
+) {
+  const manualMatches =
+    field.manualCandidate &&
+    normalizeComparableValue(field.manualCandidate.value) === normalizeComparableValue(requestedValue);
+  if (manualMatches) {
+    const manualCandidate = field.manualCandidate;
+    if (!manualCandidate) {
+      return {
+        status: field.validationStatus,
+        message: field.validationMessage,
+      };
+    }
+    return {
+      status: manualCandidate.validationStatus,
+      message: manualCandidate.validationMessage,
+    };
+  }
+
+  const fetchedMatches =
+    field.fetchedCandidate &&
+    normalizeComparableValue(field.fetchedCandidate.value) === normalizeComparableValue(requestedValue);
+  if (fetchedMatches) {
+    const fetchedCandidate = field.fetchedCandidate;
+    if (!fetchedCandidate) {
+      return {
+        status: field.validationStatus,
+        message: field.validationMessage,
+      };
+    }
+    return {
+      status: fetchedCandidate.validationStatus,
+      message: fetchedCandidate.validationMessage,
+    };
+  }
+
+  if (!Object.hasOwn(field, "manualCandidate") && !Object.hasOwn(field, "fetchedCandidate")) {
+    return {
+      status: field.validationStatus,
+      message: field.validationMessage,
+    };
+  }
+
+  return {
+    status: "invalid" as const,
+    message: "Nilai publish tidak cocok dengan candidate review yang tersedia.",
+  };
+}
+
+function resolvePublishValue(
+  field: Awaited<ReturnType<typeof buildReviewCandidateForDocument>>["fields"][number],
+  requestedFields: Record<string, AiMappingFieldValue>,
+) {
+  if (Object.hasOwn(requestedFields, field.fieldKey)) {
+    return requestedFields[field.fieldKey] ?? null;
+  }
+  return field.proposedValue as AiMappingFieldValue;
 }
 
 type ServiceResult<T> =
@@ -56,6 +137,35 @@ function isFallbackReviewStatus(
   status: "WAITING_VERIFIED_APPROVAL" | "PROCESSING" | "PUBLISHED" | "REJECTED" | "FAILED",
 ) {
   return status === "WAITING_VERIFIED_APPROVAL";
+}
+
+function normalizeRequestedFieldKeys(input: unknown) {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return [];
+  return Object.keys(input);
+}
+
+function serializeDataDesaValue(value: JsonishValue) {
+  if (value === null) {
+    return {
+      valueText: null,
+      valueJson: Prisma.JsonNull as Prisma.NullableJsonNullValueInput,
+    };
+  }
+  if (typeof value === "string") {
+    return { valueText: value, valueJson: undefined };
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return { valueText: null, valueJson: value };
+  }
+  return { valueText: null, valueJson: value };
+}
+
+function toSourceLabel(inputMode: string, sourceTypeCode: string | null) {
+  if (inputMode === "STRUCTURED_SUBMISSION") return "Admin Desa structured submission";
+  if (inputMode === "INTERNAL_SOURCE_ENTRY") return "Internal source-backed input";
+  if (inputMode === "SOURCE_INGESTION") return "Source ingestion";
+  if (sourceTypeCode) return sourceTypeCode.replaceAll("_", " ").toLowerCase();
+  return "Dokumen Admin Desa";
 }
 
 export async function createDocumentDraftMapping(params: {
@@ -239,11 +349,102 @@ export async function publishReviewedDocument(params: {
 > {
   const requestedFields = sanitizeMappingFields(params.body.fields);
   const note = params.body.note;
-  const doc = await findDocumentForReview(params.db, params.documentId);
+  const doc = await params.db.adminDesaDocument.findUnique({
+    where: { id: params.documentId },
+    select: {
+      id: true,
+      desaId: true,
+      status: true,
+      title: true,
+      inputMode: true,
+      sourceTypeCode: true,
+      sourceUrl: true,
+      sourceRegistryId: true,
+      sourceEvidenceJson: true,
+      normalizedSourceText: true,
+      structuredValuesJson: true,
+      aiMappingStatus: true,
+      aiMappingResult: true,
+      uploadedById: true,
+    },
+  });
   if (!doc) return serviceError(404, "Document not found");
 
   const statusError = validatePublishStatus(doc.status);
   if (statusError) return serviceError(statusError.status, statusError.error);
+
+  const candidate = await buildReviewCandidateForDocument({
+    desaId: doc.desaId,
+    inputMode: doc.inputMode,
+    sourceTypeCode: doc.sourceTypeCode,
+    sourceUrl: doc.sourceUrl,
+    sourceRegistryId: doc.sourceRegistryId,
+    sourceEvidenceJson: doc.sourceEvidenceJson,
+    normalizedSourceText: doc.normalizedSourceText,
+    structuredValuesJson: doc.structuredValuesJson,
+    aiMappingResult: doc.aiMappingResult,
+  });
+  const activeTemplateEngine = await resolveEffectiveTemplateFieldEngine(doc.desaId);
+  const activeFieldBindings = createActiveTemplateFieldBindingMap(activeTemplateEngine);
+
+  const requestedFieldKeys = normalizeRequestedFieldKeys(params.body.fields);
+  const requestedFieldKeySet = new Set(
+    requestedFieldKeys.length > 0 ? requestedFieldKeys : candidate.fields.map((field) => field.fieldKey),
+  );
+
+  const invalidRequestedField = candidate.fields.find(
+    (field) => {
+      if (!requestedFieldKeySet.has(field.fieldKey)) return false;
+      const requestedValue = resolvePublishValue(field, requestedFields);
+      const validation = resolveRequestedFieldValidation(field, requestedValue);
+      return validation.status !== "valid";
+    },
+  );
+  if (invalidRequestedField) {
+    const validation = resolveRequestedFieldValidation(
+      invalidRequestedField,
+      resolvePublishValue(invalidRequestedField, requestedFields),
+    );
+    return serviceError(
+      422,
+      validation.message ??
+        `Field ${invalidRequestedField.fieldLabel} belum siap dipublish.`,
+    );
+  }
+
+  const publishableCandidateFields = candidate.fields.filter(
+    (field) => {
+      if (!requestedFieldKeySet.has(field.fieldKey)) return false;
+      const requestedValue = resolvePublishValue(field, requestedFields);
+      const validation = resolveRequestedFieldValidation(field, requestedValue);
+      return validation.status === "valid";
+    },
+  );
+  const fieldWithoutActiveBinding = publishableCandidateFields.find((field) => {
+    const binding = activeFieldBindings.get(field.fieldKey);
+    return !binding?.componentId || !binding.fieldStandardId;
+  });
+  if (fieldWithoutActiveBinding) {
+    return serviceError(
+      422,
+      `Field ${fieldWithoutActiveBinding.fieldLabel} belum sinkron dengan template aktif desa.`,
+    );
+  }
+  const boundPublishableCandidateFields = publishableCandidateFields.map((field) => {
+    const binding = activeFieldBindings.get(field.fieldKey)!;
+    return {
+      ...field,
+      componentId: binding.componentId,
+      fieldStandardId: binding.fieldStandardId,
+      componentKey: binding.componentKey,
+      componentLabel: binding.componentLabel,
+      valueType: binding.valueType,
+      isPublishableNow: binding.isPublishableNow,
+    };
+  });
+  if (publishableCandidateFields.length === 0) {
+    return serviceError(422, "Tidak ada field source-backed yang siap dipublish.");
+  }
 
   const result = await params.db.$transaction(async (tx) => {
     const now = new Date();
@@ -272,6 +473,25 @@ export async function publishReviewedDocument(params: {
     fullBeforeSnapshot = toDesaVersionSnapshot(desaBefore);
     publishedSnapshot = { ...fullBeforeSnapshot };
 
+    const beforeSnapshotMap: Record<string, string | number | null> = {};
+    const afterSnapshotMap: Record<string, string | number | null> = {};
+
+    for (const field of boundPublishableCandidateFields) {
+      const publishValue = resolvePublishValue(field, requestedFields);
+      beforeSnapshotMap[field.fieldKey] =
+        field.currentValue === null ||
+        typeof field.currentValue === "string" ||
+        typeof field.currentValue === "number"
+          ? (field.currentValue as string | number | null)
+          : field.currentValuePreview;
+      afterSnapshotMap[field.fieldKey] =
+        publishValue === null ||
+        typeof publishValue === "string" ||
+        typeof publishValue === "number"
+          ? (publishValue as string | number | null)
+          : JSON.stringify(publishValue);
+    }
+
     if (fieldKeys.length > 0) {
       beforeSnapshot = {};
       afterSnapshot = {};
@@ -291,11 +511,56 @@ export async function publishReviewedDocument(params: {
 
     const mappingUpdateData = createDesaMappingUpdateData(requestedFields);
 
+    for (const field of boundPublishableCandidateFields) {
+      if (!field.componentId) continue;
+      await tx.dataDesa.updateMany({
+        where: {
+          desaId: doc.desaId,
+          componentId: field.componentId,
+          fieldKey: field.fieldKey,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+          status: "ARCHIVED",
+          updatedAt: now,
+        },
+      });
+
+      const serialized = serializeDataDesaValue(resolvePublishValue(field, requestedFields) as JsonishValue);
+      await tx.dataDesa.create({
+        data: {
+          desaId: doc.desaId,
+          templateId: activeTemplateEngine.resolvedTemplate.templateId,
+          componentId: field.componentId,
+          fieldStandardId: field.fieldStandardId,
+          fieldKey: field.fieldKey,
+          valueText: serialized.valueText,
+          valueJson: serialized.valueJson,
+          sourceId: doc.sourceRegistryId,
+          sourceDocumentId: params.documentId,
+          sourceUrl: doc.sourceUrl,
+          sourceRegistryId: doc.sourceRegistryId,
+          sourceTypeCode: doc.sourceTypeCode,
+          sourceEvidenceJson:
+            typeof doc.sourceEvidenceJson === "object" && doc.sourceEvidenceJson !== null
+              ? doc.sourceEvidenceJson
+              : undefined,
+          sourceLabel: toSourceLabel(doc.inputMode, doc.sourceTypeCode),
+          reviewNote: note,
+          status: "PUBLISHED",
+          isActive: true,
+          publishedAt: now,
+          reviewedById: params.actor.userId,
+        },
+      });
+    }
+
     await tx.desa.update({
       where: { id: doc.desaId },
       data: {
         ...(fieldKeys.length > 0 ? mappingUpdateData : {}),
-        dataSourceLabel: "Dokumen Admin Desa",
+        dataSourceLabel: toSourceLabel(doc.inputMode, doc.sourceTypeCode),
         dataPublishedAt: now,
       },
     });
@@ -338,10 +603,12 @@ export async function publishReviewedDocument(params: {
 
     return {
       kind: "ok" as const,
-      beforeSnapshot,
-      afterSnapshot,
+      beforeSnapshot: Object.keys(beforeSnapshotMap).length > 0 ? beforeSnapshotMap : beforeSnapshot,
+      afterSnapshot: Object.keys(afterSnapshotMap).length > 0 ? afterSnapshotMap : afterSnapshot,
       fallbackVersionNumber,
       versionResult,
+      appliedFields: publishableCandidateFields.map((field) => field.fieldKey),
+      templateId: activeTemplateEngine.resolvedTemplate.templateId,
     };
   });
 
@@ -364,7 +631,8 @@ export async function publishReviewedDocument(params: {
     metadata: {
       title: doc.title,
       versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
-      appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
+      appliedFieldCount: result.appliedFields.length,
+      templateId: result.templateId,
       beforeSnapshot: result.beforeSnapshot,
       afterSnapshot: result.afterSnapshot,
       reviewMode: isFallbackReviewStatus(doc.status) ? "internal_admin_fallback" : "standard",
@@ -388,7 +656,8 @@ export async function publishReviewedDocument(params: {
     metadata: {
       title: doc.title,
       versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
-      appliedFieldCount: result.beforeSnapshot ? Object.keys(result.beforeSnapshot).length : 0,
+      appliedFieldCount: result.appliedFields.length,
+      templateId: result.templateId,
       reviewMode: isFallbackReviewStatus(doc.status) ? "internal_admin_fallback" : "standard",
     },
   });
@@ -407,7 +676,11 @@ export async function publishReviewedDocument(params: {
       title: "Dokumen dipublikasikan",
       body: `"${doc.title}" telah ditinjau dan dipublikasikan oleh tim PantauDesa. Data desa diperbarui sesuai isi dokumen.`,
       desaId: doc.desaId,
-      metadata: { documentId: params.documentId },
+      metadata: {
+        documentId: params.documentId,
+        inputMode: doc.inputMode,
+        sourceTypeCode: doc.sourceTypeCode,
+      },
     })),
   );
 
@@ -417,7 +690,7 @@ export async function publishReviewedDocument(params: {
       documentId: params.documentId,
       newStatus: "PUBLISHED",
       versionNumber: result.versionResult.versionNumber ?? result.fallbackVersionNumber,
-      appliedFields: result.beforeSnapshot ? Object.keys(result.beforeSnapshot) : [],
+      appliedFields: result.appliedFields,
     },
   };
 }

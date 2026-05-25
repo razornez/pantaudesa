@@ -8,6 +8,8 @@ import type {
   SubmitReviewSuccess,
 } from "./types";
 import { readJsonLikeResponse } from "./utils";
+import type { TemplateFieldEngineViewModel } from "@/lib/village-data/template-field-contract";
+import type { SourceTypeCode } from "@/lib/village-data/source-policy";
 
 export interface IntakeRequestParams {
   mode: IntakeMode;
@@ -19,6 +21,15 @@ export interface IntakeRequestParams {
 
 export interface IntakeSubmitParams extends IntakeRequestParams {
   reviewTitle: string;
+}
+
+export interface IntakeSourceSubmitParams {
+  desaIdValue: string;
+  sourceTypeCode: SourceTypeCode;
+  sourceName: string;
+  sourceUrl: string;
+  evidenceNote: string;
+  values: Record<string, string>;
 }
 
 async function parseJsonResponse<T>(res: Response): Promise<T | PipelineError> {
@@ -39,6 +50,10 @@ type InputRequestPayload =
     };
 
 function buildInputPayload(params: IntakeRequestParams): InputRequestPayload {
+  if (params.mode === "source") {
+    return { error: { error: "Mode sumber resmi tidak memakai pipeline file/teks." } };
+  }
+
   if (params.mode === "upload") {
     if (!params.selectedFile) {
       return { error: { error: "Pilih file terlebih dahulu." } satisfies PipelineError };
@@ -141,6 +156,37 @@ export async function requestSubmitReview(
   return parseJsonResponse<SubmitReviewSuccess>(res);
 }
 
+export async function requestSubmitSourceReview(
+  params: IntakeSourceSubmitParams,
+): Promise<SubmitReviewSuccess | PipelineError> {
+  if (!params.desaIdValue.trim()) {
+    return { error: "Pilih desa target sebelum melanjutkan review sumber." };
+  }
+
+  if (!params.sourceName.trim() || !params.sourceUrl.trim()) {
+    return { error: "Source name dan source URL wajib diisi." };
+  }
+
+  const res = await fetch("/api/internal-admin/village-data/source-candidates", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      desaId: params.desaIdValue.trim(),
+      category: "internal_source_entry",
+      sourceTypeCode: params.sourceTypeCode,
+      sourceName: params.sourceName.trim(),
+      sourceUrl: params.sourceUrl.trim(),
+      evidenceNote: params.evidenceNote.trim(),
+      values: params.values,
+    }),
+  });
+
+  return parseJsonResponse<SubmitReviewSuccess>(res);
+}
+
 export async function requestDesaOptions(query: string): Promise<DesaOptionsResponse | PipelineError> {
   const suffix = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
   const res = await fetch(`/api/internal-admin/desa-options${suffix}`, {
@@ -164,4 +210,14 @@ export async function requestVersionHistory(
     { headers: { Accept: "application/json" } },
   );
   return parseJsonResponse<DesaVersionHistoryResponse>(res);
+}
+
+export async function requestTemplateFields(
+  desaId: string,
+): Promise<TemplateFieldEngineViewModel | PipelineError> {
+  const res = await fetch(
+    `/api/internal-admin/village-data/template-fields?desaId=${encodeURIComponent(desaId)}`,
+    { headers: { Accept: "application/json" } },
+  );
+  return parseJsonResponse<TemplateFieldEngineViewModel>(res);
 }

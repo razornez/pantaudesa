@@ -4,8 +4,12 @@ import {
   Globe2,
   Info,
   Layers3,
+  Leaf,
   MapPin,
+  Phone,
+  Mail,
   ShieldCheck,
+  Sprout,
   Users2,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
@@ -14,6 +18,13 @@ import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatus
 interface Props {
   desa: Desa;
   hiddenComponentKeys?: Set<string>;
+}
+
+interface HeroContactChip {
+  href: string;
+  icon: typeof Globe2;
+  label: string;
+  external: boolean;
 }
 
 export default function DesaDetailFirstView({ desa, hiddenComponentKeys = new Set() }: Props) {
@@ -51,6 +62,62 @@ export default function DesaDetailFirstView({ desa, hiddenComponentKeys = new Se
       icon: FileText,
     },
   ];
+  const profileStats = !isHidden("profil_desa") && profil
+    ? [
+        { label: "Luas wilayah", value: `${profil.luasWilayah} km2` },
+        { label: "Dusun", value: `${profil.jumlahDusun} dusun` },
+        { label: "RT / RW", value: `${profil.jumlahRt} RT / ${profil.jumlahRw} RW` },
+        { label: "KK", value: `${profil.jumlahKk.toLocaleString("id-ID")} KK` },
+      ]
+    : [];
+  const profileNotes = !isHidden("profil_desa") && profil
+    ? [
+        {
+          icon: Layers3,
+          label: "Mata pencaharian",
+          value: profil.mataPencaharian,
+        },
+        {
+          icon: Sprout,
+          label: "Potensi unggulan",
+          value: profil.potensiUnggulan,
+        },
+        ...(profil.luasSawah
+          ? [{ icon: Leaf, label: "Luas sawah", value: `${profil.luasSawah} ha` }]
+          : []),
+        ...(profil.luasHutan
+          ? [{ icon: Leaf, label: "Luas hutan/kebun", value: `${profil.luasHutan} ha` }]
+          : []),
+      ]
+    : [];
+  const contactChips = profil
+    ? [
+        profil.website
+          ? {
+              href: profil.website,
+              icon: Globe2,
+              label: "Web Profil Desa",
+              external: true,
+            }
+          : null,
+        profil.telepon
+          ? {
+              href: `tel:${profil.telepon}`,
+              icon: Phone,
+              label: profil.telepon,
+              external: false,
+            }
+          : null,
+        profil.email
+          ? {
+              href: `mailto:${profil.email}`,
+              icon: Mail,
+              label: profil.email,
+              external: false,
+            }
+          : null,
+      ].filter(Boolean) as HeroContactChip[]
+    : [];
 
   return (
     <section className="space-y-4">
@@ -98,6 +165,64 @@ export default function DesaDetailFirstView({ desa, hiddenComponentKeys = new Se
                 );
               })}
             </div>
+
+            {profileStats.length > 0 ? (
+              <div className="mt-5 grid grid-cols-2 gap-2 xl:grid-cols-4">
+                {profileStats.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-white bg-white/75 px-3 py-2.5 shadow-sm"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-xs font-black text-slate-800">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {profileNotes.length > 0 ? (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {profileNotes.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={`${item.label}-${item.value}`}
+                      className="rounded-2xl border border-white bg-white/70 px-3 py-2.5 shadow-sm"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        <Icon size={11} aria-hidden />
+                        {item.label}
+                      </div>
+                      <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
+                        {item.value}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {contactChips.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {contactChips.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={`${item.label}-${item.href}`}
+                      href={item.href}
+                      target={item.external ? "_blank" : undefined}
+                      rel={item.external ? "noopener noreferrer" : undefined}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-white bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-800"
+                    >
+                      <Icon size={12} />
+                      {item.label}
+                    </a>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <a

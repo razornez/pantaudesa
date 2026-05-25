@@ -14,17 +14,24 @@ import type {
   UnknownUsefulField,
   UploadedCoverageStatus,
 } from "@/lib/intake/types";
+import { DEFAULT_COMPONENT_KEY_BY_FIELD_KEY } from "@/lib/village-data/component-catalog-manifest";
 import type { ResolvedTemplate } from "@/lib/village-data/template-resolver";
 
 // Maps DETAIL_FIELD_STANDARDS sectionKey → template componentKey(s)
-const SECTION_TO_COMPONENT: Record<string, string[]> = {
+const LEGACY_SECTION_TO_COMPONENT: Record<string, string[]> = {
   identitas:    ["identitas"],
   demografi:    ["demografi"],
-  pemerintahan: ["perangkat"],
+  pemerintahan: ["profil_desa"],
   profil:       ["profil_desa"],
   dokumen:      ["sumber_dokumen", "transparansi"],
   anggaran:     ["anggaran", "pendapatan", "kinerja"],
 };
+
+function getOwnerComponentKeys(fieldKey: string, sectionKey: string): string[] {
+  const ownerFromCatalog = DEFAULT_COMPONENT_KEY_BY_FIELD_KEY.get(fieldKey);
+  if (ownerFromCatalog) return [ownerFromCatalog];
+  return LEGACY_SECTION_TO_COMPONENT[sectionKey] ?? [sectionKey];
+}
 
 export type DetailFieldStandard = Omit<
   DetailFieldCoverageEntry,
@@ -133,30 +140,30 @@ export const DETAIL_FIELD_STANDARDS: DetailFieldStandard[] = [
     validationRequirement: "Nama wilayah tidak kosong",
   },
   {
-    sectionKey: "pemerintahan",
-    sectionLabel: "Pemerintahan desa",
+    sectionKey: "profil",
+    sectionLabel: "Profil desa",
     fieldKey: "kepalaDesa",
     fieldLabel: "Nama kepala desa",
     currentModelSource: "PerangkatDesa[nama/jabatan]",
     currentlyMappable: false,
     aiDetectable: true,
-    publishableNow: false,
+    publishableNow: true,
     shouldBeMappableInSprint05: true,
-    deferredReason: "Perlu target publish yang lebih fleksibel dari allowlist Desa saat ini.",
+    deferredReason: null,
     sourceRequirement: "SK perangkat / profil resmi desa",
     validationRequirement: "Nama + jabatan harus jelas",
   },
   {
-    sectionKey: "pemerintahan",
-    sectionLabel: "Pemerintahan desa",
+    sectionKey: "profil",
+    sectionLabel: "Profil desa",
     fieldKey: "perangkatDesa",
     fieldLabel: "Daftar perangkat desa",
     currentModelSource: "PerangkatDesa[]",
     currentlyMappable: false,
     aiDetectable: true,
-    publishableNow: false,
+    publishableNow: true,
     shouldBeMappableInSprint05: true,
-    deferredReason: "Review UI bisa menampilkan, tetapi publish massal ke relasi PerangkatDesa belum dibuka dari intake.",
+    deferredReason: null,
     sourceRequirement: "SK perangkat / struktur organisasi",
     validationRequirement: "Perlu nama, jabatan, dan review admin",
   },
@@ -466,20 +473,6 @@ export function detectLocalFlexibleSignals(rawText: string): {
     build: (match: RegExpExecArray) => DetectedDetailField;
   }> = [
     {
-      regex: /kepala\s+desa\s*[:=-]?\s*([A-Za-z][A-Za-z\s.'-]{2,80})/i,
-      build: (match) => ({
-        sectionKey: "pemerintahan",
-        sectionLabel: "Pemerintahan desa",
-        fieldKey: "kepalaDesa",
-        fieldLabel: "Nama kepala desa",
-        value: match[1]?.trim() ?? "",
-        reason: "Perlu target publish yang lebih fleksibel dari allowlist Desa saat ini.",
-        sourceRequirement: "SK perangkat / profil resmi desa",
-        validationRequirement: "Nama + jabatan harus jelas",
-        evidenceSnippet: compactSnippet(match[0] ?? ""),
-      }),
-    },
-    {
       regex: /(?:telepon|telp|kontak)\s*[:=-]?\s*([\d+\-\s()]{6,30})/i,
       build: (match) => ({
         sectionKey: "profil",
@@ -652,7 +645,7 @@ export async function buildDetailFieldCoverageSummary(input: {
 
     // Also add fields from DETAIL_FIELD_STANDARDS that map to hidden components
     for (const std of DETAIL_FIELD_STANDARDS) {
-      const compKeys = SECTION_TO_COMPONENT[std.sectionKey] ?? [std.sectionKey];
+      const compKeys = getOwnerComponentKeys(std.fieldKey, std.sectionKey);
       const hiddenCompKeys = new Set(resolved.hiddenComponents.map(c => c.componentKey));
       if (compKeys.some(k => hiddenCompKeys.has(k))) {
         allTemplateFieldKeys.add(std.fieldKey);
@@ -697,7 +690,7 @@ export async function buildDetailFieldCoverageSummary(input: {
 
     // Entries for HIDDEN component fields (from DETAIL_FIELD_STANDARDS cross-reference)
     for (const std of DETAIL_FIELD_STANDARDS) {
-      const compKeys = SECTION_TO_COMPONENT[std.sectionKey] ?? [std.sectionKey];
+      const compKeys = getOwnerComponentKeys(std.fieldKey, std.sectionKey);
       const hiddenComp = resolved.hiddenComponents.find(c => compKeys.includes(c.componentKey));
       if (!hiddenComp) continue;
       // Avoid duplicate if already added via visible components
@@ -764,7 +757,7 @@ export async function buildDetailFieldCoverageSummary(input: {
     resolved?.hiddenComponents.map(c => c.componentKey) ?? []
   );
   const isSectionHidden = (sectionKey: string) => {
-    const componentKeys = SECTION_TO_COMPONENT[sectionKey] ?? [sectionKey];
+    const componentKeys = getOwnerComponentKeys("__section__", sectionKey);
     return componentKeys.some(k => hiddenComponentKeys.has(k));
   };
 

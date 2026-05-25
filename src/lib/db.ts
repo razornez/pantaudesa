@@ -4,7 +4,9 @@ import { attachPrismaPerfLogging } from "@/lib/perf";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function localDirectUrlOptInEnabled(): boolean {
-  return process.env.PANTAUDESA_LOCAL_DB_USE_DIRECT_URL === "true" && Boolean(process.env.DIRECT_URL);
+  if (!process.env.DIRECT_URL) return false;
+  if (process.env.PANTAUDESA_LOCAL_DB_USE_DIRECT_URL === "false") return false;
+  return true;
 }
 
 function getPrismaDatasourceUrl(): string {

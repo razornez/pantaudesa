@@ -57,7 +57,7 @@ export type {
 };
 
 export type IntakeStep = "input" | "result";
-export type IntakeMode = "upload" | "paste";
+export type IntakeMode = "upload" | "paste" | "source";
 
 export interface StatusBadgeInfo {
   label: string;

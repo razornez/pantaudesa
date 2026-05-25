@@ -53,7 +53,6 @@ export const COMPONENT_LABEL_FALLBACKS: ReadonlyArray<{
   { componentKey: "demografi", label: "Demografi" },
   { componentKey: "sumber_dokumen", label: "Sumber & Dokumen" },
   { componentKey: "transparansi", label: "Transparansi & Skor" },
-  { componentKey: "perangkat", label: "Perangkat Desa" },
   { componentKey: "anggaran", label: "Anggaran & Realisasi" },
   { componentKey: "pendapatan", label: "Sumber Pendapatan" },
   { componentKey: "kinerja", label: "Kinerja & APBDes" },

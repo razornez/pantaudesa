@@ -113,8 +113,8 @@ export function IntakeReviewPage({ data }: { data: IntakeReviewPageData }) {
             <IntakeFinalReviewSection
               document={data.document}
               desa={data.desa}
-              result={result}
               onDone={goToQueue}
+              onRefreshSource={refreshData}
             />
           }
         />

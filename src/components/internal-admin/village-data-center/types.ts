@@ -43,12 +43,74 @@ export interface FieldStandardsData {
   }>;
 }
 
+export interface TemplateCatalogField {
+  fieldKey: string;
+  label: string;
+  valueType: string;
+  isPublishableNow: boolean;
+  displayOrder: number;
+}
+
+export interface TemplateCatalogComponent {
+  componentKey: string;
+  label: string;
+  description: string;
+  componentType: string;
+  isDefaultVisible: boolean;
+  displayOrder: number;
+  rendererType: string;
+  previewVariant: string;
+  detailSlot: string;
+  highlightFieldKeys?: string[];
+  fieldCount: number;
+  fields: TemplateCatalogField[];
+  source: "db" | "manifest";
+}
+
+export interface TemplateSummary {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  status: string;
+  isDefault: boolean;
+  version: number;
+  componentCount: number;
+  assignedDesaCount: number;
+  updatedAt: string;
+}
+
+export interface TemplateEditorComponent extends TemplateCatalogComponent {
+  componentId: string | null;
+}
+
+export interface TemplateDetail extends TemplateSummary {
+  components: TemplateEditorComponent[];
+  deleteBlockedReason: string | null;
+}
+
+export interface TemplateWorkspaceData {
+  templates: TemplateSummary[];
+  selectedTemplateId: string | null;
+  selectedTemplate: TemplateDetail | null;
+  availableComponents: TemplateCatalogComponent[];
+  catalogSource: "db" | "manifest";
+}
+
 export interface DesaComponent {
   componentId: string;
   componentKey: string;
   label: string;
   displayOrder: number;
+  isVisible: boolean;
   fieldCount: number;
+  filledFieldCount: number;
+  totalFieldCount: number;
+  completionStatus: "empty" | "partial" | "complete";
+  filledFieldLabels: string[];
+  missingFieldLabels: string[];
+  teaserLabels: string[];
+  derivedSignals: string[];
 }
 
 export interface DesaComponentData {
@@ -56,14 +118,13 @@ export interface DesaComponentData {
   templateName: string;
   source: "db" | "fallback";
   visibleComponents: DesaComponent[];
-  hiddenComponents: Array<{
-    componentId: string;
-    componentKey: string;
-    label: string;
-    displayOrder: number;
-  }>;
+  hiddenComponents: DesaComponent[];
   totalFields: number;
   publishableCount: number;
+  filledFieldCount?: number;
+  filledSignalCount?: number;
+  totalSignalCount?: number;
+  mismatchPublishedFieldCount?: number;
 }
 
 export interface DesaRow {
@@ -80,9 +141,14 @@ export interface DesaRow {
   dataStatus: string;
   dataSourceLabel: string | null;
   dataPublishedAt: string | null;
+  filledFieldCount?: number;
+  totalFieldCount?: number;
+  filledSignalCount?: number;
+  totalSignalCount?: number;
+  mismatchPublishedFieldCount?: number;
   _count: { villageDataVersions: number };
   detailTemplateAssignment?: {
-    template: { key: string; name: string };
+    template: { id: string; key: string; name: string };
   } | null;
 }
 

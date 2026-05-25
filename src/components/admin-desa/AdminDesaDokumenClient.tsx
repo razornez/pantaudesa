@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  ClipboardList,
   ExternalLink,
   FileText,
   FolderKanban,
@@ -11,14 +12,9 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import type { StorageConfigurationStatus } from "@/lib/storage/supabase-storage";
+import { TemplateFieldEntrySections } from "@/components/back-office/TemplateFieldEntrySections";
 import { ToastContainer, useToast, type ToastType } from "@/components/ui/Toast";
-import {
-  approveAdminDesaDocument,
-  fetchAdminDesaDocumentPreviewUrl,
-  rejectAdminDesaDocument,
-  uploadAdminDesaDocuments,
-} from "./api";
+import type { StorageConfigurationStatus } from "@/lib/storage/supabase-storage";
 import {
   getAcceptedFileInputValue,
   getAllowedFormatLabels,
@@ -31,6 +27,14 @@ import {
   canUploadAdminDesaDocuments,
   type AdminDesaDocumentStatus,
 } from "@/lib/admin-desa/policy";
+import type { TemplateFieldEngineViewModel } from "@/lib/village-data/template-field-contract";
+import {
+  approveAdminDesaDocument,
+  fetchAdminDesaDocumentPreviewUrl,
+  rejectAdminDesaDocument,
+  submitAdminDesaStructuredData,
+  uploadAdminDesaDocuments,
+} from "./api";
 
 const COPY = BACK_OFFICE_COPY.adminDesa.documents;
 const COMMON_COPY = BACK_OFFICE_COPY.adminDesa.common;
@@ -41,9 +45,13 @@ interface DocRow {
   id: string;
   title: string;
   category: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
+  inputMode: string;
+  fileName: string | null;
+  fileType: string | null;
+  fileSize: number | null;
+  sourceTypeCode: string | null;
+  sourceUrl: string | null;
+  structuredValuesJson: Record<string, unknown> | null;
   status: DocStatus;
   approvedAt: string | null;
   publishedAt: string | null;
@@ -64,6 +72,8 @@ interface Props {
   maxFilesPerUpload: number;
   allowedMimeTypes: string[];
   storageStatus: StorageConfigurationStatus;
+  structuredTemplate: TemplateFieldEngineViewModel;
+  schemaBlockedMessage: string | null;
 }
 
 const STATUS_PILL: Record<DocStatus, { label: string; cls: string }> = {
@@ -78,6 +88,19 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getInputModeLabel(inputMode: string) {
+  switch (inputMode) {
+    case "STRUCTURED_SUBMISSION":
+      return "Structured submission";
+    case "INTERNAL_SOURCE_ENTRY":
+      return "Source-backed input";
+    case "SOURCE_INGESTION":
+      return "Source ingestion";
+    default:
+      return "Upload dokumen";
+  }
 }
 
 function DocCard({
@@ -100,6 +123,8 @@ function DocCard({
   const status = STATUS_PILL[doc.status];
   const uploaderName = doc.uploadedBy?.nama ?? doc.uploadedBy?.username ?? doc.uploadedBy?.email ?? "-";
   const showVerifiedActions = doc.status === "WAITING_VERIFIED_APPROVAL" && (canApprove || canReject);
+  const isFileDocument = Boolean(doc.fileName && doc.fileType && doc.fileSize !== null);
+  const structuredFieldCount = doc.structuredValuesJson ? Object.keys(doc.structuredValuesJson).length : 0;
 
   return (
     <article className="lux-card t-spring space-y-3 p-4 sm:p-5">
@@ -109,7 +134,8 @@ function DocCard({
             {doc.title}
           </p>
           <p className="text-[11px] text-slate-500">
-            {doc.fileType} · {formatBytes(doc.fileSize)}
+            {getInputModeLabel(doc.inputMode)}
+            {isFileDocument ? ` · ${doc.fileType} · ${formatBytes(doc.fileSize ?? 0)}` : null}
           </p>
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.cls}`}>
@@ -124,6 +150,17 @@ function DocCard({
         <span className="text-slate-300">·</span>
         <span>{new Date(doc.createdAt).toLocaleDateString("id-ID", { dateStyle: "short" })}</span>
       </div>
+
+      {!isFileDocument ? (
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-3 py-2.5 text-xs text-indigo-800">
+          {structuredFieldCount > 0
+            ? `${structuredFieldCount} field tersimpan untuk direview.`
+            : "Submission source-backed tersimpan tanpa lampiran file."}
+          {doc.sourceUrl ? (
+            <p className="mt-1 truncate text-[11px] text-indigo-700">{doc.sourceUrl}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {doc.status === "REJECTED" && doc.rejectedReason ? (
         <div className="notice-card notice-danger text-xs">
@@ -140,14 +177,16 @@ function DocCard({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => onPreview(doc.id)}
-          disabled={busyId === doc.id}
-          className="btn-lux btn-lux-ghost text-xs"
-        >
-          <ExternalLink size={11} aria-hidden /> {COPY.actions.preview}
-        </button>
+        {isFileDocument ? (
+          <button
+            type="button"
+            onClick={() => onPreview(doc.id)}
+            disabled={busyId === doc.id}
+            className="btn-lux btn-lux-ghost text-xs"
+          >
+            <ExternalLink size={11} aria-hidden /> {COPY.actions.preview}
+          </button>
+        ) : null}
 
         {showVerifiedActions && canApprove ? (
           <button
@@ -464,11 +503,191 @@ function UploadForm({
   );
 }
 
+function StructuredSubmissionForm({
+  categories,
+  template,
+  onUploaded,
+  onNotify,
+}: {
+  categories: ReadonlyArray<{ value: string; label: string }>;
+  template: TemplateFieldEngineViewModel;
+  onUploaded: () => void;
+  onNotify: (message: string, type?: ToastType) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState(categories[0]?.value ?? "");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [evidenceNote, setEvidenceNote] = useState("");
+  const [ack, setAck] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  function updateValue(fieldKey: string, value: string) {
+    setValues((current) => ({ ...current, [fieldKey]: value }));
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!title.trim()) {
+      onNotify("Judul submission wajib diisi.", "error");
+      return;
+    }
+    if (!ack) {
+      onNotify("Centang pernyataan tanggung jawab sebelum mengirim.", "error");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await submitAdminDesaStructuredData({
+        title,
+        category,
+        sourceUrl,
+        evidenceNote,
+        responsibilityAck: ack,
+        values,
+      });
+      onNotify("Structured submission berhasil dikirim.", "success");
+      setTitle("");
+      setCategory(categories[0]?.value ?? "");
+      setSourceUrl("");
+      setEvidenceNote("");
+      setValues({});
+      setAck(false);
+      onUploaded();
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : COMMON_COPY.connectionError, "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const activeFieldCount = template.visibleComponents.reduce(
+    (sum, section) => sum + section.fields.length,
+    0,
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="lux-panel space-y-4 p-5 sm:p-6">
+      <div className="space-y-1">
+        <p className="eyebrow text-[10px]">Structured submission</p>
+        <h2 className="text-[18px] font-semibold tracking-tight text-slate-900 sm:text-[20px]">
+          Isi data desa berdasarkan template aktif
+        </h2>
+        <p className="text-xs text-slate-500">
+          Semua data tetap masuk review dulu. Field publishable akan ditandai, field lain tetap
+          boleh diisi untuk melengkapi kandidat data desa secara bertahap.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="field-label text-xs">Judul submission</label>
+          <input
+            type="text"
+            value={title}
+            maxLength={200}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Contoh: Profil & demografi Mei 2026"
+            className="field-lux text-sm"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="field-label text-xs">Kategori</label>
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="select-lux text-sm"
+            required
+          >
+            {categories.map((categoryOption) => (
+              <option key={categoryOption.value} value={categoryOption.value}>
+                {categoryOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="field-label text-xs">URL sumber (opsional tapi disarankan)</label>
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={(event) => setSourceUrl(event.target.value)}
+            placeholder="https://desa.example.id/profil"
+            className="field-lux text-sm"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="field-label text-xs">Catatan evidence / konteks sumber</label>
+          <textarea
+            rows={3}
+            value={evidenceNote}
+            onChange={(event) => setEvidenceNote(event.target.value)}
+            placeholder="Jelaskan asal data, periode, atau dokumen pendukung jika field sensitif."
+            className="field-lux min-h-[96px] resize-y text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-[28px] border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-emerald-50/60 p-4 sm:p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="eyebrow text-[10px]">Template aktif</p>
+            <h3 className="text-[16px] font-semibold text-slate-900">{template.templateName}</h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="pill-info rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
+              {template.visibleComponents.length} komponen aktif
+            </span>
+            <span className="pill-ok rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
+              {activeFieldCount} field aktif
+            </span>
+          </div>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-slate-600">
+          Gunakan mode ini untuk mengirim data nyata per field tanpa memaksa format dokumen khusus.
+          Semua tetap dicatat sebagai kandidat review, belum langsung tayang publik.
+        </p>
+      </div>
+
+      <TemplateFieldEntrySections
+        sections={template.visibleComponents}
+        values={values}
+        onChange={updateValue}
+        disabled={loading}
+      />
+
+      <label className="flex cursor-pointer items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)]">
+        <input
+          type="checkbox"
+          checked={ack}
+          onChange={(event) => setAck(event.target.checked)}
+          className="mt-0.5 accent-[#1E1B4B]"
+        />
+        <span className="leading-relaxed text-slate-700">
+          Saya menyatakan nilai yang diisi bersumber dari data desa yang dapat dipertanggungjawabkan
+          dan siap diperiksa lewat review PantauDesa.
+        </span>
+      </label>
+
+      <button type="submit" disabled={loading} className="btn-lux btn-lux-primary w-full text-sm">
+        {loading ? "Mengirim structured submission..." : "Kirim structured submission"}
+      </button>
+    </form>
+  );
+}
+
 export default function AdminDesaDokumenClient(props: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<DocRow | null>(null);
+  const [entryMode, setEntryMode] = useState<"upload" | "structured">("upload");
   const { toasts, toast, removeToast } = useToast();
+  const schemaBlocked = Boolean(props.schemaBlockedMessage);
   const canUpload = canUploadAdminDesaDocuments(props.memberStatus);
   const canApprove = canApproveAdminDesaDocuments(props.memberStatus, props.memberRole);
   const canReject = canRejectAdminDesaDocuments(props.memberStatus, props.memberRole);
@@ -561,19 +780,76 @@ export default function AdminDesaDokumenClient(props: Props) {
         </div>
       </div>
 
-      {canUpload ? (
-        <UploadForm
-          categories={props.categories}
-          maxFileSizeMB={props.maxFileSizeMB}
-          maxFilesPerUpload={props.maxFilesPerUpload}
-          allowedMimeTypes={props.allowedMimeTypes}
-          storageStatus={props.storageStatus}
-          onUploaded={() => router.refresh()}
-          onNotify={toast}
-        />
+      {props.schemaBlockedMessage ? (
+        <div className="notice-card notice-warn text-sm">
+          <div className="flex items-start gap-2">
+            <ShieldAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+            <div className="space-y-1">
+              <p className="font-semibold text-slate-900">Mode Batch 4 belum aktif penuh</p>
+              <p>{props.schemaBlockedMessage}</p>
+              <p className="text-xs text-slate-600">
+                Daftar dokumen lama tetap ditampilkan agar aman dibaca, tetapi upload dan
+                structured submission baru dikunci dulu sampai skema database diperbarui.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : null}
 
-      {!props.storageStatus.configured ? (
+      {canUpload && !schemaBlocked ? (
+        <div className="space-y-4">
+          <div
+            className="flex items-center gap-1 rounded-2xl bg-slate-50 p-1 w-fit"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06)" }}
+          >
+            <button
+              type="button"
+              onClick={() => setEntryMode("upload")}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
+                entryMode === "upload"
+                  ? "bg-[#1E1B4B] text-white shadow-sm"
+                  : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
+              }`}
+            >
+              <Upload size={13} aria-hidden />
+              Unggah Dokumen
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryMode("structured")}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
+                entryMode === "structured"
+                  ? "bg-[#1E1B4B] text-white shadow-sm"
+                  : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
+              }`}
+            >
+              <ClipboardList size={13} aria-hidden />
+              Isi Data Terstruktur
+            </button>
+          </div>
+
+          {entryMode === "upload" ? (
+            <UploadForm
+              categories={props.categories}
+              maxFileSizeMB={props.maxFileSizeMB}
+              maxFilesPerUpload={props.maxFilesPerUpload}
+              allowedMimeTypes={props.allowedMimeTypes}
+              storageStatus={props.storageStatus}
+              onUploaded={() => router.refresh()}
+              onNotify={toast}
+            />
+          ) : (
+            <StructuredSubmissionForm
+              categories={props.categories}
+              template={props.structuredTemplate}
+              onUploaded={() => router.refresh()}
+              onNotify={toast}
+            />
+          )}
+        </div>
+      ) : null}
+
+      {!schemaBlocked && !props.storageStatus.configured ? (
         <div className="notice-card notice-warn text-xs">
           <div className="flex items-start gap-2">
             <ShieldAlert size={14} className="mt-0.5 shrink-0" aria-hidden />

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { Prisma } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
@@ -23,6 +24,10 @@ import {
 } from "@/lib/admin-desa/policy";
 import { parseAdminDesaUploadFields } from "@/lib/admin-desa/validation";
 import { buildDocumentPipelineSnapshotFromBuffer } from "@/lib/internal-admin/document-pipeline-snapshot";
+import {
+  createTemplateFieldEngineSnapshot,
+  resolveEffectiveTemplateFieldEngine,
+} from "@/lib/village-data/field-engine";
 
 // POST /api/admin-claim/documents/upload
 // multipart/form-data fields:
@@ -129,6 +134,7 @@ export async function POST(req: NextRequest) {
     const status = getUploadedDocumentInitialStatus(
       member.status as "LIMITED" | "VERIFIED",
     );
+    const templateEngine = await resolveEffectiveTemplateFieldEngine(member.desaId);
     const multi = files.length > 1;
     const uploaded: Array<{ id: string; title: string; status: string; createdAt: string }> = [];
 
@@ -184,11 +190,18 @@ export async function POST(req: NextRequest) {
           uploadedById: userId,
           title: docTitle,
           category,
+          inputMode: "DOCUMENT_UPLOAD",
           storageKey,
           fileName: file.name.slice(0, 200),
           fileType: normalizedFileType,
           fileSize: file.size,
           status,
+          sourceTypeCode: "DOCUMENT_UPLOAD",
+          sourceEvidenceJson: {
+            uploadChannel: "admin_desa_document_upload",
+            uploaderRole: member.role,
+            templateSnapshot: createTemplateFieldEngineSnapshot(templateEngine),
+          } as unknown as Prisma.InputJsonObject,
           aiMappingStatus: snapshot.aiMappingStatus,
           aiMappingResult: snapshot.pipelineJson,
         },

@@ -9,7 +9,12 @@ import type {
   SubmitReviewSuccess,
   IntakeMode,
 } from "../types";
-import { requestIntakePipeline, requestSubmitReview } from "../api";
+import {
+  requestIntakePipeline,
+  requestSubmitReview,
+  requestSubmitSourceReview,
+  type IntakeSourceSubmitParams,
+} from "../api";
 
 interface UseIntakePipelineOptions {
   onSuccess?: (result: PipelineResult) => void;
@@ -89,6 +94,29 @@ export function useIntakePipeline(options: UseIntakePipelineOptions = {}) {
     []
   );
 
+  const submitSourceReview = useCallback(
+    async (params: IntakeSourceSubmitParams): Promise<SubmitReviewSuccess | null> => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const payload = await requestSubmitSourceReview(params);
+        if ("error" in payload) {
+          setError(payload);
+          return null;
+        }
+
+        return payload;
+      } catch {
+        setError({ error: "Koneksi bermasalah. Coba lagi." });
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
   const reset = useCallback(() => {
     setResult(null);
     setError(null);
@@ -100,6 +128,7 @@ export function useIntakePipeline(options: UseIntakePipelineOptions = {}) {
     result,
     runPipeline,
     submitToReview,
+    submitSourceReview,
     reset,
   };
 }

@@ -1,5 +1,8 @@
 import { AlertTriangle, Info, Sparkles } from "lucide-react";
+import type { TemplateFieldEngineViewModel } from "@/lib/village-data/template-field-contract";
+import type { SourceTypeCode } from "@/lib/village-data/source-policy";
 import { INTAKE_COPY } from "./constants";
+import { IntakeSourceModeStep } from "./IntakeSourceModeStep";
 import { noticeClassForTone, type ErrorState } from "./error-state";
 import { formatBytes } from "./utils";
 import type { DesaOption, IntakeMode } from "./types";
@@ -17,10 +20,23 @@ interface IntakeInputStepProps {
   desaLoading: boolean;
   desaFocused: boolean;
   displayError: ErrorState | null;
+  sourceTypeCode: SourceTypeCode;
+  sourceName: string;
+  sourceUrl: string;
+  evidenceNote: string;
+  sourceValues: Record<string, string>;
+  sourceTemplate: TemplateFieldEngineViewModel | null;
+  sourceTemplateLoading: boolean;
+  sourceTemplateError: string | null;
   onModeChange: (mode: IntakeMode) => void;
   onAiToggle: (checked: boolean) => void;
   onTextChange: (value: string) => void;
   onFileChange: (file: File | null) => void;
+  onSourceTypeCodeChange: (value: SourceTypeCode) => void;
+  onSourceNameChange: (value: string) => void;
+  onSourceUrlChange: (value: string) => void;
+  onEvidenceNoteChange: (value: string) => void;
+  onSourceValueChange: (fieldKey: string, value: string) => void;
   onDesaSearchChange: (value: string) => void;
   onDesaFocus: () => void;
   onDesaBlur: () => void;
@@ -42,10 +58,23 @@ export function IntakeInputStep({
   desaLoading,
   desaFocused,
   displayError,
+  sourceTypeCode,
+  sourceName,
+  sourceUrl,
+  evidenceNote,
+  sourceValues,
+  sourceTemplate,
+  sourceTemplateLoading,
+  sourceTemplateError,
   onModeChange,
   onAiToggle,
   onTextChange,
   onFileChange,
+  onSourceTypeCodeChange,
+  onSourceNameChange,
+  onSourceUrlChange,
+  onEvidenceNoteChange,
+  onSourceValueChange,
   onDesaSearchChange,
   onDesaFocus,
   onDesaBlur,
@@ -81,27 +110,36 @@ export function IntakeInputStep({
           >
             Tempel teks
           </button>
+          <button
+            type="button"
+            onClick={() => onModeChange("source")}
+            className={`rounded-lg px-4 py-2 text-xs font-semibold ${mode === "source" ? "bg-white text-slate-900 shadow" : "text-slate-500"}`}
+          >
+            Sumber resmi
+          </button>
         </div>
 
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              {INTAKE_COPY.aiOption.label}
-            </p>
-            <p className="mt-1 text-sm font-medium text-slate-900">
-              {INTAKE_COPY.aiOption.checkboxLabel}
-            </p>
+        {mode !== "source" ? (
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                {INTAKE_COPY.aiOption.label}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-900">
+                {INTAKE_COPY.aiOption.checkboxLabel}
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={useAiMapping}
+                onChange={(event) => onAiToggle(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Aktif
+            </label>
           </div>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-            <input
-              type="checkbox"
-              checked={useAiMapping}
-              onChange={(event) => onAiToggle(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300"
-            />
-            Aktif
-          </label>
-        </div>
+        ) : null}
 
         {mode === "upload" ? (
           <div className="mt-4 space-y-2">
@@ -122,7 +160,7 @@ export function IntakeInputStep({
               </p>
             ) : null}
           </div>
-        ) : (
+        ) : mode === "paste" ? (
           <div className="mt-4 space-y-2">
             <label className="field-label text-xs">Teks yang akan diproses</label>
             <textarea
@@ -134,7 +172,27 @@ export function IntakeInputStep({
               placeholder="Salin teks dari dokumen di sini..."
             />
           </div>
-        )}
+        ) : null}
+
+        {mode === "source" ? (
+          <IntakeSourceModeStep
+            selectedDesa={selectedDesa}
+            sourceTypeCode={sourceTypeCode}
+            sourceName={sourceName}
+            sourceUrl={sourceUrl}
+            evidenceNote={evidenceNote}
+            values={sourceValues}
+            loading={loading}
+            template={sourceTemplate}
+            templateLoading={sourceTemplateLoading}
+            templateError={sourceTemplateError}
+            onSourceTypeCodeChange={onSourceTypeCodeChange}
+            onSourceNameChange={onSourceNameChange}
+            onSourceUrlChange={onSourceUrlChange}
+            onEvidenceNoteChange={onEvidenceNoteChange}
+            onValueChange={onSourceValueChange}
+          />
+        ) : null}
 
         <div className="mt-4 space-y-2">
           <label className="field-label text-xs">Pilih desa (opsional)</label>
@@ -209,7 +267,7 @@ export function IntakeInputStep({
           ) : (
             <>
               <Sparkles size={14} />
-              Jalankan pipeline
+              {mode === "source" ? "Buka Step 2 review" : "Jalankan pipeline"}
             </>
           )}
         </button>

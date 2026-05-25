@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATE_KEY,
-  DEFAULT_TEMPLATE_NAME,
 } from "@/lib/village-data/template-constants";
 import { ActivityLogTab } from "./village-data-center/ActivityLogTab";
 import { DesaDataTab } from "./village-data-center/DesaDataTab";
@@ -106,9 +105,8 @@ export function VillageDataCenter({
             Manajemen Data & Template Desa
           </h1>
           <p className="text-[13px] text-slate-500 mt-1.5 max-w-2xl">
-            Foundation untuk sistem data desa yang fleksibel. Saat ini semua desa
-            memakai{" "}
-            <span className="font-medium text-slate-700">{DEFAULT_TEMPLATE_NAME}</span>.
+            Workspace internal untuk mengelola data desa, template publik, dan parity
+            komponen antara intake, back office, dan halaman detail warga.
           </p>
         </div>
 
@@ -127,7 +125,7 @@ export function VillageDataCenter({
             tab="standards"
             active={activeTab}
             icon={<BookOpen size={13} />}
-            label="Standar Detail"
+            label="Kelola Template"
             onClick={switchTab}
           />
           <TabButton

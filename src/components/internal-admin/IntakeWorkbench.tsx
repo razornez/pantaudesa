@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { TemplateFieldEngineViewModel } from "@/lib/village-data/template-field-contract";
+import type { SourceTypeCode } from "@/lib/village-data/source-policy";
 
 import type {
   IntakeMode,
@@ -20,6 +22,11 @@ import { getReviewableContentCount } from "./intake/IntakeStatusHelpers";
 import { buildSuggestedReviewTitle } from "./intake/constants";
 import { IntakeInputStep } from "./intake/IntakeInputStep";
 import { IntakeHistoryPanels } from "./intake/IntakeHistoryPanels";
+import { requestTemplateFields } from "./intake/api";
+import {
+  buildDefaultSourceName,
+  DEFAULT_INTAKE_SOURCE_TYPE,
+} from "./intake/source-mode";
 
 export default function IntakeWorkbench() {
   const router = useRouter();
@@ -30,6 +37,16 @@ export default function IntakeWorkbench() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [desaFocused, setDesaFocused] = useState(false);
+  const [sourceTypeCode, setSourceTypeCode] =
+    useState<SourceTypeCode>(DEFAULT_INTAKE_SOURCE_TYPE);
+  const [sourceName, setSourceName] = useState("");
+  const [sourceNameTouched, setSourceNameTouched] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [evidenceNote, setEvidenceNote] = useState("");
+  const [sourceValues, setSourceValues] = useState<Record<string, string>>({});
+  const [sourceTemplate, setSourceTemplate] = useState<TemplateFieldEngineViewModel | null>(null);
+  const [sourceTemplateLoading, setSourceTemplateLoading] = useState(false);
+  const [sourceTemplateError, setSourceTemplateError] = useState<string | null>(null);
 
   const {
     desaSearch,
@@ -48,14 +65,69 @@ export default function IntakeWorkbench() {
     error: pipelineError,
     runPipeline,
     submitToReview,
+    submitSourceReview,
     reset: resetPipeline,
   } = useIntakePipeline();
 
   const intakeHistory = useIntakeHistory();
   const versionHistory = useVersionHistory(selectedDesa?.id ?? null);
+  const effectiveSourceName = useMemo(
+    () =>
+      sourceNameTouched
+        ? sourceName
+        : buildDefaultSourceName(sourceTypeCode, selectedDesa?.nama ?? null),
+    [selectedDesa?.nama, sourceName, sourceNameTouched, sourceTypeCode],
+  );
+
+  const loadSourceTemplate = useCallback(async (desaId: string) => {
+    setSourceTemplateLoading(true);
+    setSourceTemplateError(null);
+
+    try {
+      const payload = await requestTemplateFields(desaId);
+      if ("error" in payload) {
+        setSourceTemplate(null);
+        setSourceTemplateError(payload.error);
+        return;
+      }
+
+      setSourceTemplate(payload);
+    } catch (requestError) {
+      setSourceTemplate(null);
+      setSourceTemplateError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Gagal memuat field template desa.",
+      );
+    } finally {
+      setSourceTemplateLoading(false);
+    }
+  }, []);
 
   const handleRunPipeline = useCallback(async () => {
     setError(null);
+    if (mode === "source") {
+      if (!selectedDesa) {
+        setError({ message: "Pilih desa target sebelum melanjutkan review sumber.", tone: "warn" });
+        return;
+      }
+
+      const submitted = await submitSourceReview({
+        desaIdValue: selectedDesa.id,
+        sourceTypeCode,
+        sourceName: effectiveSourceName,
+        sourceUrl,
+        evidenceNote,
+        values: sourceValues,
+      });
+
+      if (submitted) {
+        void intakeHistory.refetch();
+        router.push(`/internal-admin/intake/${encodeURIComponent(submitted.documentId)}`);
+      }
+      return;
+    }
+
     const data = await runPipeline({
       mode,
       selectedFile,
@@ -108,6 +180,12 @@ export default function IntakeWorkbench() {
     router,
     selectedDesa,
     selectedFile,
+    effectiveSourceName,
+    sourceTypeCode,
+    sourceUrl,
+    sourceValues,
+    evidenceNote,
+    submitSourceReview,
     submitToReview,
     textValue,
     useAiMapping,
@@ -130,10 +208,33 @@ export default function IntakeWorkbench() {
         desaLoading={desaLoading}
         desaFocused={desaFocused}
         displayError={displayError}
-        onModeChange={setMode}
+        sourceTypeCode={sourceTypeCode}
+        sourceName={effectiveSourceName}
+        sourceUrl={sourceUrl}
+        evidenceNote={evidenceNote}
+        sourceValues={sourceValues}
+        sourceTemplate={sourceTemplate}
+        sourceTemplateLoading={sourceTemplateLoading}
+        sourceTemplateError={sourceTemplateError}
+        onModeChange={(nextMode) => {
+          setMode(nextMode);
+          if (nextMode === "source" && selectedDesa) {
+            void loadSourceTemplate(selectedDesa.id);
+          }
+        }}
         onAiToggle={setUseAiMapping}
         onTextChange={setTextValue}
         onFileChange={setSelectedFile}
+        onSourceTypeCodeChange={setSourceTypeCode}
+        onSourceNameChange={(value) => {
+          setSourceNameTouched(true);
+          setSourceName(value);
+        }}
+        onSourceUrlChange={setSourceUrl}
+        onEvidenceNoteChange={setEvidenceNote}
+        onSourceValueChange={(fieldKey, value) => {
+          setSourceValues((current) => ({ ...current, [fieldKey]: value }));
+        }}
         onDesaSearchChange={(value) => {
           setDesaSearch(value);
           openPicker();
@@ -146,8 +247,16 @@ export default function IntakeWorkbench() {
         onSelectDesa={(desa) => {
           selectDesa(desa);
           setDesaFocused(false);
+          if (mode === "source") {
+            void loadSourceTemplate(desa.id);
+          }
         }}
-        onClearSelectedDesa={clearSelectedDesa}
+        onClearSelectedDesa={() => {
+          clearSelectedDesa();
+          setSourceTemplate(null);
+          setSourceTemplateError(null);
+          setSourceTemplateLoading(false);
+        }}
         onRunPipeline={handleRunPipeline}
       />
 

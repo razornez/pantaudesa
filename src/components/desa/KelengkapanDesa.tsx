@@ -7,18 +7,74 @@ import {
   Stethoscope, GraduationCap, Leaf, ChevronDown, ChevronUp,
   TrendingUp, CheckCircle2, XCircle, Coins, BarChart3,
 } from "lucide-react";
-import { ProfilDesa, AsetDesa, FasilitasDesa, LembagaDesa } from "@/lib/types";
+import { ProfilDesa, AsetDesa, FasilitasDesa, LembagaDesa, PerangkatDesa } from "@/lib/types";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
-type Tab = "aset" | "fasilitas" | "lembaga" | "bumdes";
+type Tab = "perangkat" | "aset" | "fasilitas" | "lembaga" | "bumdes";
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
+  { id: "perangkat", label: "Perangkat", emoji: "🏛️" },
   { id: "aset",      label: "Aset",      emoji: "🏗️" },
   { id: "fasilitas", label: "Fasilitas", emoji: "🏫" },
   { id: "lembaga",   label: "Lembaga",   emoji: "🤝" },
   { id: "bumdes",    label: "BUMDes",    emoji: "🏪" },
 ];
+
+function PerangkatTab({ perangkat }: { perangkat: PerangkatDesa[] }) {
+  if (perangkat.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-8 text-center">
+        <p className="text-sm font-semibold text-slate-700">Daftar perangkat desa belum diterbitkan.</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          Nama kepala desa dan perangkat lainnya akan tampil di tab ini setelah field template aktif diterbitkan.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {perangkat.map((item, index) => (
+          <article
+            key={`${item.jabatan}-${item.nama}-${index}`}
+            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-white shadow-sm">
+                <Users size={18} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  {item.jabatan}
+                </p>
+                <p className="mt-1 text-sm font-black leading-tight text-slate-900">
+                  {item.nama}
+                </p>
+              </div>
+            </div>
+
+            {item.periode || item.kontak ? (
+              <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+                {item.periode ? (
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-700">Periode:</span> {item.periode}
+                  </p>
+                ) : null}
+                {item.kontak ? (
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-700">Kontak:</span> {item.kontak}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── Aset ─────────────────────────────────────────────────────────────────────
 
@@ -385,7 +441,9 @@ function BumdesTab({ bumdes }: { bumdes: NonNullable<ProfilDesa["bumdes"]> }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
-  const [tab, setTab] = useState<Tab>("aset");
+  const [tab, setTab] = useState<Tab>(() =>
+    profil.perangkat && profil.perangkat.length > 0 ? "perangkat" : "aset",
+  );
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -397,7 +455,7 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelengkapan Desa</p>
-            <h2 className="text-sm font-black text-white leading-tight">Aset, Fasilitas &amp; Organisasi Masyarakat</h2>
+            <h2 className="text-sm font-black text-white leading-tight">Perangkat, Aset &amp; Organisasi Desa</h2>
           </div>
         </div>
         <DataStatusBadge status="demo" size="xs" className="self-start" />
@@ -423,6 +481,7 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
 
       {/* Content */}
       <div className="p-4 sm:p-5">
+        {tab === "perangkat" && <PerangkatTab perangkat={profil.perangkat ?? []} />}
         {tab === "aset"      && <AsetTab      aset={profil.aset} />}
         {tab === "fasilitas" && <FasilitasTab  fasilitas={profil.fasilitas} />}
         {tab === "lembaga"   && <LembagaTab    lembaga={profil.lembaga} />}

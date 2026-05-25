@@ -85,6 +85,7 @@ export interface ProfilDesa {
   aset:            AsetDesa[];
   fasilitas:       FasilitasDesa[];
   lembaga:         LembagaDesa[];
+  perangkat?:      PerangkatDesa[];
   bumdes?:         BumdesInfo;
   historyBelanja:  HistoryBelanja[];
   badge:           DesaBadge;
@@ -173,6 +174,7 @@ export interface Desa {
     perluReview: boolean;
   }[];
   identityStatus?: "demo" | "source-found" | "needs-review";
+  dataStatus?: string;
   jumlahSumber?: number;
   jumlahDokumenPendukung?: number;
   terakhirDiperbaruiLabel?: string;

@@ -40,7 +40,7 @@ export async function fetchDocumentPreviewUrl(documentId: string): Promise<strin
 
 export async function publishDocumentReview(
   documentId: string,
-  input: { fields: Record<string, string | number | null>; note?: string },
+  input: { fields: Record<string, unknown>; note?: string },
 ): Promise<PublishApiPayload> {
   const response = await fetch(`/api/internal-admin/documents/${documentId}/publish`, {
     method: "POST",
@@ -81,4 +81,15 @@ export async function fetchTemplateRibbonInfo(desaId: string): Promise<TemplateR
     visibleCount: Array.isArray(data.visibleComponents) ? data.visibleComponents.length : 0,
     hiddenCount: Array.isArray(data.hiddenComponents) ? data.hiddenComponents.length : 0,
   };
+}
+
+export async function refreshDocumentSourceSnapshot(documentId: string): Promise<void> {
+  const response = await fetch(`/api/internal-admin/documents/${documentId}/refresh-source`, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+  });
+  const data = (await response.json()) as ApiErrorPayload;
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Snapshot sumber belum berhasil diperbarui."));
+  }
 }

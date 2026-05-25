@@ -29,7 +29,8 @@ export function buildStatusHref(pathname: string, status: string) {
   return `${pathname}?status=${encodeURIComponent(status)}`;
 }
 
-export function formatBytes(bytes: number) {
+export function formatBytes(bytes: number | null) {
+  if (bytes === null || bytes < 0) return "Tanpa file";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

@@ -92,6 +92,32 @@ export async function uploadAdminDesaDocuments(formData: FormData): Promise<numb
   return persisted;
 }
 
+export async function submitAdminDesaStructuredData(input: {
+  title: string;
+  category: string;
+  sourceUrl?: string;
+  evidenceNote?: string;
+  responsibilityAck: boolean;
+  values: Record<string, string>;
+}): Promise<{ documentId: string; status: string }> {
+  const response = await fetch("/api/admin-claim/documents/structured-submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await response.json()) as ApiErrorPayload & {
+    documentId?: string;
+    status?: string;
+  };
+  if (!response.ok || !data.documentId || !data.status) {
+    throw new Error(getErrorMessage(data, "Structured submission belum berhasil dikirim."));
+  }
+  return {
+    documentId: data.documentId,
+    status: data.status,
+  };
+}
+
 export async function approveAdminDesaDocument(documentId: string): Promise<void> {
   const response = await fetch(`/api/admin-claim/documents/${documentId}/approve`, {
     method: "POST",

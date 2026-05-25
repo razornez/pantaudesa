@@ -35,6 +35,7 @@ export async function POST(
         status: true,
         title: true,
         uploadedById: true,
+        inputMode: true,
         storageKey: true,
         fileName: true,
         fileType: true,
@@ -66,14 +67,17 @@ export async function POST(
       }, { status: 403 });
     }
 
-    const snapshot = await buildDocumentPipelineSnapshotFromStorage({
-      desaId: doc.desaId,
-      storageKey: doc.storageKey,
-      fileName: doc.fileName,
-      fileType: doc.fileType,
-      fileSize: doc.fileSize,
-      existingAiMappingResult: doc.aiMappingResult,
-    });
+    const snapshot =
+      doc.storageKey && doc.fileName && doc.fileType && doc.fileSize !== null
+        ? await buildDocumentPipelineSnapshotFromStorage({
+            desaId: doc.desaId,
+            storageKey: doc.storageKey,
+            fileName: doc.fileName,
+            fileType: doc.fileType,
+            fileSize: doc.fileSize,
+            existingAiMappingResult: doc.aiMappingResult,
+          })
+        : null;
 
     const now = new Date();
     await db.adminDesaDocument.update({
@@ -82,8 +86,12 @@ export async function POST(
         status: "PROCESSING",
         approvedById: userId,
         approvedAt: now,
-        aiMappingStatus: snapshot.aiMappingStatus,
-        aiMappingResult: snapshot.pipelineJson,
+        ...(snapshot
+          ? {
+              aiMappingStatus: snapshot.aiMappingStatus,
+              aiMappingResult: snapshot.pipelineJson,
+            }
+          : {}),
         updatedAt: now,
       },
     });
@@ -114,7 +122,7 @@ export async function POST(
         title: "Dokumen kamu disetujui",
         body: `"${doc.title}" telah disetujui oleh Admin VERIFIED dan sekarang sedang diproses oleh tim PantauDesa.`,
         desaId: doc.desaId,
-        metadata: { documentId },
+        metadata: { documentId, inputMode: doc.inputMode },
       });
     }
 

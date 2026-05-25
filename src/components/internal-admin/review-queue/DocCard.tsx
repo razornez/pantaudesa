@@ -37,15 +37,31 @@ export function DocCard({
   const draftSummary = getDraftSummary(doc);
   const versionCandidateSummary = getVersionCandidateSummary(doc);
   const nextStep = getNextStepCopy(doc);
+  const hasPreview =
+    Boolean(doc.fileName) && Boolean(doc.fileType) && doc.fileSize !== null;
+  const fileMetaLabel = hasPreview
+    ? `${doc.fileType} - ${formatBytes(doc.fileSize)}`
+    : "Input source-backed tanpa file";
 
   async function openPreview() {
+    if (!hasPreview) {
+      onNotify(
+        "Item ini tidak punya file preview. Buka review data untuk melihat hasil source-backed-nya.",
+        "warning",
+      );
+      return;
+    }
+
     setBusy(true);
 
     try {
       const signedUrl = await fetchDocumentPreviewUrl(doc.id);
       window.open(signedUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.", "error");
+      onNotify(
+        error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.",
+        "error",
+      );
     } finally {
       setBusy(false);
     }
@@ -78,11 +94,9 @@ export function DocCard({
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
         <span>{getUploaderName(doc)}</span>
-        <span className="text-slate-300">·</span>
-        <span>
-          {doc.fileType} · {formatBytes(doc.fileSize)}
-        </span>
-        <span className="text-slate-300">·</span>
+        <span className="text-slate-300">/</span>
+        <span>{fileMetaLabel}</span>
+        <span className="text-slate-300">/</span>
         <span>{new Date(doc.createdAt).toLocaleDateString("id-ID", { dateStyle: "short" })}</span>
       </div>
 
@@ -104,8 +118,8 @@ export function DocCard({
 
       {draftSummary ? (
         <div className="rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2 text-[11px] text-sky-800">
-          Draft review tersedia dengan {draftSummary.filledCount} field terisi. Tombol `Review
-          data` akan membuka isi review ini untuk dicek, dilengkapi, atau dipublikasikan.
+          Draft review tersedia dengan {draftSummary.filledCount} field terisi. Tombol
+          {" "}`Review data`{" "}akan membuka isi review ini untuk dicek, dilengkapi, atau dipublikasikan.
         </div>
       ) : null}
 
@@ -139,14 +153,16 @@ export function DocCard({
 
       {doc.status === "PROCESSING" ? (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={openPreview}
-            disabled={busy}
-            className="btn-lux btn-lux-ghost text-xs"
-          >
-            <ExternalLink size={11} aria-hidden /> Preview
-          </button>
+          {hasPreview ? (
+            <button
+              type="button"
+              onClick={openPreview}
+              disabled={busy}
+              className="btn-lux btn-lux-ghost text-xs"
+            >
+              <ExternalLink size={11} aria-hidden /> Preview
+            </button>
+          ) : null}
           <Link
             href={`/internal-admin/intake/${encodeURIComponent(doc.id)}`}
             className="btn-lux btn-lux-success text-xs"
@@ -166,14 +182,16 @@ export function DocCard({
 
       {doc.status === "WAITING_VERIFIED_APPROVAL" ? (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={openPreview}
-            disabled={busy}
-            className="btn-lux btn-lux-ghost text-xs"
-          >
-            <ExternalLink size={11} aria-hidden /> Preview
-          </button>
+          {hasPreview ? (
+            <button
+              type="button"
+              onClick={openPreview}
+              disabled={busy}
+              className="btn-lux btn-lux-ghost text-xs"
+            >
+              <ExternalLink size={11} aria-hidden /> Preview
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => onMarkFailed(doc)}
@@ -193,14 +211,16 @@ export function DocCard({
 
       {doc.status === "PUBLISHED" || doc.status === "FAILED" || doc.status === "REJECTED" ? (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={openPreview}
-            disabled={busy}
-            className="btn-lux btn-lux-ghost text-xs"
-          >
-            <ExternalLink size={11} aria-hidden /> Preview
-          </button>
+          {hasPreview ? (
+            <button
+              type="button"
+              onClick={openPreview}
+              disabled={busy}
+              className="btn-lux btn-lux-ghost text-xs"
+            >
+              <ExternalLink size={11} aria-hidden /> Preview
+            </button>
+          ) : null}
           <Link
             href={`/internal-admin/intake/${encodeURIComponent(doc.id)}`}
             className="btn-lux btn-lux-secondary text-xs"

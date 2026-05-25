@@ -1,357 +1,677 @@
-/**
- * seed-templates.mjs
- *
- * Seeds VillageDetailTemplate, VillageDetailComponent, DetailFieldStandard,
- * DesaDetailTemplateAssignment, and DesaDetailComponentVisibility.
- *
- * REQUIRES: prisma migrate dev --name flexible-village-template-components
- *           (schema must be activated first — see PROPOSAL block in schema.prisma)
- *
- * Run: node prisma/seed-templates.mjs
- * Idempotent: uses upsert throughout — safe to run multiple times.
- */
-
 import { PrismaClient } from "../src/generated/prisma/index.js";
+import {
+  COMPONENT_CATALOG,
+  DEFAULT_TEMPLATE_MANIFEST,
+  LEGACY_TEMPLATE_MANIFESTS,
+} from "./template-catalog.manifest.mjs";
 
 const db = new PrismaClient();
 
-// ─── Template definitions ─────────────────────────────────────────────────────
+async function supportsCatalogRelations() {
+  try {
+    await db.$queryRawUnsafe("SELECT 1 FROM village_component_catalog LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-const TEMPLATES = [
-  {
-    key: "CURRENT_PUBLIC_DETAIL_TEMPLATE",
-    name: "Template Umum Desa",
-    description: "Template default untuk semua desa. Mencakup 11 komponen halaman detail desa publik.",
-    isDefault: true,
-    components: [
-      {
-        componentKey: "identitas",
-        label: "Identitas & Wilayah",
-        description: "Informasi dasar identitas dan lokasi desa",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 1,
-        fields: [
-          { fieldKey: "websiteUrl",      label: "Website resmi",   valueType: "url",    isPublishableNow: true,  displayOrder: 1 },
-          { fieldKey: "kategori",        label: "Kategori desa",   valueType: "string", isPublishableNow: true,  displayOrder: 2 },
-          { fieldKey: "tahunData",       label: "Tahun data",      valueType: "number", isPublishableNow: true,  displayOrder: 3 },
-          { fieldKey: "kecamatan",       label: "Kecamatan",       valueType: "string", isPublishableNow: true,  displayOrder: 4 },
-          { fieldKey: "kabupaten",       label: "Kabupaten/Kota",  valueType: "string", isPublishableNow: true,  displayOrder: 5 },
-          { fieldKey: "provinsi",        label: "Provinsi",        valueType: "string", isPublishableNow: true,  displayOrder: 6 },
-        ],
-      },
-      {
-        componentKey: "demografi",
-        label: "Demografi",
-        description: "Data kependudukan desa",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 2,
-        fields: [
-          { fieldKey: "jumlahPenduduk", label: "Jumlah penduduk", valueType: "number", isPublishableNow: true,  displayOrder: 1 },
-          { fieldKey: "jumlahKK",       label: "Jumlah KK",       valueType: "number", isPublishableNow: false, displayOrder: 2 },
-          { fieldKey: "jumlahDusun",    label: "Jumlah dusun",    valueType: "number", isPublishableNow: false, displayOrder: 3 },
-          { fieldKey: "jumlahRt",       label: "Jumlah RT",       valueType: "number", isPublishableNow: false, displayOrder: 4 },
-          { fieldKey: "jumlahRw",       label: "Jumlah RW",       valueType: "number", isPublishableNow: false, displayOrder: 5 },
-        ],
-      },
-      {
-        componentKey: "sumber_dokumen",
-        label: "Sumber & Dokumen",
-        description: "Sumber publik dan dokumen pendukung desa (baca dari DataSource[], DokumenPublik[])",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 3,
-        fields: [], // no DataDesa-stored fields — reads existing models
-      },
-      {
-        componentKey: "transparansi",
-        label: "Transparansi & Skor",
-        description: "Skor transparansi dan rincian dokumen (computed dari dokumen yang tersedia)",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 4,
-        fields: [
-          { fieldKey: "skorTransparansiTotal",    label: "Skor transparansi total",     valueType: "number", isPublishableNow: false, displayOrder: 1 },
-          { fieldKey: "skorKetepatan",            label: "Ketepatan pelaporan",          valueType: "number", isPublishableNow: false, displayOrder: 2 },
-          { fieldKey: "skorKelengkapan",          label: "Kelengkapan dokumen",          valueType: "number", isPublishableNow: false, displayOrder: 3 },
-        ],
-      },
-      {
-        componentKey: "perangkat",
-        label: "Perangkat Desa",
-        description: "Struktur kepemimpinan dan staf desa (baca dari PerangkatDesa[])",
-        componentType: "list",
-        isDefaultVisible: true,
-        displayOrder: 5,
-        fields: [
-          { fieldKey: "kepalaDesa", label: "Nama kepala desa", valueType: "string", isPublishableNow: false, displayOrder: 1 },
-        ],
-      },
-      {
-        componentKey: "anggaran",
-        label: "Anggaran & Realisasi",
-        description: "Ringkasan anggaran dan realisasi belanja desa",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 6,
-        fields: [
-          { fieldKey: "totalAnggaran",       label: "Total anggaran",     valueType: "number", isPublishableNow: false, displayOrder: 1 },
-          { fieldKey: "terealisasi",         label: "Realisasi anggaran", valueType: "number", isPublishableNow: false, displayOrder: 2 },
-          { fieldKey: "persentaseSerapan",   label: "Persentase serapan", valueType: "number", isPublishableNow: false, displayOrder: 3 },
-        ],
-      },
-      {
-        componentKey: "pendapatan",
-        label: "Sumber Pendapatan",
-        description: "Rincian sumber pendapatan APBDes",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 7,
-        fields: [
-          { fieldKey: "danaDesa",          label: "Dana desa",           valueType: "number", isPublishableNow: false, displayOrder: 1 },
-          { fieldKey: "add",               label: "ADD",                 valueType: "number", isPublishableNow: false, displayOrder: 2 },
-          { fieldKey: "pades",             label: "PADes",               valueType: "number", isPublishableNow: false, displayOrder: 3 },
-          { fieldKey: "bantuanKeuangan",   label: "Bantuan keuangan",    valueType: "number", isPublishableNow: false, displayOrder: 4 },
-        ],
-      },
-      {
-        componentKey: "kinerja",
-        label: "Kinerja & Rincian APBDes",
-        description: "Output fisik, rincian per bidang, dan riwayat anggaran (baca dari APBDesItem[], AnggaranDesaSummary[])",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 8,
-        fields: [
-          { fieldKey: "outputFisik",   label: "Output fisik",      valueType: "json",   isPublishableNow: false, displayOrder: 1 },
-          { fieldKey: "riwayatAPBDes", label: "Riwayat anggaran",  valueType: "json",   isPublishableNow: false, displayOrder: 2 },
-        ],
-      },
-      {
-        componentKey: "profil_desa",
-        label: "Profil & Kelengkapan Desa",
-        description: "Aset, fasilitas, lembaga, BUMDes, kontak, dan potensi desa",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 9,
-        fields: [
-          { fieldKey: "teleponDesa",    label: "Telepon desa",     valueType: "string", isPublishableNow: false, displayOrder: 1 },
-          { fieldKey: "emailDesa",      label: "Email desa",       valueType: "string", isPublishableNow: false, displayOrder: 2 },
-          { fieldKey: "potensiUnggulan",label: "Potensi unggulan", valueType: "text",   isPublishableNow: false, displayOrder: 3 },
-          { fieldKey: "fasilitasUmum",  label: "Fasilitas umum",   valueType: "text",   isPublishableNow: false, displayOrder: 4 },
-          { fieldKey: "asetDesa",       label: "Aset desa",        valueType: "json",   isPublishableNow: false, displayOrder: 5 },
-          { fieldKey: "lembagaDesa",    label: "Lembaga desa",     valueType: "json",   isPublishableNow: false, displayOrder: 6 },
-          { fieldKey: "bumdes",         label: "BUMDes",           valueType: "json",   isPublishableNow: false, displayOrder: 7 },
-        ],
-      },
-      {
-        componentKey: "panduan_warga",
-        label: "Panduan Warga",
-        description: "Panduan hak warga, tanggung jawab, dan langkah pelaporan (static + computed)",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 10,
-        fields: [], // static content, no DataDesa
-      },
-      {
-        componentKey: "suara_warga",
-        label: "Suara Warga",
-        description: "Cerita dan suara warga tentang kondisi desa (citizen voices, model terpisah)",
-        componentType: "section",
-        isDefaultVisible: true,
-        displayOrder: 11,
-        fields: [], // separate model (SuaraWarga), not DataDesa
-      },
-    ],
-  },
-  {
-    key: "DESA_WISATA_TEMPLATE",
-    name: "Template Desa Wisata",
-    description: "Template untuk desa dengan potensi wisata. Profil & potensi desa menjadi publishable.",
-    isDefault: false,
-    components: null, // populated below — same as default but profil_desa fields publishable
-  },
-  {
-    key: "DESA_TRANSPARAN_TEMPLATE",
-    name: "Template Desa Transparan",
-    description: "Template untuk desa yang memprioritaskan transparansi anggaran. Field anggaran menjadi publishable.",
-    isDefault: false,
-    components: null, // populated below — same as default but anggaran fields publishable
-  },
-];
+async function migrateLegacyPerangkatIntoProfilComponent({
+  templateId,
+  legacyComponentId,
+  profilComponentId,
+  profilFieldIdMap,
+}) {
+  if (!legacyComponentId || !profilComponentId) return;
 
-// Assignments: desaId → templateKey
-const ASSIGNMENTS = [
-  { desaId: "demo-desa-arjasari",   templateKey: "DESA_WISATA_TEMPLATE" },
-  { desaId: "demo-desa-baros",      templateKey: "DESA_WISATA_TEMPLATE" },
-  { desaId: "demo-desa-batukarut",  templateKey: "DESA_TRANSPARAN_TEMPLATE" },
-  { desaId: "demo-desa-lebakwangi", templateKey: "DESA_TRANSPARAN_TEMPLATE" },
-];
+  const migratedFieldKeys = ["kepalaDesa", "perangkatDesa"];
+  const [legacyRows, legacyOverrides] = await Promise.all([
+    db.dataDesa.findMany({
+      where: {
+        templateId,
+        componentId: legacyComponentId,
+        fieldKey: { in: migratedFieldKeys },
+      },
+      select: {
+        id: true,
+        desaId: true,
+        fieldKey: true,
+      },
+    }),
+    db.desaDetailComponentVisibility.findMany({
+      where: {
+        templateId,
+        componentId: legacyComponentId,
+      },
+      select: {
+        id: true,
+        desaId: true,
+        isVisible: true,
+        reason: true,
+        updatedById: true,
+      },
+    }),
+  ]);
 
-// Component visibility overrides: baros hides anggaran
-const VISIBILITY_OVERRIDES = [
-  {
-    desaId:       "demo-desa-baros",
-    templateKey:  "DESA_WISATA_TEMPLATE",
-    componentKey: "anggaran",
-    isVisible:    false,
-    reason:       "Desa Baros memilih tidak menampilkan komponen anggaran saat ini.",
-  },
-];
+  for (const row of legacyRows) {
+    const targetFieldStandardId = profilFieldIdMap.get(row.fieldKey) ?? null;
+    const existingTargetRow = await db.dataDesa.findFirst({
+      where: {
+        templateId,
+        componentId: profilComponentId,
+        desaId: row.desaId,
+        fieldKey: row.fieldKey,
+        isActive: true,
+        NOT: { id: row.id },
+      },
+      select: { id: true },
+    });
 
-// ─── Seed logic ───────────────────────────────────────────────────────────────
-
-async function seedTemplates() {
-  console.log("🌱 Seeding village detail templates...");
-
-  const defaultComponents = TEMPLATES[0].components;
-
-  for (const templateDef of TEMPLATES) {
-    // Determine components for this template
-    let components = templateDef.components ?? JSON.parse(JSON.stringify(defaultComponents));
-
-    // For DESA_WISATA_TEMPLATE: make profil_desa fields publishable
-    if (templateDef.key === "DESA_WISATA_TEMPLATE") {
-      for (const comp of components) {
-        if (comp.componentKey === "profil_desa") {
-          for (const field of comp.fields) {
-            if (["potensiUnggulan", "fasilitasUmum"].includes(field.fieldKey)) {
-              field.isPublishableNow = true;
-            }
-          }
-        }
-      }
+    if (existingTargetRow) {
+      await db.dataDesa.updateMany({
+        where: { id: row.id },
+        data: {
+          status: "ARCHIVED",
+          isActive: false,
+          reviewNote:
+            "Archived during template seed sync after perangkat fields moved into profil_desa.",
+        },
+      });
+      continue;
     }
 
-    // For DESA_TRANSPARAN_TEMPLATE: make anggaran + kinerja fields publishable
-    if (templateDef.key === "DESA_TRANSPARAN_TEMPLATE") {
-      for (const comp of components) {
-        if (["anggaran", "pendapatan", "kinerja"].includes(comp.componentKey)) {
-          for (const field of comp.fields) {
-            field.isPublishableNow = true;
-          }
-        }
-      }
-    }
+    await db.dataDesa.updateMany({
+      where: { id: row.id },
+      data: {
+        componentId: profilComponentId,
+        fieldStandardId: targetFieldStandardId,
+      },
+    });
+  }
 
-    const template = await db.villageDetailTemplate.upsert({
-      where: { key: templateDef.key },
+  for (const override of legacyOverrides) {
+    await db.desaDetailComponentVisibility.upsert({
+      where: {
+        desaId_componentId: {
+          desaId: override.desaId,
+          componentId: profilComponentId,
+        },
+      },
       create: {
-        key: templateDef.key,
-        name: templateDef.name,
-        description: templateDef.description,
-        isDefault: templateDef.isDefault,
+        desaId: override.desaId,
+        templateId,
+        componentId: profilComponentId,
+        isVisible: override.isVisible,
+        reason: override.reason,
+        updatedById: override.updatedById,
+      },
+      update: {
+        isVisible: override.isVisible,
+        reason: override.reason,
+        updatedById: override.updatedById,
+      },
+    });
+  }
+
+  if (legacyOverrides.length > 0) {
+    await db.desaDetailComponentVisibility.deleteMany({
+      where: {
+        templateId,
+        componentId: legacyComponentId,
+      },
+    });
+  }
+}
+
+async function seedComponentCatalog(withCatalogTables) {
+  const catalogByKey = new Map();
+
+  if (!withCatalogTables) {
+    for (const componentDef of COMPONENT_CATALOG) {
+      catalogByKey.set(componentDef.componentKey, {
+        id: null,
+        componentKey: componentDef.componentKey,
+      });
+    }
+    return catalogByKey;
+  }
+
+  for (const componentDef of COMPONENT_CATALOG) {
+    const component = await db.villageComponentCatalog.upsert({
+      where: { componentKey: componentDef.componentKey },
+      create: {
+        componentKey: componentDef.componentKey,
+        label: componentDef.label,
+        description: componentDef.description,
+        componentType: componentDef.componentType,
         status: "ACTIVE",
       },
       update: {
-        name: templateDef.name,
-        description: templateDef.description,
-        isDefault: templateDef.isDefault,
+        label: componentDef.label,
+        description: componentDef.description,
+        componentType: componentDef.componentType,
+        status: "ACTIVE",
       },
     });
-    console.log(`  ✓ Template: ${templateDef.key}`);
 
-    for (const compDef of components) {
-      const component = await db.villageDetailComponent.upsert({
-        where: { templateId_componentKey: { templateId: template.id, componentKey: compDef.componentKey } },
+    catalogByKey.set(componentDef.componentKey, component);
+
+    for (const fieldDef of componentDef.fields) {
+      await db.villageComponentCatalogField.upsert({
+        where: {
+          catalogComponentId_fieldKey: {
+            catalogComponentId: component.id,
+            fieldKey: fieldDef.fieldKey,
+          },
+        },
         create: {
-          templateId: template.id,
-          componentKey: compDef.componentKey,
-          label: compDef.label,
-          description: compDef.description,
-          componentType: compDef.componentType,
-          isDefaultVisible: compDef.isDefaultVisible,
-          displayOrder: compDef.displayOrder,
+          catalogComponentId: component.id,
+          fieldKey: fieldDef.fieldKey,
+          label: fieldDef.label,
+          valueType: fieldDef.valueType,
+          isPublishableNow: fieldDef.isPublishableNow,
+          isPublicVisible: true,
+          displayOrder: fieldDef.displayOrder,
           status: "ACTIVE",
         },
         update: {
-          label: compDef.label,
-          description: compDef.description,
-          isDefaultVisible: compDef.isDefaultVisible,
-          displayOrder: compDef.displayOrder,
+          label: fieldDef.label,
+          valueType: fieldDef.valueType,
+          isPublishableNow: fieldDef.isPublishableNow,
+          isPublicVisible: true,
+          displayOrder: fieldDef.displayOrder,
+          status: "ACTIVE",
+        },
+      });
+    }
+  }
+
+  return catalogByKey;
+}
+
+async function syncTemplatePlacements(templateId, orderedComponentDefs, catalogByKey) {
+  const withCatalogTables = await supportsCatalogRelations();
+  const existingPlacements = await db.villageDetailComponent.findMany({
+    where: { templateId },
+    select: {
+      id: true,
+      componentKey: true,
+      fieldStandards: {
+        select: { id: true, fieldKey: true },
+      },
+      _count: {
+        select: {
+          dataDesa: true,
+          desaVisibility: true,
+        },
+      },
+    },
+  });
+
+  const existingByKey = new Map(
+    existingPlacements.map((placement) => [placement.componentKey, placement]),
+  );
+  const nextKeys = new Set(orderedComponentDefs.map((component) => component.componentKey));
+  const placementIdByKey = new Map();
+  const fieldStandardIdByComponentKey = new Map();
+
+  for (const [index, componentDef] of orderedComponentDefs.entries()) {
+    const catalogComponent = catalogByKey.get(componentDef.componentKey);
+    if (!catalogComponent) {
+      throw new Error(`Catalog component not found: ${componentDef.componentKey}`);
+    }
+
+    const placement = await db.villageDetailComponent.upsert({
+      where: {
+        templateId_componentKey: {
+          templateId,
+          componentKey: componentDef.componentKey,
+        },
+      },
+      create: {
+        templateId,
+        ...(catalogComponent.id ? { catalogComponentId: catalogComponent.id } : {}),
+        componentKey: componentDef.componentKey,
+        label: componentDef.label,
+        description: componentDef.description,
+        componentType: componentDef.componentType,
+        isDefaultVisible: componentDef.isDefaultVisible,
+        displayOrder: index + 1,
+        status: "ACTIVE",
+      },
+      update: {
+        ...(catalogComponent.id ? { catalogComponentId: catalogComponent.id } : {}),
+        label: componentDef.label,
+        description: componentDef.description,
+        componentType: componentDef.componentType,
+        isDefaultVisible: componentDef.isDefaultVisible,
+        displayOrder: index + 1,
+        status: "ACTIVE",
+      },
+      select: {
+        id: true,
+      },
+    });
+    placementIdByKey.set(componentDef.componentKey, placement.id);
+
+    const catalogFields =
+      withCatalogTables && catalogComponent.id
+        ? await db.villageComponentCatalogField.findMany({
+            where: { catalogComponentId: catalogComponent.id, status: "ACTIVE" },
+            orderBy: { displayOrder: "asc" },
+          })
+        : componentDef.fields.map((field) => ({
+            id: null,
+            fieldKey: field.fieldKey,
+            label: field.label,
+            valueType: field.valueType,
+            sourcePolicyJson: null,
+            validationRules: null,
+            isRequired: false,
+            isPublicVisible: true,
+            isPublishableNow: field.isPublishableNow,
+            displayOrder: field.displayOrder,
+          }));
+
+    const nextFieldKeys = new Set(catalogFields.map((field) => field.fieldKey));
+    const existingPlacement = existingByKey.get(componentDef.componentKey);
+    const staleFieldRows = (existingPlacement?.fieldStandards ?? []).filter(
+      (field) => !nextFieldKeys.has(field.fieldKey),
+    );
+
+    if (staleFieldRows.length > 0) {
+      await db.detailFieldStandard.updateMany({
+        where: { id: { in: staleFieldRows.map((field) => field.id) } },
+        data: { status: "ARCHIVED" },
+      });
+    }
+
+    for (const field of catalogFields) {
+      const fieldStandard = await db.detailFieldStandard.upsert({
+        where: {
+          templateId_componentId_fieldKey: {
+            templateId,
+            componentId: placement.id,
+            fieldKey: field.fieldKey,
+          },
+        },
+        create: {
+          templateId,
+          componentId: placement.id,
+          ...(field.id ? { catalogFieldId: field.id } : {}),
+          fieldKey: field.fieldKey,
+          label: field.label,
+          valueType: field.valueType,
+          sourcePolicyJson: field.sourcePolicyJson,
+          validationRules: field.validationRules,
+          isRequired: field.isRequired,
+          isPublicVisible: field.isPublicVisible,
+          isPublishableNow: field.isPublishableNow,
+          displayOrder: field.displayOrder,
+          status: "ACTIVE",
+        },
+        update: {
+          ...(field.id ? { catalogFieldId: field.id } : {}),
+          label: field.label,
+          valueType: field.valueType,
+          sourcePolicyJson: field.sourcePolicyJson,
+          validationRules: field.validationRules,
+          isRequired: field.isRequired,
+          isPublicVisible: field.isPublicVisible,
+          isPublishableNow: field.isPublishableNow,
+          displayOrder: field.displayOrder,
+          status: "ACTIVE",
+        },
+        select: {
+          id: true,
         },
       });
 
-      for (const fieldDef of compDef.fields) {
-        await db.detailFieldStandard.upsert({
-          where: {
-            templateId_componentId_fieldKey: {
-              templateId: template.id,
-              componentId: component.id,
-              fieldKey: fieldDef.fieldKey,
-            },
-          },
-          create: {
-            templateId: template.id,
-            componentId: component.id,
-            fieldKey: fieldDef.fieldKey,
-            label: fieldDef.label,
-            valueType: fieldDef.valueType,
-            isPublishableNow: fieldDef.isPublishableNow,
-            displayOrder: fieldDef.displayOrder,
-            status: "ACTIVE",
-          },
-          update: {
-            label: fieldDef.label,
-            isPublishableNow: fieldDef.isPublishableNow,
-            displayOrder: fieldDef.displayOrder,
-          },
-        });
-      }
+      const fieldMap = fieldStandardIdByComponentKey.get(componentDef.componentKey) ?? new Map();
+      fieldMap.set(field.fieldKey, fieldStandard.id);
+      fieldStandardIdByComponentKey.set(componentDef.componentKey, fieldMap);
     }
   }
 
-  // Seed assignments
-  console.log("\n🌱 Seeding template assignments...");
-  for (const assignment of ASSIGNMENTS) {
-    const desa = await db.desa.findUnique({ where: { id: assignment.desaId }, select: { id: true, nama: true } });
-    if (!desa) {
-      console.log(`  ⚠ Skipped: desa ${assignment.desaId} not found in DB`);
+  await migrateLegacyPerangkatIntoProfilComponent({
+    templateId,
+    legacyComponentId: existingByKey.get("perangkat")?.id ?? null,
+    profilComponentId: placementIdByKey.get("profil_desa") ?? null,
+    profilFieldIdMap: fieldStandardIdByComponentKey.get("profil_desa") ?? new Map(),
+  });
+
+  for (const placement of existingPlacements) {
+    if (nextKeys.has(placement.componentKey)) continue;
+    if (placement._count.dataDesa > 0 || placement._count.desaVisibility > 0) {
+      await db.villageDetailComponent.updateMany({
+        where: { id: placement.id },
+        data: { status: "ARCHIVED" },
+      });
+      await db.detailFieldStandard.updateMany({
+        where: { componentId: placement.id },
+        data: { status: "ARCHIVED" },
+      });
       continue;
     }
-    const template = await db.villageDetailTemplate.findUnique({ where: { key: assignment.templateKey }, select: { id: true } });
-    if (!template) {
-      console.log(`  ⚠ Skipped: template ${assignment.templateKey} not found`);
-      continue;
-    }
-    await db.desaDetailTemplateAssignment.upsert({
-      where: { desaId: assignment.desaId },
-      create: { desaId: desa.id, templateId: template.id, isActive: true, reason: "Initial seeding" },
-      update: { templateId: template.id, isActive: true },
-    });
-    console.log(`  ✓ ${desa.nama} → ${assignment.templateKey}`);
+
+    await db.detailFieldStandard.deleteMany({ where: { componentId: placement.id } });
+    await db.villageDetailComponent.deleteMany({ where: { id: placement.id } });
   }
-
-  // Seed visibility overrides
-  console.log("\n🌱 Seeding component visibility overrides...");
-  for (const override of VISIBILITY_OVERRIDES) {
-    const desa = await db.desa.findUnique({ where: { id: override.desaId }, select: { id: true, nama: true } });
-    if (!desa) { console.log(`  ⚠ Skipped: ${override.desaId} not found`); continue; }
-    const template = await db.villageDetailTemplate.findUnique({ where: { key: override.templateKey }, select: { id: true } });
-    if (!template) { console.log(`  ⚠ Skipped: template ${override.templateKey} not found`); continue; }
-    const component = await db.villageDetailComponent.findUnique({
-      where: { templateId_componentKey: { templateId: template.id, componentKey: override.componentKey } },
-      select: { id: true },
-    });
-    if (!component) { console.log(`  ⚠ Skipped: component ${override.componentKey} not found`); continue; }
-
-    await db.desaDetailComponentVisibility.upsert({
-      where: { desaId_componentId: { desaId: desa.id, componentId: component.id } },
-      create: {
-        desaId: desa.id,
-        templateId: template.id,
-        componentId: component.id,
-        isVisible: override.isVisible,
-        reason: override.reason,
-      },
-      update: { isVisible: override.isVisible, reason: override.reason },
-    });
-    console.log(`  ✓ ${desa.nama} · ${override.componentKey} → visible: ${override.isVisible}`);
-  }
-
-  console.log("\n✅ Template seeding complete.");
 }
 
-seedTemplates()
-  .catch(e => { console.error("❌ Seed failed:", e); process.exit(1); })
+async function seedTemplates(catalogByKey) {
+  const defaultTemplate = await db.villageDetailTemplate.upsert({
+    where: { key: DEFAULT_TEMPLATE_MANIFEST.key },
+    create: {
+      key: DEFAULT_TEMPLATE_MANIFEST.key,
+      name: DEFAULT_TEMPLATE_MANIFEST.name,
+      description: DEFAULT_TEMPLATE_MANIFEST.description,
+      isDefault: true,
+      status: "ACTIVE",
+    },
+    update: {
+      name: DEFAULT_TEMPLATE_MANIFEST.name,
+      description: DEFAULT_TEMPLATE_MANIFEST.description,
+      isDefault: true,
+      status: "ACTIVE",
+    },
+  });
+
+  await syncTemplatePlacements(
+    defaultTemplate.id,
+    COMPONENT_CATALOG.filter((component) =>
+      DEFAULT_TEMPLATE_MANIFEST.componentKeys.includes(component.componentKey),
+    ),
+    catalogByKey,
+  );
+
+  for (const legacy of LEGACY_TEMPLATE_MANIFESTS) {
+    await db.villageDetailTemplate.upsert({
+      where: { key: legacy.key },
+      create: {
+        key: legacy.key,
+        name: legacy.name,
+        description: legacy.description,
+        isDefault: false,
+        status: legacy.status,
+      },
+      update: {
+        name: legacy.name,
+        description: legacy.description,
+        isDefault: false,
+        status: legacy.status,
+      },
+    });
+  }
+
+  return defaultTemplate;
+}
+
+async function seedAssignments(templateId) {
+  const desaRows = await db.desa.findMany({
+    select: { id: true, nama: true },
+    orderBy: { nama: "asc" },
+  });
+
+  for (const desa of desaRows) {
+    await db.desaDetailTemplateAssignment.upsert({
+      where: { desaId: desa.id },
+      create: {
+        desaId: desa.id,
+        templateId,
+        isActive: true,
+        reason: "Unified active template",
+      },
+      update: {
+        templateId,
+        isActive: true,
+        reason: "Unified active template",
+      },
+    });
+  }
+
+  await db.desaDetailComponentVisibility.deleteMany({});
+}
+
+function isMeaningfulFieldValue(row) {
+  if (typeof row?.valueText === "string" && row.valueText.trim().length > 0) return true;
+  if (Array.isArray(row?.valueJson)) return row.valueJson.length > 0;
+  return row?.valueJson !== null && row?.valueJson !== undefined;
+}
+
+function normalizePerangkatPayload(perangkat, kepalaDesa) {
+  if (!Array.isArray(perangkat)) return [];
+
+  const normalized = perangkat
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      ...item,
+      jabatan: typeof item.jabatan === "string" ? item.jabatan.trim() : "",
+      nama: typeof item.nama === "string" ? item.nama.trim() : "",
+    }))
+    .filter((item) => item.jabatan && item.nama);
+
+  if (!kepalaDesa || typeof kepalaDesa !== "string" || kepalaDesa.trim().length === 0) {
+    return normalized;
+  }
+
+  const kepalaDesaName = kepalaDesa.trim();
+  const kepalaDesaIndex = normalized.findIndex((item) => /kepala desa/i.test(item.jabatan));
+
+  if (kepalaDesaIndex >= 0) {
+    const next = [...normalized];
+    next[kepalaDesaIndex] = {
+      ...next[kepalaDesaIndex],
+      nama: kepalaDesaName,
+    };
+    return next;
+  }
+
+  return [{ jabatan: "Kepala Desa", nama: kepalaDesaName }, ...normalized];
+}
+
+async function upsertPublishedTemplateField({
+  desaId,
+  templateId,
+  componentId,
+  fieldStandardId,
+  fieldKey,
+  valueText = null,
+  valueJson = null,
+  reviewNote,
+  overwriteMeaningful = false,
+}) {
+  const existingRow = await db.dataDesa.findFirst({
+    where: {
+      desaId,
+      templateId,
+      componentId,
+      fieldKey,
+      isActive: true,
+    },
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      valueText: true,
+      valueJson: true,
+    },
+  });
+
+  if (existingRow && isMeaningfulFieldValue(existingRow) && !overwriteMeaningful) {
+    return false;
+  }
+
+  const payload = {
+    templateId,
+    componentId,
+    fieldStandardId,
+    fieldKey,
+    valueText,
+    valueJson,
+    sourceLabel: "Legacy perangkat_desa backfill",
+    reviewNote,
+    status: "PUBLISHED",
+    isActive: true,
+    publishedAt: new Date(),
+  };
+
+  if (existingRow) {
+    await db.dataDesa.updateMany({
+      where: { id: existingRow.id },
+      data: payload,
+    });
+    return true;
+  }
+
+  await db.dataDesa.create({
+    data: {
+      desaId,
+      ...payload,
+    },
+  });
+  return true;
+}
+
+async function backfillLegacyPerangkatFields(templateId) {
+  const profilComponent = await db.villageDetailComponent.findFirst({
+    where: {
+      templateId,
+      componentKey: "profil_desa",
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      fieldStandards: {
+        where: {
+          status: "ACTIVE",
+          fieldKey: { in: ["kepalaDesa", "perangkatDesa"] },
+        },
+        select: {
+          id: true,
+          fieldKey: true,
+        },
+      },
+    },
+  });
+
+  if (!profilComponent) return;
+
+  const fieldIdMap = new Map(
+    profilComponent.fieldStandards.map((field) => [field.fieldKey, field.id]),
+  );
+  const perangkatFieldId = fieldIdMap.get("perangkatDesa") ?? null;
+  const kepalaDesaFieldId = fieldIdMap.get("kepalaDesa") ?? null;
+  if (!perangkatFieldId && !kepalaDesaFieldId) return;
+
+  const legacyRows = await db.perangkatDesa.findMany({
+    where: {
+      desa: {
+        detailTemplateAssignment: {
+          templateId,
+          isActive: true,
+        },
+      },
+    },
+    orderBy: [{ jabatan: "asc" }, { nama: "asc" }],
+    select: {
+      desaId: true,
+      jabatan: true,
+      nama: true,
+      periode: true,
+      kontakLabel: true,
+    },
+  });
+
+  const existingKepalaDesaRows = await db.dataDesa.findMany({
+    where: {
+      templateId,
+      fieldKey: "kepalaDesa",
+      status: "PUBLISHED",
+      isActive: true,
+    },
+    select: {
+      desaId: true,
+      valueText: true,
+    },
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+  });
+  const kepalaDesaByDesaId = new Map();
+  for (const row of existingKepalaDesaRows) {
+    if (kepalaDesaByDesaId.has(row.desaId)) continue;
+    if (typeof row.valueText !== "string" || row.valueText.trim().length === 0) continue;
+    kepalaDesaByDesaId.set(row.desaId, row.valueText.trim());
+  }
+
+  const perangkatByDesaId = new Map();
+  for (const row of legacyRows) {
+    const list = perangkatByDesaId.get(row.desaId) ?? [];
+    list.push({
+      jabatan: row.jabatan,
+      nama: row.nama,
+      ...(row.periode ? { periode: row.periode } : {}),
+      ...(row.kontakLabel ? { kontak: row.kontakLabel } : {}),
+    });
+    perangkatByDesaId.set(row.desaId, list);
+  }
+
+  for (const [desaId, perangkat] of perangkatByDesaId.entries()) {
+    const legacyKepalaDesa =
+      perangkat.find((item) => /kepala desa/i.test(item.jabatan))?.nama ?? null;
+    const preferredKepalaDesa = kepalaDesaByDesaId.get(desaId) ?? legacyKepalaDesa;
+    const normalizedPerangkat = normalizePerangkatPayload(perangkat, preferredKepalaDesa);
+
+    if (perangkatFieldId) {
+      await upsertPublishedTemplateField({
+        desaId,
+        templateId,
+        componentId: profilComponent.id,
+        fieldStandardId: perangkatFieldId,
+        fieldKey: "perangkatDesa",
+        valueJson: normalizedPerangkat,
+        reviewNote:
+          "Backfilled from legacy perangkat_desa rows after perangkat ownership moved into profil_desa.",
+        overwriteMeaningful: true,
+      });
+    }
+
+    if (kepalaDesaFieldId) {
+      const kepalaDesa = preferredKepalaDesa;
+      if (!kepalaDesa) continue;
+
+      await upsertPublishedTemplateField({
+        desaId,
+        templateId,
+        componentId: profilComponent.id,
+        fieldStandardId: kepalaDesaFieldId,
+        fieldKey: "kepalaDesa",
+        valueText: kepalaDesa,
+        reviewNote:
+          "Backfilled kepalaDesa from legacy perangkat_desa rows after perangkat ownership moved into profil_desa.",
+      });
+    }
+  }
+}
+
+async function main() {
+  const withCatalogTables = await supportsCatalogRelations();
+  console.log("Seeding template catalog...");
+  const catalogByKey = await seedComponentCatalog(withCatalogTables);
+
+  console.log("Seeding templates...");
+  const defaultTemplate = await seedTemplates(catalogByKey);
+
+  console.log("Seeding desa assignments...");
+  await seedAssignments(defaultTemplate.id);
+
+  console.log("Backfilling perangkat template fields...");
+  await backfillLegacyPerangkatFields(defaultTemplate.id);
+
+  console.log("Template seeding complete.");
+}
+
+main()
+  .catch((error) => {
+    console.error("Seed templates failed:", error);
+    process.exit(1);
+  })
   .finally(() => db.$disconnect());

@@ -56,6 +56,11 @@ export async function GET(
     if (!doc) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
+    if (!doc.storageKey) {
+      return NextResponse.json({
+        error: "Dokumen ini tidak memiliki lampiran file untuk dipreview.",
+      }, { status: 422 });
+    }
 
     // Authorization: same-desa active admin OR internal admin
     const isAdminPlatform = await isInternalAdmin(userId);

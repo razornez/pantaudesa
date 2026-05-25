@@ -1,40 +1,120 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft, Wallet, CheckCircle2, Clock, TrendingUp,
-  Megaphone, ArrowRight,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Megaphone,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
-import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
+import {
+  buildPublishedProfilSection,
+  readPublishedNumber,
+  readPublishedString,
+  toPublishedApbdesItems,
+  toPublishedOutputFisikArray,
+  toPublishedPerangkatDesaArray,
+  toPublishedRiwayatArray,
+} from "@/lib/data/desa-template-public-view";
 import { getPublishedTemplateData } from "@/lib/data/village-template-read";
+import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
 import { perfStart, publicPerfLog } from "@/lib/perf";
-import { formatRupiahMock, formatRupiahFullMock } from "@/lib/utils";
+import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
+import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
-import DetailSectionNav from "@/components/desa/DetailSectionNav";
-import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
+import DetailSectionNav, {
+  type DetailSectionNavItem,
+} from "@/components/desa/DetailSectionNav";
 import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
-import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
-import TransparansiCard from "@/components/desa/TransparansiCard";
-import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
 import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
+import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
+import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
+import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
+import TransparansiCard from "@/components/desa/TransparansiCard";
+import {
+  PUBLIC_TEMPLATE_COMPONENT_REGISTRY,
+} from "@/components/desa/public-template-registry";
 
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-interface Props { params: Promise<{ id: string }> }
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+type PublicDetailSlotKey =
+  | "first_view"
+  | "sumber_dokumen"
+  | "transparansi"
+  | "ringkasan_anggaran"
+  | "kinerja_anggaran"
+  | "kelengkapan_desa"
+  | "panduan_warga"
+  | "suara_warga";
+
+const SLOT_META: Record<
+  PublicDetailSlotKey,
+  {
+    anchorId: string;
+    navLabel: string;
+  }
+> = {
+  first_view: { anchorId: "ringkasan", navLabel: "Ringkasan" },
+  sumber_dokumen: {
+    anchorId: "dokumen-transparansi",
+    navLabel: "Sumber & Dokumen",
+  },
+  transparansi: { anchorId: "dokumen-desa", navLabel: "Transparansi" },
+  ringkasan_anggaran: { anchorId: "anggaran", navLabel: "Anggaran" },
+  kinerja_anggaran: {
+    anchorId: "kinerja-anggaran",
+    navLabel: "Kinerja",
+  },
+  kelengkapan_desa: {
+    anchorId: "kelengkapan-desa",
+    navLabel: "Kelengkapan",
+  },
+  panduan_warga: { anchorId: "panduan-warga", navLabel: "Panduan Warga" },
+  suara_warga: { anchorId: "suara-warga", navLabel: "Suara Warga" },
+};
+
+function getOrderedVisibleSlots(componentKeys: string[]): PublicDetailSlotKey[] {
+  const slots: PublicDetailSlotKey[] = [];
+  const seen = new Set<PublicDetailSlotKey>();
+
+  for (const componentKey of componentKeys) {
+    const slot = PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]
+      ?.detailSlot as PublicDetailSlotKey | undefined;
+    if (!slot || seen.has(slot)) continue;
+    seen.add(slot);
+    slots.push(slot);
+  }
+
+  return slots;
+}
+
+function buildNavItems(slots: PublicDetailSlotKey[]): DetailSectionNavItem[] {
+  return slots.map((slot) => ({
+    href: `#${SLOT_META[slot].anchorId}`,
+    label: SLOT_META[slot].navLabel,
+  }));
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const desa = await getDesaByIdOrSlugWithFallback(id);
   if (!desa) return { title: "Desa Tidak Ditemukan" };
 
-  const title       = `${desa.nama} — Anggaran ${desa.tahun}`;
-  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Indikator serapan anggaran ${desa.persentaseSerapan}% dari total ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(desa.totalAnggaran)}; nilai bertanda mock adalah contoh baca.`;
+  const title = `${desa.nama} - Halaman Detail Desa`;
+  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Halaman detail desa berbasis template aktif dan data publik yang sudah diterbitkan.`;
 
   return {
     title,
@@ -42,7 +122,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url:  `https://pantaudesa.id/desa/${desa.id}`,
+      url: `https://pantaudesa.id/desa/${desa.id}`,
       type: "article",
     },
     twitter: { title, description },
@@ -57,25 +137,104 @@ export default async function DesaDetailPage({ params }: Props) {
   publicPerfLog("public.desa-detail", "getDesaByIdOrSlugWithFallback()", desaTimer);
   if (!desa) return notFound();
 
-  const selisih      = desa.totalAnggaran - desa.terealisasi;
-
-  // Use prismaId (actual DB PK) for all DB queries — desa.id is the URL slug
   const templateData = await getPublishedTemplateData(desa.prismaId ?? desa.id);
+  const runtimeManifest = buildRuntimeTemplateManifest(templateData.resolvedTemplate);
   publicPerfLog("public.desa-detail", "routeDataReady", routeTimer);
 
-  const profil = desa.profil;
-
-  // Only hide sections explicitly marked hidden — default show everything
-  const hiddenComponentKeys = new Set(
-    templateData.resolvedTemplate.hiddenComponents.map(c => c.componentKey)
+  const publishedValues = templateData.publishedValues;
+  const publishedPenduduk = readPublishedNumber(publishedValues, "jumlahPenduduk");
+  const publishedTahun = readPublishedNumber(publishedValues, "tahunData");
+  const publishedTotalAnggaran = readPublishedNumber(publishedValues, "totalAnggaran");
+  const publishedTerealisasi = readPublishedNumber(publishedValues, "terealisasi");
+  const publishedPersentaseSerapan = readPublishedNumber(
+    publishedValues,
+    "persentaseSerapan",
   );
-  const isVisible = (componentKey: string) => !hiddenComponentKeys.has(componentKey);
+
+  const desaView = {
+    ...desa,
+    kecamatan: readPublishedString(publishedValues, "kecamatan") ?? desa.kecamatan,
+    kabupaten: readPublishedString(publishedValues, "kabupaten") ?? desa.kabupaten,
+    provinsi: readPublishedString(publishedValues, "provinsi") ?? desa.provinsi,
+    kategori: readPublishedString(publishedValues, "kategori") ?? desa.kategori,
+    perangkat: toPublishedPerangkatDesaArray(
+      publishedValues.perangkatDesa,
+      readPublishedString(publishedValues, "kepalaDesa"),
+    ),
+    profil: buildPublishedProfilSection(publishedValues) ?? undefined,
+    apbdes: toPublishedApbdesItems(publishedValues.apbdesItems),
+    outputFisik: toPublishedOutputFisikArray(publishedValues.outputFisik),
+    riwayat: toPublishedRiwayatArray(publishedValues.riwayatAPBDes),
+    penduduk: publishedPenduduk ?? desa.penduduk,
+    tahun: publishedTahun ?? desa.tahun,
+    totalAnggaran: publishedTotalAnggaran ?? desa.totalAnggaran,
+    terealisasi: publishedTerealisasi ?? desa.terealisasi,
+  };
+
+  desaView.persentaseSerapan =
+    publishedPersentaseSerapan !== null
+      ? publishedPersentaseSerapan
+      : desaView.totalAnggaran > 0
+        ? Math.round((desaView.terealisasi / desaView.totalAnggaran) * 100)
+        : desa.persentaseSerapan;
+
+  const hiddenComponentKeys = new Set(
+    runtimeManifest.hiddenComponents.map((component) => component.componentKey),
+  );
+  const visibleComponentKeys = runtimeManifest.visibleComponents.map(
+    (component) => component.componentKey,
+  );
+  const visibleSlots = getOrderedVisibleSlots(visibleComponentKeys);
+  const navItems = buildNavItems(visibleSlots);
+  const showBudgetSummary =
+    visibleComponentKeys.includes("anggaran") ||
+    visibleComponentKeys.includes("pendapatan");
+  const showBudgetMetrics = visibleComponentKeys.includes("anggaran");
+  const showPendapatanBreakdown = visibleComponentKeys.includes("pendapatan");
+  const showSourceSection = visibleComponentKeys.includes("sumber_dokumen");
+  const showTransparansiSection = visibleComponentKeys.includes("transparansi");
+  const showKinerjaSection = visibleComponentKeys.includes("kinerja");
+  const showProfilSection = visibleComponentKeys.includes("profil_desa");
+  const showPanduanSection = visibleComponentKeys.includes("panduan_warga");
+  const showSuaraSection = visibleComponentKeys.includes("suara_warga");
+  const showFirstView = visibleSlots.includes("first_view");
+
+  const selisih = desaView.totalAnggaran - desaView.terealisasi;
+  const voiceSummary = showSuaraSection
+    ? await getVoicePreviewForDesaFromDb(desaView.prismaId ?? desaView.id)
+    : { total: 0, preview: [] };
+  const voicePreview = voiceSummary.preview;
+  const profil = desaView.profil;
 
   const budgetItems = [
-    { icon: Wallet,       label: BUDGET_ITEMS.totalAnggaran.label, value: formatRupiahFullMock(desa.totalAnggaran), color: "text-indigo-600",  bg: "bg-indigo-50"  },
-    { icon: CheckCircle2, label: BUDGET_ITEMS.terealisasi.label,   value: formatRupiahFullMock(desa.terealisasi),   color: "text-emerald-600", bg: "bg-emerald-50" },
-    { icon: Clock,        label: BUDGET_ITEMS.belumTerserap.label, value: formatRupiahFullMock(selisih),            color: "text-rose-600",    bg: "bg-rose-50"    },
-    { icon: TrendingUp,   label: BUDGET_ITEMS.persentase.label,    value: `${desa.persentaseSerapan}%`,         color: "text-amber-600",   bg: "bg-amber-50"   },
+    {
+      icon: Wallet,
+      label: BUDGET_ITEMS.totalAnggaran.label,
+      value: formatRupiahFull(desaView.totalAnggaran),
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+    },
+    {
+      icon: CheckCircle2,
+      label: BUDGET_ITEMS.terealisasi.label,
+      value: formatRupiahFull(desaView.terealisasi),
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      icon: Clock,
+      label: BUDGET_ITEMS.belumTerserap.label,
+      value: formatRupiahFull(selisih),
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+    },
+    {
+      icon: TrendingUp,
+      label: BUDGET_ITEMS.persentase.label,
+      value: `${desaView.persentaseSerapan}%`,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
   ];
 
   const panduanFlowSteps = [
@@ -101,233 +260,334 @@ export default async function DesaDetailPage({ params }: Props) {
     },
   ] as const;
 
+  const slotSections: Partial<Record<PublicDetailSlotKey, ReactNode>> = {
+    ...(showFirstView
+      ? {
+          first_view: (
+            <div id={SLOT_META.first_view.anchorId}>
+              <DesaDetailFirstView
+                desa={desaView}
+                hiddenComponentKeys={hiddenComponentKeys}
+              />
+            </div>
+          ),
+        }
+      : {}),
+    ...(showSourceSection
+      ? {
+          sumber_dokumen: (
+            <section
+              id={SLOT_META.sumber_dokumen.anchorId}
+              className="space-y-5"
+            >
+              <SourceDocumentSnapshotSection desa={desaView} />
+            </section>
+          ),
+        }
+      : {}),
+    ...(showTransparansiSection
+      ? {
+          transparansi: (
+            <section id={SLOT_META.transparansi.anchorId}>
+              <TransparansiCard desa={desaView} showPerangkat={false} />
+            </section>
+          ),
+        }
+      : {}),
+    ...(showBudgetSummary
+      ? {
+          ringkasan_anggaran: (
+            <section id={SLOT_META.ringkasan_anggaran.anchorId} className="space-y-5">
+              <div className="space-y-3">
+                {desa.dataStatus === "demo" ? (
+                  <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+                    Angka ini masih bersifat demo. Tetap cek sumber dan dokumen sebelum
+                    menjadikannya rujukan akhir.
+                  </p>
+                ) : null}
+
+                {showBudgetMetrics ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {budgetItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.label}
+                          className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+                        >
+                          <div
+                            className={`mb-2 inline-flex rounded-xl p-2 ${item.bg}`}
+                          >
+                            <Icon size={15} className={item.color} aria-hidden />
+                          </div>
+                          <p className="mb-0.5 text-[10px] leading-tight text-slate-600">
+                            {item.label}
+                          </p>
+                          <p className={`text-sm font-black leading-tight ${item.color}`}>
+                            {item.value}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {showPendapatanBreakdown && desaView.pendapatan ? (
+                  <div className="rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-bold text-slate-600">
+                        Dari mana uang desa ini berasal?
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {(
+                        [
+                          {
+                            key: "danaDesa",
+                            amount: desaView.pendapatan.danaDesa,
+                            bar: "bg-indigo-500",
+                            dot: "bg-indigo-400",
+                          },
+                          {
+                            key: "add",
+                            amount: desaView.pendapatan.add,
+                            bar: "bg-sky-500",
+                            dot: "bg-sky-400",
+                          },
+                          {
+                            key: "pades",
+                            amount: desaView.pendapatan.pades,
+                            bar: "bg-emerald-500",
+                            dot: "bg-emerald-400",
+                          },
+                          {
+                            key: "bantuanKeuangan",
+                            amount: desaView.pendapatan.bantuanKeuangan,
+                            bar: "bg-violet-500",
+                            dot: "bg-violet-400",
+                          },
+                        ] as const
+                      ).map((source) => {
+                        const info = PENDAPATAN[source.key];
+                        const pct =
+                          desaView.totalAnggaran > 0
+                            ? Math.round((source.amount / desaView.totalAnggaran) * 100)
+                            : 0;
+                        return (
+                          <div key={source.key} className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <div
+                                className={`h-2 w-2 flex-shrink-0 rounded-full ${source.dot}`}
+                                aria-hidden
+                              />
+                              <p className="truncate text-[10px] leading-tight text-slate-600">
+                                {info.label}
+                              </p>
+                            </div>
+                            <p className="text-sm font-black text-slate-800">
+                              {formatRupiah(source.amount)}
+                            </p>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className={`h-full rounded-full ${source.bar}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-500">{pct}% dari total</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ),
+        }
+      : {}),
+    ...(showKinerjaSection
+      ? {
+          kinerja_anggaran: (
+            <section id={SLOT_META.kinerja_anggaran.anchorId}>
+              <KinerjaAnggaranCard desa={desaView} />
+            </section>
+          ),
+        }
+      : {}),
+    ...(showProfilSection
+      ? {
+          kelengkapan_desa: (
+            <section id={SLOT_META.kelengkapan_desa.anchorId}>
+              {profil ? (
+                <KelengkapanDesa profil={profil} />
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-white px-5 py-6 shadow-sm">
+                  <p className="text-sm font-bold text-slate-800">
+                    Kelengkapan desa belum diterbitkan.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    Komponen ini tetap mengikuti template aktif, tetapi field profil dan
+                    kelengkapan desa belum memiliki data publik yang siap ditayangkan.
+                  </p>
+                </div>
+              )}
+            </section>
+          ),
+        }
+      : {}),
+    ...(showPanduanSection
+      ? {
+          panduan_warga: (
+            <section
+              id={SLOT_META.panduan_warga.anchorId}
+              className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5"
+            >
+              <div className="space-y-4">
+                <div className="max-w-2xl">
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-700">
+                    Panduan Warga
+                  </p>
+                  <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
+                    Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum
+                    melapor.
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Alur ini membantu warga bergerak dari memahami konteks, menanyakan
+                    hal yang tepat, sampai menyampaikan kondisi desa tanpa membuat data
+                    publik terlihat seperti kesimpulan final.
+                  </p>
+                </div>
+
+                <ol
+                  className="grid gap-2 sm:grid-cols-4"
+                  aria-label="Alur panduan warga"
+                >
+                  {panduanFlowSteps.map((item) => (
+                    <li
+                      key={item.step}
+                      className="rounded-2xl border border-amber-100 bg-white/85 p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
+                          {item.step}
+                        </span>
+                        <p className="text-xs font-black text-slate-800">
+                          {item.title}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                        {item.body}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <SeharusnyaAdaSection desa={desaView} />
+              <ResponsibilityGuideCard />
+              <div id="pre-report-checklist">
+                <PreReportChecklistCard kabupaten={desaView.kabupaten} />
+              </div>
+            </section>
+          ),
+        }
+      : {}),
+    ...(showSuaraSection
+      ? {
+          suara_warga: (
+            <section id={SLOT_META.suara_warga.anchorId} className="space-y-3">
+              <div className="max-w-2xl">
+                <p className="text-xs font-black uppercase tracking-widest text-indigo-600">
+                  Suara Warga
+                </p>
+                <h2 className="mt-1 text-lg font-black text-slate-900">
+                  Cerita warga tentang kondisi desa ini
+                </h2>
+              </div>
+
+              <Link
+                href={`/desa/${desaView.id}/suara`}
+                prefetch={false}
+                className="group block overflow-hidden rounded-2xl border border-indigo-100 shadow-sm transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                aria-label={`Suara warga untuk ${desaView.nama}`}
+              >
+                <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white/15">
+                      <Megaphone size={15} className="text-white" aria-hidden />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Suara Warga</p>
+                      <p className="text-[10px] text-indigo-200">
+                        {voiceSummary.total > 0
+                          ? `${voiceSummary.total} cerita dari warga`
+                          : "Jadilah yang pertama bercerita"}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight
+                    size={16}
+                    className="flex-shrink-0 text-indigo-200 transition-all group-hover:translate-x-1 group-hover:text-white"
+                    aria-hidden
+                  />
+                </div>
+                {voicePreview.length > 0 ? (
+                  <div className="divide-y divide-slate-50 bg-white">
+                    {voicePreview.map((voice) => (
+                      <div
+                        key={voice.id}
+                        className="flex items-start gap-2.5 px-4 py-2.5"
+                      >
+                        <span
+                          className="mt-0.5 inline-flex min-w-12 flex-shrink-0 justify-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                          aria-hidden
+                        >
+                          {voice.category}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-xs leading-relaxed text-slate-700">
+                            {voice.text}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-slate-500">
+                            {voice.author}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between bg-indigo-50 px-4 py-2">
+                  <span className="text-[11px] font-semibold text-indigo-600">
+                    Ceritakan Kondisi Desaku
+                  </span>
+                  <ArrowRight
+                    size={12}
+                    className="text-indigo-400 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </div>
+              </Link>
+            </section>
+          ),
+        }
+      : {}),
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
-
-      {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <Link href="/desa" prefetch={false} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg">
+        <Link
+          href="/desa"
+          prefetch={false}
+          className="inline-flex items-center gap-2 rounded-lg text-sm text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+        >
           <ArrowLeft size={15} aria-hidden /> Kembali ke Daftar Desa
         </Link>
-        <DownloadButton desa={desa} />
+        <DownloadButton desa={desaView} />
       </div>
 
-      {/* ── Source indicator — only shown after internal admin publishes data */}
-      {desa.dataPublishedAt && (
-        <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
-          <span>
-            {desa.dataSourceLabel ?? "Sumber terverifikasi"} ·{" "}
-            Terakhir diperbarui{" "}
-            {new Date(desa.dataPublishedAt).toLocaleDateString("id-ID", {
-              day: "numeric", month: "short", year: "numeric",
-            })}
-          </span>
-        </div>
-      )}
-
-      {/* ── 1. FIRST VIEW — identity, status, safe framing (DETAIL-HIER-01/06, DETAIL-RISK-01) */}
-      <div id="ringkasan">
-        <DesaDetailFirstView desa={desa} hiddenComponentKeys={hiddenComponentKeys} />
-      </div>
-
-      <DetailSectionNav />
-
-      {/* ── 2. SOURCE & DOCUMENTS — source/doc proof before any numbers (DOC-01) */}
-      {isVisible("sumber_dokumen") && (
-        <section id="dokumen-transparansi" className="space-y-5">
-          <SourceDocumentSnapshotSection desa={desa} />
-
-          {/* ── 3. TRANSPARANSI — dokumen tab first, before budget numbers (METRIC-06) */}
-          {isVisible("transparansi") && (
-            <div id="dokumen-desa">
-              <TransparansiCard desa={desa} showPerangkat={isVisible("perangkat")} />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── 4. BUDGET RINGKASAN — after source/doc context (DETAIL-RISK-02, D-01) */}
-      {isVisible("anggaran") && (
-      <section id="anggaran" className="space-y-5">
-      <div className="space-y-3">
-
-        <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
-          Angka yang bertanda (mock) adalah contoh untuk membantu membaca halaman, bukan angka resmi final.
-        </p>
-
-        {/* 4 stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {budgetItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-                <div className={`inline-flex p-2 rounded-xl ${item.bg} mb-2`}>
-                  <Icon size={15} className={item.color} aria-hidden />
-                </div>
-                <p className="text-[10px] text-slate-600 mb-0.5 leading-tight">{item.label}</p>
-                <p className={`text-sm font-black ${item.color} leading-tight`}>{item.value}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Sumber pendapatan — compact horizontal */}
-        {isVisible("pendapatan") && desa.pendapatan && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <p className="text-xs font-bold text-slate-600">Dari mana uang desa ini berasal?</p>
-              <span className="text-[10px] font-bold text-amber-700">(mock)</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(
-                [
-                  { key: "danaDesa",        amount: desa.pendapatan.danaDesa,        bar: "bg-indigo-500", dot: "bg-indigo-400" },
-                  { key: "add",             amount: desa.pendapatan.add,             bar: "bg-sky-500",    dot: "bg-sky-400" },
-                  { key: "pades",           amount: desa.pendapatan.pades,           bar: "bg-emerald-500",dot: "bg-emerald-400" },
-                  { key: "bantuanKeuangan", amount: desa.pendapatan.bantuanKeuangan, bar: "bg-violet-500", dot: "bg-violet-400" },
-                ] as const
-              ).map((s) => {
-                const info = PENDAPATAN[s.key];
-                const pct  = Math.round((s.amount / desa.totalAnggaran) * 100);
-                return (
-                  <div key={s.key} className="space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} aria-hidden />
-                      <p className="text-[10px] text-slate-600 leading-tight truncate">{info.label}</p>
-                    </div>
-                    <p className="text-sm font-black text-slate-800">{formatRupiahMock(s.amount)}</p>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="text-[10px] text-slate-500">{pct}% dari total</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── 5. KINERJA ANGGARAN — after budget context */}
-      {isVisible("kinerja") && <KinerjaAnggaranCard desa={desa} />}
-      </section>
-      )}
-
-      {/* ── 6. KELENGKAPAN DESA — secondary context before citizen guidance */}
-      {isVisible("profil_desa") && profil && <KelengkapanDesa profil={profil} />}
-
-      {/* ── 7. PANDUAN WARGA — connected citizen journey */}
-      {isVisible("panduan_warga") && (
-        <section id="panduan-warga" className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5">
-          <div className="space-y-4">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-widest text-amber-700">Panduan Warga</p>
-              <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
-                Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum melapor.
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                Alur ini membantu warga bergerak dari memahami konteks, menanyakan hal yang tepat,
-                sampai menyampaikan kondisi desa tanpa membuat data demo terlihat seperti temuan final.
-              </p>
-            </div>
-
-            <ol className="grid gap-2 sm:grid-cols-4" aria-label="Alur panduan warga">
-              {panduanFlowSteps.map((item) => (
-                <li key={item.step} className="rounded-2xl border border-amber-100 bg-white/85 p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
-                      {item.step}
-                    </span>
-                    <p className="text-xs font-black text-slate-800">{item.title}</p>
-                  </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{item.body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <SeharusnyaAdaSection desa={desa} />
-
-          {/* ── 8. TANYAKAN KE PIHAK YANG TEPAT ──────────────────────────────── */}
-          <ResponsibilityGuideCard />
-
-          {/* ── 10. PRE-REPORT CHECKLIST — gate before any external CTA (REPORT-01..07) */}
-          <div id="pre-report-checklist">
-            <PreReportChecklistCard kabupaten={desa.kabupaten} />
-          </div>
-        </section>
-      )}
-
-      {/* ── 11. SUARA WARGA — streamed independently so voice DB query doesn't block page */}
-      {isVisible("suara_warga") && (
-        <Suspense fallback={
-          <div className="h-28 rounded-2xl bg-slate-100 animate-pulse" aria-hidden />
-        }>
-          <SuaraWargaSection desaId={desa.id} desaPrismaId={desa.prismaId ?? desa.id} desaNama={desa.nama} />
-        </Suspense>
-      )}
+      <DetailSectionNav sections={navItems} />
+      {visibleSlots.map((slot) => slotSections[slot] ? <div key={slot}>{slotSections[slot]}</div> : null)}
     </div>
-  );
-}
-
-// ─── Streaming component — fetches voice data independently ──────────────────
-
-async function SuaraWargaSection({
-  desaId, desaPrismaId, desaNama,
-}: { desaId: string; desaPrismaId: string; desaNama: string }) {
-  const voiceSummary = await getVoicePreviewForDesaFromDb(desaPrismaId);
-  const voicePreview = voiceSummary.preview;
-
-  return (
-    <section id="suara-warga" className="space-y-3">
-      <div className="max-w-2xl">
-        <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Suara Warga</p>
-        <h2 className="mt-1 text-lg font-black text-slate-900">Cerita warga tentang kondisi desa ini</h2>
-      </div>
-
-      <Link
-        href={`/desa/${desaId}/suara`}
-        prefetch={false}
-        className="group block rounded-2xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-        aria-label={`Suara warga untuk ${desaNama}`}
-      >
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
-              <Megaphone size={15} className="text-white" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">Suara Warga</p>
-              <p className="text-[10px] text-indigo-200">
-                {voiceSummary.total > 0
-                  ? `${voiceSummary.total} cerita dari warga`
-                  : "Jadilah yang pertama bercerita"}
-              </p>
-            </div>
-          </div>
-          <ArrowRight size={16} className="text-indigo-200 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0" aria-hidden />
-        </div>
-        {voicePreview.length > 0 && (
-          <div className="bg-white divide-y divide-slate-50">
-            {voicePreview.map((v) => (
-              <div key={v.id} className="px-4 py-2.5 flex items-start gap-2.5">
-                <span className="text-sm flex-shrink-0 mt-0.5" aria-hidden>
-                  {["🛣️","💰","🏫","📋","🌿","💬"][["infrastruktur","bansos","fasilitas","anggaran","lingkungan","lainnya"].indexOf(v.category)] ?? "💬"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{v.text}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{v.author}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
-          <span className="text-[11px] text-indigo-600 font-semibold">Ceritakan Kondisi Desaku</span>
-          <ArrowRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" aria-hidden />
-        </div>
-      </Link>
-    </section>
   );
 }

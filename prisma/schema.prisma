@@ -201,6 +201,7 @@ model Desa {
   adminDocuments    AdminDesaDocument[]
   villageDataVersions VillageDataVersion[]
   dataAuditEvents   DesaDataAuditEvent[]
+  dataSourceFetchRuns DataSourceFetchRun[]
 
   detailTemplateAssignment     DesaDetailTemplateAssignment?
   componentVisibilityOverrides DesaDetailComponentVisibility[]
@@ -232,6 +233,7 @@ model DataSource {
   apbdesItems       APBDesItem[]
   dokumenPublik     DokumenPublik[]
   perangkatDesa     PerangkatDesa[]
+  fetchRuns         DataSourceFetchRun[]
 
   @@index([desaId])
   @@index([scopeType, scopeName])
@@ -239,6 +241,36 @@ model DataSource {
   @@index([accessStatus])
   @@index([dataStatus])
   @@map("data_sources")
+}
+
+model DataSourceFetchRun {
+  id                String   @id @default(cuid())
+  dataSourceId      String?
+  desaId            String?
+  inputMode         String   @default("SOURCE_INGESTION")
+  sourceTypeCode    String?
+  sourceName        String?
+  sourceUrl         String
+  requestLabel      String?
+  status            String   @default("PENDING")
+  fetchedAt         DateTime?
+  completedAt       DateTime?
+  httpStatus        Int?
+  contentType       String?
+  rawText           String?  @db.Text
+  extractedMetaJson Json?
+  errorMessage      String?  @db.Text
+  createdByUserId   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  dataSource DataSource? @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
+  desa       Desa?       @relation(fields: [desaId], references: [id], onDelete: SetNull)
+
+  @@index([dataSourceId, createdAt])
+  @@index([desaId, createdAt])
+  @@index([status, createdAt])
+  @@map("data_source_fetch_runs")
 }
 
 model AnggaranDesaSummary {
@@ -444,16 +476,23 @@ model AdminDesaDocument {
   uploadedById    String?
   title           String
   category        String
-  storageKey      String               // Supabase Storage object path
-  fileName        String
-  fileType        String
-  fileSize        Int
+  inputMode       String               @default("DOCUMENT_UPLOAD")
+  storageKey      String?              // Supabase Storage object path
+  fileName        String?
+  fileType        String?
+  fileSize        Int?
   status          DocumentUploadStatus @default(WAITING_VERIFIED_APPROVAL)
   approvedById    String?              // userId of VERIFIED admin who approved
   approvedAt      DateTime?
   rejectedReason  String?              @db.Text
   publishedAt     DateTime?
   failedReason    String?              @db.Text
+  sourceTypeCode  String?
+  sourceUrl       String?
+  sourceRegistryId String?
+  sourceEvidenceJson Json?
+  structuredValuesJson Json?
+  normalizedSourceText String?         @db.Text
   aiMappingStatus String?              // null | PENDING | DONE | FAILED
   aiMappingResult Json?
   createdAt       DateTime             @default(now())
@@ -463,6 +502,7 @@ model AdminDesaDocument {
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   villageDataVersions VillageDataVersion[]
   dataAuditEvents     DesaDataAuditEvent[]
+  dataDesaRows        DataDesa[]
 
   @@index([desaId])
   @@index([status])
@@ -682,24 +722,66 @@ model VillageDetailTemplate {
   @@map("village_detail_templates")
 }
 //
+model VillageComponentCatalog {
+  id            String   @id @default(cuid())
+  componentKey  String   @unique
+  label         String
+  description   String?  @db.Text
+  componentType String   @default("section")
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+//
+  fields             VillageComponentCatalogField[]
+  templatePlacements VillageDetailComponent[]
+//
+  @@map("village_component_catalog")
+}
+//
+model VillageComponentCatalogField {
+  id                 String   @id @default(cuid())
+  catalogComponentId String
+  fieldKey           String
+  label              String
+  valueType          String
+  sourcePolicyJson   Json?
+  validationRules    Json?
+  isRequired         Boolean  @default(false)
+  isPublicVisible    Boolean  @default(true)
+  isPublishableNow   Boolean  @default(false)
+  displayOrder       Int      @default(0)
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+//
+  component      VillageComponentCatalog  @relation(fields: [catalogComponentId], references: [id])
+  templateFields DetailFieldStandard[]
+//
+  @@unique([catalogComponentId, fieldKey])
+  @@map("village_component_catalog_fields")
+}
+//
 // ─── VillageDetailComponent (section/komponen di dalam template) ─────────────
 model VillageDetailComponent {
   id               String   @id @default(cuid())
   templateId       String
+  catalogComponentId String?
   componentKey     String   // "identitas"|"demografi"|"anggaran"|"profil_desa"|dst
   label            String   // "Identitas & Wilayah"
   description      String?  @db.Text
   componentType    String   @default("section")
+  sourcePolicyJson Json?
   isDefaultVisible Boolean  @default(true)
   displayOrder     Int      @default(0)
   status           String   @default("ACTIVE")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 //
-  template       VillageDetailTemplate          @relation(fields: [templateId], references: [id])
-  fieldStandards DetailFieldStandard[]
-  desaVisibility DesaDetailComponentVisibility[]
-  dataDesa       DataDesa[]
+  template         VillageDetailTemplate          @relation(fields: [templateId], references: [id])
+  catalogComponent VillageComponentCatalog?      @relation(fields: [catalogComponentId], references: [id])
+  fieldStandards   DetailFieldStandard[]
+  desaVisibility   DesaDetailComponentVisibility[]
+  dataDesa         DataDesa[]
 //
   @@unique([templateId, componentKey])
   @@map("village_detail_components")
@@ -710,9 +792,11 @@ model DetailFieldStandard {
   id               String   @id @default(cuid())
   templateId       String
   componentId      String
+  catalogFieldId   String?
   fieldKey         String
   label            String
   valueType        String   // "string" | "number" | "url" | "text" | "json"
+  sourcePolicyJson Json?
   validationRules  Json?
   isRequired       Boolean  @default(false)
   isPublicVisible  Boolean  @default(true)
@@ -722,7 +806,8 @@ model DetailFieldStandard {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 //
-  component VillageDetailComponent @relation(fields: [componentId], references: [id])
+  component    VillageDetailComponent        @relation(fields: [componentId], references: [id])
+  catalogField VillageComponentCatalogField? @relation(fields: [catalogFieldId], references: [id])
 //
   @@unique([templateId, componentId, fieldKey])
   @@map("detail_field_standards")
@@ -773,6 +858,13 @@ model DataDesa {
   valueJson       Json?
   valueText       String?        @db.Text
   sourceId        String?
+  sourceDocumentId String?
+  sourceUrl       String?
+  sourceRegistryId String?
+  sourceTypeCode  String?
+  sourceEvidenceJson Json?
+  sourceLabel     String?
+  reviewNote      String?        @db.Text
   status          DataDesaStatus @default(DRAFT)
   isActive        Boolean        @default(true)
   publishedAt     DateTime?
@@ -780,11 +872,13 @@ model DataDesa {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 //
-  desa      Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
-  component VillageDetailComponent @relation(fields: [componentId], references: [id])
+  desa           Desa                   @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  component      VillageDetailComponent @relation(fields: [componentId], references: [id])
+  sourceDocument AdminDesaDocument?     @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
 //
   @@index([desaId, fieldKey, status])
   @@index([desaId, componentId])
+  @@index([sourceDocumentId])
   @@map("data_desa")
 }
 //
@@ -804,18 +898,17 @@ enum DataDesaStatus {
   ARCHIVED
 }
 //
-// ─── Template design (11 komponen, semua di CURRENT_PUBLIC_DETAIL_TEMPLATE) ──
+// ─── Template design (10 komponen, semua di CURRENT_PUBLIC_DETAIL_TEMPLATE) ──
 // 1.  identitas      — Identitas & Wilayah     (websiteUrl, kategori, tahunData, kec, kab, prov)
 // 2.  demografi      — Demografi                (jumlahPenduduk, jumlahKK, jumlahDusun, RT, RW)
 // 3.  sumber_dokumen — Sumber & Dokumen         (reads DataSource[], DokumenPublik[])
 // 4.  transparansi   — Transparansi & Skor      (skorTransparansi computed, dokumen detail)
-// 5.  perangkat      — Perangkat Desa           (kepalaDesa, linked PerangkatDesa[])
-// 6.  anggaran       — Anggaran & Realisasi     (totalAnggaran, terealisasi, persentaseSerapan)
-// 7.  pendapatan     — Sumber Pendapatan        (danaDesa, add, pades, bantuanKeuangan)
-// 8.  kinerja        — Kinerja & Rincian APBDes (apbdesItems, outputFisik, riwayat)
-// 9.  profil_desa    — Profil & Kelengkapan     (telepon, email, potensi, fasilitas, aset, bumdes)
-// 10. panduan_warga  — Panduan Warga            (static + computed)
-// 11. suara_warga    — Suara Warga              (citizen voices, separate model)
+// 5.  anggaran       — Anggaran & Realisasi     (totalAnggaran, terealisasi, persentaseSerapan)
+// 6.  pendapatan     — Sumber Pendapatan        (danaDesa, add, pades, bantuanKeuangan)
+// 7.  kinerja        — Kinerja & Rincian APBDes (apbdesItems, outputFisik, riwayat)
+// 8.  profil_desa    — Profil & Kelengkapan     (kontak, perangkat, potensi, fasilitas, aset, bumdes)
+// 9.  panduan_warga  — Panduan Warga            (static + computed)
+// 10. suara_warga    — Suara Warga              (citizen voices, separate model)
 //
 // ─── Template assignments (seed via prisma/seed-templates.mjs) ───────────────
 // arjasari, baros          → DESA_WISATA_TEMPLATE   (profil fields publishable)

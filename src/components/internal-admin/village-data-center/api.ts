@@ -1,10 +1,12 @@
 import type { AdminDesaFilter } from "@/components/internal-admin/AdminDesaFilterBar";
+import type { TemplateFieldEngineViewModel } from "@/lib/village-data/template-field-contract";
 import type {
   DesaComponentData,
   DesaRow,
   FieldStandard,
   FieldStandardsData,
   AuditRow,
+  TemplateWorkspaceData,
   VersionRow,
 } from "./types";
 
@@ -13,6 +15,15 @@ interface DbComponentPayload {
   componentKey: string;
   label: string;
   displayOrder: number;
+  isVisible?: boolean;
+  fieldCount?: number;
+  filledFieldCount?: number;
+  totalFieldCount?: number;
+  completionStatus?: "empty" | "partial" | "complete";
+  filledFieldLabels?: string[];
+  missingFieldLabels?: string[];
+  teaserLabels?: string[];
+  derivedSignals?: string[];
   fields?: unknown[];
 }
 
@@ -28,9 +39,13 @@ interface FieldStandardsPayload {
   source: "db" | "fallback";
   totalFields: number;
   publishableCount: number;
+  filledFieldCount?: number;
+  filledSignalCount?: number;
+  totalSignalCount?: number;
+  mismatchPublishedFieldCount?: number;
   holdCount?: number;
   visibleComponents?: DbComponentPayload[];
-  hiddenComponents?: Omit<DbComponentPayload, "fields">[];
+  hiddenComponents?: DbComponentPayload[];
   sections?: SectionPayload[];
 }
 
@@ -84,6 +99,15 @@ interface VersionsPayload {
 interface DesaDataPayload {
   desa?: DesaRow[];
   total?: number;
+}
+
+export interface DesaOptionPayload {
+  id: string;
+  nama: string;
+  slug: string;
+  kecamatan: string;
+  kabupaten: string;
+  provinsi: string;
 }
 
 function buildFilterParams(filter: AdminDesaFilter, page?: number) {
@@ -143,33 +167,83 @@ function normalizeDesaComponentData(payload: FieldStandardsPayload): DesaCompone
         componentKey: component.componentKey,
         label: component.label,
         displayOrder: component.displayOrder,
-        fieldCount: Array.isArray(component.fields) ? component.fields.length : 0,
+        isVisible: component.isVisible ?? true,
+        fieldCount:
+          component.fieldCount ??
+          component.totalFieldCount ??
+          (Array.isArray(component.fields) ? component.fields.length : 0),
+        filledFieldCount: component.filledFieldCount ?? 0,
+        totalFieldCount:
+          component.totalFieldCount ??
+          component.fieldCount ??
+          (Array.isArray(component.fields) ? component.fields.length : 0),
+        completionStatus: component.completionStatus ?? "empty",
+        filledFieldLabels: component.filledFieldLabels ?? [],
+        missingFieldLabels: component.missingFieldLabels ?? [],
+        teaserLabels: component.teaserLabels ?? [],
+        derivedSignals: component.derivedSignals ?? [],
       })),
       hiddenComponents: (payload.hiddenComponents ?? []).map((component) => ({
         componentId: component.componentId,
         componentKey: component.componentKey,
         label: component.label,
         displayOrder: component.displayOrder,
+        isVisible: component.isVisible ?? false,
+        fieldCount:
+          component.fieldCount ??
+          component.totalFieldCount ??
+          (Array.isArray(component.fields) ? component.fields.length : 0),
+        filledFieldCount: component.filledFieldCount ?? 0,
+        totalFieldCount:
+          component.totalFieldCount ??
+          component.fieldCount ??
+          (Array.isArray(component.fields) ? component.fields.length : 0),
+        completionStatus: component.completionStatus ?? "empty",
+        filledFieldLabels: component.filledFieldLabels ?? [],
+        missingFieldLabels: component.missingFieldLabels ?? [],
+        teaserLabels: component.teaserLabels ?? [],
+        derivedSignals: component.derivedSignals ?? [],
       })),
       totalFields: payload.totalFields,
       publishableCount: payload.publishableCount,
+      filledFieldCount: payload.filledFieldCount ?? 0,
+      filledSignalCount: payload.filledSignalCount ?? 0,
+      totalSignalCount: payload.totalSignalCount ?? 0,
+      mismatchPublishedFieldCount: payload.mismatchPublishedFieldCount ?? 0,
     };
   }
+
+  const visibleComponents = (payload.sections ?? []).map((section, index) => {
+    const totalFieldCount = Array.isArray(section.fields) ? section.fields.length : 0;
+    return {
+      componentId: `fallback-${section.sectionKey}`,
+      componentKey: section.sectionKey,
+      label: section.sectionLabel,
+      displayOrder: index + 1,
+      isVisible: true,
+      fieldCount: totalFieldCount,
+      filledFieldCount: 0,
+      totalFieldCount,
+      completionStatus: "empty" as const,
+      filledFieldLabels: [],
+      missingFieldLabels: [],
+      teaserLabels: [],
+      derivedSignals: [],
+    };
+  });
 
   return {
     templateKey: payload.templateKey,
     templateName: payload.templateName,
     source: "fallback",
-    visibleComponents: (payload.sections ?? []).map((section, index) => ({
-      componentId: `fallback-${section.sectionKey}`,
-      componentKey: section.sectionKey,
-      label: section.sectionLabel,
-      displayOrder: index + 1,
-      fieldCount: Array.isArray(section.fields) ? section.fields.length : 0,
-    })),
+    visibleComponents,
     hiddenComponents: [],
     totalFields: payload.totalFields,
     publishableCount: payload.publishableCount,
+    filledFieldCount: 0,
+    filledSignalCount: 0,
+    totalSignalCount: 0,
+    mismatchPublishedFieldCount: 0,
   };
 }
 
@@ -217,7 +291,8 @@ export async function fetchDesaData(
     `/api/internal-admin/village-data/desa-data?${buildFilterParams(filter, page).toString()}`,
   );
   if (!response.ok) {
-    throw new Error("Gagal memuat data desa.");
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? "Gagal memuat data desa.");
   }
 
   const payload = (await response.json()) as DesaDataPayload;
@@ -245,4 +320,156 @@ export async function fetchVersionsData(
     auditEvents: payload.auditEvents ?? [],
     total: payload.total ?? 0,
   };
+}
+
+export async function fetchDesaSearchOptions(query: string): Promise<DesaOptionPayload[]> {
+  const response = await fetch(
+    `/api/internal-admin/desa-options?q=${encodeURIComponent(query)}`,
+  );
+  if (!response.ok) {
+    throw new Error("Gagal memuat opsi desa.");
+  }
+  const payload = (await response.json()) as { desa?: DesaOptionPayload[] };
+  return payload.desa ?? [];
+}
+
+export async function fetchTemplateFields(desaId: string): Promise<TemplateFieldEngineViewModel> {
+  const response = await fetch(
+    `/api/internal-admin/village-data/template-fields?desaId=${encodeURIComponent(desaId)}`,
+  );
+  if (!response.ok) {
+    throw new Error("Gagal memuat field template desa.");
+  }
+  return (await response.json()) as TemplateFieldEngineViewModel;
+}
+
+export async function fetchTemplateWorkspace(
+  templateId?: string | null,
+): Promise<TemplateWorkspaceData> {
+  const params = new URLSearchParams();
+  if (templateId) params.set("templateId", templateId);
+
+  const response = await fetch(
+    `/api/internal-admin/village-data/templates${params.size ? `?${params.toString()}` : ""}`,
+  );
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? "Gagal memuat workspace template.");
+  }
+  return (await response.json()) as TemplateWorkspaceData;
+}
+
+export async function createTemplateWorkspace(input: {
+  name: string;
+  description?: string;
+}): Promise<{ templateId: string; message: string }> {
+  const response = await fetch("/api/internal-admin/village-data/templates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { templateId?: string; message?: string; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.templateId || !payload.message) {
+    throw new Error(payload?.error ?? "Gagal membuat template.");
+  }
+
+  return { templateId: payload.templateId, message: payload.message };
+}
+
+export async function updateTemplateWorkspaceMeta(input: {
+  templateId: string;
+  name: string;
+  description?: string | null;
+}): Promise<{ templateId: string; message: string }> {
+  const response = await fetch(
+    `/api/internal-admin/village-data/templates/${encodeURIComponent(input.templateId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: input.name,
+        description: input.description ?? null,
+      }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as
+    | { templateId?: string; message?: string; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.templateId || !payload.message) {
+    throw new Error(payload?.error ?? "Gagal memperbarui template.");
+  }
+
+  return { templateId: payload.templateId, message: payload.message };
+}
+
+export async function saveTemplateWorkspaceComponents(input: {
+  templateId: string;
+  componentKeys: string[];
+}): Promise<{ templateId: string; message: string }> {
+  const response = await fetch(
+    `/api/internal-admin/village-data/templates/${encodeURIComponent(input.templateId)}/components`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ componentKeys: input.componentKeys }),
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as
+    | { templateId?: string; message?: string; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.templateId || !payload.message) {
+    throw new Error(payload?.error ?? "Gagal menyimpan komponen template.");
+  }
+
+  return { templateId: payload.templateId, message: payload.message };
+}
+
+export async function deleteTemplateWorkspace(
+  templateId: string,
+): Promise<{ templateId: string; message: string }> {
+  const response = await fetch(
+    `/api/internal-admin/village-data/templates/${encodeURIComponent(templateId)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  const payload = (await response.json().catch(() => null)) as
+    | { templateId?: string; message?: string; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.templateId || !payload.message) {
+    throw new Error(payload?.error ?? "Gagal menghapus template.");
+  }
+
+  return { templateId: payload.templateId, message: payload.message };
+}
+
+export async function switchDesaTemplate(input: {
+  desaId: string;
+  templateId: string;
+}): Promise<{ templateId: string; message: string }> {
+  const response = await fetch("/api/internal-admin/village-data/template-assignment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { templateId?: string; message?: string; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.templateId || !payload.message) {
+    throw new Error(payload?.error ?? "Gagal mengganti template desa.");
+  }
+
+  return { templateId: payload.templateId, message: payload.message };
 }

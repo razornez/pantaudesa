@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
 import { perfStart, publicPerfLogWithRows } from "@/lib/perf";
 import type { CitizenVoice, VoiceStatus } from "@/lib/citizen-voice";
 
@@ -118,6 +119,10 @@ export async function getAllVoicesFromDb() {
     publicPerfLogWithRows("public.voice-read", "getCachedAllVoices()", voices.length, timer);
     return voices;
   } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      console.warn("[voice-read] public voice read degraded due to database connectivity.");
+      return [];
+    }
     console.error("[voice-read] public voice read failed:", error);
     return [];
   }
@@ -136,6 +141,10 @@ export async function getVoicesForDesaFromDb(desaId: string) {
       desa && records.length > 0 ? { nama: desa.nama, kabupaten: desa.kabupaten, slug: desa.slug } : undefined;
     return records.map((record) => mapVoice(record, canonicalDesa));
   } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      console.warn("[voice-read] public desa voice read degraded due to database connectivity.");
+      return [];
+    }
     console.error("[voice-read] public desa voice read failed:", error);
     return [];
   }
@@ -178,6 +187,10 @@ async function fetchVoicePreviewForDesa(desaId: string): Promise<DesaVoicePrevie
       })),
     };
   } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      console.warn("[voice-read] public desa voice preview read degraded due to database connectivity.");
+      return { total: 0, preview: [] };
+    }
     console.error("[voice-read] public desa voice preview read failed:", error);
     return { total: 0, preview: [] };
   }

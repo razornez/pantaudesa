@@ -4,6 +4,7 @@ export const INTAKE_COPY = {
   inputMode: {
     upload: "Upload file",
     paste: "Tempel teks",
+    source: "Sumber resmi",
   },
   aiOption: {
     label: "Bantuan AI (opsional)",

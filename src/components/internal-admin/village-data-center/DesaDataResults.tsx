@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { Database, ExternalLink } from "lucide-react";
 import type { AdminDesaFilter } from "@/components/internal-admin/AdminDesaFilterBar";
-import type { DesaRow } from "./types";
+import { switchDesaTemplate } from "./api";
+import type { DesaRow, TemplateSummary } from "./types";
 import {
   DesaStatusPill,
   EmptyState,
@@ -10,6 +12,140 @@ import {
   SkeletonCards,
 } from "./shared";
 import { ComponentVisibilityPanel } from "./ComponentVisibilityPanel";
+
+function TemplateSwitchPopover({
+  desaId,
+  currentTemplateId,
+  templateOptions,
+  templatesLoading,
+  onOpen,
+  onApplied,
+}: {
+  desaId: string;
+  currentTemplateId: string | null;
+  templateOptions: TemplateSummary[];
+  templatesLoading: boolean;
+  onOpen: () => void;
+  onApplied: () => void;
+}) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState(currentTemplateId ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <details
+      className="group relative"
+      onToggle={(event) => {
+        const details = event.currentTarget;
+        if (details.open) {
+          onOpen();
+          return;
+        }
+        if (!details.open) {
+          setError(null);
+          setNotice(null);
+          setSelectedTemplateId(currentTemplateId ?? "");
+        }
+      }}
+    >
+      <summary
+        className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[11.5px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
+      >
+        Ganti template
+      </summary>
+
+      <div
+        className="absolute left-0 top-[calc(100%+8px)] z-20 w-[320px] rounded-2xl bg-white p-4"
+        style={{
+          boxShadow:
+            "inset 0 0 0 1px rgba(15,23,42,0.06), 0 18px 40px -24px rgba(15,23,42,0.28)",
+        }}
+      >
+        <div className="space-y-1">
+          <p className="text-[12px] font-semibold text-slate-900">Switch template desa</p>
+          <p className="text-[11px] leading-relaxed text-slate-500">
+            Pilih template aktif baru. Setelah diterapkan, urutan komponen publik, intake,
+            dan panel desa akan ikut membaca template yang sama.
+          </p>
+        </div>
+
+        <label className="mt-3 block">
+          <span className="eyebrow mb-1.5 block">Template aktif baru</span>
+          <select
+            value={selectedTemplateId}
+            onChange={(event) => setSelectedTemplateId(event.target.value)}
+            disabled={templatesLoading}
+            className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[12px] font-medium text-slate-900 outline-none focus:bg-white"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
+          >
+            <option value="" disabled>
+              {templatesLoading ? "Memuat template..." : "Pilih template"}
+            </option>
+            {templateOptions.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {error ? (
+          <p className="mt-3 text-[11px] leading-relaxed text-rose-700">{error}</p>
+        ) : null}
+        {notice ? (
+          <p className="mt-3 text-[11px] leading-relaxed text-emerald-700">{notice}</p>
+        ) : null}
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const details = document.activeElement?.closest("details");
+              if (details instanceof HTMLDetailsElement) details.open = false;
+            }}
+            className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-200"
+          >
+            Tutup
+          </button>
+          <button
+            type="button"
+            disabled={
+              isPending ||
+              !selectedTemplateId ||
+              selectedTemplateId === (currentTemplateId ?? "")
+            }
+            onClick={() => {
+              startTransition(() => {
+                setError(null);
+                setNotice(null);
+                void switchDesaTemplate({
+                  desaId,
+                  templateId: selectedTemplateId,
+                })
+                  .then((result) => {
+                    setNotice(result.message);
+                    onApplied();
+                  })
+                  .catch((mutationError) => {
+                    setError(
+                      mutationError instanceof Error
+                        ? mutationError.message
+                        : "Gagal mengganti template desa.",
+                    );
+                  });
+              });
+            }}
+            className="rounded-xl bg-[#1E1B4B] px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#15123a] disabled:opacity-50"
+          >
+            Terapkan
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+}
 
 interface DesaDataResultsProps {
   desa: DesaRow[];
@@ -20,6 +156,10 @@ interface DesaDataResultsProps {
   expanded: string | null;
   onExpandedChange: (desaId: string | null) => void;
   onPageChange: (page: number) => void;
+  templateOptions: TemplateSummary[];
+  templatesLoading: boolean;
+  onTemplateSwitchOpen: () => void;
+  onTemplateMutation: () => void;
 }
 
 export function DesaDataResults({
@@ -31,6 +171,10 @@ export function DesaDataResults({
   expanded,
   onExpandedChange,
   onPageChange,
+  templateOptions,
+  templatesLoading,
+  onTemplateSwitchOpen,
+  onTemplateMutation,
 }: DesaDataResultsProps) {
   const totalPages = Math.ceil(total / 20);
   const hasFilter = Boolean(
@@ -73,12 +217,11 @@ export function DesaDataResults({
           </div>
           <div>
             {desa.map((item, index) => {
-              const filledCount = [
-                item.websiteUrl,
-                item.kategori,
-                item.tahunData,
-                item.jumlahPenduduk,
-              ].filter(Boolean).length;
+              const totalFieldCount = Math.max(item.totalFieldCount ?? 0, 1);
+              const filledCount = Math.min(
+                item.filledFieldCount ?? 0,
+                totalFieldCount,
+              );
               const isExpanded = expanded === item.id;
 
               return (
@@ -123,11 +266,11 @@ export function DesaDataResults({
                         <div className="h-1.5 flex-1 max-w-[60px] rounded-full bg-slate-100 overflow-hidden">
                           <div
                             className="h-full bg-emerald-500 rounded-full"
-                            style={{ width: `${Math.round((filledCount / 7) * 100)}%` }}
+                            style={{ width: `${Math.round((filledCount / totalFieldCount) * 100)}%` }}
                           />
                         </div>
                         <span className="text-[11px] text-slate-500 tabular-nums">
-                          {filledCount}/7
+                          {filledCount}/{totalFieldCount}
                         </span>
                       </div>
                       <span className="text-[11.5px] text-slate-600 tabular-nums">
@@ -148,6 +291,17 @@ export function DesaDataResults({
                   {isExpanded ? (
                     <div className="px-4 sm:px-6 pb-4 pt-1 bg-indigo-50/20 border-t border-indigo-100/60 space-y-4">
                       <div>
+                        {item.mismatchPublishedFieldCount ? (
+                          <div
+                            className="mb-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800"
+                            style={{ boxShadow: "inset 0 0 0 1px rgba(217,119,6,0.14)" }}
+                          >
+                            Ditemukan {item.mismatchPublishedFieldCount} field published lama yang belum sinkron
+                            dengan template aktif. Counter desa di atas sekarang hanya menghitung field yang valid
+                            untuk template aktif saat ini.
+                          </div>
+                        ) : null}
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                           <FieldValue label="Website" value={item.websiteUrl} />
                           <FieldValue label="Kategori" value={item.kategori} />
@@ -177,6 +331,16 @@ export function DesaDataResults({
                           >
                             <ExternalLink size={11} aria-hidden /> Buka di Intake
                           </a>
+                          <TemplateSwitchPopover
+                            desaId={item.id}
+                            currentTemplateId={
+                              item.detailTemplateAssignment?.template.id ?? null
+                            }
+                            templateOptions={templateOptions}
+                            templatesLoading={templatesLoading}
+                            onOpen={onTemplateSwitchOpen}
+                            onApplied={onTemplateMutation}
+                          />
                           {item.dataSourceLabel ? (
                             <span className="text-[11px] text-slate-400">
                               Sumber: {item.dataSourceLabel}

@@ -20,6 +20,7 @@ interface FilterOptions {
 interface Props {
   onChange: (filter: AdminDesaFilter) => void;
   initialFilter?: Partial<AdminDesaFilter>;
+  loadOptionsOnMount?: boolean;
 }
 
 /**
@@ -27,7 +28,11 @@ interface Props {
  * Matches the filter UX on the public /desa page but backed by admin APIs.
  * Used in: Data per Desa tab, Versi & Audit tab, Log Aktivitas tab.
  */
-export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
+export default function AdminDesaFilterBar({
+  onChange,
+  initialFilter,
+  loadOptionsOnMount = true,
+}: Props) {
   const [q, setQ] = useState(initialFilter?.q ?? "");
   const [provinsi, setProvinsi] = useState(initialFilter?.provinsi ?? "");
   const [kabupaten, setKabupaten] = useState(initialFilter?.kabupaten ?? "");
@@ -38,6 +43,7 @@ export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
     kecamatan: [],
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLoadInitialOptionsRef = useRef(false);
 
   const loadOptions = useCallback((prov: string, kab: string) => {
     fetchDesaFilterOptions({ provinsi: prov, kabupaten: kab })
@@ -45,9 +51,16 @@ export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
+  const ensureInitialOptionsLoaded = useCallback(() => {
+    if (didLoadInitialOptionsRef.current) return;
+    didLoadInitialOptionsRef.current = true;
     loadOptions("", "");
   }, [loadOptions]);
+
+  useEffect(() => {
+    if (!loadOptionsOnMount) return;
+    ensureInitialOptionsLoaded();
+  }, [ensureInitialOptionsLoaded, loadOptionsOnMount]);
 
   const emit = useCallback(
     (next: AdminDesaFilter) => {
@@ -121,12 +134,13 @@ export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
           ) : null}
         </div>
 
-        <FilterSelect
+      <FilterSelect
           value={provinsi}
           onChange={handleProvinsi}
           ariaLabel="Filter provinsi"
           minWidth="min-w-[130px]"
           icon={<SlidersHorizontal size={13} aria-hidden />}
+          onFocus={ensureInitialOptionsLoaded}
         >
           <option value="">Semua Provinsi</option>
           {options.provinsi.map((item) => (
@@ -141,6 +155,7 @@ export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
           onChange={handleKabupaten}
           ariaLabel="Filter kabupaten"
           minWidth="min-w-[150px]"
+          onFocus={ensureInitialOptionsLoaded}
         >
           <option value="">Semua Kabupaten</option>
           {options.kabupaten.map((item) => (
@@ -155,6 +170,7 @@ export default function AdminDesaFilterBar({ onChange, initialFilter }: Props) {
           onChange={handleKecamatan}
           ariaLabel="Filter kecamatan"
           minWidth="min-w-[140px]"
+          onFocus={ensureInitialOptionsLoaded}
         >
           <option value="">Semua Kecamatan</option>
           {options.kecamatan.map((item) => (
@@ -195,6 +211,7 @@ function FilterSelect({
   ariaLabel,
   minWidth,
   icon,
+  onFocus,
   children,
 }: {
   value: string;
@@ -202,6 +219,7 @@ function FilterSelect({
   ariaLabel: string;
   minWidth: string;
   icon?: React.ReactNode;
+  onFocus?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -214,6 +232,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onFocus={onFocus}
         aria-label={ariaLabel}
         className={`select-lux appearance-none text-sm ${minWidth}`}
         style={{

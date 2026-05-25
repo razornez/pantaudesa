@@ -13,9 +13,9 @@ export interface InternalDocumentQueueItem {
   id: string;
   title: string;
   category: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
+  fileName: string | null;
+  fileType: string | null;
+  fileSize: number | null;
   status: InternalDocumentStatus;
   approvedAt: string | null;
   publishedAt: string | null;

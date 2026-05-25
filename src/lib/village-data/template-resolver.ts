@@ -8,7 +8,11 @@
  */
 
 import { db } from "@/lib/db";
-import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME, DETAIL_FIELD_STANDARDS } from "@/lib/village-data/template-constants";
+import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { DEFAULT_TEMPLATE_KEY, DEFAULT_TEMPLATE_NAME } from "@/lib/village-data/template-constants";
+import { DEFAULT_COMPONENT_CATALOG_MANIFEST } from "@/lib/village-data/component-catalog-manifest";
+import { mergeResolvedFieldsWithCatalogManifest } from "@/lib/village-data/runtime-template-manifest";
 
 // ─── Module-level cache + deduplication (60s TTL) ────────────────────────────
 // Cache survives across requests in the same Node.js process.
@@ -31,6 +35,11 @@ export function invalidateTemplateCache(desaId: string) {
   _inflight.delete(desaId);
 }
 
+export function invalidateAllTemplateCaches() {
+  _templateCache.clear();
+  _inflight.clear();
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ResolvedComponent {
@@ -42,9 +51,15 @@ export interface ResolvedComponent {
 }
 
 export interface ResolvedField {
+  componentId?: string;
+  fieldStandardId?: string;
   fieldKey: string;
   label: string;
   valueType: string;
+  validationRules?: unknown;
+  sourcePolicy?: unknown;
+  isRequired?: boolean;
+  isPublicVisible?: boolean;
   isPublishableNow: boolean;
   componentKey: string;
   componentLabel: string;
@@ -57,35 +72,110 @@ export interface ResolvedTemplate {
   /** Components visible for this desa (accounting for visibility overrides) */
   visibleComponents: ResolvedComponent[];
   /** Components that exist in template but are hidden for this desa */
-  hiddenComponents: Array<{ componentId: string; componentKey: string; label: string; displayOrder: number }>;
+  hiddenComponents: ResolvedComponent[];
 }
+
+type SupabaseAssignmentRow = {
+  templateId: string;
+  isActive: boolean;
+};
+
+type SupabaseTemplateRow = {
+  id: string;
+  key: string;
+  name: string;
+};
+
+type SupabaseComponentRow = {
+  id: string;
+  componentKey: string;
+  label: string;
+  isDefaultVisible: boolean;
+  displayOrder: number;
+};
+
+type SupabaseFieldRow = {
+  id: string;
+  componentId: string;
+  fieldKey: string;
+  label: string;
+  valueType: string;
+  validationRules: unknown;
+  sourcePolicyJson: unknown;
+  isRequired: boolean;
+  isPublicVisible: boolean;
+  isPublishableNow: boolean;
+  displayOrder: number;
+};
+
+type SupabaseVisibilityRow = {
+  componentId: string;
+  isVisible: boolean;
+};
+
+type SupabasePublishedDataDesaRow = {
+  fieldKey: string;
+  valueJson: unknown;
+  valueText: string | null;
+};
+
+const templateTreeSelect = {
+  id: true,
+  key: true,
+  name: true,
+  components: {
+    where: { status: "ACTIVE" },
+    orderBy: { displayOrder: "asc" as const },
+    select: {
+      id: true,
+      componentKey: true,
+      label: true,
+      isDefaultVisible: true,
+      displayOrder: true,
+      fieldStandards: {
+        where: { status: "ACTIVE" },
+        orderBy: { displayOrder: "asc" as const },
+        select: {
+          id: true,
+          fieldKey: true,
+          label: true,
+          valueType: true,
+          validationRules: true,
+          sourcePolicyJson: true,
+          isRequired: true,
+          isPublicVisible: true,
+          isPublishableNow: true,
+        },
+      },
+    },
+  },
+};
 
 // ─── Fallback (pre-migration) ─────────────────────────────────────────────────
 
 function buildFallbackTemplate(): ResolvedTemplate {
-  // Group DETAIL_FIELD_STANDARDS by sectionKey into pseudo-components
-  const sectionMap = new Map<string, { key: string; label: string; fields: ResolvedField[] }>();
-  for (const field of DETAIL_FIELD_STANDARDS) {
-    if (!sectionMap.has(field.sectionKey)) {
-      sectionMap.set(field.sectionKey, { key: field.sectionKey, label: field.sectionLabel, fields: [] });
-    }
-    sectionMap.get(field.sectionKey)!.fields.push({
-      fieldKey:        field.fieldKey,
-      label:           field.fieldLabel,
-      valueType:       "string",
-      isPublishableNow: field.publishableNow,
-      componentKey:    field.sectionKey,
-      componentLabel:  field.sectionLabel,
-    });
-  }
-
-  const visibleComponents: ResolvedComponent[] = [...sectionMap.entries()].map(([key, sec], i) => ({
-    componentId:  `fallback-${key}`,
-    componentKey: key,
-    label:        sec.label,
-    displayOrder: i + 1,
-    fields:       sec.fields,
-  }));
+  const visibleComponents: ResolvedComponent[] = DEFAULT_COMPONENT_CATALOG_MANIFEST.map(
+    (component) => ({
+      componentId: `fallback-${component.componentKey}`,
+      componentKey: component.componentKey,
+      label: component.label,
+      displayOrder: component.displayOrder,
+      fields: component.fields.map((field) => ({
+        componentId: `fallback-${component.componentKey}`,
+        fieldStandardId: `fallback-${component.componentKey}:${field.fieldKey}`,
+        fieldKey: field.fieldKey,
+        label: field.label,
+        valueType: field.valueType,
+        validationRules: null,
+        sourcePolicy: null,
+        isRequired: false,
+        isPublicVisible: true,
+        isPublishableNow: field.isPublishableNow,
+        componentKey: component.componentKey,
+        componentLabel: component.label,
+      })),
+    }),
+  );
 
   return {
     templateId:        "fallback",
@@ -94,6 +184,168 @@ function buildFallbackTemplate(): ResolvedTemplate {
     visibleComponents,
     hiddenComponents:  [],
   };
+}
+
+async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedTemplate | null> {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data: assignment, error: assignmentError } = await client
+    .from("desa_detail_template_assignments")
+    .select("templateId,isActive")
+    .eq("desaId", desaId)
+    .maybeSingle<SupabaseAssignmentRow>();
+  if (assignmentError) throw assignmentError;
+
+  let template: SupabaseTemplateRow | null = null;
+  if (assignment?.isActive !== false && assignment?.templateId) {
+    const { data, error } = await client
+      .from("village_detail_templates")
+      .select("id,key,name")
+      .eq("id", assignment.templateId)
+      .maybeSingle<SupabaseTemplateRow>();
+    if (error) throw error;
+    template = data;
+  } else {
+    const { data, error } = await client
+      .from("village_detail_templates")
+      .select("id,key,name")
+      .eq("key", DEFAULT_TEMPLATE_KEY)
+      .maybeSingle<SupabaseTemplateRow>();
+    if (error) throw error;
+    template = data;
+  }
+
+  if (!template) return null;
+  const shouldOverlayCatalog = template.key === DEFAULT_TEMPLATE_KEY;
+
+  const [{ data: components, error: componentsError }, { data: fields, error: fieldsError }, { data: overrides, error: overridesError }] =
+    await Promise.all([
+      client
+        .from("village_detail_components")
+        .select("id,componentKey,label,isDefaultVisible,displayOrder")
+        .eq("templateId", template.id)
+        .eq("status", "ACTIVE")
+        .order("displayOrder", { ascending: true })
+        .returns<SupabaseComponentRow[]>(),
+      client
+        .from("detail_field_standards")
+        .select("id,componentId,fieldKey,label,valueType,validationRules,sourcePolicyJson,isRequired,isPublicVisible,isPublishableNow,displayOrder")
+        .eq("templateId", template.id)
+        .eq("status", "ACTIVE")
+        .order("displayOrder", { ascending: true })
+        .returns<SupabaseFieldRow[]>(),
+      client
+        .from("desa_detail_component_visibility")
+        .select("componentId,isVisible")
+        .eq("desaId", desaId)
+        .returns<SupabaseVisibilityRow[]>(),
+    ]);
+
+  if (componentsError) throw componentsError;
+  if (fieldsError) throw fieldsError;
+  if (overridesError) throw overridesError;
+
+  const fieldMap = new Map<string, ResolvedField[]>();
+  for (const field of (fields ?? []).sort((a, b) => a.displayOrder - b.displayOrder)) {
+    const list = fieldMap.get(field.componentId) ?? [];
+    list.push({
+      componentId: field.componentId,
+      fieldStandardId: field.id,
+      fieldKey: field.fieldKey,
+      label: field.label,
+      valueType: field.valueType,
+      validationRules: field.validationRules,
+      sourcePolicy: field.sourcePolicyJson,
+      isRequired: field.isRequired,
+      isPublicVisible: field.isPublicVisible,
+      isPublishableNow: field.isPublishableNow,
+      componentKey: "",
+      componentLabel: "",
+    });
+    fieldMap.set(field.componentId, list);
+  }
+
+  const overrideMap = new Map((overrides ?? []).map((row) => [row.componentId, row.isVisible]));
+  const visibleComponents: ResolvedComponent[] = [];
+  const hiddenComponents: ResolvedTemplate["hiddenComponents"] = [];
+
+  for (const component of (components ?? []).sort((a, b) => a.displayOrder - b.displayOrder)) {
+    const resolvedFields = (fieldMap.get(component.id) ?? []).map((field) => ({
+      ...field,
+      componentKey: component.componentKey,
+      componentLabel: component.label,
+    }));
+    const mergedFields = shouldOverlayCatalog
+      ? mergeResolvedFieldsWithCatalogManifest({
+          componentId: component.id,
+          componentKey: component.componentKey,
+          componentLabel: component.label,
+          fields: resolvedFields,
+        })
+      : resolvedFields;
+    const isVisible = overrideMap.has(component.id)
+      ? overrideMap.get(component.id)!
+      : component.isDefaultVisible;
+
+    if (isVisible) {
+      visibleComponents.push({
+        componentId: component.id,
+        componentKey: component.componentKey,
+        label: component.label,
+        displayOrder: component.displayOrder,
+        fields: mergedFields,
+      });
+    } else {
+      hiddenComponents.push({
+        componentId: component.id,
+        componentKey: component.componentKey,
+        label: component.label,
+        displayOrder: component.displayOrder,
+        fields: mergedFields,
+      });
+    }
+  }
+
+  return {
+    templateId: template.id,
+    templateKey: template.key,
+    templateName: template.name,
+    visibleComponents,
+    hiddenComponents,
+  };
+}
+
+async function getPublishedDataDesaViaSupabase(
+  desaId: string,
+  resolved: ResolvedTemplate,
+): Promise<Record<string, unknown>> {
+  const client = getSupabaseAdminClient();
+  if (!client) return {};
+
+  const visibleComponentIds = resolved.visibleComponents
+    .map((component) => component.componentId)
+    .filter((componentId) => !componentId.startsWith("fallback-"));
+
+  if (visibleComponentIds.length === 0) return {};
+
+  const { data, error } = await client
+    .from("data_desa")
+    .select("fieldKey,valueJson,valueText")
+    .eq("desaId", desaId)
+    .eq("status", "PUBLISHED")
+    .eq("isActive", true)
+    .in("componentId", visibleComponentIds)
+    .returns<SupabasePublishedDataDesaRow[]>();
+
+  if (error) throw error;
+
+  const result: Record<string, unknown> = {};
+  for (const row of data ?? []) {
+    result[row.fieldKey] = row.valueJson ?? row.valueText;
+  }
+
+  return result;
 }
 
 // ─── Main resolver ────────────────────────────────────────────────────────────
@@ -111,7 +363,9 @@ export function resolveDesaTemplate(desaId: string): Promise<ResolvedTemplate> {
   if (inflight) return inflight;
 
   const promise = _resolveDesaTemplateFromDB(desaId).then(result => {
-    toTemplateCache(desaId, result);
+    if (result.templateId !== "fallback") {
+      toTemplateCache(desaId, result);
+    }
     _inflight.delete(desaId);
     return result;
   }).catch(e => {
@@ -123,55 +377,36 @@ export function resolveDesaTemplate(desaId: string): Promise<ResolvedTemplate> {
 }
 
 async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTemplate> {
-  if (!db) return buildFallbackTemplate();
+  if (!db) {
+    return (await resolveDesaTemplateViaSupabase(desaId)) ?? buildFallbackTemplate();
+  }
 
   try {
-    // Run both queries in parallel — visibility overrides don't depend on assignment
-    const [assignment, overrides] = await Promise.all([
-      db.desaDetailTemplateAssignment.findUnique({
-        where: { desaId },
-        select: {
-          templateId: true,
-          template: {
-            select: {
-              id: true,
-              key: true,
-              name: true,
-              components: {
-                where: { status: "ACTIVE" },
-                orderBy: { displayOrder: "asc" },
-                select: {
-                  id: true,
-                  componentKey: true,
-                  label: true,
-                  isDefaultVisible: true,
-                  displayOrder: true,
-                  fieldStandards: {
-                    where: { status: "ACTIVE" },
-                    orderBy: { displayOrder: "asc" },
-                    select: {
-                      fieldKey: true,
-                      label: true,
-                      valueType: true,
-                      isPublishableNow: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      }),
-      db.desaDetailComponentVisibility.findMany({
-        where: { desaId },
-        select: { componentId: true, isVisible: true },
-      }),
-    ]);
+    // Keep these reads sequential so local runtimes with a very small Prisma pool
+    // do not time out and silently fall back to hardcoded template ids.
+    const assignment = await db.desaDetailTemplateAssignment.findUnique({
+      where: { desaId },
+      select: {
+        isActive: true,
+        templateId: true,
+        template: { select: templateTreeSelect },
+      },
+    });
 
-    // If no assignment found, use fallback
-    if (!assignment?.template) return buildFallbackTemplate();
+    const template =
+      assignment?.isActive !== false && assignment?.template
+        ? assignment.template
+        : await db.villageDetailTemplate.findUnique({
+            where: { key: DEFAULT_TEMPLATE_KEY },
+            select: templateTreeSelect,
+          });
+    if (!template) return buildFallbackTemplate();
+    const shouldOverlayCatalog = template.key === DEFAULT_TEMPLATE_KEY;
 
-    const template = assignment.template;
+    const overrides = await db.desaDetailComponentVisibility.findMany({
+      where: { desaId },
+      select: { componentId: true, isVisible: true },
+    });
 
     const overrideMap = new Map<string, boolean>(
       overrides.map(o => [o.componentId, o.isVisible])
@@ -187,15 +422,39 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
         : comp.isDefaultVisible;
 
       const resolvedFields: ResolvedField[] = comp.fieldStandards.map(
-        (f: { fieldKey: string; label: string; valueType: string; isPublishableNow: boolean }) => ({
+        (f: {
+          id: string;
+          fieldKey: string;
+          label: string;
+          valueType: string;
+          validationRules: unknown;
+          sourcePolicyJson: unknown;
+          isRequired: boolean;
+          isPublicVisible: boolean;
+          isPublishableNow: boolean;
+        }) => ({
+          componentId:     comp.id,
+          fieldStandardId:  f.id,
           fieldKey:        f.fieldKey,
           label:           f.label,
           valueType:       f.valueType,
+          validationRules: f.validationRules,
+          sourcePolicy:    f.sourcePolicyJson,
+          isRequired:      f.isRequired,
+          isPublicVisible: f.isPublicVisible,
           isPublishableNow: f.isPublishableNow,
           componentKey:    comp.componentKey,
           componentLabel:  comp.label,
         })
       );
+      const mergedFields = shouldOverlayCatalog
+        ? mergeResolvedFieldsWithCatalogManifest({
+            componentId: comp.id,
+            componentKey: comp.componentKey,
+            componentLabel: comp.label,
+            fields: resolvedFields,
+          })
+        : resolvedFields;
 
       if (isVisible) {
         visibleComponents.push({
@@ -203,7 +462,7 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
           componentKey: comp.componentKey,
           label:        comp.label,
           displayOrder: comp.displayOrder,
-          fields:       resolvedFields,
+          fields:       mergedFields,
         });
       } else {
         hiddenComponents.push({
@@ -211,6 +470,7 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
           componentKey: comp.componentKey,
           label:        comp.label,
           displayOrder: comp.displayOrder,
+          fields:       mergedFields,
         });
       }
     }
@@ -223,6 +483,10 @@ async function _resolveDesaTemplateFromDB(desaId: string): Promise<ResolvedTempl
       hiddenComponents,
     };
   } catch (e) {
+    if (isDatabaseConnectivityError(e)) {
+      const supabaseResolved = await resolveDesaTemplateViaSupabase(desaId).catch(() => null);
+      if (supabaseResolved) return supabaseResolved;
+    }
     if (process.env.NODE_ENV === "development") {
       console.error("[template-resolver] error for", desaId, e);
     }
@@ -258,7 +522,9 @@ export async function getPublishedDataDesa(
   desaId: string,
   resolved: ResolvedTemplate,
 ): Promise<Record<string, unknown>> {
-  if (!db) return {};
+  if (!db) {
+    return getPublishedDataDesaViaSupabase(desaId, resolved).catch(() => ({}));
+  }
 
   try {
     const visibleComponentIds = resolved.visibleComponents
@@ -282,7 +548,10 @@ export async function getPublishedDataDesa(
       result[row.fieldKey] = row.valueJson ?? row.valueText;
     }
     return result;
-  } catch {
+  } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      return getPublishedDataDesaViaSupabase(desaId, resolved).catch(() => ({}));
+    }
     return {};
   }
 }
