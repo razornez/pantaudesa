@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ComponentPreviewVariant } from "@/lib/village-data/component-catalog-manifest";
 
 interface PreviewField {
   fieldKey: string;
@@ -7,6 +8,7 @@ interface PreviewField {
 
 export interface TemplatePreviewComponentInput {
   componentKey: string;
+  previewVariant?: ComponentPreviewVariant;
   label: string;
   description: string;
   fields: PreviewField[];
@@ -225,20 +227,23 @@ function PreviewShell({
   );
 }
 
-const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) => ReactNode> = {
-  identitas: (input) => (
+export const PUBLIC_TEMPLATE_PREVIEW_REGISTRY: Record<
+  ComponentPreviewVariant,
+  (input: TemplatePreviewComponentInput) => ReactNode
+> = {
+  identity: (input) => (
     <FirstViewShellPreview
       input={input}
       body="Slot first view di halaman publik memang besar. Preview ini menampilkan shell lengkapnya, lalu menyorot field identitas yang diisi komponen ini."
     />
   ),
-  demografi: (input) => (
+  demography: (input) => (
     <FirstViewShellPreview
       input={input}
       body="Komponen demografi juga hidup di shell first view yang sama. Area angka dan fakta cepat di bawah nama desa di-highlight dari field demografi."
     />
   ),
-  sumber_dokumen: (input) => (
+  source: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -260,7 +265,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  transparansi: (input) => (
+  transparency: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -278,7 +283,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  anggaran: (input) => (
+  budget: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -395,7 +400,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  profil_desa: (input) => (
+  kelengkapan: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -433,7 +438,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  panduan_warga: (input) => (
+  guide: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -451,11 +456,11 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  agenda_desa: (input) => (
+  agenda: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
-      body="Komponen catalog-only untuk uji pasang template. Zero-field, jadi tidak menambah total field publik."
+      body="Agenda desa memakai field DB untuk daftar kegiatan, ringkasan, dan kontak agenda."
       tone="border-sky-100 bg-sky-50/45"
       chips={renderPreviewFieldChips(input)}
     >
@@ -468,7 +473,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
             </p>
           </div>
           <span className="rounded-full bg-sky-50 px-2 py-1 text-[8px] font-bold text-sky-700">
-            Zero field
+            Field DB
           </span>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -481,7 +486,7 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
       </div>
     </PreviewShell>
   ),
-  suara_warga: (input) => (
+  voice: (input) => (
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
@@ -507,5 +512,8 @@ const PREVIEW_RENDERERS: Record<string, (input: TemplatePreviewComponentInput) =
 };
 
 export function renderTemplateComponentPreview(input: TemplatePreviewComponentInput) {
-  return (PREVIEW_RENDERERS[input.componentKey] ?? PREVIEW_RENDERERS.identitas)(input);
+  return (
+    PUBLIC_TEMPLATE_PREVIEW_REGISTRY[input.previewVariant ?? "identity"] ??
+    PUBLIC_TEMPLATE_PREVIEW_REGISTRY.identity
+  )(input);
 }

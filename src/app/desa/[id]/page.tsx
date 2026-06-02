@@ -26,12 +26,12 @@ import { perfStart, publicPerfLog } from "@/lib/perf";
 import {
   buildPublicDetailRenderPlan,
   getOrderedVisibleSlots,
-  isLegacyPublicDetailComponent,
   type PublicDetailSlotKey,
 } from "@/lib/village-data/public-detail-composition";
 import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
 import { formatRupiah, formatRupiahFull } from "@/lib/utils";
 import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
+import type { ComponentRendererType } from "@/lib/village-data/component-catalog-manifest";
 import DownloadButton from "@/components/desa/DownloadButton";
 import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
 import DetailSectionNav, {
@@ -45,7 +45,7 @@ import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
 import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
 import TransparansiCard from "@/components/desa/TransparansiCard";
 import {
-  PUBLIC_TEMPLATE_COMPONENT_REGISTRY,
+  PUBLIC_TEMPLATE_RENDERER_REGISTRY,
 } from "@/components/desa/public-template-registry";
 
 import type { Metadata } from "next";
@@ -81,11 +81,6 @@ const SLOT_META: Record<
   panduan_warga: { anchorId: "panduan-warga", navLabel: "Panduan Warga" },
   suara_warga: { anchorId: "suara-warga", navLabel: "Suara Warga" },
 };
-
-function getPublicDetailSlot(componentKey: string) {
-  return PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]
-    ?.detailSlot as PublicDetailSlotKey | undefined;
-}
 
 function buildNavItems(slots: PublicDetailSlotKey[]): DetailSectionNavItem[] {
   return slots.map((slot) => ({
@@ -167,30 +162,23 @@ export default async function DesaDetailPage({ params }: Props) {
   const hiddenComponentKeys = new Set(
     runtimeManifest.hiddenComponents.map((component) => component.componentKey),
   );
-  const visibleComponentKeys = runtimeManifest.visibleComponents.map(
-    (component) => component.componentKey,
-  );
-  const visibleSlots = getOrderedVisibleSlots(
-    visibleComponentKeys,
-    getPublicDetailSlot,
-  );
-  const renderPlan = buildPublicDetailRenderPlan(
-    visibleComponentKeys,
-    getPublicDetailSlot,
-  );
+  const visibleComponents = runtimeManifest.visibleComponents;
+  const visibleSlots = getOrderedVisibleSlots(visibleComponents);
+  const renderPlan = buildPublicDetailRenderPlan(visibleComponents);
   const navItems = buildNavItems(visibleSlots);
+  const hasRenderer = (rendererType: string) =>
+    visibleComponents.some((component) => component.rendererType === rendererType);
   const showBudgetSummary =
-    visibleComponentKeys.includes("anggaran") ||
-    visibleComponentKeys.includes("pendapatan");
-  const showBudgetMetrics = visibleComponentKeys.includes("anggaran");
-  const showPendapatanBreakdown = visibleComponentKeys.includes("pendapatan");
-  const showSourceSection = visibleComponentKeys.includes("sumber_dokumen");
-  const showPerangkatSection = visibleComponentKeys.includes("perangkat");
-  const showTransparansiSection = visibleComponentKeys.includes("transparansi");
-  const showKinerjaSection = visibleComponentKeys.includes("kinerja");
-  const showProfilSection = visibleComponentKeys.includes("profil_desa");
-  const showPanduanSection = visibleComponentKeys.includes("panduan_warga");
-  const showSuaraSection = visibleComponentKeys.includes("suara_warga");
+    hasRenderer("budget_summary") || hasRenderer("pendapatan_breakdown");
+  const showBudgetMetrics = hasRenderer("budget_summary");
+  const showPendapatanBreakdown = hasRenderer("pendapatan_breakdown");
+  const showSourceSection = hasRenderer("source_snapshot");
+  const showPerangkatSection = hasRenderer("perangkat_contacts");
+  const showTransparansiSection = hasRenderer("transparency_metrics");
+  const showKinerjaSection = hasRenderer("kinerja_breakdown");
+  const showProfilSection = hasRenderer("kelengkapan_tabs");
+  const showPanduanSection = hasRenderer("citizen_guide");
+  const showSuaraSection = hasRenderer("voice_preview");
   const showFirstView = visibleSlots.includes("first_view");
 
   const selisih = desaView.totalAnggaran - desaView.terealisasi;
@@ -255,15 +243,17 @@ export default async function DesaDetailPage({ params }: Props) {
   ] as const;
 
   const registryOnlySectionEntries = await Promise.all(
-    visibleComponentKeys
-      .filter((componentKey) => !isLegacyPublicDetailComponent(componentKey))
-      .map(async (componentKey) => {
-        const section = await PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]?.render({
+    renderPlan
+      .filter((item) => item.kind === "registry_component")
+      .map(async (item) => {
+        const section = await PUBLIC_TEMPLATE_RENDERER_REGISTRY[
+          item.rendererType as ComponentRendererType
+        ]?.render({
           desa: desaView,
           publishedValues,
           sourceSummaries: templateData.sourceSummaries,
         });
-        return [componentKey, section] as const;
+        return [item.componentKey, section] as const;
       }),
   );
   const registryOnlySectionsByComponentKey = new Map(

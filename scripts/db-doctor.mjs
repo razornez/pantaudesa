@@ -10,6 +10,8 @@ loadEnv({ path: ".env", override: false });
 const CONNECT_TIMEOUT_MS = Number(process.env.DB_DOCTOR_CONNECT_TIMEOUT_MS ?? 10_000);
 const PRISMA_TIMEOUT_MS = Number(process.env.DB_DOCTOR_PRISMA_TIMEOUT_MS ?? 20_000);
 const MIGRATE_TIMEOUT_MS = Number(process.env.DB_DOCTOR_MIGRATE_TIMEOUT_MS ?? 45_000);
+const DEFAULT_LOCAL_POOLER_CONNECTION_LIMIT = "5";
+const DEFAULT_LOCAL_POOLER_TIMEOUT_SECONDS = "20";
 
 function safeUrlInfo(name, rawUrl) {
   if (!rawUrl) {
@@ -34,6 +36,8 @@ function safeUrlInfo(name, rawUrl) {
       port: parsed.port || "5432",
       database: parsed.pathname.replace(/^\//, "") || null,
       pgbouncer: parsed.searchParams.get("pgbouncer"),
+      connection_limit: parsed.searchParams.get("connection_limit"),
+      pool_timeout: parsed.searchParams.get("pool_timeout"),
     };
   } catch {
     return {
@@ -45,6 +49,57 @@ function safeUrlInfo(name, rawUrl) {
       database: null,
       pgbouncer: null,
     };
+  }
+}
+
+function isLocalRuntime() {
+  return !process.env.VERCEL && !process.env.VERCEL_ENV;
+}
+
+function readPositiveInteger(value) {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function normalizeLocalRuntimeDatabaseUrl(rawUrl) {
+  if (!rawUrl || !isLocalRuntime()) return rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    if (!["postgresql:", "postgres:"].includes(parsed.protocol)) return rawUrl;
+    const shouldTune =
+      parsed.searchParams.get("pgbouncer") === "true" ||
+      parsed.hostname.includes(".pooler.supabase.com");
+    if (!shouldTune) return rawUrl;
+
+    const desiredConnectionLimit =
+      process.env.PANTAUDESA_LOCAL_DB_CONNECTION_LIMIT ??
+      DEFAULT_LOCAL_POOLER_CONNECTION_LIMIT;
+    const desiredPoolTimeout =
+      process.env.PANTAUDESA_LOCAL_DB_POOL_TIMEOUT ?? DEFAULT_LOCAL_POOLER_TIMEOUT_SECONDS;
+
+    const currentConnectionLimit = readPositiveInteger(
+      parsed.searchParams.get("connection_limit"),
+    );
+    const nextConnectionLimit = readPositiveInteger(desiredConnectionLimit);
+    if (
+      nextConnectionLimit &&
+      (!currentConnectionLimit || currentConnectionLimit < nextConnectionLimit)
+    ) {
+      parsed.searchParams.set("connection_limit", String(nextConnectionLimit));
+    }
+
+    const currentPoolTimeout = readPositiveInteger(parsed.searchParams.get("pool_timeout"));
+    const nextPoolTimeout = readPositiveInteger(desiredPoolTimeout);
+    if (nextPoolTimeout && (!currentPoolTimeout || currentPoolTimeout < nextPoolTimeout)) {
+      parsed.searchParams.set("pool_timeout", String(nextPoolTimeout));
+    }
+
+    return parsed.toString();
+  } catch {
+    return rawUrl;
   }
 }
 
@@ -63,11 +118,18 @@ function pickRuntimeUrl() {
 
   return {
     source: databaseUrl ? "DATABASE_URL" : "DIRECT_URL",
-    url: databaseUrl || directUrl,
+    url: databaseUrl ? normalizeLocalRuntimeDatabaseUrl(databaseUrl) : directUrl,
+    rawUrl: databaseUrl || directUrl,
   };
 }
 
-function recommendedAction({ runtimeOk, migrationOk, directUrlUsable, runtimeSource }) {
+function recommendedAction({
+  runtimeOk,
+  migrationOk,
+  directUrlUsable,
+  runtimeSource,
+  runtimePoolTuned,
+}) {
   if (!runtimeOk) {
     return "Fix DATABASE_URL/runtime connectivity before opening local back office pages.";
   }
@@ -79,6 +141,9 @@ function recommendedAction({ runtimeOk, migrationOk, directUrlUsable, runtimeSou
   }
   if (!directUrlUsable) {
     return "Runtime is healthy; DIRECT_URL is not usable from this environment, so run migrations from a stable network/CI or Supabase SQL tool.";
+  }
+  if (runtimePoolTuned) {
+    return "Database is healthy. Local Next dev pooler URL was tuned above connection_limit=1 to avoid Prisma P2024 starvation.";
   }
   return "Database runtime, migration status, and direct URL are healthy.";
 }
@@ -206,6 +271,8 @@ const databaseUrlInfo = safeUrlInfo("DATABASE_URL", process.env.DATABASE_URL);
 const directUrlInfo = safeUrlInfo("DIRECT_URL", process.env.DIRECT_URL);
 const runtime = pickRuntimeUrl();
 const runtimeInfo = safeUrlInfo(runtime.source, runtime.url);
+const rawRuntimeInfo = safeUrlInfo(`${runtime.source}_RAW`, runtime.rawUrl);
+const runtimePoolTuned = runtime.url !== runtime.rawUrl;
 
 const [databaseTcp, directTcp, runtimePrisma, migration] = await Promise.all([
   tcpCheck(databaseUrlInfo),
@@ -227,9 +294,12 @@ const result = {
     migrationOk,
     directUrlUsable,
     runtimeSource: runtime.source,
+    runtimePoolTuned,
   }),
   runtime: {
     source: runtime.source,
+    local_pool_tuned: runtimePoolTuned,
+    raw_url: rawRuntimeInfo,
     url: runtimeInfo,
     prisma: runtimePrisma,
   },

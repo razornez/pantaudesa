@@ -96,6 +96,47 @@ describe("resolveDesaTemplate", () => {
     expect(result.visibleComponents[0]?.fields[0]?.fieldKey).toBe("potensiUnggulan");
   });
 
+  it("does not reuse stale template assignment across separate resolves", async () => {
+    vi.doMock("@/lib/supabase-admin", () => ({
+      getSupabaseAdminClient: () => null,
+    }));
+    const firstTemplate = buildTemplate("tpl_first", "TEMPLATE_UMUM_DESA", "websiteUrl");
+    const secondTemplate = buildTemplate("tpl_second", "TEMPLATE_AGENDA", "agendaDesa");
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce({
+        isActive: true,
+        templateId: "tpl_first",
+        template: firstTemplate,
+      })
+      .mockResolvedValueOnce({
+        isActive: true,
+        templateId: "tpl_second",
+        template: secondTemplate,
+      });
+
+    vi.doMock("@/lib/db", () => ({
+      db: {
+        desaDetailTemplateAssignment: { findUnique },
+        villageDetailTemplate: {
+          findUnique: vi.fn().mockResolvedValue(firstTemplate),
+        },
+        desaDetailComponentVisibility: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+      },
+    }));
+
+    const { resolveDesaTemplate } = await import("@/lib/village-data/template-resolver");
+    const first = await resolveDesaTemplate("qa-desa-a");
+    const second = await resolveDesaTemplate("qa-desa-a");
+
+    expect(findUnique).toHaveBeenCalledTimes(2);
+    expect(first.templateId).toBe("tpl_first");
+    expect(second.templateId).toBe("tpl_second");
+    expect(second.visibleComponents[0]?.fields[0]?.fieldKey).toBe("agendaDesa");
+  });
+
   it("falls back to hardcoded constants only when DB default is unavailable", async () => {
     vi.doMock("@/lib/supabase-admin", () => ({
       getSupabaseAdminClient: () => null,

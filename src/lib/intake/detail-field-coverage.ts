@@ -15,6 +15,7 @@ import type {
   UploadedCoverageStatus,
 } from "@/lib/intake/types";
 import { DEFAULT_COMPONENT_KEY_BY_FIELD_KEY } from "@/lib/village-data/component-catalog-manifest";
+import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
 import type { ResolvedTemplate } from "@/lib/village-data/template-resolver";
 
 // Maps DETAIL_FIELD_STANDARDS sectionKey → template componentKey(s)
@@ -632,28 +633,21 @@ export async function buildDetailFieldCoverageSummary(input: {
 
   const resolved = input.resolvedTemplate;
   const useDbTemplate = resolved && resolved.templateId !== "fallback" && resolved.visibleComponents.length > 0;
+  const runtimeManifest = resolved ? buildRuntimeTemplateManifest(resolved) : null;
 
   // ── Branch A: DB template available ──────────────────────────────────────────
-  if (useDbTemplate) {
+  if (useDbTemplate && runtimeManifest) {
     const entries: DetailFieldCoverageEntry[] = [];
 
     // All fieldKeys in template (visible + hidden) — for outside_template detection
-    const allTemplateFieldKeys = new Set<string>([
-      ...resolved.visibleComponents.flatMap(c => c.fields.map(f => f.fieldKey)),
-      ...resolved.hiddenComponents.flatMap(() => [] as string[]), // hidden components have no fields in ResolvedTemplate type
-    ]);
-
-    // Also add fields from DETAIL_FIELD_STANDARDS that map to hidden components
-    for (const std of DETAIL_FIELD_STANDARDS) {
-      const compKeys = getOwnerComponentKeys(std.fieldKey, std.sectionKey);
-      const hiddenCompKeys = new Set(resolved.hiddenComponents.map(c => c.componentKey));
-      if (compKeys.some(k => hiddenCompKeys.has(k))) {
-        allTemplateFieldKeys.add(std.fieldKey);
-      }
-    }
+    const allTemplateFieldKeys = new Set<string>(
+      runtimeManifest.components.flatMap((component) =>
+        component.fields.map((field) => field.fieldKey),
+      ),
+    );
 
     // Entries for VISIBLE component fields
-    for (const component of resolved.visibleComponents) {
+    for (const component of runtimeManifest.visibleComponents) {
       for (const field of component.fields) {
         const knownMappedValue = KNOWN_FIELD_KEYS.has(field.fieldKey)
           ? input.mappedFields[field.fieldKey as AiMappableDesaField]
@@ -688,22 +682,34 @@ export async function buildDetailFieldCoverageSummary(input: {
       }
     }
 
-    // Entries for HIDDEN component fields (from DETAIL_FIELD_STANDARDS cross-reference)
-    for (const std of DETAIL_FIELD_STANDARDS) {
-      const compKeys = getOwnerComponentKeys(std.fieldKey, std.sectionKey);
-      const hiddenComp = resolved.hiddenComponents.find(c => compKeys.includes(c.componentKey));
-      if (!hiddenComp) continue;
-      // Avoid duplicate if already added via visible components
-      if (entries.some(e => e.fieldKey === std.fieldKey)) continue;
+    // Entries for HIDDEN component fields come from the same runtime contract.
+    for (const component of runtimeManifest.hiddenComponents) {
+      for (const field of component.fields) {
+        if (entries.some((entry) => entry.fieldKey === field.fieldKey)) continue;
 
-      const currentValue = getCurrentValueForStandard(std, desa, input.currentKnownFields);
-      entries.push(buildEntryFromDbField({
-        fieldKey: std.fieldKey, fieldLabel: std.fieldLabel,
-        componentKey: hiddenComp.componentKey, componentLabel: hiddenComp.label,
-        isPublishableNow: std.publishableNow,
-        uploadedCoverageStatus: "component_hidden", uploadedValuePreview: null,
-        currentValueStatus: currentValue.status, currentValuePreview: currentValue.preview,
-      }));
+        const currentValue = getCurrentValueForStandard(
+          STANDARDS_BY_KEY.get(field.fieldKey) ??
+            ({
+              fieldKey: field.fieldKey,
+              fieldLabel: field.label,
+              sectionKey: component.componentKey,
+              sectionLabel: component.label,
+            } as DetailFieldStandard),
+          desa,
+          input.currentKnownFields,
+        );
+        entries.push(buildEntryFromDbField({
+          fieldKey: field.fieldKey,
+          fieldLabel: field.label,
+          componentKey: component.componentKey,
+          componentLabel: component.label,
+          isPublishableNow: field.isPublishableNow,
+          uploadedCoverageStatus: "component_hidden",
+          uploadedValuePreview: null,
+          currentValueStatus: currentValue.status,
+          currentValuePreview: currentValue.preview,
+        }));
+      }
     }
 
     // Synthetic entries for OUTSIDE_TEMPLATE detected fields
@@ -734,9 +740,9 @@ export async function buildDetailFieldCoverageSummary(input: {
       templateKey:            resolved.templateKey,
       templateName:           resolved.templateName,
       source:                 "db",
-      visibleComponentCount:  resolved.visibleComponents.length,
-      hiddenComponentCount:   resolved.hiddenComponents.length,
-      totalFieldCount:        resolved.visibleComponents.flatMap(c => c.fields).length,
+      visibleComponentCount:  runtimeManifest.visibleComponents.length,
+      hiddenComponentCount:   runtimeManifest.hiddenComponents.length,
+      totalFieldCount:        runtimeManifest.visibleFieldCount,
     };
 
     return {

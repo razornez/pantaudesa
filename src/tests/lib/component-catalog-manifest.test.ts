@@ -40,13 +40,17 @@ describe("component catalog manifest", () => {
     }
   });
 
-  it("allows catalog-only zero-field components without changing field count", () => {
+  it("makes agenda desa a template-backed component with fillable fields", () => {
     const agendaComponent = DEFAULT_COMPONENT_CATALOG_MANIFEST.find(
       (component) => component.componentKey === "agenda_desa",
     );
 
     expect(agendaComponent).toBeTruthy();
-    expect(agendaComponent?.fields).toEqual([]);
+    expect(agendaComponent?.fields.map((field) => field.fieldKey)).toEqual([
+      "agendaDesa",
+      "agendaRingkasan",
+      "agendaKontak",
+    ]);
     expect(agendaComponent?.detailSlot).toBe("panduan_warga");
   });
 });

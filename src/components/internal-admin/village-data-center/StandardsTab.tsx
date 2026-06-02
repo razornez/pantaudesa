@@ -56,6 +56,19 @@ function moveKeyToIndex(keys: string[], componentKey: string, index: number) {
   return next;
 }
 
+export function uniqueTemplateCanvasKeys(keys: string[]) {
+  const uniqueKeys: string[] = [];
+  const seen = new Set<string>();
+
+  for (const key of keys) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueKeys.push(key);
+  }
+
+  return uniqueKeys;
+}
+
 function moveKeyByOffset(keys: string[], componentKey: string, offset: -1 | 1) {
   const currentIndex = keys.indexOf(componentKey);
   if (currentIndex === -1) return keys;
@@ -68,14 +81,21 @@ function syncEditorFromTemplate(template: TemplateDetail | null) {
   return {
     name: template?.name ?? "",
     description: template?.description ?? "",
-    componentKeys: template?.components.map((component) => component.componentKey) ?? [],
+    componentKeys: uniqueTemplateCanvasKeys(
+      template?.components.map((component) => component.componentKey) ?? [],
+    ),
   };
 }
 
 function renderTemplatePreview(
   component: Pick<
     TemplateCatalogComponent,
-    "componentKey" | "label" | "description" | "fields" | "highlightFieldKeys"
+    | "componentKey"
+    | "label"
+    | "description"
+    | "fields"
+    | "highlightFieldKeys"
+    | "previewVariant"
   >,
 ) {
   return renderTemplateComponentPreview({
@@ -337,7 +357,7 @@ export function StandardsTab() {
   );
 
   const canvasComponents = useMemo(() => {
-    return canvasKeys
+    return uniqueTemplateCanvasKeys(canvasKeys)
       .map((key) => {
         const liveComponent =
           selectedTemplate?.components.find((component) => component.componentKey === key) ??
@@ -353,7 +373,11 @@ export function StandardsTab() {
       .filter((component): component is TemplateEditorComponent => Boolean(component));
   }, [canvasKeys, componentMap, selectedTemplate]);
 
-  const canvasKeySet = useMemo(() => new Set(canvasKeys), [canvasKeys]);
+  const normalizedCanvasKeys = useMemo(
+    () => uniqueTemplateCanvasKeys(canvasKeys),
+    [canvasKeys],
+  );
+  const canvasKeySet = useMemo(() => new Set(normalizedCanvasKeys), [normalizedCanvasKeys]);
   const unusedCatalogComponents = availableComponents.filter(
     (component) => !canvasKeySet.has(component.componentKey),
   );
@@ -361,7 +385,7 @@ export function StandardsTab() {
   const dirty =
     draftName.trim() !== (selectedTemplate?.name ?? "") ||
     draftDescription !== (selectedTemplate?.description ?? "") ||
-    canvasKeys.join("|") !==
+    normalizedCanvasKeys.join("|") !==
       (selectedTemplate?.components.map((component) => component.componentKey).join("|") ?? "");
 
   const applyTemplateSelection = (template: TemplateSummary) => {
@@ -425,8 +449,12 @@ export function StandardsTab() {
       toast(readOnlyReason, "warning");
       return;
     }
-    if (payload.source === "catalog" && !canvasKeys.includes(payload.componentKey)) {
-      setCanvasKeys((current) => [...current, payload.componentKey]);
+    if (payload.source === "catalog") {
+      setCanvasKeys((current) =>
+        current.includes(payload.componentKey)
+          ? moveKeyToIndex(current, payload.componentKey, current.length)
+          : [...current, payload.componentKey],
+      );
       return;
     }
 
@@ -486,6 +514,10 @@ export function StandardsTab() {
     }
     setActiveMutation("save");
     setError(null);
+    const componentKeysToSave = uniqueTemplateCanvasKeys(canvasKeys);
+    if (componentKeysToSave.length !== canvasKeys.length) {
+      setCanvasKeys(componentKeysToSave);
+    }
     void updateTemplateWorkspaceMeta({
       templateId: selectedTemplateId,
       name: draftName,
@@ -494,7 +526,7 @@ export function StandardsTab() {
       .then((metaResult) =>
         saveTemplateWorkspaceComponents({
           templateId: selectedTemplateId,
-          componentKeys: canvasKeys,
+          componentKeys: componentKeysToSave,
         }).then((componentResult) => ({
           metaResult,
           componentResult,

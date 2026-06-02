@@ -1,3 +1,5 @@
+import type { RuntimeComponentContract } from "@/lib/village-data/runtime-template-manifest";
+
 export type PublicDetailSlotKey =
   | "first_view"
   | "sumber_dokumen"
@@ -8,22 +10,22 @@ export type PublicDetailSlotKey =
   | "panduan_warga"
   | "suara_warga";
 
-const LEGACY_PUBLIC_DETAIL_COMPONENT_KEYS = new Set([
-  "identitas",
-  "demografi",
-  "perangkat",
-  "sumber_dokumen",
-  "transparansi",
-  "anggaran",
-  "pendapatan",
-  "kinerja",
-  "profil_desa",
-  "panduan_warga",
-  "suara_warga",
+const LEGACY_PUBLIC_DETAIL_RENDERER_TYPES = new Set([
+  "identity_grid",
+  "demography_metrics",
+  "perangkat_contacts",
+  "source_snapshot",
+  "transparency_metrics",
+  "budget_summary",
+  "pendapatan_breakdown",
+  "kinerja_breakdown",
+  "kelengkapan_tabs",
+  "citizen_guide",
+  "voice_preview",
 ]);
 
-export function isLegacyPublicDetailComponent(componentKey: string) {
-  return LEGACY_PUBLIC_DETAIL_COMPONENT_KEYS.has(componentKey);
+export function isLegacyPublicDetailRenderer(rendererType: string) {
+  return LEGACY_PUBLIC_DETAIL_RENDERER_TYPES.has(rendererType);
 }
 
 export type PublicDetailRenderItem =
@@ -34,18 +36,18 @@ export type PublicDetailRenderItem =
   | {
       kind: "registry_component";
       componentKey: string;
+      rendererType: string;
       slot: PublicDetailSlotKey;
     };
 
 export function getOrderedVisibleSlots(
-  componentKeys: string[],
-  getDetailSlot: (componentKey: string) => PublicDetailSlotKey | undefined,
+  components: Array<Pick<RuntimeComponentContract, "detailSlot">>,
 ): PublicDetailSlotKey[] {
   const slots: PublicDetailSlotKey[] = [];
   const seen = new Set<PublicDetailSlotKey>();
 
-  for (const componentKey of componentKeys) {
-    const slot = getDetailSlot(componentKey);
+  for (const component of components) {
+    const slot = component.detailSlot as PublicDetailSlotKey | undefined;
     if (!slot || seen.has(slot)) continue;
     seen.add(slot);
     slots.push(slot);
@@ -55,45 +57,31 @@ export function getOrderedVisibleSlots(
 }
 
 export function buildPublicDetailRenderPlan(
-  componentKeys: string[],
-  getDetailSlot: (componentKey: string) => PublicDetailSlotKey | undefined,
+  components: Array<
+    Pick<RuntimeComponentContract, "componentKey" | "rendererType" | "detailSlot">
+  >,
 ): PublicDetailRenderItem[] {
   const plan: PublicDetailRenderItem[] = [];
   const emittedLegacySlots = new Set<PublicDetailSlotKey>();
 
-  for (const componentKey of componentKeys) {
-    const slot = getDetailSlot(componentKey);
+  for (const component of components) {
+    const slot = component.detailSlot as PublicDetailSlotKey | undefined;
     if (!slot) continue;
 
-    if (isLegacyPublicDetailComponent(componentKey)) {
+    if (isLegacyPublicDetailRenderer(component.rendererType)) {
       if (emittedLegacySlots.has(slot)) continue;
       emittedLegacySlots.add(slot);
       plan.push({ kind: "legacy_slot", slot });
       continue;
     }
 
-    plan.push({ kind: "registry_component", componentKey, slot });
+    plan.push({
+      kind: "registry_component",
+      componentKey: component.componentKey,
+      rendererType: component.rendererType,
+      slot,
+    });
   }
 
   return plan;
-}
-
-export function groupRegistryOnlyComponentKeysBySlot(
-  componentKeys: string[],
-  getDetailSlot: (componentKey: string) => PublicDetailSlotKey | undefined,
-) {
-  const grouped = new Map<PublicDetailSlotKey, string[]>();
-
-  for (const componentKey of componentKeys) {
-    if (isLegacyPublicDetailComponent(componentKey)) continue;
-
-    const slot = getDetailSlot(componentKey);
-    if (!slot) continue;
-
-    const slotComponents = grouped.get(slot) ?? [];
-    slotComponents.push(componentKey);
-    grouped.set(slot, slotComponents);
-  }
-
-  return grouped;
 }

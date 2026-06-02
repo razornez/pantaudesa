@@ -9,19 +9,23 @@ import {
 loadEnv({ path: ".env.local", override: false });
 loadEnv({ path: ".env", override: false });
 
-// Template sync should use the most reliable local connection. In this
-// workspace the session/direct pooler can be unavailable while DATABASE_URL
-// works, so direct usage must be explicit instead of the default.
+// Template sync is an admin/seed job, not app runtime. Prefer DIRECT_URL when
+// available so catalog writes do not compete with the runtime pooler. Runtime
+// Next.js still uses DATABASE_URL; this override is scoped to this process only.
 if (process.env.TEMPLATE_SYNC_DATABASE_URL) {
   process.env.DATABASE_URL = process.env.TEMPLATE_SYNC_DATABASE_URL;
 } else if (
   process.env.DIRECT_URL &&
-  process.env.TEMPLATE_SYNC_USE_DIRECT_URL === "true"
+  process.env.TEMPLATE_SYNC_USE_DIRECT_URL !== "false"
 ) {
   process.env.DATABASE_URL = process.env.DIRECT_URL;
 }
 
-const db = new PrismaClient();
+const db = new PrismaClient({
+  datasources: {
+    db: { url: process.env.DATABASE_URL },
+  },
+});
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run") || process.env.TEMPLATE_SYNC_DRY_RUN === "true";
 const stageTimeoutMs = Number(process.env.TEMPLATE_SYNC_STAGE_TIMEOUT_MS ?? 120_000);
@@ -754,43 +758,203 @@ const batukarutProfilBackfill = {
     {
       jenis: "pemerintahan",
       nama: "BPD Batukarut",
-      jumlahAnggota: 7,
       ketua: "Dadan Hidayat",
-      statusAktif: true,
+      anggota: 7,
+      tahunBerdiri: 1999,
+      aktif: true,
+      deskripsi: "Mitra pemerintahan desa untuk musyawarah dan pengawasan kebijakan.",
+      program: "Musyawarah desa dan aspirasi warga",
     },
     {
       jenis: "pemberdayaan",
       nama: "PKK Desa Batukarut",
-      jumlahAnggota: 18,
       ketua: "Nani Rohaeni",
-      statusAktif: true,
+      anggota: 18,
+      tahunBerdiri: 2004,
+      aktif: true,
+      deskripsi: "Gerakan pemberdayaan keluarga, kader posyandu, dan ekonomi rumah tangga.",
+      program: "Kader kesehatan dan kebun gizi",
     },
     {
       jenis: "ekonomi",
       nama: "Karang Taruna Mandiri",
-      jumlahAnggota: 24,
       ketua: "Yudi Hermawan",
-      statusAktif: true,
+      anggota: 24,
+      tahunBerdiri: 2016,
+      aktif: true,
+      deskripsi: "Organisasi pemuda untuk kegiatan sosial, olahraga, dan ekonomi kreatif.",
+      program: "Festival sungai dan pelatihan UMKM muda",
     },
   ],
   bumdes: {
     nama: "BUMDes Batu Maju",
-    bidangUsaha: ["Unit wisata sungai", "Perdagangan hasil tani", "Sewa alat desa"],
+    bidangUsaha: "Unit wisata sungai, perdagangan hasil tani, dan sewa alat desa",
+    tahunBerdiri: 2018,
     modal: 175_000_000,
     omsetPerTahun: 245_000_000,
     status: "aktif",
+    deskripsi:
+      "BUMDes mengelola potensi wisata sungai, pemasaran hasil tani, dan layanan sewa alat untuk warga.",
   },
 };
 
-async function backfillDemoProfilFields(templateId) {
-  const profilComponent = await db.villageDetailComponent.findFirst({
+const batukarutCompleteTemplateBackfill = {
+  identitas: {
+    websiteUrl: "https://batukarut.desa.id",
+    kategori: "Maju",
+    tahunData: 2026,
+    kecamatan: "Arjasari",
+    kabupaten: "Kabupaten Bandung",
+    provinsi: "Jawa Barat",
+  },
+  demografi: {
+    jumlahPenduduk: 3786,
+    jumlahKK: 987,
+    jumlahDusun: 4,
+    jumlahRt: 11,
+    jumlahRw: 5,
+  },
+  transparansi: {
+    skorTransparansiTotal: 82,
+    skorKetepatan: 78,
+    skorKelengkapan: 85,
+  },
+  anggaran: {
+    totalAnggaran: 2_800_000_000,
+    terealisasi: 2_015_000_000,
+    persentaseSerapan: 72,
+  },
+  pendapatan: {
+    danaDesa: 1_200_000_000,
+    add: 950_000_000,
+    pades: 225_000_000,
+    bantuanKeuangan: 425_000_000,
+  },
+  kinerja: {
+    outputFisik: [
+      {
+        label: "Jalan lingkungan diperbaiki",
+        satuan: "meter",
+        target: 850,
+        realisasi: 650,
+        persentase: 76,
+      },
+      {
+        label: "Drainase permukiman dibangun",
+        satuan: "meter",
+        target: 420,
+        realisasi: 310,
+        persentase: 74,
+      },
+      {
+        label: "Posyandu aktif didukung",
+        satuan: "unit",
+        target: 3,
+        realisasi: 3,
+        persentase: 100,
+      },
+    ],
+    riwayatAPBDes: [
+      { tahun: 2022, totalAnggaran: 2_200_000_000, terealisasi: 1_520_000_000, persentaseSerapan: 69 },
+      { tahun: 2023, totalAnggaran: 2_450_000_000, terealisasi: 1_830_000_000, persentaseSerapan: 75 },
+      { tahun: 2024, totalAnggaran: 2_620_000_000, terealisasi: 1_930_000_000, persentaseSerapan: 74 },
+      { tahun: 2025, totalAnggaran: 2_750_000_000, terealisasi: 2_030_000_000, persentaseSerapan: 74 },
+      { tahun: 2026, totalAnggaran: 2_800_000_000, terealisasi: 2_015_000_000, persentaseSerapan: 72 },
+    ],
+    apbdesItems: [
+      {
+        kode: "1",
+        bidang: "Penyelenggaraan Pemerintahan Desa",
+        anggaran: 720_000_000,
+        realisasi: 560_000_000,
+        persentase: 78,
+      },
+      {
+        kode: "2",
+        bidang: "Pelaksanaan Pembangunan Desa",
+        anggaran: 1_120_000_000,
+        realisasi: 790_000_000,
+        persentase: 71,
+      },
+      {
+        kode: "3",
+        bidang: "Pembinaan Kemasyarakatan",
+        anggaran: 360_000_000,
+        realisasi: 270_000_000,
+        persentase: 75,
+      },
+      {
+        kode: "4",
+        bidang: "Pemberdayaan Masyarakat",
+        anggaran: 430_000_000,
+        realisasi: 305_000_000,
+        persentase: 71,
+      },
+      {
+        kode: "5",
+        bidang: "Penanggulangan Bencana dan Darurat",
+        anggaran: 170_000_000,
+        realisasi: 90_000_000,
+        persentase: 53,
+      },
+    ],
+  },
+  profil_desa: batukarutProfilBackfill,
+};
+
+const batukarutPublicDocumentBackfill = [
+  {
+    id: "doc-batukarut-apbdes-2026",
+    tahun: 2026,
+    namaDokumen: "APBDes Batukarut 2026",
+    jenisDokumen: "apbdes",
+    status: "tersedia",
+    url: "https://batukarut.desa.id/dokumen/apbdes-2026",
+  },
+  {
+    id: "doc-batukarut-rkpdes-2026",
+    tahun: 2026,
+    namaDokumen: "RKP Desa Batukarut 2026",
+    jenisDokumen: "rkpdes",
+    status: "tersedia",
+    url: "https://batukarut.desa.id/dokumen/rkpdes-2026",
+  },
+  {
+    id: "doc-batukarut-realisasi-semester-1-2026",
+    tahun: 2026,
+    namaDokumen: "Laporan Realisasi Semester I 2026",
+    jenisDokumen: "realisasi",
+    status: "tersedia",
+    url: "https://batukarut.desa.id/dokumen/realisasi-semester-1-2026",
+  },
+  {
+    id: "doc-batukarut-rpjmdes-2021-2027",
+    tahun: 2021,
+    namaDokumen: "RPJMDes Batukarut 2021-2027",
+    jenisDokumen: "rpjmdes",
+    status: "needs_review",
+    url: "https://batukarut.desa.id/dokumen/rpjmdes-2021-2027",
+  },
+  {
+    id: "doc-batukarut-lppd-2025",
+    tahun: 2025,
+    namaDokumen: "LPPD Batukarut 2025",
+    jenisDokumen: "lppd",
+    status: "needs_review",
+    url: "https://batukarut.desa.id/dokumen/lppd-2025",
+  },
+];
+
+async function backfillDemoBatukarutCompleteTemplateFields(templateId) {
+  const components = await db.villageDetailComponent.findMany({
     where: {
       templateId,
-      componentKey: "profil_desa",
+      componentKey: { in: Object.keys(batukarutCompleteTemplateBackfill) },
       status: "ACTIVE",
     },
     select: {
       id: true,
+      componentKey: true,
       fieldStandards: {
         where: { status: "ACTIVE" },
         select: {
@@ -802,34 +966,76 @@ async function backfillDemoProfilFields(templateId) {
     },
   });
 
-  if (!profilComponent) return;
-
   const batukarut = await db.desa.findUnique({
     where: { id: "demo-desa-batukarut" },
     select: { id: true },
   });
   if (!batukarut) return;
 
-  const fieldMap = new Map(
-    profilComponent.fieldStandards.map((field) => [field.fieldKey, field]),
-  );
+  for (const component of components) {
+    const values = batukarutCompleteTemplateBackfill[component.componentKey] ?? {};
+    const fieldMap = new Map(
+      component.fieldStandards.map((field) => [field.fieldKey, field]),
+    );
 
-  for (const [fieldKey, value] of Object.entries(batukarutProfilBackfill)) {
-    const field = fieldMap.get(fieldKey);
-    if (!field) continue;
+    for (const [fieldKey, value] of Object.entries(values)) {
+      const field = fieldMap.get(fieldKey);
+      if (!field) continue;
 
-    const isTextValue = typeof value === "string";
-    await upsertPublishedTemplateField({
+      const isTextValue = ["string", "text", "url"].includes(field.valueType);
+      await upsertPublishedTemplateField({
+        desaId: batukarut.id,
+        templateId,
+        componentId: component.id,
+        fieldStandardId: field.id,
+        fieldKey,
+        valueText: isTextValue ? String(value) : null,
+        valueJson: isTextValue ? null : value,
+        sourceLabel: "Seed dummy contoh Batukarut",
+        reviewNote:
+          "Backfilled complete demo values so Batukarut can show a full public detail preview from DataDesa/template fields.",
+        overwriteMeaningful: true,
+      });
+    }
+  }
+}
+
+async function backfillDemoBatukarutPublicDocuments() {
+  const batukarut = await db.desa.findUnique({
+    where: { id: "demo-desa-batukarut" },
+    select: { id: true },
+  });
+  if (!batukarut) return;
+
+  const source = await db.dataSource.findFirst({
+    where: {
       desaId: batukarut.id,
-      templateId,
-      componentId: profilComponent.id,
-      fieldStandardId: field.id,
-      fieldKey,
-      valueText: isTextValue ? value : null,
-      valueJson: isTextValue ? null : value,
-      sourceLabel: "Seed dummy contoh Batukarut",
-      reviewNote:
-        "Backfilled demo profil_desa values so the public detail shell renders from DataDesa/template fields instead of UI fallback.",
+      sourceType: "official_website",
+    },
+    select: { id: true },
+  });
+
+  for (const document of batukarutPublicDocumentBackfill) {
+    await db.dokumenPublik.upsert({
+      where: { id: document.id },
+      update: {
+        desaId: batukarut.id,
+        tahun: document.tahun,
+        namaDokumen: document.namaDokumen,
+        jenisDokumen: document.jenisDokumen,
+        status: document.status,
+        url: document.url,
+        sourceId: source?.id ?? null,
+        dataStatus: "demo",
+        lastCheckedAt: new Date(),
+      },
+      create: {
+        ...document,
+        desaId: batukarut.id,
+        sourceId: source?.id ?? null,
+        dataStatus: "demo",
+        lastCheckedAt: new Date(),
+      },
     });
   }
 }
@@ -873,8 +1079,12 @@ async function main() {
     backfillLegacyPerangkatFields(defaultTemplate.id),
   );
 
-  await runStage("backfill Batukarut profil template fields", async () =>
-    backfillDemoProfilFields(defaultTemplate.id),
+  await runStage("backfill Batukarut complete template fields", async () =>
+    backfillDemoBatukarutCompleteTemplateFields(defaultTemplate.id),
+  );
+
+  await runStage("backfill Batukarut public documents", async () =>
+    backfillDemoBatukarutPublicDocuments(),
   );
 
   console.log("[template:sync] complete");

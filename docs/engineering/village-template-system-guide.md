@@ -10,6 +10,22 @@ Panduan ini adalah aturan operasional untuk mengubah komponen, field, slot, tab,
 - `DesaDetailTemplateAssignment` + `DesaDetailComponentVisibility` mengatur template dan show/hide per desa.
 - `DataDesa` menyimpan value published per desa, template, component, dan field.
 
+## Contract Layer Files
+
+File di bawah ini adalah boundary resmi untuk metadata/render contract. Kalau ada perubahan template normal yang menyentuh consumer lain dulu, berhenti dan cek apakah perubahan itu seharusnya cukup lewat file/script ini:
+
+- `src/lib/village-data/component-catalog-manifest.ts`
+- `src/lib/village-data/runtime-template-manifest.ts`
+- `src/lib/village-data/template-resolver.ts`
+- `src/lib/village-data/public-detail-composition.ts`
+- `src/components/desa/public-template-registry.tsx`
+- `src/components/desa/public-template-preview-registry.tsx`
+- `prisma/template-catalog.manifest.mjs`
+- `prisma/seed-templates.mjs`
+- `scripts/template-validate.mjs`
+
+Consumer seperti public detail, desa-data, field-standards, dan intake coverage harus membaca `TemplateRuntimeContract`. Mereka tidak boleh membuat mapping component-specific baru untuk ownership, slot, renderer, atau preview.
+
 ## Allowed Change Paths
 
 ### Pindah Field ke Komponen Lain
@@ -75,6 +91,7 @@ Expected:
 - Tambah component catalog dan fields.
 - Pilih `rendererType`/`previewVariant` yang sudah ada.
 - Tidak perlu edit public page.
+- Jalankan `npm run template:sync` lalu `npm run template:validate`.
 
 ### Tambah Visual Baru
 
@@ -85,6 +102,13 @@ Baru boleh edit source UI:
 - Tambah guardrail test renderer coverage.
 
 Target blast radius: 2-3 file.
+
+Minimal yang harus sinkron:
+
+- `rendererType` tersedia di public renderer registry.
+- `previewVariant` tersedia di preview registry.
+- catalog manifest punya `detailSlot`, `navLabel`, dan `anchorId`.
+- validator dan test registry tetap lulus.
 
 ## Forbidden Patterns
 
@@ -114,8 +138,20 @@ Untuk perubahan runtime/public, tambahkan smoke:
 /internal-admin/village-data?tab=standards
 ```
 
+Untuk perubahan migration/catalog DB, jalankan juga:
+
+```bash
+npm run db:doctor
+npx prisma migrate deploy
+npm run template:sync
+npm run qa:runtime
+npm run build
+```
+
 ## Decision Rule
 
 Jika perubahan bisa dijelaskan sebagai "composition, ownership, slot, tab, order, atau visibility", lakukan lewat DB config, script, atau UI Kelola Template.
 
 Jika perubahan membutuhkan bentuk visual yang belum ada, baru edit presenter source code.
+
+Jika `template:validate` gagal karena component-specific mapping, jangan bypass validator. Pindahkan logic ke contract layer atau ubah metadata catalog supaya consumer tetap membaca satu contract yang sama.

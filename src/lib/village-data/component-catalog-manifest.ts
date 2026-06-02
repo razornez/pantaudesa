@@ -286,7 +286,12 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     anchorId: "agenda-desa",
     publicGroupKey: "panduan_warga",
     publicTabKey: "agenda_desa",
-    fields: [],
+    highlightFieldKeys: ["agendaDesa", "agendaRingkasan", "agendaKontak"],
+    fields: [
+      { fieldKey: "agendaDesa", label: "Daftar agenda desa", valueType: "json", isPublishableNow: true, displayOrder: 1 },
+      { fieldKey: "agendaRingkasan", label: "Ringkasan agenda", valueType: "text", isPublishableNow: true, displayOrder: 2 },
+      { fieldKey: "agendaKontak", label: "Kontak agenda", valueType: "string", isPublishableNow: true, displayOrder: 3 },
+    ],
   },
 ];
 

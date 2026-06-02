@@ -10,11 +10,11 @@ import {
   DEFAULT_MAX_FILE_SIZE_MB,
   DEFAULT_MAX_FILES_PER_UPLOAD,
   DEFAULT_ALLOWED_MIME_TYPES,
-  DOCUMENT_CATEGORIES,
   getMaxFileSizeBytes,
   getMaxFilesPerUpload,
   getAllowedMimeTypes,
 } from "@/lib/storage/upload-validation";
+import { buildTemplateDocumentCategories } from "@/lib/admin-desa/document-categories";
 import { getStorageConfigurationStatus } from "@/lib/storage/supabase-storage";
 import { perfLog, perfLogWithRows, perfQueryShape, perfStart } from "@/lib/perf";
 
@@ -123,6 +123,7 @@ export default async function AdminDesaDokumenPage() {
   const maxBytes = storageOk ? getMaxFileSizeBytes() : DEFAULT_MAX_FILE_SIZE_MB * 1024 * 1024;
   const maxFiles = storageOk ? getMaxFilesPerUpload() : DEFAULT_MAX_FILES_PER_UPLOAD;
   const allowedMime = storageOk ? getAllowedMimeTypes() : [...DEFAULT_ALLOWED_MIME_TYPES];
+  const categories = buildTemplateDocumentCategories(structuredTemplate);
 
   return (
     <AdminDesaDokumenClient
@@ -130,7 +131,7 @@ export default async function AdminDesaDokumenPage() {
       memberStatus={ctx.member.status}
       memberRole={ctx.member.role}
       documents={serialized}
-      categories={[...DOCUMENT_CATEGORIES]}
+      categories={categories}
       maxFileSizeMB={Math.round(maxBytes / (1024 * 1024))}
       maxFilesPerUpload={maxFiles}
       allowedMimeTypes={allowedMime}

@@ -685,7 +685,6 @@ export default function AdminDesaDokumenClient(props: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<DocRow | null>(null);
-  const [entryMode, setEntryMode] = useState<"upload" | "structured">("upload");
   const { toasts, toast, removeToast } = useToast();
   const schemaBlocked = Boolean(props.schemaBlockedMessage);
   const canUpload = canUploadAdminDesaDocuments(props.memberStatus);
@@ -797,38 +796,42 @@ export default function AdminDesaDokumenClient(props: Props) {
       ) : null}
 
       {canUpload && !schemaBlocked ? (
-        <div className="space-y-4">
-          <div
-            className="flex items-center gap-1 rounded-2xl bg-slate-50 p-1 w-fit"
-            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.06)" }}
-          >
-            <button
-              type="button"
-              onClick={() => setEntryMode("upload")}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                entryMode === "upload"
-                  ? "bg-[#1E1B4B] text-white shadow-sm"
-                  : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
-              }`}
+        <div className="space-y-4" data-testid="admin-desa-document-entry-mode">
+          <input
+            id="admin-desa-entry-upload"
+            type="radio"
+            name="admin-desa-entry-mode"
+            defaultChecked
+            className="peer/upload sr-only"
+          />
+          <input
+            id="admin-desa-entry-structured"
+            type="radio"
+            name="admin-desa-entry-mode"
+            className="peer/structured sr-only"
+          />
+          <div className="flex w-fit items-center gap-1 rounded-2xl bg-slate-50 p-1 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
+            <label
+              htmlFor="admin-desa-entry-upload"
+              role="button"
+              tabIndex={0}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium text-slate-500 transition hover:bg-white/70 hover:text-slate-900 peer-checked/upload:bg-[#1E1B4B] peer-checked/upload:text-white peer-checked/upload:shadow-sm"
             >
               <Upload size={13} aria-hidden />
               Unggah Dokumen
-            </button>
-            <button
-              type="button"
-              onClick={() => setEntryMode("structured")}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                entryMode === "structured"
-                  ? "bg-[#1E1B4B] text-white shadow-sm"
-                  : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
-              }`}
+            </label>
+            <label
+              htmlFor="admin-desa-entry-structured"
+              role="button"
+              tabIndex={0}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium text-slate-500 transition hover:bg-white/70 hover:text-slate-900 peer-checked/structured:bg-[#1E1B4B] peer-checked/structured:text-white peer-checked/structured:shadow-sm"
             >
               <ClipboardList size={13} aria-hidden />
               Isi Data Terstruktur
-            </button>
+            </label>
           </div>
 
-          {entryMode === "upload" ? (
+          <div className="block peer-checked/structured:hidden">
             <UploadForm
               categories={props.categories}
               maxFileSizeMB={props.maxFileSizeMB}
@@ -838,14 +841,15 @@ export default function AdminDesaDokumenClient(props: Props) {
               onUploaded={() => router.refresh()}
               onNotify={toast}
             />
-          ) : (
+          </div>
+          <div className="hidden peer-checked/structured:block">
             <StructuredSubmissionForm
               categories={props.categories}
               template={props.structuredTemplate}
               onUploaded={() => router.refresh()}
               onNotify={toast}
             />
-          )}
+          </div>
         </div>
       ) : null}
 
