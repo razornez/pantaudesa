@@ -96,6 +96,9 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
       { fieldKey: "kecamatan", label: "Kecamatan", valueType: "string", isPublishableNow: true, displayOrder: 4 },
       { fieldKey: "kabupaten", label: "Kabupaten/Kota", valueType: "string", isPublishableNow: true, displayOrder: 5 },
       { fieldKey: "provinsi", label: "Provinsi", valueType: "string", isPublishableNow: true, displayOrder: 6 },
+      { fieldKey: "geoLat", label: "Koordinat lintang", valueType: "number", isPublishableNow: true, displayOrder: 7 },
+      { fieldKey: "geoLng", label: "Koordinat bujur", valueType: "number", isPublishableNow: true, displayOrder: 8 },
+      { fieldKey: "topografi", label: "Topografi", valueType: "string", isPublishableNow: true, displayOrder: 9 },
     ],
   },
   {

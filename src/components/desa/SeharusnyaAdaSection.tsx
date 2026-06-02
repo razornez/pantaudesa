@@ -1,9 +1,7 @@
-import Image from "next/image";
 import { CheckCircle2, ClipboardList, HelpCircle, ChevronRight, Info } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
 import { getExpectations, ExpectedStatus } from "@/lib/expectations";
-import { ASSETS } from "@/lib/assets";
 import { SEHARUSNYA_ADA } from "@/lib/copy";
 
 interface Props {
@@ -122,65 +120,47 @@ export default function SeharusnyaAdaSection({ desa }: Props) {
   const { items, ringkasan, ringkasanTone } = getExpectations(desa);
   const toneStyle = TONE_STYLE[ringkasanTone];
   const hakSummaryCards = [
-    { label: "Ada dasar", value: items.filter((i) => i.status === "wajib").length, className: "border-emerald-300/30 bg-emerald-400/10 text-emerald-100" },
-    { label: "Masuk rencana", value: items.filter((i) => i.status === "direncanakan").length, className: "border-indigo-300/30 bg-indigo-400/10 text-indigo-100" },
-    { label: "Bisa ditanya", value: items.filter((i) => i.status === "tanyakan").length, className: "border-amber-300/40 bg-amber-400/10 text-amber-100" },
+    { label: "Ada dasar", value: items.filter((i) => i.status === "wajib").length },
+    { label: "Masuk rencana", value: items.filter((i) => i.status === "direncanakan").length },
+    { label: "Bisa ditanya", value: items.filter((i) => i.status === "tanyakan").length },
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+    <div className="overflow-hidden rounded-2xl bg-white/80 ring-hair">
 
-      {/* Header banner */}
-      <div className="relative bg-gradient-to-r from-slate-800 to-slate-700 overflow-hidden">
-        {/* Texture overlay */}
-        <div className="absolute inset-0 opacity-[0.06]">
-          <Image src={ASSETS.textureDark} alt="" fill className="object-cover" />
-        </div>
-        <div className="relative flex items-center gap-0">
-          {/* Ilustrasi kiri */}
-          <div className="hidden sm:block relative w-44 h-36 flex-shrink-0">
-            <Image
-              src={ASSETS.illustrationHakWarga}
-              alt="Warga dengan checklist hak desa"
-              fill
-              className="object-cover object-center"
-              sizes="176px"
-            />
-          </div>
-          {/* Teks */}
-          <div className="px-5 sm:pl-4 sm:pr-6 py-5 flex-1">
-            <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">
-              Panduan Hak Warga
-            </p>
-            <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
-              Apa yang bisa ditanyakan warga dari anggaran{" "}
-              <span className="text-amber-300">{formatRupiah(desa.totalAnggaran)}</span>
-              {" "}ini?
-            </h2>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-400">
-              <li>Hak warga perlu dibaca bersama aturan dan dokumen desa.</li>
-              <li>Estimasi ini panduan bertanya, bukan kondisi aktual final.</li>
-            </ul>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {hakSummaryCards.map((card) => (
-                <div key={card.label} className={`rounded-2xl border px-3 py-2 ${card.className}`}>
-                  <p className="text-lg font-black leading-none">{card.value}</p>
-                  <p className="mt-1 text-[10px] font-semibold leading-tight opacity-85">{card.label}</p>
-                </div>
-              ))}
+      {/* Header — clean editorial, no raster */}
+      <div className="px-5 py-5 sm:px-6">
+        <p className="eyebrow mb-1 text-[color:var(--amber-700)]">Panduan Hak Warga</p>
+        <h2 className="display text-[18px] font-semibold leading-tight text-[color:var(--ink-1)] sm:text-[20px]">
+          Apa yang bisa ditanyakan warga dari anggaran{" "}
+          <span className="num">{formatRupiah(desa.totalAnggaran)}</span> ini?
+        </h2>
+        <ul className="mt-2 list-disc space-y-1 pl-4 text-[12px] text-[color:var(--ink-3)]">
+          <li>Hak warga perlu dibaca bersama aturan dan dokumen desa.</li>
+          <li>Estimasi ini panduan bertanya, bukan kondisi aktual final.</li>
+        </ul>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {hakSummaryCards.map((card) => (
+            <div key={card.label} className="rounded-2xl bg-white px-3 py-2.5 ring-hair">
+              <p className="num text-xl font-semibold leading-none text-[color:var(--ink-1)]">
+                {card.value}
+              </p>
+              <p className="mt-1 text-[10px] font-medium leading-tight text-[color:var(--ink-3)]">
+                {card.label}
+              </p>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Body */}
-      <div className="bg-slate-50 px-5 sm:px-6 py-5 space-y-6">
+      <div className="border-t border-[color:var(--hair)] px-5 py-5 space-y-6 sm:px-6">
 
         {/* Estimasi caution — RIGHTS-06 */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <Info size={14} className="text-amber-600 flex-shrink-0 mt-0.5" aria-hidden />
-          <p className="text-xs text-amber-800 leading-relaxed">
-            <span className="font-bold">{SEHARUSNYA_ADA.estimasiCaution}</span>
+        <div className="flex items-start gap-2.5 rounded-xl bg-[color:var(--amber-50)] px-4 py-3 ring-hair">
+          <Info size={14} className="mt-0.5 flex-shrink-0 text-[color:var(--amber-700)]" aria-hidden />
+          <p className="text-[12px] leading-relaxed text-[color:var(--amber-900)]">
+            <span className="font-semibold">{SEHARUSNYA_ADA.estimasiCaution}</span>
             {" "}{SEHARUSNYA_ADA.sectionDisclaimer}
           </p>
         </div>

@@ -395,37 +395,39 @@ export default function KelengkapanDesa({ profil }: { profil: ProfilDesa }) {
   });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      {/* Header — clean dark, no image */}
-      <div className="bg-slate-800 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-base">🏛️</span>
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelengkapan Desa</p>
-            <h2 className="text-sm font-black text-white leading-tight">Aset, Fasilitas &amp; Organisasi Masyarakat</h2>
-          </div>
+    <div className="overflow-hidden rounded-2xl bg-white ring-hair shadow-lux-1">
+      {/* Header — clean, monochrome */}
+      <div className="flex flex-col gap-3 border-b border-[color:var(--hair)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="eyebrow mb-1">Kelengkapan Desa</p>
+          <h2 className="text-[15px] font-semibold leading-tight text-[color:var(--ink-1)]">
+            Aset, Fasilitas &amp; Organisasi Masyarakat
+          </h2>
         </div>
         <DataStatusBadge status="demo" size="xs" className="self-start" />
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-100">
-        {TABS.filter((t) => t.id !== "perangkat").map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold border-b-2 transition-all flex-1 justify-center sm:flex-initial sm:justify-start whitespace-nowrap ${
-              tab === t.id
-                ? "border-indigo-500 text-indigo-600 bg-indigo-50/40"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <span>{t.emoji}</span>
-            <span className="hidden sm:inline">{t.label}</span>
-          </button>
-        ))}
+      {/* Tabs — ink underline for active */}
+      <div className="flex border-b border-[color:var(--hair)]">
+        {TABS.filter((t) => t.id !== "perangkat").map((t) => {
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-4 py-3 text-[12px] font-medium transition-colors sm:flex-initial sm:justify-start ${
+                isActive
+                  ? "text-[color:var(--indigo-950)]"
+                  : "text-[color:var(--ink-3)] hover:text-[color:var(--ink-1)]"
+              }`}
+            >
+              <span>{t.label}</span>
+              {isActive && (
+                <span className="absolute inset-x-0 bottom-[-1px] h-0.5 rounded-full bg-[color:var(--indigo-950)]" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}

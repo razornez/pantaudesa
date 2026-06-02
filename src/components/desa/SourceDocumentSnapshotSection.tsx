@@ -3,46 +3,28 @@ import {
   Building2,
   FileText,
   Globe2,
-  SearchCheck,
   ShieldCheck,
 } from "lucide-react";
 import type { Desa } from "@/lib/types";
-import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
   desa: Desa;
 }
 
+type SnapshotTone = "ok" | "warn" | "neutral";
+
 interface SnapshotCard {
   title: string;
   status: string;
-  statusKind?: DataStatusKind;
+  tone: SnapshotTone;
   body: string;
   icon: LucideIcon;
-  tone: "indigo" | "sky" | "emerald" | "amber";
 }
 
-const toneClasses: Record<SnapshotCard["tone"], { card: string; icon: string; fallbackBadge: string }> = {
-  indigo: {
-    card: "border-indigo-100 bg-indigo-50/60",
-    icon: "bg-white text-indigo-600",
-    fallbackBadge: "bg-white text-indigo-700",
-  },
-  sky: {
-    card: "border-sky-100 bg-sky-50/70",
-    icon: "bg-white text-sky-600",
-    fallbackBadge: "bg-white text-sky-700",
-  },
-  emerald: {
-    card: "border-emerald-100 bg-emerald-50/70",
-    icon: "bg-white text-emerald-600",
-    fallbackBadge: "bg-white text-emerald-700",
-  },
-  amber: {
-    card: "border-amber-100 bg-amber-50/80",
-    icon: "bg-white text-amber-700",
-    fallbackBadge: "bg-white text-amber-700",
-  },
+const pillByTone: Record<SnapshotTone, string> = {
+  ok: "pill-ok",
+  warn: "pill-warn",
+  neutral: "bg-slate-100 text-[color:var(--ink-3)]",
 };
 
 export default function SourceDocumentSnapshotSection({ desa }: Props) {
@@ -68,105 +50,78 @@ export default function SourceDocumentSnapshotSection({ desa }: Props) {
   const cards: SnapshotCard[] = [
     {
       title: "Sumber utama",
-      status: hasSource ? "Sumber ditemukan" : "Belum tercatat",
-      statusKind: hasSource ? "source-found" : undefined,
+      status: hasSource ? "Ditemukan" : "Belum tercatat",
+      tone: hasSource ? "ok" : "neutral",
       body: hasSource
         ? `${primarySource} menjadi rujukan awal. Sumber ini belum berarti terverifikasi.`
         : "Sumber publik belum tercatat untuk desa ini.",
       icon: Globe2,
-      tone: "indigo",
     },
     {
       title: "Sumber lain",
-      status: sourceNames.length > 1 ? `${sourceNames.length - 1} sumber lain` : "Belum tercatat",
+      status: sourceNames.length > 1 ? `${sourceNames.length - 1} lainnya` : "Belum ada",
+      tone: sourceNames.length > 1 ? "ok" : "neutral",
       body: sourceNames.length > 1
         ? sourceNames.slice(1, 3).join("; ")
         : `Belum ada sumber tambahan untuk ${desa.kecamatan} yang tercatat di ringkasan ini.`,
       icon: Building2,
-      tone: "sky",
     },
     {
       title: "Dokumen APBDes/Realisasi",
-      status: documentStatus,
-      statusKind: hasApbdes || hasRealisasi ? "source-found" : undefined,
+      status: documentStatus === "Sumber ditemukan" ? "Ditemukan" : "Belum tercatat",
+      tone: hasApbdes || hasRealisasi ? "ok" : "neutral",
       body: documentBody,
       icon: FileText,
-      tone: "emerald",
     },
     {
       title: "Status review",
-      status: needsReviewSource ? "Perlu Review" : "Belum diverifikasi",
-      statusKind: needsReviewSource ? "needs-review" : undefined,
+      status: needsReviewSource ? "Perlu review" : "Belum diverifikasi",
+      tone: needsReviewSource ? "warn" : "neutral",
       body: needsReviewSource
         ? "Ada sumber atau dokumen yang perlu dicek ulang sebelum menjadi rujukan."
         : "Sumber dapat dibaca sebagai referensi, tetapi belum dinyatakan terverifikasi.",
       icon: ShieldCheck,
-      tone: "amber",
     },
   ];
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-              Snapshot sumber
-            </p>
-            <h2 className="mt-1 text-lg font-black text-slate-950">
-              Sumber dan dokumen yang sudah terlihat
-            </h2>
-          </div>
-          <p className="max-w-md text-xs leading-relaxed text-slate-500">
-            Sumber: {primarySource ?? "belum tersedia"}. {desa.terakhirDiperbaruiLabel}
-          </p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-1">Snapshot sumber</p>
+          <h2 className="display text-[26px] font-semibold leading-tight text-[color:var(--ink-1)]">
+            Sumber dan dokumen yang sudah terlihat
+          </h2>
         </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {cards.map((card) => {
-            const Icon = card.icon;
-            const tone = toneClasses[card.tone];
-
-            return (
-              <details key={card.title} className={`group rounded-2xl border p-3 ${tone.card}`}>
-                <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 rounded-xl">
-                  <div className={`mx-auto flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${tone.icon}`}>
-                    <Icon size={17} />
-                  </div>
-                  <p className="mt-2 text-center text-xs font-black leading-tight text-slate-900">{card.title}</p>
-                  <div className="mt-2 flex justify-center">
-                    {card.statusKind
-                      ? <DataStatusBadge status={card.statusKind} size="xs" />
-                      : (
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone.fallbackBadge}`}>
-                          {card.status}
-                        </span>
-                      )}
-                  </div>
-                </summary>
-                <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                  {card.body}
-                </p>
-              </details>
-            );
-          })}
-        </div>
+        <p className="hidden max-w-xs text-right text-[11px] leading-relaxed text-[color:var(--ink-3)] sm:block">
+          Sumber: {primarySource ?? "belum tersedia"}. {desa.terakhirDiperbaruiLabel}
+        </p>
       </div>
 
-      <div className="rounded-3xl border border-sky-100 bg-sky-50 p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-sky-600 shadow-sm">
-            <SearchCheck size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-black text-slate-950">Kenapa desa ini perlu dibaca?</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-              <span className="rounded-full bg-white/80 px-3 py-1.5">Ada sumber awal</span>
-              <span className="rounded-full bg-white/80 px-3 py-1.5">Dokumen bisa dicek</span>
-              <span className="rounded-full bg-white/80 px-3 py-1.5">Pertanyaan bisa diarahkan</span>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.title} className="rounded-2xl bg-white p-4 ring-hair shadow-lux-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--indigo-50)] text-[color:var(--indigo-600)]">
+                  <Icon size={15} aria-hidden />
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${pillByTone[card.tone]}`}
+                >
+                  {card.status}
+                </span>
+              </div>
+              <p className="mt-3 text-[13px] font-semibold leading-tight text-[color:var(--ink-1)]">
+                {card.title}
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-[color:var(--ink-3)]">
+                {card.body}
+              </p>
             </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </section>
   );

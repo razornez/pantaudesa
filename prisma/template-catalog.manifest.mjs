@@ -17,6 +17,9 @@ export const COMPONENT_CATALOG = [
       { fieldKey: "kecamatan", label: "Kecamatan", valueType: "string", displayOrder: 4, isPublishableNow: true },
       { fieldKey: "kabupaten", label: "Kabupaten/Kota", valueType: "string", displayOrder: 5, isPublishableNow: true },
       { fieldKey: "provinsi", label: "Provinsi", valueType: "string", displayOrder: 6, isPublishableNow: true },
+      { fieldKey: "geoLat", label: "Koordinat lintang", valueType: "number", displayOrder: 7, isPublishableNow: true },
+      { fieldKey: "geoLng", label: "Koordinat bujur", valueType: "number", displayOrder: 8, isPublishableNow: true },
+      { fieldKey: "topografi", label: "Topografi", valueType: "string", displayOrder: 9, isPublishableNow: true },
     ],
   },
   {
