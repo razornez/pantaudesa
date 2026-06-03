@@ -89,6 +89,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     error(error) {
       const msg = error.message ?? String(error);
+      // JWTSessionError / decryption failures = a session cookie that can't be
+      // decoded (stale cookie from a rotated/different AUTH_SECRET, or expired).
+      // Auth.js self-heals by clearing the session and treating the request as
+      // logged-out, so this is benign + recoverable — log locally but do NOT page
+      // Sentry/email, otherwise every request with a stale cookie spams alerts.
+      const benign = error.name === "JWTSessionError" || /decryption operation failed|JWEDecryptionFailed/i.test(msg);
+      if (benign) {
+        console.warn("[auth] benign session error (stale/invalid cookie, ignored):", error.name, msg);
+        return;
+      }
       console.error("[auth] ERROR:", error.name, msg, (error as Error).stack ?? "");
       Sentry.captureException(error, { tags: { source: "next-auth" } });
       sendErrorAlert({
