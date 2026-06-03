@@ -24,6 +24,7 @@ async function main() {
   const { OSMOverpassAdapter } = await import("@/lib/adapters/osm-overpass-adapter");
   const { KemendesaDanaDesaAdapter } = await import("@/lib/adapters/kemendesa-danadesa-adapter");
   const { OpenSIDAdapter } = await import("@/lib/adapters/opensid-adapter");
+  const { KecamatanBandungAdapter } = await import("@/lib/adapters/kecamatan-bandung-adapter");
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
@@ -38,7 +39,7 @@ async function main() {
 
   const desas = await db.desa.findMany({
     where,
-    select: { id: true, nama: true, kecamatan: true, kabupaten: true, provinsi: true },
+    select: { id: true, slug: true, kodeDesa: true, nama: true, kecamatan: true, kabupaten: true, provinsi: true, websiteUrl: true },
     orderBy: { nama: "asc" },
   });
   if (desas.length === 0) throw new Error("Tidak ada desa yang cocok dengan filter.");
@@ -75,6 +76,8 @@ async function main() {
       kecamatan: d.kecamatan,
       kabupaten: d.kabupaten,
       provinsi: d.provinsi,
+      kodeDesa: d.kodeDesa,
+      website: d.websiteUrl ?? undefined,
     })),
   };
 
@@ -83,7 +86,9 @@ async function main() {
   // within a foreground time budget.
   const onlyIdx = argv.indexOf("--only");
   const only = onlyIdx >= 0 ? argv[onlyIdx + 1] : null;
-  const adapters = [new OSMOverpassAdapter(), new KemendesaDanaDesaAdapter(), new OpenSIDAdapter()].filter(
+  const kecAdapter = new KecamatanBandungAdapter();
+  kecAdapter.setDb(db);
+  const adapters = [new OSMOverpassAdapter(), new KemendesaDanaDesaAdapter(), kecAdapter, new OpenSIDAdapter()].filter(
     (a) => !only || a.id.includes(only),
   );
 
