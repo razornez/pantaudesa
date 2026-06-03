@@ -56,6 +56,7 @@ out center tags 5;`;
           method: "POST",
           headers: { "User-Agent": USER_AGENT, "Content-Type": "text/plain" },
           body: query,
+          signal: AbortSignal.timeout(28000), // never hang on a slow/throttled Overpass
         });
         if (!res.ok) {
           results.push({ desaId: d.desaId, fields: [], rawMeta: { httpStatus: res.status } });
