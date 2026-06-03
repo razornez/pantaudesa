@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma";
 import { db } from "@/lib/db";
+import { DEFAULT_TEMPLATE_KEY } from "@/lib/village-data/template-constants";
 import { DATA_SOURCE_BY_CODE } from "./data-source-registry";
 import type { DataAdapter } from "./adapter-base";
 import type { AdapterContext, AdapterFieldValue, IngestionSummary } from "./types";
@@ -29,14 +30,27 @@ async function buildFieldIndex(
 ): Promise<{ templateId: string; index: Map<string, { componentId: string; fieldStandardId?: string }> } | null> {
   if (!db) return null;
 
+  // Resolve the desa's template the same way the public resolver does: use the
+  // per-desa assignment when active, otherwise fall back to the global DEFAULT
+  // template. This lets ingestion run for any desa record without requiring a
+  // per-desa assignment row (key for kabupaten-wide rollout).
   const assignment = await db.desaDetailTemplateAssignment.findUnique({
     where: { desaId },
     select: { templateId: true, isActive: true },
   });
-  if (!assignment || !assignment.isActive) return null;
+  let templateId =
+    assignment && assignment.isActive !== false ? assignment.templateId : undefined;
+  if (!templateId) {
+    const defaultTemplate = await db.villageDetailTemplate.findUnique({
+      where: { key: DEFAULT_TEMPLATE_KEY },
+      select: { id: true },
+    });
+    templateId = defaultTemplate?.id;
+  }
+  if (!templateId) return null;
 
   const components = await db.villageDetailComponent.findMany({
-    where: { templateId: assignment.templateId, status: "ACTIVE" },
+    where: { templateId, status: "ACTIVE" },
     select: {
       id: true,
       fieldStandards: {
@@ -52,7 +66,7 @@ async function buildFieldIndex(
       index.set(field.fieldKey, { componentId: component.id, fieldStandardId: field.id });
     }
   }
-  return { templateId: assignment.templateId, index };
+  return { templateId, index };
 }
 
 /**
