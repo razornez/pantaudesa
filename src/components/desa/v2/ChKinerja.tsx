@@ -1,7 +1,7 @@
 import { Hammer, Activity } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
 function buildChart(riwayat: NonNullable<Desa["riwayat"]>) {
   const pts = riwayat
@@ -18,7 +18,7 @@ function buildChart(riwayat: NonNullable<Desa["riwayat"]>) {
   return { coords, line, area };
 }
 
-export default function ChKinerja({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
+export default function ChKinerja({ desa, chapterNo, sourceNote }: { desa: Desa; chapterNo: string; sourceNote?: SourceNote }) {
   const apbdes = (desa.apbdes ?? []).slice().sort((a, b) => b.persentase - a.persentase);
   const outputFisik = desa.outputFisik ?? [];
   const chart = desa.riwayat && desa.riwayat.length > 1 ? buildChart(desa.riwayat) : null;
@@ -37,6 +37,7 @@ export default function ChKinerja({ desa, chapterNo }: { desa: Desa; chapterNo: 
       blobStyle={{ width: 320, height: 320, bottom: -120, right: -70, background: "var(--color-good-500)" }}
       tagText="DIPAKAI UNTUK APA"
       tagClass="ch-tag-violet"
+      sourceNote={sourceNote}
       headline={
         <>
           Sebagian besar dipakai untuk <span className="underline-sweep">jalan, drainase, dan fasilitas warga</span>.

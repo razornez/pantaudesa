@@ -1,10 +1,10 @@
 import { UserRound } from "lucide-react";
 import type { Desa } from "@/lib/types";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
 const CIRC = 753.98; // 2π·120
 
-export default function ChTransparansi({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
+export default function ChTransparansi({ desa, chapterNo, sourceNote }: { desa: Desa; chapterNo: string; sourceNote?: SourceNote }) {
   const skor = desa.skorTransparansi;
   const total = skor?.total ?? 0;
   const arcTo = (CIRC * (1 - Math.max(0, Math.min(100, total)) / 100)).toFixed(2);
@@ -29,6 +29,7 @@ export default function ChTransparansi({ desa, chapterNo }: { desa: Desa; chapte
       stripGradient="linear-gradient(90deg,#10B981,#F59E0B,#F43F5E)"
       tagText="KETERBUKAAN INFORMASI"
       tagClass="ch-tag-emerald"
+      sourceNote={sourceNote}
       dark
       headline={
         <>
