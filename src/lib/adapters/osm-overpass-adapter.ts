@@ -93,7 +93,7 @@ out center tags 5;`;
         });
       }
 
-      await sleep(1500); // Overpass is heavier; be polite.
+      await sleep(1100); // Overpass is heavier; be polite (light queries tolerate ~1/s).
     }
 
     return { adapterId: this.id, sourceCode: this.sourceCode, fetchedAt: new Date(), results };

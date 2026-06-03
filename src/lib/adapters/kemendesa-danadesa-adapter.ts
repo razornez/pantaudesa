@@ -50,32 +50,70 @@ export class KemendesaDanaDesaAdapter implements DataAdapter {
   async run(context: AdapterContext): Promise<AdapterRunResult> {
     const results: AdapterDesaResult[] = [];
 
+    // Fetch the propinsi→kabupaten→kecamatan→desa tree ONCE per (prov, kab) and
+    // cache list_desa per kecamatan, instead of re-walking it for every desa.
+    // For a whole kabupaten this turns ~3×N calls into ~(2 + #kecamatan).
+    type KabTree = {
+      kabId: string | null;
+      kecIdByName: Map<string, string>;
+      desaByKec: Map<string, Map<string, Record<string, string>>>;
+    };
+    const kabCache = new Map<string, KabTree>();
+
+    const resolveTree = async (provinsi: string, kabupaten: string): Promise<KabTree | null> => {
+      const idProv = PROVINCE_CODE[up(provinsi)];
+      if (!idProv) return null;
+      const key = `${idProv}|${bareKab(kabupaten)}`;
+      const cached = kabCache.get(key);
+      if (cached) return cached;
+      const kabs = (await getJson(`/users/list_kabupaten/${idProv}`)) as Array<Record<string, string>>;
+      const kab = kabs.find((k) => bareKab(String(k.nama_kab_kota ?? "")) === bareKab(kabupaten));
+      await sleep(300);
+      let kecIdByName = new Map<string, string>();
+      if (kab?.id_kabupaten) {
+        const kecs = (await getJson(`/users/list_kecamatan/${kab.id_kabupaten}`)) as Array<Record<string, string>>;
+        kecIdByName = new Map(kecs.map((k) => [up(String(k.nama_kecamatan ?? "")), String(k.id_kecamatan)]));
+        await sleep(300);
+      }
+      const tree: KabTree = { kabId: kab?.id_kabupaten ?? null, kecIdByName, desaByKec: new Map() };
+      kabCache.set(key, tree);
+      return tree;
+    };
+
+    const desaRowsFor = async (tree: KabTree, kecId: string) => {
+      const cached = tree.desaByKec.get(kecId);
+      if (cached) return cached;
+      const desas = (await getJson(`/users/list_desa/${kecId}`)) as Array<Record<string, string>>;
+      // Dedup by desa name, keeping the latest tahun_data row.
+      const map = new Map<string, Record<string, string>>();
+      for (const x of desas) {
+        const k = up(String(x.nama_desa ?? ""));
+        const prev = map.get(k);
+        if (!prev || Number(x.tahun_data) > Number(prev.tahun_data)) map.set(k, x);
+      }
+      tree.desaByKec.set(kecId, map);
+      await sleep(300);
+      return map;
+    };
+
     for (const d of context.desas) {
       try {
-        const idProv = PROVINCE_CODE[up(d.provinsi)];
-        if (!idProv) {
+        const tree = await resolveTree(d.provinsi, d.kabupaten);
+        if (!tree) {
           results.push({ desaId: d.desaId, fields: [], rawMeta: { note: "prov code unknown", provinsi: d.provinsi } });
           continue;
         }
-
-        const kabs = (await getJson(`/users/list_kabupaten/${idProv}`)) as Array<Record<string, string>>;
-        const kab = kabs.find((k) => bareKab(String(k.nama_kab_kota ?? "")) === bareKab(d.kabupaten));
-        if (!kab?.id_kabupaten) {
+        if (!tree.kabId) {
           results.push({ desaId: d.desaId, fields: [], rawMeta: { note: "kab not found", kabupaten: d.kabupaten } });
           continue;
         }
-        await sleep(400);
-
-        const kecs = (await getJson(`/users/list_kecamatan/${kab.id_kabupaten}`)) as Array<Record<string, string>>;
-        const kec = kecs.find((k) => up(String(k.nama_kecamatan ?? "")) === up(d.kecamatan));
-        if (!kec?.id_kecamatan) {
+        const kecId = tree.kecIdByName.get(up(d.kecamatan));
+        if (!kecId) {
           results.push({ desaId: d.desaId, fields: [], rawMeta: { note: "kec not found", kecamatan: d.kecamatan } });
           continue;
         }
-        await sleep(400);
-
-        const desas = (await getJson(`/users/list_desa/${kec.id_kecamatan}`)) as Array<Record<string, string>>;
-        const row = desas.find((x) => up(String(x.nama_desa ?? "")) === up(d.nama));
+        const desaMap = await desaRowsFor(tree, kecId);
+        const row = desaMap.get(up(d.nama));
         const pagu = row ? parseFloat(String(row.pagu)) : NaN;
 
         if (row && Number.isFinite(pagu) && pagu > 0) {
@@ -90,7 +128,6 @@ export class KemendesaDanaDesaAdapter implements DataAdapter {
         } else {
           results.push({ desaId: d.desaId, fields: [], rawMeta: { note: "desa/pagu not found", nama: d.nama } });
         }
-        await sleep(400);
       } catch (error) {
         results.push({
           desaId: d.desaId,
