@@ -90,8 +90,14 @@ async function processKabupaten(
         const kodeDesa = r.id_desa;
         const nama = titleCase(r.nama_desa);
         const base = kebab(r.nama_desa);
-        const clash = await db.desa.findUnique({ where: { slug: base }, select: { kodeDesa: true } });
-        const slug = clash && clash.kodeDesa !== kodeDesa ? `${base}-${kodeDesa.slice(-4)}` : base;
+        // Use up to 7 chars of kodeDesa suffix to build a unique slug when the
+        // plain name is already taken by a desa in another kab.
+        let slug = base;
+        for (const suffix of [`-${kodeDesa.slice(-6)}`, `-${kodeDesa.slice(-8)}`, `-${kodeDesa}`]) {
+          const clash = await db.desa.findUnique({ where: { slug }, select: { kodeDesa: true } });
+          if (!clash || clash.kodeDesa === kodeDesa) break;
+          slug = base + suffix;
+        }
 
         // Reconcile any pre-existing record (no kodeDesa) with matching name+kecamatan.
         const legacy = await db.desa.findFirst({

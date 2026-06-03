@@ -133,35 +133,19 @@ export class OpenSIDAdapter implements DataAdapter {
     return dusun + rw + rt > 0 ? { dusun, rw, rt, kk } : null;
   }
 
-  /** Parse /data-statistik/pendidikan → persentase lulusan SMA/SMK+ (proxy pendidikan). */
-  private parsePendidikanSMA(html: string): number | null {
-    const text = stripTags(html);
-    const rows = [...text.matchAll(/([A-Z][A-Za-z /]{4,40})\s*\|[^\d]{0,4}(\d[\d.,]*)\s*\|[^\d]{0,4}([\d.,]+)%/g)];
-    let totalPop = 0;
-    let smaPop = 0;
-    for (const r of rows) {
-      const label = r[1].trim();
-      const count = toInt(r[2]);
-      if (!Number.isFinite(count) || count <= 0) continue;
-      totalPop += count;
-      if (/SMA|SMK|MA\b|Aliyah|D[1-4]\b|Sarjana|S1|S2|S3|Diploma|Strata/i.test(label)) smaPop += count;
-    }
-    if (totalPop === 0) return null;
-    return Math.round((smaPop / totalPop) * 100);
-  }
-
   /** Scrape all data for one desa — called concurrently per batch. */
   private async scrapeOne(d: AdapterContext["desas"][number]): Promise<AdapterDesaResult> {
     const base = d.website?.replace(/\/+$/, "") ?? `https://${slugDesaId(d.nama)}.desa.id`;
     const fields: AdapterFieldOutput[] = [];
 
     // All sources are INDEPENDENT — failure on one never short-circuits the rest.
-    const [html, wilHtml, home, pek, pendHtml] = await Promise.all([
+    // NOTE: /data-statistik/pendidikan was removed — OpenSID loads education data
+    // via AJAX (JavaScript-rendered), so static HTML scraping yields no content.
+    const [html, wilHtml, home, pek] = await Promise.all([
       this.fetchText(`${base}/data-statistik/jenis-kelamin`),
       this.fetchText(`${base}/data-wilayah`),
       this.fetchText(`${base}/`),
       this.fetchText(`${base}/data-statistik/pekerjaan`),
-      this.fetchText(`${base}/data-statistik/pendidikan`),
     ]);
 
     let total = NaN;
@@ -186,9 +170,6 @@ export class OpenSIDAdapter implements DataAdapter {
 
     const job = pek ? this.parseDominantJob(pek) : null;
     if (job) fields.push({ fieldKey: "mataPencaharian", value: job });
-
-    const smaPct = pendHtml ? this.parsePendidikanSMA(pendHtml) : null;
-    if (smaPct !== null) fields.push({ fieldKey: "persentaseLulusSMA", value: smaPct });
 
     return fields.length > 0
       ? { desaId: d.desaId, fields, rawMeta: { base, total, wilayah: wil } }
