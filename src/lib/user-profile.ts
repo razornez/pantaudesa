@@ -3,7 +3,7 @@
  * Semua pure functions — tidak ada UI knowledge di sini.
  */
 
-import { getAllVoices, CitizenVoice } from "./citizen-voice";
+import type { CitizenVoice } from "./citizen-voice";
 
 // ─── Trust badge ──────────────────────────────────────────────────────────────
 
@@ -39,9 +39,7 @@ export interface TrustStats {
   badge:         UserBadge;
 }
 
-export function computeTrustStats(username: string): TrustStats {
-  const voices = getAllVoices().filter(v => !v.isAnon && v.author === username);
-
+export function computeTrustStatsFromVoices(voices: CitizenVoice[]): TrustStats {
   const totalSuara     = voices.length;
   const totalVoteBenar = voices.reduce((s, v) => s + v.votes.benar, 0);
   const totalHelpful   = voices.reduce((s, v) => s + v.helpful, 0);
@@ -89,71 +87,63 @@ const NOTIF_CONFIG: Record<NotifType, { icon: string; color: string; label: stri
 
 export { NOTIF_CONFIG };
 
-// ─── Mock notifications per user ─────────────────────────────────────────────
+// ─── Notifications (derived from the user's real DB voices) ───────────────────
+// No persistent notification table exists, so we surface an activity feed built
+// from real signals on the user's voices: replies received, resolved status, and
+// "Benar" votes. isRead is ephemeral (toggled client-side in the session).
 
-const D = (h: number) => new Date(Date.now() - h * 3_600_000);
+export function deriveNotifications(voices: CitizenVoice[], selfName: string): UserNotification[] {
+  const snippet = (text: string) => (text.length > 64 ? `${text.slice(0, 61)}...` : text);
+  const notifs: UserNotification[] = [];
 
-export const MOCK_NOTIFICATIONS: Record<string, UserNotification[]> = {
-  // Pak Muryanto — author v10
-  "Pak Muryanto": [
-    {
-      id: "n1", type: "reply", voiceId: "v10", isOfficial: false,
-      voiceText: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan...",
-      fromName: "Ibu Ratna", message: "Ibu Ratna membalas suaramu.",
-      createdAt: D(2), isRead: false,
-    },
-    {
-      id: "n2", type: "reply", voiceId: "v10", isOfficial: false,
-      voiceText: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan...",
-      fromName: "Pak Muryanto", message: "Kamu membalas di suara milikmu.",
-      createdAt: D(5), isRead: false,
-    },
-    {
-      id: "n3", type: "vote_benar", voiceId: "v10", isOfficial: false,
-      voiceText: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan...",
-      fromName: "Seseorang", message: "98 orang menandai suaramu sebagai Benar.",
-      createdAt: D(8), isRead: true,
-    },
-    {
-      id: "n4", type: "helpful", voiceId: "v10", isOfficial: false,
-      voiceText: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan...",
-      fromName: "Seseorang", message: "102 orang merasa suaramu berguna.",
-      createdAt: D(24), isRead: true,
-    },
-  ],
-  // Ibu Sumarni — author v5
-  "Ibu Sumarni": [
-    {
-      id: "n5", type: "reply", voiceId: "v5", isOfficial: false,
-      voiceText: "Sudah minta lihat APBDes ke pak kades, katanya nanti-nanti...",
-      fromName: "Pak Cahyo", message: "Pak Cahyo membalas suaramu.",
-      createdAt: D(1), isRead: false,
-    },
-    {
-      id: "n6", type: "reply", voiceId: "v5", isOfficial: true,
-      voiceText: "Sudah minta lihat APBDes ke pak kades, katanya nanti-nanti...",
-      fromName: "BPD Desa", message: "BPD Desa merespons secara resmi suaramu.",
-      createdAt: D(3), isRead: false,
-    },
-    {
-      id: "n7", type: "vote_benar", voiceId: "v5", isOfficial: false,
-      voiceText: "Sudah minta lihat APBDes ke pak kades...",
-      fromName: "Seseorang", message: "41 orang menandai suaramu sebagai Benar.",
-      createdAt: D(12), isRead: true,
-    },
-  ],
-};
+  for (const voice of voices) {
+    const text = snippet(voice.text);
 
-export function getNotifications(authorName: string): UserNotification[] {
-  return MOCK_NOTIFICATIONS[authorName] ?? [];
-}
+    for (const reply of voice.replies) {
+      if (!reply.isOfficialDesa && reply.author === selfName) continue; // skip own replies
+      notifs.push({
+        id: `nr-${reply.id}`,
+        type: "reply",
+        voiceId: voice.id,
+        voiceText: text,
+        fromName: reply.author,
+        isOfficial: reply.isOfficialDesa,
+        message: reply.isOfficialDesa
+          ? `${reply.author} merespons resmi suaramu.`
+          : `${reply.author} membalas suaramu.`,
+        createdAt: reply.createdAt instanceof Date ? reply.createdAt : new Date(reply.createdAt),
+        isRead: false,
+      });
+    }
 
-export function getUnreadCount(authorName: string): number {
-  return getNotifications(authorName).filter(n => !n.isRead).length;
-}
+    if (voice.status === "resolved") {
+      notifs.push({
+        id: `nres-${voice.id}`,
+        type: "resolved",
+        voiceId: voice.id,
+        voiceText: text,
+        fromName: "Perangkat desa",
+        isOfficial: true,
+        message: "Masalah pada suaramu ditandai selesai.",
+        createdAt: voice.resolvedAt ? new Date(voice.resolvedAt) : voice.createdAt,
+        isRead: false,
+      });
+    }
 
-// ─── User voices ──────────────────────────────────────────────────────────────
+    if (voice.votes.benar > 0) {
+      notifs.push({
+        id: `nv-${voice.id}`,
+        type: "vote_benar",
+        voiceId: voice.id,
+        voiceText: text,
+        fromName: "Seseorang",
+        isOfficial: false,
+        message: `${voice.votes.benar} orang menandai suaramu sebagai Benar.`,
+        createdAt: voice.createdAt,
+        isRead: false,
+      });
+    }
+  }
 
-export function getVoicesByAuthor(authorName: string): CitizenVoice[] {
-  return getAllVoices().filter(v => !v.isAnon && v.author === authorName);
+  return notifs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }

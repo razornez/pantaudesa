@@ -119,74 +119,7 @@ export function relativeTime(date: Date): string {
   return `${Math.floor(days / 30)} bulan lalu`;
 }
 
-// ─── Mock helpers ─────────────────────────────────────────────────────────────
-
-const D  = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000);
-const r  = (voiceId: string, id: string, author: string, text: string, isOfficial: boolean, daysAgo: number, isAnon = false): VoiceReply =>
-  ({ id, voiceId, author, isAnon, isOfficialDesa: isOfficial, text, createdAt: D(daysAgo) });
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const ALL_VOICES: CitizenVoice[] = [
-  {
-    id: "v1", desaId: "1", category: "infrastruktur",
-    text: "Jalan di RT 04 baru selesai diperbaiki bulan lalu, hasilnya bagus dan mulus. Terima kasih desanya sudah gerak cepat.",
-    author: "Pak Hendra", isAnon: false, createdAt: D(3), helpful: 12,
-    photos: [], votes: { benar: 18, bohong: 0 }, status: "resolved", resolvedAt: D(32),
-    replies: [
-      r("v1","r1a","Bu Siti RT 04","Betul, saya bisa konfirmasi. Jalan sekarang sudah nyaman dilalui motor dan mobil.", false, 2),
-      r("v1","r1b","Kepala Desa Sukamaju","Terima kasih apresiasinya. Kami memang prioritaskan perbaikan jalan di Q1 sesuai APBDes. Semoga manfaat untuk warga.", true, 2),
-    ],
-  },
-  {
-    id: "v4", desaId: "1", category: "infrastruktur",
-    text: "Lampu jalan di gang belakang balai desa masih mati sudah 3 minggu. Mohon segera diperbaiki, warga takut jalan malam.",
-    author: "Pak Darto", isAnon: false, createdAt: D(2), helpful: 21,
-    photos: ["/images/illustration-alert.webp"], votes: { benar: 28, bohong: 1 }, status: "resolved", resolvedAt: D(1),
-    replies: [
-      r("v4","r4a","Warga RT 04","Betul! Saya yang lapor ini. Sudah 3 minggu gelap gulita, anak-anak takut pulang malam.", false, 2),
-      r("v4","r4b","Kepala Desa Sukamaju","Sudah kami koordinasikan ke pengelola PJU. Lampu akan menyala dalam 3 hari kerja. Mohon bersabar.", true, 1),
-      r("v4","r4c","Pak Darto","Update: lampu sudah menyala lagi kemarin malam. Terima kasih pak kades sudah cepat!", false, 0),
-    ],
-  },
-  {
-    id: "v2", desaId: "1", category: "fasilitas",
-    text: "Posyandu di RT 02 aktif tiap bulan, petugas ramah dan tidak pernah minta bayaran. Mantap.",
-    author: "Bu Ratna", isAnon: false, createdAt: D(8), helpful: 7,
-    photos: [], votes: { benar: 15, bohong: 0 }, status: "open",
-    replies: [],
-  },
-  {
-    id: "v3", desaId: "1", category: "bansos",
-    text: "BLT sudah cair ke keluarga saya, prosesnya lancar dan transparan. Semoga terus begini.",
-    author: "Anonim", isAnon: true, createdAt: D(15), helpful: 5,
-    photos: [], votes: { benar: 9, bohong: 0 }, status: "open",
-    replies: [],
-  },
-  {
-    id: "v5", desaId: "2", category: "anggaran",
-    text: "Sudah minta lihat APBDes ke pak kades, katanya nanti-nanti terus. Padahal ini hak warga kan? Sudah 2 minggu bolak-balik.",
-    author: "Ibu Sumarni", isAnon: false, createdAt: D(5), helpful: 34,
-    photos: [], votes: { benar: 41, bohong: 2 }, status: "open",
-    replies: [
-      r("v5","r5a","Pak Cahyo","Saya juga pernah mengalami hal yang sama. Akhirnya saya datang langsung ke kantor kecamatan dan mereka yang membantu.",false,4),
-      r("v5","r5b","Anonim","Coba minta ke BPD (Badan Permusyawaratan Desa), mereka punya kewenangan mengawasi kades dan bisa membantu akses dokumen.",true,3),
-    ],
-  },
-];
-
-// ─── Getters ──────────────────────────────────────────────────────────────────
-
-export function getVoicesForDesa(desaId: string): CitizenVoice[] {
-  return ALL_VOICES
-    .filter(v => v.desaId === desaId)
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-}
-
-export function getAllVoices(): CitizenVoice[] {
-  return [...ALL_VOICES].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-}
-
-// NOTE: getVoiceStats / getDesaRanking / getCategoryStats were removed together
-// with the dead VoiceStats component. Public voice stats are computed from real
-// DB voices via getVoiceStatsFromVoices() in src/lib/data/voice-read.ts.
+// NOTE: The mock voice data + getters (getVoicesForDesa / getAllVoices /
+// getVoiceStats / getDesaRanking / getCategoryStats) were removed. All voices
+// now come from the database via src/lib/data/voice-read.ts. This module keeps
+// only the shared voice domain (types, category/status config, formatting).
