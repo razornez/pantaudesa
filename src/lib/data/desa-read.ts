@@ -759,6 +759,9 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
 
   const timer = perfStart();
   const records = await prisma.desa.findMany({
+    // Exclude QA test fixtures (seed-qa creates "qa-desa-*" for E2E only) from all
+    // public reads, so they never surface as real desa even when seed:qa has run.
+    where: { NOT: { id: { startsWith: "qa-desa" } } },
     orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
     select: {
       id: true,
