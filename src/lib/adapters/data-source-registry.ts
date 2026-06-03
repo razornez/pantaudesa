@@ -32,6 +32,7 @@ export const DATA_SOURCE_REGISTRY: DataSourceDef[] = [
   { code: "OSM", sourceName: "OpenStreetMap", sourceUrl: "https://nominatim.openstreetmap.org", sourceType: "official_website", scopeType: "national", scopeName: "Global", trustLevel: 3, format: "API_JSON", frekuensiUpdate: "komunitas" },
   { code: "BUMDES-REG", sourceName: "Registry BUMDes Kemendesa", sourceUrl: "https://bumdes.kemendesa.go.id", sourceType: "official_website", scopeType: "national", scopeName: "Indonesia", trustLevel: 4, format: "WEB", frekuensiUpdate: "variabel" },
   { code: "DESA-WEB", sourceName: "Website Resmi Desa (OpenSID)", sourceUrl: "", sourceType: "official_website", scopeType: "desa", scopeName: "per desa", trustLevel: 4, format: "HTML", frekuensiUpdate: "variabel" },
+  { code: "KECAMATAN-BDG", sourceName: "Situs Kecamatan Kab. Bandung (profil desa)", sourceUrl: "https://kecamatan{kec}.bandungkab.go.id", sourceType: "official_website", scopeType: "kabupaten", scopeName: "Kabupaten Bandung", trustLevel: 4, format: "HTML", frekuensiUpdate: "tahunan" },
 ];
 
 export const DATA_SOURCE_BY_CODE: Record<string, DataSourceDef> = Object.fromEntries(

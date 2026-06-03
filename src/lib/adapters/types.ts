@@ -35,6 +35,8 @@ export interface AdapterDesaDescriptor {
   provinsi: string;
   /** Official desa website (e.g. OpenSID at {slug}.desa.id), if known */
   website?: string;
+  /** Official kode wilayah (e.g. "3204162003"), used for OSM ref-tag matching */
+  kodeDesa?: string | null;
 }
 
 export interface AdapterContext {

@@ -133,50 +133,78 @@ export class OpenSIDAdapter implements DataAdapter {
     return dusun + rw + rt > 0 ? { dusun, rw, rt, kk } : null;
   }
 
+  /** Parse /data-statistik/pendidikan → persentase lulusan SMA/SMK+ (proxy pendidikan). */
+  private parsePendidikanSMA(html: string): number | null {
+    const text = stripTags(html);
+    const rows = [...text.matchAll(/([A-Z][A-Za-z /]{4,40})\s*\|[^\d]{0,4}(\d[\d.,]*)\s*\|[^\d]{0,4}([\d.,]+)%/g)];
+    let totalPop = 0;
+    let smaPop = 0;
+    for (const r of rows) {
+      const label = r[1].trim();
+      const count = toInt(r[2]);
+      if (!Number.isFinite(count) || count <= 0) continue;
+      totalPop += count;
+      if (/SMA|SMK|MA\b|Aliyah|D[1-4]\b|Sarjana|S1|S2|S3|Diploma|Strata/i.test(label)) smaPop += count;
+    }
+    if (totalPop === 0) return null;
+    return Math.round((smaPop / totalPop) * 100);
+  }
+
+  /** Scrape all data for one desa — called concurrently per batch. */
+  private async scrapeOne(d: AdapterContext["desas"][number]): Promise<AdapterDesaResult> {
+    const base = d.website?.replace(/\/+$/, "") ?? `https://${slugDesaId(d.nama)}.desa.id`;
+    const fields: AdapterFieldOutput[] = [];
+
+    // All sources are INDEPENDENT — failure on one never short-circuits the rest.
+    const [html, wilHtml, home, pek, pendHtml] = await Promise.all([
+      this.fetchText(`${base}/data-statistik/jenis-kelamin`),
+      this.fetchText(`${base}/data-wilayah`),
+      this.fetchText(`${base}/`),
+      this.fetchText(`${base}/data-statistik/pekerjaan`),
+      this.fetchText(`${base}/data-statistik/pendidikan`),
+    ]);
+
+    let total = NaN;
+    if (html) {
+      const m = stripTags(html).match(/\b(?:JUMLAH|TOTAL)\b[^\d]{0,6}(\d[\d.,]{2,})/i);
+      total = m ? toInt(m[1]) : NaN;
+      if (Number.isFinite(total) && total > 0) fields.push({ fieldKey: "jumlahPenduduk", value: total });
+    }
+
+    const wil = wilHtml ? this.parseWilayah(wilHtml) : null;
+    if (wil) {
+      if (wil.dusun > 0) fields.push({ fieldKey: "jumlahDusun", value: wil.dusun });
+      if (wil.rw > 0) fields.push({ fieldKey: "jumlahRw", value: wil.rw });
+      if (wil.rt > 0) fields.push({ fieldKey: "jumlahRt", value: wil.rt });
+      if (wil.kk > 0) fields.push({ fieldKey: "jumlahKK", value: wil.kk });
+    }
+
+    if (home) {
+      const kades = this.parseKepalaDesa(home);
+      if (kades) fields.push({ fieldKey: "kepalaDesa", value: kades });
+    }
+
+    const job = pek ? this.parseDominantJob(pek) : null;
+    if (job) fields.push({ fieldKey: "mataPencaharian", value: job });
+
+    const smaPct = pendHtml ? this.parsePendidikanSMA(pendHtml) : null;
+    if (smaPct !== null) fields.push({ fieldKey: "persentaseLulusSMA", value: smaPct });
+
+    return fields.length > 0
+      ? { desaId: d.desaId, fields, rawMeta: { base, total, wilayah: wil } }
+      : { desaId: d.desaId, fields: [], rawMeta: { note: "nothing parsed", base } };
+  }
+
   async run(context: AdapterContext): Promise<AdapterRunResult> {
     const results: AdapterDesaResult[] = [];
 
-    for (const d of context.desas) {
-      const base = d.website?.replace(/\/+$/, "") ?? `https://${slugDesaId(d.nama)}.desa.id`;
-      const fields: AdapterFieldOutput[] = [];
-
-      // Each source below is INDEPENDENT — a desa whose statistik modules are down
-      // (HTTP 500) can still yield its Kepala Desa from the homepage, so a single
-      // failed page must never short-circuit the others.
-      const html = await this.fetchText(`${base}/data-statistik/jenis-kelamin`);
-      let total = NaN;
-      if (html) {
-        // OpenSID table has a "JUMLAH" / "TOTAL" row: "|JUMLAH| |16742| |100,00%|..."
-        const m = stripTags(html).match(/\b(?:JUMLAH|TOTAL)\b[^\d]{0,6}(\d[\d.,]{2,})/i);
-        total = m ? toInt(m[1]) : NaN;
-        if (Number.isFinite(total) && total > 0) fields.push({ fieldKey: "jumlahPenduduk", value: total });
-      }
-
-      // /data-wilayah → dusun/RW/RT counts + total KK (sum of dusun-level KK)
-      const wilHtml = await this.fetchText(`${base}/data-wilayah`);
-      const wil = wilHtml ? this.parseWilayah(wilHtml) : null;
-      if (wil) {
-        if (wil.dusun > 0) fields.push({ fieldKey: "jumlahDusun", value: wil.dusun });
-        if (wil.rw > 0) fields.push({ fieldKey: "jumlahRw", value: wil.rw });
-        if (wil.rt > 0) fields.push({ fieldKey: "jumlahRt", value: wil.rt });
-        if (wil.kk > 0) fields.push({ fieldKey: "jumlahKK", value: wil.kk });
-      }
-
-      // Kepala Desa (from homepage) + dominant occupation (from pekerjaan stats)
-      const home = await this.fetchText(`${base}/`);
-      if (home) {
-        const kades = this.parseKepalaDesa(home);
-        if (kades) fields.push({ fieldKey: "kepalaDesa", value: kades });
-      }
-      const pek = await this.fetchText(`${base}/data-statistik/pekerjaan`);
-      const job = pek ? this.parseDominantJob(pek) : null;
-      if (job) fields.push({ fieldKey: "mataPencaharian", value: job });
-
-      if (fields.length > 0) {
-        results.push({ desaId: d.desaId, fields, rawMeta: { base, total, wilayah: wil } });
-      } else {
-        results.push({ desaId: d.desaId, fields: [], rawMeta: { note: "nothing parsed", base } });
-      }
+    // Process in concurrent batches of 5 — ~5x faster than sequential while
+    // staying polite (each desa hits its own domain, not the same server).
+    const BATCH = 5;
+    for (let i = 0; i < context.desas.length; i += BATCH) {
+      const batch = context.desas.slice(i, i + BATCH);
+      const batchResults = await Promise.all(batch.map((d) => this.scrapeOne(d)));
+      results.push(...batchResults);
     }
 
     return { adapterId: this.id, sourceCode: this.sourceCode, fetchedAt: new Date(), results };
