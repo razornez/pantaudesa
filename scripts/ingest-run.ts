@@ -5,6 +5,7 @@
  *   npx tsx scripts/ingest-run.ts                      → default: batukarut
  *   npx tsx scripts/ingest-run.ts batukarut lebakwangi → explicit slugs
  *   npx tsx scripts/ingest-run.ts --kecamatan Arjasari → every desa in a kecamatan
+ *   npx tsx scripts/ingest-run.ts --all                → every desa in the DB
  *
  * Routes through DIRECT_URL (session-mode, port 5432) because the transaction
  * pooler (6543) refuses connections under saturation. Env is loaded BEFORE the
@@ -26,11 +27,12 @@ async function main() {
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
-  // Resolve target desa: --kecamatan <name>, explicit slugs, or default batukarut.
+  // Resolve target desa: --all, --kecamatan <name>, explicit slugs, or default batukarut.
   const kecIdx = argv.indexOf("--kecamatan");
   const slugArgs = argv.filter((a) => !a.startsWith("--"));
-  const where =
-    kecIdx >= 0 && argv[kecIdx + 1]
+  const where = argv.includes("--all")
+    ? {}
+    : kecIdx >= 0 && argv[kecIdx + 1]
       ? { kecamatan: { equals: argv[kecIdx + 1], mode: "insensitive" as const } }
       : { slug: { in: slugArgs.length ? slugArgs : ["batukarut"] } };
 
