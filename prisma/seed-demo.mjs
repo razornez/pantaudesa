@@ -336,28 +336,11 @@ const perangkatRoles = [
   { jabatan: "Kaur Perencanaan", periode: null, kontakLabel: null },
 ];
 
-const demoVillageRecords = [
-  { id: "1", nama: "Desa Sukamaju", kecamatan: "Ciawi", kabupaten: "Bogor", provinsi: "Jawa Barat", total: 1250000000, realisasi: 1187500000, persen: 95, status: "baik", penduduk: 3420, kategori: "Infrastruktur" },
-  { id: "2", nama: "Desa Harapan Jaya", kecamatan: "Cibinong", kabupaten: "Bogor", provinsi: "Jawa Barat", total: 980000000, realisasi: 784000000, persen: 80, status: "sedang", penduduk: 2890, kategori: "Pendidikan" },
-  { id: "3", nama: "Desa Maju Bersama", kecamatan: "Jonggol", kabupaten: "Bogor", provinsi: "Jawa Barat", total: 870000000, realisasi: 417600000, persen: 48, status: "rendah", penduduk: 2100, kategori: "Kesehatan" },
-  { id: "4", nama: "Desa Sumber Rejeki", kecamatan: "Mlati", kabupaten: "Sleman", provinsi: "D.I. Yogyakarta", total: 1340000000, realisasi: 1286400000, persen: 96, status: "baik", penduduk: 4100, kategori: "Infrastruktur" },
-  { id: "5", nama: "Desa Mekar Sari", kecamatan: "Depok", kabupaten: "Sleman", provinsi: "D.I. Yogyakarta", total: 1120000000, realisasi: 1008000000, persen: 90, status: "baik", penduduk: 3750, kategori: "Pertanian" },
-  { id: "6", nama: "Desa Karang Indah", kecamatan: "Godean", kabupaten: "Sleman", provinsi: "D.I. Yogyakarta", total: 760000000, realisasi: 532000000, persen: 70, status: "sedang", penduduk: 1980, kategori: "Pariwisata" },
-  { id: "7", nama: "Desa Baru Makmur", kecamatan: "Waru", kabupaten: "Sidoarjo", provinsi: "Jawa Timur", total: 1480000000, realisasi: 1406000000, persen: 95, status: "baik", penduduk: 5200, kategori: "Infrastruktur" },
-  { id: "8", nama: "Desa Sumber Agung", kecamatan: "Gedangan", kabupaten: "Sidoarjo", provinsi: "Jawa Timur", total: 920000000, realisasi: 598000000, persen: 65, status: "sedang", penduduk: 2640, kategori: "Ekonomi" },
-  { id: "9", nama: "Desa Pura Harapan", kecamatan: "Taman", kabupaten: "Sidoarjo", provinsi: "Jawa Timur", total: 1050000000, realisasi: 367500000, persen: 35, status: "rendah", penduduk: 3100, kategori: "Kesehatan" },
-  { id: "10", nama: "Desa Tirta Mulya", kecamatan: "Sungai Raya", kabupaten: "Kubu Raya", provinsi: "Kalimantan Barat", total: 890000000, realisasi: 836600000, persen: 94, status: "baik", penduduk: 2200, kategori: "Pertanian" },
-  { id: "11", nama: "Desa Rimba Jaya", kecamatan: "Kuala Mandor B", kabupaten: "Kubu Raya", provinsi: "Kalimantan Barat", total: 670000000, realisasi: 436000000, persen: 65, status: "sedang", penduduk: 1450, kategori: "Infrastruktur" },
-  { id: "12", nama: "Desa Talang Hijau", kecamatan: "Muara Enim", kabupaten: "Muara Enim", provinsi: "Sumatera Selatan", total: 1100000000, realisasi: 1034000000, persen: 94, status: "baik", penduduk: 3300, kategori: "Perkebunan" },
-  { id: "13", nama: "Desa Pantai Indah", kecamatan: "Mesuji", kabupaten: "Mesuji", provinsi: "Lampung", total: 780000000, realisasi: 288600000, persen: 37, status: "rendah", penduduk: 1890, kategori: "Perikanan" },
-  { id: "14", nama: "Desa Ingin Jaya", kecamatan: "Krueng Barona Jaya", kabupaten: "Aceh Besar", provinsi: "Aceh", total: 1200000000, realisasi: 1140000000, persen: 95, status: "baik", penduduk: 4500, kategori: "Infrastruktur" },
-  { id: "15", nama: "Desa Dolok Sanggul", kecamatan: "Lintongnihuta", kabupaten: "Humbang Hasundutan", provinsi: "Sumatera Utara", total: 960000000, realisasi: 768000000, persen: 80, status: "sedang", penduduk: 2780, kategori: "Pertanian" },
-  { id: "16", nama: "Desa Bontomarannu", kecamatan: "Bontomarannu", kabupaten: "Gowa", provinsi: "Sulawesi Selatan", total: 1150000000, realisasi: 1092500000, persen: 95, status: "baik", penduduk: 3900, kategori: "Infrastruktur" },
-  { id: "17", nama: "Desa Mataram Baru", kecamatan: "Labuapi", kabupaten: "Lombok Barat", provinsi: "NTB", total: 830000000, realisasi: 456500000, persen: 55, status: "rendah", penduduk: 2400, kategori: "Pariwisata" },
-  { id: "18", nama: "Desa Toili", kecamatan: "Toili", kabupaten: "Banggai", provinsi: "Sulawesi Tengah", total: 740000000, realisasi: 607000000, persen: 82, status: "baik", penduduk: 2050, kategori: "Pertanian" },
-  { id: "19", nama: "Desa Wamena", kecamatan: "Wamena", kabupaten: "Jayawijaya", provinsi: "Papua Pegunungan", total: 2100000000, realisasi: 945000000, persen: 45, status: "rendah", penduduk: 1200, kategori: "Infrastruktur" },
-  { id: "20", nama: "Desa Batulicin", kecamatan: "Kusan Hilir", kabupaten: "Tanah Bumbu", provinsi: "Kalimantan Selatan", total: 990000000, realisasi: 881100000, persen: 89, status: "baik", penduduk: 3100, kategori: "Pertambangan" },
-];
+// Removed: 20 fictional cross-Indonesia demo villages (ids "1"–"20") that
+// masqueraded as real desa and polluted public listings. The demo dataset now
+// rides on the 11 REAL Arjasari desa (desaRecords) instead. Voice + admin-claim
+// demos below reference those real desa ids.
+const demoVillageRecords = [];
 
 const apbdesFields = [
   ["1", "Penyelenggaraan Pemerintahan Desa", 0.18, 1.03],
@@ -368,22 +351,22 @@ const apbdesFields = [
 ];
 
 const voiceExamples = [
-  { id: "v1", desaId: "1", category: "infrastruktur", text: "Jalan di RT 04 baru selesai diperbaiki bulan lalu, hasilnya bagus dan mulus. Terima kasih desanya sudah gerak cepat.", author: "Pak Hendra", days: 3, helpful: 12, benar: 18, bohong: 0, status: "RESOLVED" },
-  { id: "v4", desaId: "1", category: "infrastruktur", text: "Lampu jalan di gang belakang balai desa masih mati sudah 3 minggu. Mohon segera diperbaiki, warga takut jalan malam.", author: "Pak Darto", days: 2, helpful: 21, benar: 28, bohong: 1, status: "RESOLVED" },
-  { id: "v2", desaId: "1", category: "fasilitas", text: "Posyandu di RT 02 aktif tiap bulan, petugas ramah dan tidak pernah minta bayaran. Mantap.", author: "Bu Ratna", days: 8, helpful: 7, benar: 15, bohong: 0, status: "OPEN" },
-  { id: "v3", desaId: "1", category: "bansos", text: "BLT sudah cair ke keluarga saya, prosesnya lancar dan transparan. Semoga terus begini.", author: "Anonim", isAnon: true, days: 15, helpful: 5, benar: 9, bohong: 0, status: "OPEN" },
-  { id: "v5", desaId: "2", category: "anggaran", text: "Sudah minta lihat APBDes ke pak kades, katanya nanti-nanti terus. Padahal ini hak warga kan? Sudah 2 minggu bolak-balik.", author: "Ibu Sumarni", days: 5, helpful: 34, benar: 41, bohong: 2, status: "OPEN" },
-  { id: "v6", desaId: "2", category: "infrastruktur", text: "Saluran drainase RT 01 sudah mampet 2 bulan. Waktu hujan banjir kecil-kecilan masuk halaman. Sudah lapor ke RT tapi tidak ada tindakan.", author: "Anonim", isAnon: true, days: 12, helpful: 18, benar: 23, bohong: 0, status: "IN_PROGRESS" },
-  { id: "v7", desaId: "2", category: "fasilitas", text: "PAUD di desa ini bagus, gurunya rajin dan gedungnya baru direnovasi. Anak saya senang sekolah di sini.", author: "Bu Wulandari", days: 20, helpful: 9, benar: 11, bohong: 0, status: "OPEN" },
-  { id: "v8", desaId: "3", category: "bansos", text: "BLT sudah 3 bulan tidak cair. Sudah lapor ke RT tapi katanya lagi diproses. Keluarga saya butuh sekarang.", author: "Pak Sugeng", days: 1, helpful: 67, benar: 78, bohong: 2, status: "OPEN" },
-  { id: "v9", desaId: "3", category: "infrastruktur", text: "Jalan utama berlubang parah. Motor saya sudah dua kali rusak karena jalan ini. Warga perlu penjelasan rencana perbaikannya.", author: "Anonim", isAnon: true, days: 4, helpful: 89, benar: 112, bohong: 3, status: "OPEN" },
-  { id: "v10", desaId: "3", category: "anggaran", text: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan berarti. Saya ingin tahu dokumen APBDes dan rencana kegiatannya.", author: "Pak Muryanto", days: 7, helpful: 102, benar: 98, bohong: 1, status: "OPEN" },
-  { id: "v11", desaId: "3", category: "fasilitas", text: "Posyandu buka tidak teratur, kadang buka kadang tidak ada kabar. Ibu-ibu bingung kapan harus datang.", author: "Bu Endang", days: 10, helpful: 45, benar: 52, bohong: 0, status: "OPEN" },
-  { id: "v12", desaId: "7", category: "infrastruktur", text: "Pengerjaan jalan desa sangat rapi dan kualitasnya bagus. Warga ikut mengawasi langsung saat pengerjaan.", author: "Pak Zainal", days: 6, helpful: 15, benar: 18, bohong: 0, status: "OPEN" },
-  { id: "v13", desaId: "7", category: "bansos", text: "Pembagian BLT tertib dan transparan. Ada daftar nama yang ditempel di balai desa, siapapun bisa cek.", author: "Bu Mahmudah", days: 14, helpful: 28, benar: 31, bohong: 0, status: "OPEN" },
-  { id: "v14", desaId: "9", category: "anggaran", text: "Dana desa katanya lebih dari Rp 1 miliar, tapi warga belum melihat penjelasan kegiatan. Saya ingin tahu dokumennya.", author: "Anonim", isAnon: true, days: 2, helpful: 156, benar: 134, bohong: 5, status: "OPEN" },
-  { id: "v15", desaId: "9", category: "infrastruktur", text: "Jalan ke sawah sudah rusak bertahun-tahun. Petani rugi karena sulit angkut hasil panen. Mohon dicek prioritasnya.", author: "Pak Sarpan", days: 9, helpful: 78, benar: 89, bohong: 0, status: "OPEN" },
-  { id: "v16", desaId: "9", category: "bansos", text: "Tetangga saya mampu tapi dapat BLT. Saya yang susah belum dapat. Tolong dicek datanya secara terbuka.", author: "Anonim", isAnon: true, days: 3, helpful: 134, benar: 98, bohong: 8, status: "IN_PROGRESS" },
+  { id: "v1", desaId: "demo-desa-batukarut", category: "infrastruktur", text: "Jalan di RT 04 baru selesai diperbaiki bulan lalu, hasilnya bagus dan mulus. Terima kasih desanya sudah gerak cepat.", author: "Pak Hendra", days: 3, helpful: 12, benar: 18, bohong: 0, status: "RESOLVED" },
+  { id: "v4", desaId: "demo-desa-batukarut", category: "infrastruktur", text: "Lampu jalan di gang belakang balai desa masih mati sudah 3 minggu. Mohon segera diperbaiki, warga takut jalan malam.", author: "Pak Darto", days: 2, helpful: 21, benar: 28, bohong: 1, status: "RESOLVED" },
+  { id: "v2", desaId: "demo-desa-batukarut", category: "fasilitas", text: "Posyandu di RT 02 aktif tiap bulan, petugas ramah dan tidak pernah minta bayaran. Mantap.", author: "Bu Ratna", days: 8, helpful: 7, benar: 15, bohong: 0, status: "OPEN" },
+  { id: "v3", desaId: "demo-desa-batukarut", category: "bansos", text: "BLT sudah cair ke keluarga saya, prosesnya lancar dan transparan. Semoga terus begini.", author: "Anonim", isAnon: true, days: 15, helpful: 5, benar: 9, bohong: 0, status: "OPEN" },
+  { id: "v5", desaId: "demo-desa-ancolmekar", category: "anggaran", text: "Sudah minta lihat APBDes ke pak kades, katanya nanti-nanti terus. Padahal ini hak warga kan? Sudah 2 minggu bolak-balik.", author: "Ibu Sumarni", days: 5, helpful: 34, benar: 41, bohong: 2, status: "OPEN" },
+  { id: "v6", desaId: "demo-desa-ancolmekar", category: "infrastruktur", text: "Saluran drainase RT 01 sudah mampet 2 bulan. Waktu hujan banjir kecil-kecilan masuk halaman. Sudah lapor ke RT tapi tidak ada tindakan.", author: "Anonim", isAnon: true, days: 12, helpful: 18, benar: 23, bohong: 0, status: "IN_PROGRESS" },
+  { id: "v7", desaId: "demo-desa-ancolmekar", category: "fasilitas", text: "PAUD di desa ini bagus, gurunya rajin dan gedungnya baru direnovasi. Anak saya senang sekolah di sini.", author: "Bu Wulandari", days: 20, helpful: 9, benar: 11, bohong: 0, status: "OPEN" },
+  { id: "v8", desaId: "demo-desa-baros", category: "bansos", text: "BLT sudah 3 bulan tidak cair. Sudah lapor ke RT tapi katanya lagi diproses. Keluarga saya butuh sekarang.", author: "Pak Sugeng", days: 1, helpful: 67, benar: 78, bohong: 2, status: "OPEN" },
+  { id: "v9", desaId: "demo-desa-baros", category: "infrastruktur", text: "Jalan utama berlubang parah. Motor saya sudah dua kali rusak karena jalan ini. Warga perlu penjelasan rencana perbaikannya.", author: "Anonim", isAnon: true, days: 4, helpful: 89, benar: 112, bohong: 3, status: "OPEN" },
+  { id: "v10", desaId: "demo-desa-baros", category: "anggaran", text: "Serapan hanya 48% tapi saya tidak melihat ada pembangunan berarti. Saya ingin tahu dokumen APBDes dan rencana kegiatannya.", author: "Pak Muryanto", days: 7, helpful: 102, benar: 98, bohong: 1, status: "OPEN" },
+  { id: "v11", desaId: "demo-desa-baros", category: "fasilitas", text: "Posyandu buka tidak teratur, kadang buka kadang tidak ada kabar. Ibu-ibu bingung kapan harus datang.", author: "Bu Endang", days: 10, helpful: 45, benar: 52, bohong: 0, status: "OPEN" },
+  { id: "v12", desaId: "demo-desa-wargaluyu", category: "infrastruktur", text: "Pengerjaan jalan desa sangat rapi dan kualitasnya bagus. Warga ikut mengawasi langsung saat pengerjaan.", author: "Pak Zainal", days: 6, helpful: 15, benar: 18, bohong: 0, status: "OPEN" },
+  { id: "v13", desaId: "demo-desa-wargaluyu", category: "bansos", text: "Pembagian BLT tertib dan transparan. Ada daftar nama yang ditempel di balai desa, siapapun bisa cek.", author: "Bu Mahmudah", days: 14, helpful: 28, benar: 31, bohong: 0, status: "OPEN" },
+  { id: "v14", desaId: "demo-desa-mangunjaya", category: "anggaran", text: "Dana desa katanya lebih dari Rp 1 miliar, tapi warga belum melihat penjelasan kegiatan. Saya ingin tahu dokumennya.", author: "Anonim", isAnon: true, days: 2, helpful: 156, benar: 134, bohong: 5, status: "OPEN" },
+  { id: "v15", desaId: "demo-desa-mangunjaya", category: "infrastruktur", text: "Jalan ke sawah sudah rusak bertahun-tahun. Petani rugi karena sulit angkut hasil panen. Mohon dicek prioritasnya.", author: "Pak Sarpan", days: 9, helpful: 78, benar: 89, bohong: 0, status: "OPEN" },
+  { id: "v16", desaId: "demo-desa-mangunjaya", category: "bansos", text: "Tetangga saya mampu tapi dapat BLT. Saya yang susah belum dapat. Tolong dicek datanya secara terbuka.", author: "Anonim", isAnon: true, days: 3, helpful: 134, benar: 98, bohong: 8, status: "IN_PROGRESS" },
 ];
 
 function loadLocalEnv() {
@@ -893,31 +876,31 @@ async function seedAdminClaimDemo() {
   const claimStates = [
     {
       id: "admin-claim-pending-demo",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       email: "pengaju.admin.demo@pantaudesa.local",
       status: "PENDING",
       method: "OFFICIAL_EMAIL",
       officialEmail: "pemdes-demo@pantaudesa.local",
-      websiteUrl: "https://sumberrejeki.desa.id",
+      websiteUrl: "https://lebakwangi.desa.id",
       verifiedAt: null,
       rejectedAt: null,
       rejectionReason: null,
     },
     {
       id: "admin-claim-verified-demo",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       email: "admin.desa.verified.demo@pantaudesa.local",
       status: "APPROVED",
       method: "WEBSITE_TOKEN",
       officialEmail: "pemdes-demo@pantaudesa.local",
-      websiteUrl: "https://sumberrejeki.desa.id",
+      websiteUrl: "https://lebakwangi.desa.id",
       verifiedAt: now,
       rejectedAt: null,
       rejectionReason: null,
     },
     {
       id: "admin-claim-rejected-demo",
-      desaId: "9",
+      desaId: "demo-desa-mangunjaya",
       email: "admin.desa.rejected.demo@pantaudesa.local",
       status: "REJECTED",
       method: "SUPPORT_REVIEW",
@@ -968,7 +951,7 @@ async function seedAdminClaimDemo() {
   const memberStates = [
     {
       id: "admin-member-limited-demo",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       email: "admin.desa.limited.demo@pantaudesa.local",
       role: "LIMITED_ADMIN",
       status: "LIMITED",
@@ -977,7 +960,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-member-verified-demo",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       email: "admin.desa.verified.demo@pantaudesa.local",
       role: "VERIFIED_ADMIN",
       status: "VERIFIED",
@@ -986,7 +969,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-member-suspended-demo",
-      desaId: "1",
+      desaId: "demo-desa-batukarut",
       email: "admin.desa.suspended.demo@pantaudesa.local",
       role: "LIMITED_ADMIN",
       status: "REVOKED",
@@ -1033,7 +1016,7 @@ async function seedAdminClaimDemo() {
     await prisma.desaAdminInvite.upsert({
       where: { id: "admin-invite-demo-limited" },
       update: {
-        desaId: "4",
+        desaId: "demo-desa-lebakwangi",
         email: "admin.desa.limited.demo@pantaudesa.local",
         tokenHash: "demo-token-hash",
         invitedById: "platform-admin-demo",
@@ -1043,7 +1026,7 @@ async function seedAdminClaimDemo() {
       },
       create: {
         id: "admin-invite-demo-limited",
-        desaId: "4",
+        desaId: "demo-desa-lebakwangi",
         email: "admin.desa.limited.demo@pantaudesa.local",
         tokenHash: "demo-token-hash",
         invitedById: "platform-admin-demo",
@@ -1057,7 +1040,7 @@ async function seedAdminClaimDemo() {
   const auditRows = [
     {
       id: "admin-audit-claim-pending",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       actorUserId: "admin-claim-demo-pending",
       targetUserId: "admin-claim-demo-pending",
       claimId: "admin-claim-pending-demo",
@@ -1068,7 +1051,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-audit-claim-verified",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       actorUserId: "platform-admin-demo",
       targetUserId: "admin-claim-demo-verified",
       claimId: "admin-claim-verified-demo",
@@ -1079,7 +1062,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-audit-member-limited",
-      desaId: "4",
+      desaId: "demo-desa-lebakwangi",
       actorUserId: "platform-admin-demo",
       targetUserId: "admin-claim-demo-limited",
       claimId: null,
@@ -1090,7 +1073,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-audit-claim-rejected",
-      desaId: "9",
+      desaId: "demo-desa-mangunjaya",
       actorUserId: "platform-admin-demo",
       targetUserId: "admin-claim-demo-rejected",
       claimId: "admin-claim-rejected-demo",
@@ -1101,7 +1084,7 @@ async function seedAdminClaimDemo() {
     },
     {
       id: "admin-audit-member-suspended",
-      desaId: "1",
+      desaId: "demo-desa-batukarut",
       actorUserId: "platform-admin-demo",
       targetUserId: "admin-claim-demo-suspended",
       claimId: null,

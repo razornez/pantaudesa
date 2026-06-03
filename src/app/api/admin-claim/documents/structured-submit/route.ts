@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { AUDIT_EVENT } from "@/lib/admin-claim/audit-events";
 import { getUploadedDocumentInitialStatus } from "@/lib/admin-desa/policy";
+import { isValidTemplateDocumentCategory } from "@/lib/admin-desa/document-categories";
 import { createSourceBackedReviewDocument } from "@/lib/internal-admin/review-candidate-submission";
 import {
   createTemplateFieldEngineSnapshot,
@@ -69,6 +70,16 @@ export async function POST(req: NextRequest) {
     }
 
     const engine = await resolveEffectiveTemplateFieldEngine(member.desaId);
+    if (
+      !isValidTemplateDocumentCategory(category, {
+        visibleComponents: engine.resolvedTemplate.visibleComponents,
+      })
+    ) {
+      return NextResponse.json({
+        error: "Kategori submission tidak tersedia di template aktif desa.",
+        code: "INVALID_TEMPLATE_CATEGORY",
+      }, { status: 400 });
+    }
     const sanitized = sanitizeTemplateFieldValues({
       engine,
       rawValues,

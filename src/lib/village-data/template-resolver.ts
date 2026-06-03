@@ -15,28 +15,25 @@ import { DEFAULT_COMPONENT_CATALOG_MANIFEST } from "@/lib/village-data/component
 import { mergeResolvedFieldsWithCatalogManifest } from "@/lib/village-data/runtime-template-manifest";
 
 // ─── Module-level cache + deduplication (60s TTL) ────────────────────────────
-// Cache survives across requests in the same Node.js process.
-// Deduplication map ensures concurrent requests for the same desaId share one
-// DB round trip instead of each firing their own (e.g. React StrictMode in dev).
-const _templateCache = new Map<string, { data: ResolvedTemplate; ts: number }>();
+// Do not keep a cross-request template cache here. Template mutations happen in
+// separate route bundles/processes, so a module-level TTL cache can show stale
+// field counts after switching templates. In-flight dedupe is still safe.
 const _inflight = new Map<string, Promise<ResolvedTemplate>>();
-const TEMPLATE_CACHE_TTL_MS = 60_000;
 
 function fromTemplateCache(key: string): ResolvedTemplate | null {
-  const hit = _templateCache.get(key);
-  return hit && Date.now() - hit.ts < TEMPLATE_CACHE_TTL_MS ? hit.data : null;
+  void key;
+  return null;
 }
 function toTemplateCache(key: string, data: ResolvedTemplate) {
-  _templateCache.set(key, { data, ts: Date.now() });
+  void key;
+  void data;
 }
 /** Call after toggling component visibility so the cache reflects the change immediately. */
 export function invalidateTemplateCache(desaId: string) {
-  _templateCache.delete(desaId);
   _inflight.delete(desaId);
 }
 
 export function invalidateAllTemplateCaches() {
-  _templateCache.clear();
   _inflight.clear();
 }
 
@@ -101,6 +98,19 @@ type SupabaseComponentRow = {
   label: string;
   isDefaultVisible: boolean;
   displayOrder: number;
+};
+
+type SupabaseCatalogComponentRow = {
+  componentKey: string;
+  rendererType: string | null;
+  previewVariant: string | null;
+  detailSlot: string | null;
+  navLabel: string | null;
+  anchorId: string | null;
+  publicGroupKey: string | null;
+  publicTabKey: string | null;
+  highlightFieldKeys: unknown;
+  renderConfigJson: unknown;
 };
 
 type SupabaseFieldRow = {
@@ -280,6 +290,19 @@ async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedT
   if (fieldsError) throw fieldsError;
   if (overridesError) throw overridesError;
 
+  const componentKeys = [...new Set((components ?? []).map((component) => component.componentKey))];
+  const { data: catalogRows, error: catalogError } = await client
+    .from("village_component_catalog")
+    .select("componentKey,rendererType,previewVariant,detailSlot,navLabel,anchorId,publicGroupKey,publicTabKey,highlightFieldKeys,renderConfigJson")
+    .in("componentKey", componentKeys.length > 0 ? componentKeys : ["__empty__"])
+    .eq("status", "ACTIVE")
+    .returns<SupabaseCatalogComponentRow[]>();
+  if (catalogError) throw catalogError;
+
+  const catalogByComponentKey = new Map(
+    (catalogRows ?? []).map((row) => [row.componentKey, row]),
+  );
+
   const fieldMap = new Map<string, ResolvedField[]>();
   for (const field of (fields ?? []).sort((a, b) => a.displayOrder - b.displayOrder)) {
     const list = fieldMap.get(field.componentId) ?? [];
@@ -305,6 +328,7 @@ async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedT
   const hiddenComponents: ResolvedTemplate["hiddenComponents"] = [];
 
   for (const component of (components ?? []).sort((a, b) => a.displayOrder - b.displayOrder)) {
+    const catalog = catalogByComponentKey.get(component.componentKey) ?? null;
     const resolvedFields = (fieldMap.get(component.id) ?? []).map((field) => ({
       ...field,
       componentKey: component.componentKey,
@@ -328,6 +352,15 @@ async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedT
         componentKey: component.componentKey,
         label: component.label,
         displayOrder: component.displayOrder,
+        rendererType: catalog?.rendererType ?? undefined,
+        previewVariant: catalog?.previewVariant ?? undefined,
+        detailSlot: catalog?.detailSlot ?? undefined,
+        navLabel: catalog?.navLabel ?? undefined,
+        anchorId: catalog?.anchorId ?? undefined,
+        publicGroupKey: catalog?.publicGroupKey ?? undefined,
+        publicTabKey: catalog?.publicTabKey ?? undefined,
+        highlightFieldKeys: toStringArray(catalog?.highlightFieldKeys),
+        renderConfig: toRecord(catalog?.renderConfigJson),
         fields: mergedFields,
       });
     } else {
@@ -336,6 +369,15 @@ async function resolveDesaTemplateViaSupabase(desaId: string): Promise<ResolvedT
         componentKey: component.componentKey,
         label: component.label,
         displayOrder: component.displayOrder,
+        rendererType: catalog?.rendererType ?? undefined,
+        previewVariant: catalog?.previewVariant ?? undefined,
+        detailSlot: catalog?.detailSlot ?? undefined,
+        navLabel: catalog?.navLabel ?? undefined,
+        anchorId: catalog?.anchorId ?? undefined,
+        publicGroupKey: catalog?.publicGroupKey ?? undefined,
+        publicTabKey: catalog?.publicTabKey ?? undefined,
+        highlightFieldKeys: toStringArray(catalog?.highlightFieldKeys),
+        renderConfig: toRecord(catalog?.renderConfigJson),
         fields: mergedFields,
       });
     }

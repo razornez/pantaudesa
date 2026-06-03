@@ -14,10 +14,10 @@ import {
 } from "@/lib/storage/supabase-storage";
 import {
   validateUpload,
-  isValidCategory,
   getMaxFilesPerUpload,
   normalizeUploadMimeType,
 } from "@/lib/storage/upload-validation";
+import { isValidTemplateDocumentCategory } from "@/lib/admin-desa/document-categories";
 import { createNotifications, NOTIF_TYPE } from "@/lib/notifications/create-notification";
 import {
   getUploadedDocumentInitialStatus,
@@ -72,9 +72,7 @@ export async function POST(req: NextRequest) {
 
     if (!title) return NextResponse.json({ error: "title is required" }, { status: 400 });
     if (title.length > 200) return NextResponse.json({ error: "title too long (max 200 chars)" }, { status: 400 });
-    if (!category || !isValidCategory(category)) {
-      return NextResponse.json({ error: "category is required and must be valid" }, { status: 400 });
-    }
+    if (!category) return NextResponse.json({ error: "category is required" }, { status: 400 });
     if (ack !== "true") {
       return NextResponse.json({
         error: "Pernyataan tanggung jawab wajib dicentang sebelum unggah.",
@@ -135,6 +133,16 @@ export async function POST(req: NextRequest) {
       member.status as "LIMITED" | "VERIFIED",
     );
     const templateEngine = await resolveEffectiveTemplateFieldEngine(member.desaId);
+    if (
+      !isValidTemplateDocumentCategory(category, {
+        visibleComponents: templateEngine.resolvedTemplate.visibleComponents,
+      })
+    ) {
+      return NextResponse.json({
+        error: "Kategori dokumen tidak tersedia di template aktif desa.",
+        code: "INVALID_TEMPLATE_CATEGORY",
+      }, { status: 400 });
+    }
     const multi = files.length > 1;
     const uploaded: Array<{ id: string; title: string; status: string; createdAt: string }> = [];
 

@@ -17,6 +17,7 @@ import {
 import type { ReactNode } from "react";
 import type { Desa, PendapatanDesa, PerangkatDesa, ProfilDesa } from "@/lib/types";
 import type { PublishedTemplateSourceSummary } from "@/lib/data/village-template-read";
+import type { ComponentRendererType } from "@/lib/village-data/component-catalog-manifest";
 import {
   buildPublishedProfilSection,
   readPublishedNumber,
@@ -47,6 +48,7 @@ export interface PublicTemplateSectionContext {
 
 export interface PublicTemplateSectionDefinition {
   componentKey: string;
+  rendererType: ComponentRendererType;
   navLabel: string;
   anchorId: string;
   detailSlot: string;
@@ -782,7 +784,43 @@ function renderPanduanWargaSection({ desa }: PublicTemplateSectionContext) {
   );
 }
 
-function renderAgendaDesaSection() {
+function readAgendaItems(input: unknown): Array<{ title: string; meta: string; description: string }> {
+  const source = Array.isArray(input) ? input : [];
+  return source.flatMap((item) => {
+    if (typeof item === "string") {
+      return [{ title: item, meta: "Agenda desa", description: "Detail agenda belum dilengkapi." }];
+    }
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    const title =
+      typeof record.title === "string"
+        ? record.title
+        : typeof record.nama === "string"
+          ? record.nama
+          : null;
+    if (!title) return [];
+    const meta =
+      typeof record.tanggal === "string"
+        ? record.tanggal
+        : typeof record.meta === "string"
+          ? record.meta
+          : "Agenda desa";
+    const description =
+      typeof record.description === "string"
+        ? record.description
+        : typeof record.deskripsi === "string"
+          ? record.deskripsi
+          : "Detail agenda belum dilengkapi.";
+    return [{ title, meta, description }];
+  });
+}
+
+function renderAgendaDesaSection({ publishedValues }: PublicTemplateSectionContext) {
+  const agendaItems = readAgendaItems(publishedValues.agendaDesa);
+  const summary = readPublishedString(publishedValues, "agendaRingkasan");
+  const contact = readPublishedString(publishedValues, "agendaKontak");
+  const hasContent = agendaItems.length > 0 || Boolean(summary) || Boolean(contact);
+
   return (
     <SectionShell title="Agenda desa" subtitle="Komponen template agenda">
       <div className="rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/45 to-indigo-50/40 p-5 shadow-sm sm:p-6">
@@ -793,24 +831,30 @@ function renderAgendaDesaSection() {
               Komponen opsional
             </div>
             <h2 className="mt-4 text-lg font-black text-slate-950">
-              Agenda publik desa belum diterbitkan.
+              {hasContent ? "Agenda publik desa" : "Agenda publik desa belum diterbitkan."}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Komponen ini sengaja tersedia di catalog sebagai uji template. Jika
-              dipasang ke template aktif, section ini akan tampil tanpa menambah
-              field count karena belum memiliki field DB.
+              {summary ??
+                "Komponen ini mengikuti template aktif, tetapi data agenda belum tersedia untuk publik."}
             </p>
           </div>
           <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 text-xs font-semibold text-slate-600 shadow-sm">
-            Zero-field component
+            {contact ? `Kontak: ${contact}` : "Menunggu data agenda"}
           </div>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {["Musyawarah desa", "Layanan administrasi", "Kegiatan warga"].map((item) => (
-            <div key={item} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
-              <p className="text-xs font-black text-slate-900">{item}</p>
+          {(agendaItems.length > 0 ? agendaItems : [
+            {
+              title: "Belum ada agenda terbit",
+              meta: "Empty state",
+              description: "Isi agenda lewat intake atau structured submission Admin Desa.",
+            },
+          ]).map((item) => (
+            <div key={`${item.title}-${item.meta}`} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest text-sky-600">{item.meta}</p>
+              <p className="mt-1 text-xs font-black text-slate-900">{item.title}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                Contoh statis untuk membuktikan slot template bisa ditambahkan manual.
+                {item.description}
               </p>
             </div>
           ))}
@@ -1158,7 +1202,7 @@ function previewAgendaSection(input: PublicTemplatePreviewInput) {
     <PreviewShell
       eyebrow="Preview detail publik"
       title={input.label}
-      body="Komponen catalog-only untuk uji pasang template. Tidak menambah field count karena belum punya field DB."
+      body="Agenda desa tampil sebagai daftar kegiatan singkat. Field dinamisnya diisi dari DB/template aktif."
       tone="border-sky-100 bg-sky-50/40"
       chips={renderPreviewFieldChips(input)}
     >
@@ -1306,6 +1350,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
 > = {
   identitas: {
     componentKey: "identitas",
+    rendererType: "identity_grid",
     navLabel: "Identitas",
     anchorId: "identitas",
     detailSlot: "first_view",
@@ -1314,6 +1359,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   demografi: {
     componentKey: "demografi",
+    rendererType: "demography_metrics",
     navLabel: "Demografi",
     anchorId: "demografi",
     detailSlot: "first_view",
@@ -1322,6 +1368,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   perangkat: {
     componentKey: "perangkat",
+    rendererType: "perangkat_contacts",
     navLabel: "Perangkat",
     anchorId: "dokumen-desa",
     detailSlot: "transparansi",
@@ -1330,6 +1377,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   sumber_dokumen: {
     componentKey: "sumber_dokumen",
+    rendererType: "source_snapshot",
     navLabel: "Sumber & Dokumen",
     anchorId: "sumber-dokumen",
     detailSlot: "sumber_dokumen",
@@ -1338,6 +1386,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   transparansi: {
     componentKey: "transparansi",
+    rendererType: "transparency_metrics",
     navLabel: "Transparansi",
     anchorId: "transparansi",
     detailSlot: "transparansi",
@@ -1346,6 +1395,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   anggaran: {
     componentKey: "anggaran",
+    rendererType: "budget_summary",
     navLabel: "Anggaran",
     anchorId: "anggaran",
     detailSlot: "ringkasan_anggaran",
@@ -1354,6 +1404,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   pendapatan: {
     componentKey: "pendapatan",
+    rendererType: "pendapatan_breakdown",
     navLabel: "Pendapatan",
     anchorId: "pendapatan",
     detailSlot: "ringkasan_anggaran",
@@ -1362,6 +1413,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   kinerja: {
     componentKey: "kinerja",
+    rendererType: "kinerja_breakdown",
     navLabel: "Kinerja",
     anchorId: "kinerja",
     detailSlot: "kinerja_anggaran",
@@ -1370,6 +1422,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   profil_desa: {
     componentKey: "profil_desa",
+    rendererType: "kelengkapan_tabs",
     navLabel: "Profil Desa",
     anchorId: "profil-desa",
     detailSlot: "kelengkapan_desa",
@@ -1378,6 +1431,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   panduan_warga: {
     componentKey: "panduan_warga",
+    rendererType: "citizen_guide",
     navLabel: "Panduan Warga",
     anchorId: "panduan-warga",
     detailSlot: "panduan_warga",
@@ -1386,6 +1440,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   agenda_desa: {
     componentKey: "agenda_desa",
+    rendererType: "agenda_preview",
     navLabel: "Agenda Desa",
     anchorId: "agenda-desa",
     detailSlot: "panduan_warga",
@@ -1394,6 +1449,7 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
   },
   suara_warga: {
     componentKey: "suara_warga",
+    rendererType: "voice_preview",
     navLabel: "Suara Warga",
     anchorId: "suara-warga",
     detailSlot: "suara_warga",
@@ -1401,3 +1457,13 @@ export const PUBLIC_TEMPLATE_COMPONENT_REGISTRY: Record<
     preview: previewSuaraSection,
   },
 };
+
+export const PUBLIC_TEMPLATE_RENDERER_REGISTRY: Record<
+  ComponentRendererType,
+  PublicTemplateSectionDefinition
+> = Object.fromEntries(
+  Object.values(PUBLIC_TEMPLATE_COMPONENT_REGISTRY).map((entry) => [
+    entry.rendererType,
+    entry,
+  ]),
+) as Record<ComponentRendererType, PublicTemplateSectionDefinition>;

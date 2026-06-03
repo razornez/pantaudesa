@@ -1,15 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Megaphone,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import {
   buildPublishedProfilSection,
@@ -26,27 +16,28 @@ import { perfStart, publicPerfLog } from "@/lib/perf";
 import {
   buildPublicDetailRenderPlan,
   getOrderedVisibleSlots,
-  isLegacyPublicDetailComponent,
   type PublicDetailSlotKey,
 } from "@/lib/village-data/public-detail-composition";
 import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-template-manifest";
-import { formatRupiah, formatRupiahFull } from "@/lib/utils";
-import { BUDGET_ITEMS, PENDAPATAN } from "@/lib/copy";
-import DownloadButton from "@/components/desa/DownloadButton";
-import DesaDetailFirstView from "@/components/desa/DesaDetailFirstView";
-import DetailSectionNav, {
-  type DetailSectionNavItem,
-} from "@/components/desa/DetailSectionNav";
-import KelengkapanDesa from "@/components/desa/KelengkapanDesa";
-import KinerjaAnggaranCard from "@/components/desa/KinerjaAnggaranCard";
-import PreReportChecklistCard from "@/components/desa/PreReportChecklistCard";
-import ResponsibilityGuideCard from "@/components/desa/ResponsibilityGuideCard";
-import SeharusnyaAdaSection from "@/components/desa/SeharusnyaAdaSection";
-import SourceDocumentSnapshotSection from "@/components/desa/SourceDocumentSnapshotSection";
-import TransparansiCard from "@/components/desa/TransparansiCard";
-import {
-  PUBLIC_TEMPLATE_COMPONENT_REGISTRY,
-} from "@/components/desa/public-template-registry";
+import type { ComponentRendererType } from "@/lib/village-data/component-catalog-manifest";
+import { PUBLIC_TEMPLATE_RENDERER_REGISTRY } from "@/components/desa/public-template-registry";
+import DetailV2Shell, { type ChapterRailItem } from "@/components/desa/v2/DetailV2Shell";
+import ChIdentity from "@/components/desa/v2/ChIdentity";
+import ChSumber from "@/components/desa/v2/ChSumber";
+import ChAnggaran from "@/components/desa/v2/ChAnggaran";
+import ChKinerja from "@/components/desa/v2/ChKinerja";
+import ChIsiDesa from "@/components/desa/v2/ChIsiDesa";
+import ChTransparansi from "@/components/desa/v2/ChTransparansi";
+import ChPanduan from "@/components/desa/v2/ChPanduan";
+import ChSuara, { type VoicePreviewItem } from "@/components/desa/v2/ChSuara";
+import { getShowcaseDemo } from "@/lib/desa-detail/showcase-demo";
+import { getKomposisiBenchmark } from "@/lib/benchmarks/komposisi-apbdes";
+import ChDanaDesa from "@/components/desa/v2/showcase/ChDanaDesa";
+import ChKomposisi from "@/components/desa/v2/showcase/ChKomposisi";
+import ChFasilitas from "@/components/desa/v2/showcase/ChFasilitas";
+import ChPeta from "@/components/desa/v2/showcase/ChPeta";
+import ChIndeksDesa from "@/components/desa/v2/showcase/ChIndeksDesa";
+import ChKomparasi from "@/components/desa/v2/showcase/ChKomparasi";
 
 import type { Metadata } from "next";
 
@@ -56,43 +47,16 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-const SLOT_META: Record<
-  PublicDetailSlotKey,
-  {
-    anchorId: string;
-    navLabel: string;
-  }
-> = {
-  first_view: { anchorId: "ringkasan", navLabel: "Ringkasan" },
-  sumber_dokumen: {
-    anchorId: "dokumen-transparansi",
-    navLabel: "Sumber & Dokumen",
-  },
-  transparansi: { anchorId: "dokumen-desa", navLabel: "Transparansi" },
-  ringkasan_anggaran: { anchorId: "anggaran", navLabel: "Anggaran" },
-  kinerja_anggaran: {
-    anchorId: "kinerja-anggaran",
-    navLabel: "Kinerja",
-  },
-  kelengkapan_desa: {
-    anchorId: "kelengkapan-desa",
-    navLabel: "Kelengkapan",
-  },
-  panduan_warga: { anchorId: "panduan-warga", navLabel: "Panduan Warga" },
-  suara_warga: { anchorId: "suara-warga", navLabel: "Suara Warga" },
+const SLOT_RAIL_LABEL: Record<PublicDetailSlotKey, string> = {
+  first_view: "Kenalan",
+  sumber_dokumen: "Sumber & Dokumen",
+  transparansi: "Transparansi",
+  ringkasan_anggaran: "Anggaran",
+  kinerja_anggaran: "Kinerja",
+  kelengkapan_desa: "Isi Desa",
+  panduan_warga: "Panduan",
+  suara_warga: "Suara Warga",
 };
-
-function getPublicDetailSlot(componentKey: string) {
-  return PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]
-    ?.detailSlot as PublicDetailSlotKey | undefined;
-}
-
-function buildNavItems(slots: PublicDetailSlotKey[]): DetailSectionNavItem[] {
-  return slots.map((slot) => ({
-    href: `#${SLOT_META[slot].anchorId}`,
-    label: SLOT_META[slot].navLabel,
-  }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -132,10 +96,7 @@ export default async function DesaDetailPage({ params }: Props) {
   const publishedTahun = readPublishedNumber(publishedValues, "tahunData");
   const publishedTotalAnggaran = readPublishedNumber(publishedValues, "totalAnggaran");
   const publishedTerealisasi = readPublishedNumber(publishedValues, "terealisasi");
-  const publishedPersentaseSerapan = readPublishedNumber(
-    publishedValues,
-    "persentaseSerapan",
-  );
+  const publishedPersentaseSerapan = readPublishedNumber(publishedValues, "persentaseSerapan");
 
   const desaView = {
     ...desa,
@@ -164,470 +125,252 @@ export default async function DesaDetailPage({ params }: Props) {
         ? Math.round((desaView.terealisasi / desaView.totalAnggaran) * 100)
         : desa.persentaseSerapan;
 
-  const hiddenComponentKeys = new Set(
-    runtimeManifest.hiddenComponents.map((component) => component.componentKey),
-  );
-  const visibleComponentKeys = runtimeManifest.visibleComponents.map(
-    (component) => component.componentKey,
-  );
-  const visibleSlots = getOrderedVisibleSlots(
-    visibleComponentKeys,
-    getPublicDetailSlot,
-  );
-  const renderPlan = buildPublicDetailRenderPlan(
-    visibleComponentKeys,
-    getPublicDetailSlot,
-  );
-  const navItems = buildNavItems(visibleSlots);
-  const showBudgetSummary =
-    visibleComponentKeys.includes("anggaran") ||
-    visibleComponentKeys.includes("pendapatan");
-  const showBudgetMetrics = visibleComponentKeys.includes("anggaran");
-  const showPendapatanBreakdown = visibleComponentKeys.includes("pendapatan");
-  const showSourceSection = visibleComponentKeys.includes("sumber_dokumen");
-  const showPerangkatSection = visibleComponentKeys.includes("perangkat");
-  const showTransparansiSection = visibleComponentKeys.includes("transparansi");
-  const showKinerjaSection = visibleComponentKeys.includes("kinerja");
-  const showProfilSection = visibleComponentKeys.includes("profil_desa");
-  const showPanduanSection = visibleComponentKeys.includes("panduan_warga");
-  const showSuaraSection = visibleComponentKeys.includes("suara_warga");
+  // ─── SANDBOX SHOWCASE (throwaway) ──────────────────────────────────────────
+  // Batukarut renders the FULL BMAD-T-001 v2 component set with DEMO (mock) data
+  // for UI redesign. Replace with real template-driven data when adapters land.
+  // See: src/lib/desa-detail/showcase-demo.ts + memory project-batukarut-demo-data-swap
+  const demo = getShowcaseDemo(desa.id);
+  if (demo) {
+    const voice = await getVoicePreviewForDesaFromDb(desaView.prismaId ?? desaView.id);
+
+    // Real geo coords from OSM ingestion (DataDesa) override the demo center when present.
+    const realLat = readPublishedNumber(publishedValues, "geoLat");
+    const realLng = readPublishedNumber(publishedValues, "geoLng");
+    const geoIsReal = realLat !== null && realLng !== null;
+    // When the center is real (from OSM), demo POI pins would sit ~km away and look
+    // wrong — so show only a single marker at the real village center instead.
+    const geo = geoIsReal
+      ? {
+          lat: realLat,
+          lng: realLng,
+          topografi: "Perbukitan · 650–700 mdpl",
+          poi: [
+            {
+              label: `${desaView.nama} (pusat desa)`,
+              jenis: "kantor" as const,
+              lat: realLat,
+              lng: realLng,
+            },
+          ],
+        }
+      : demo.geo;
+
+    // Real Dana Desa pagu from DJPK (via Kemendesa IDM) ingestion overrides demo pagu.
+    const realDanaDesa = readPublishedNumber(publishedValues, "danaDesa");
+    // Keep the displayed year consistent with the real pagu figure's year (tahunData).
+    const danaDesa =
+      realDanaDesa !== null
+        ? { ...demo.danaDesa, pagu: realDanaDesa, tahun: publishedTahun ?? demo.danaDesa.tahun }
+        : demo.danaDesa;
+    const danaDesaPaguReal = realDanaDesa !== null;
+
+    // Real demografi from the desa's own official OpenSID site overrides demo values.
+    const realKK = readPublishedNumber(publishedValues, "jumlahKK");
+    const realDusun = readPublishedNumber(publishedValues, "jumlahDusun");
+    const realRt = readPublishedNumber(publishedValues, "jumlahRt");
+    const realRw = readPublishedNumber(publishedValues, "jumlahRw");
+    if (desaView.profil) {
+      if (realKK !== null) desaView.profil.jumlahKk = realKK;
+      if (realDusun !== null) desaView.profil.jumlahDusun = realDusun;
+      if (realRt !== null) desaView.profil.jumlahRt = realRt;
+      if (realRw !== null) desaView.profil.jumlahRw = realRw;
+    }
+    const demografiReal = publishedPenduduk !== null || realKK !== null || realDusun !== null;
+
+    // Kepala Desa + mata pencaharian from the desa's official site (real if ingested).
+    const realKades = readPublishedString(publishedValues, "kepalaDesa");
+    const realJob = readPublishedString(publishedValues, "mataPencaharian");
+    if (desaView.profil && realJob) desaView.profil.mataPencaharian = realJob;
+
+    // Wilayah, tata guna lahan & kontak — verified from the desa's own official site
+    // (batukarut.desa.id /data-wilayah + homepage footer). Real, attributed to DESA-WEB.
+    const REAL_KANTOR = "Jl. Arjasari No. 106, Batukarut, Arjasari, Kab. Bandung 40379";
+    const REAL_TELP = "022-8593-0543";
+    const REAL_WEB = "https://batukarut.desa.id";
+    if (desaView.profil) {
+      desaView.profil.luasWilayah = 1.78; // 177,77 ha → km²
+      desaView.profil.luasSawah = 27.77; // sawah teknis 19,77 + tadah hujan 8 ha
+      desaView.profil.telepon = REAL_TELP;
+      desaView.profil.website = REAL_WEB;
+    }
+    const kades = {
+      ...demo.kades,
+      ...(realKades ? { nama: realKades } : {}),
+      alamatKantor: REAL_KANTOR,
+      telepon: REAL_TELP,
+    };
+
+    // Komposisi belanja = national benchmark config (reference, not per-desa mock).
+    const bench = getKomposisiBenchmark("BERKEMBANG");
+    const komposisi = { kategoriDesa: bench.kategori, bidang: bench.bidang };
+    const showcaseChapters: ChapterRailItem[] = [
+      { id: "ch-00", label: "00 · Kenalan" },
+      { id: "ch-01", label: "01 · Dana Desa" },
+      { id: "ch-02", label: "02 · Dipakai apa" },
+      { id: "ch-03", label: "03 · Isi desa" },
+      { id: "ch-04", label: "04 · Peta" },
+      { id: "ch-05", label: "05 · Indeks" },
+      { id: "ch-06", label: "06 · Komparasi" },
+      { id: "ch-07", label: "07 · Sumber" },
+      { id: "ch-08", label: "08 · Panduan" },
+      { id: "ch-09", label: "09 · Suara warga" },
+    ];
+    return (
+      <DetailV2Shell chapters={showcaseChapters}>
+        <ChIdentity
+          desa={desaView}
+          chapterNo="00"
+          totalChapters={showcaseChapters.length}
+          sourceNote={
+            demografiReal
+              ? { label: "Website Resmi Desa (batukarut.desa.id) — demografi, wilayah & kontak; sebagian profil contoh", mock: false, url: "https://batukarut.desa.id" }
+              : { label: "BPS Podes (demografi) & Prodeskel (profil/kontak)", mock: true }
+          }
+        />
+        <ChDanaDesa
+          chapterNo="01"
+          danaDesa={danaDesa}
+          paguSourceLabel={danaDesaPaguReal ? "DJPK Kemenkeu (via Kemendesa IDM)" : null}
+        />
+        <ChKomposisi chapterNo="02" komposisi={komposisi} isReference />
+        <ChFasilitas
+          chapterNo="03"
+          fasilitas={demo.fasilitas}
+          kades={kades}
+          lembaga={demo.lembaga}
+          bumdes={demo.bumdes}
+        />
+        <ChPeta
+          chapterNo="04"
+          geo={geo}
+          namaDesa={desaView.nama}
+          coordSourceLabel={geoIsReal ? "OpenStreetMap" : null}
+        />
+        <ChIndeksDesa chapterNo="05" idm={demo.idm} disiplin={demo.disiplin} />
+        <ChKomparasi chapterNo="06" peer={demo.peer} />
+        <ChSumber
+          desa={desaView}
+          chapterNo="07"
+          sourceNote={{ label: "Website desa & PPID Kabupaten Bandung", mock: true }}
+        />
+        <ChPanduan desa={desaView} chapterNo="08" />
+        <ChSuara desa={desaView} chapterNo="09" voice={voice} />
+      </DetailV2Shell>
+    );
+  }
+
+  const visibleComponents = runtimeManifest.visibleComponents;
+  const visibleSlots = getOrderedVisibleSlots(visibleComponents);
+  const renderPlan = buildPublicDetailRenderPlan(visibleComponents);
+  const hasRenderer = (rendererType: string) =>
+    visibleComponents.some((component) => component.rendererType === rendererType);
+
+  const showBudgetSummary = hasRenderer("budget_summary") || hasRenderer("pendapatan_breakdown");
+  const showSourceSection = hasRenderer("source_snapshot");
+  const showPerangkatSection = hasRenderer("perangkat_contacts");
+  const showTransparansiSection = hasRenderer("transparency_metrics");
+  const showKinerjaSection = hasRenderer("kinerja_breakdown");
+  const showProfilSection = hasRenderer("kelengkapan_tabs");
+  const showPanduanSection = hasRenderer("citizen_guide");
+  const showSuaraSection = hasRenderer("voice_preview");
   const showFirstView = visibleSlots.includes("first_view");
 
-  const selisih = desaView.totalAnggaran - desaView.terealisasi;
   const voiceSummary = showSuaraSection
     ? await getVoicePreviewForDesaFromDb(desaView.prismaId ?? desaView.id)
-    : { total: 0, preview: [] };
-  const voicePreview = voiceSummary.preview;
-  const profil = desaView.profil;
+    : { total: 0, preview: [] as VoicePreviewItem[] };
 
-  const budgetItems = [
-    {
-      icon: Wallet,
-      label: BUDGET_ITEMS.totalAnggaran.label,
-      value: formatRupiahFull(desaView.totalAnggaran),
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
-    },
-    {
-      icon: CheckCircle2,
-      label: BUDGET_ITEMS.terealisasi.label,
-      value: formatRupiahFull(desaView.terealisasi),
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-    {
-      icon: Clock,
-      label: BUDGET_ITEMS.belumTerserap.label,
-      value: formatRupiahFull(selisih),
-      color: "text-rose-600",
-      bg: "bg-rose-50",
-    },
-    {
-      icon: TrendingUp,
-      label: BUDGET_ITEMS.persentase.label,
-      value: `${desaView.persentaseSerapan}%`,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-  ];
-
-  const panduanFlowSteps = [
-    {
-      step: "1",
-      title: "Pahami hak warga",
-      body: "Mulai dari hal yang bisa ditanyakan, bukan langsung menyimpulkan.",
-    },
-    {
-      step: "2",
-      title: "Tanya pihak yang tepat",
-      body: "Bedakan urusan desa, kabupaten, dan layanan lain sebelum bertindak.",
-    },
-    {
-      step: "3",
-      title: "Cek sebelum melapor",
-      body: "Pastikan dokumen, konteks, dan jalur tanya sudah dicoba dulu.",
-    },
-    {
-      step: "4",
-      title: "Sampaikan suara warga",
-      body: "Bagikan kondisi desa atau lanjutkan ke kanal resmi bila sudah siap.",
-    },
-  ] as const;
-
+  // Registry-only components (non-legacy renderers, e.g. agenda_desa)
   const registryOnlySectionEntries = await Promise.all(
-    visibleComponentKeys
-      .filter((componentKey) => !isLegacyPublicDetailComponent(componentKey))
-      .map(async (componentKey) => {
-        const section = await PUBLIC_TEMPLATE_COMPONENT_REGISTRY[componentKey]?.render({
+    renderPlan
+      .filter((item) => item.kind === "registry_component")
+      .map(async (item) => {
+        const section = await PUBLIC_TEMPLATE_RENDERER_REGISTRY[
+          item.rendererType as ComponentRendererType
+        ]?.render({
           desa: desaView,
           publishedValues,
           sourceSummaries: templateData.sourceSummaries,
         });
-        return [componentKey, section] as const;
+        return [item.componentKey, section] as const;
       }),
   );
-  const registryOnlySectionsByComponentKey = new Map(
+  const registryNodesByKey = new Map(
     registryOnlySectionEntries.filter(
       (entry) => entry[1] !== null && entry[1] !== undefined && entry[1] !== false,
     ) as Array<readonly [string, ReactNode]>,
   );
 
-  const renderSlotSections = (
-    _slot: PublicDetailSlotKey,
-    legacySection?: ReactNode,
-  ) => {
-    if (!legacySection) return null;
-
-    return (
-      <div className="space-y-5">
-        {legacySection}
-      </div>
-    );
+  // Per-slot chapter visibility + renderer (template-driven)
+  const slotEnabled: Partial<Record<PublicDetailSlotKey, boolean>> = {
+    first_view: showFirstView,
+    sumber_dokumen: showSourceSection,
+    transparansi: showTransparansiSection || showPerangkatSection,
+    ringkasan_anggaran: showBudgetSummary,
+    kinerja_anggaran: showKinerjaSection,
+    kelengkapan_desa: showProfilSection,
+    panduan_warga: showPanduanSection,
+    suara_warga: showSuaraSection,
   };
 
-  const slotSections: Partial<Record<PublicDetailSlotKey, ReactNode>> = {
-    ...(showFirstView
-      ? {
-          first_view: renderSlotSections("first_view", (
-            <div id={SLOT_META.first_view.anchorId}>
-              <DesaDetailFirstView
-                desa={desaView}
-                hiddenComponentKeys={hiddenComponentKeys}
-              />
-            </div>
-          )),
-        }
-      : {}),
-    ...(showSourceSection
-      ? {
-          sumber_dokumen: renderSlotSections("sumber_dokumen", (
-            <section
-              id={SLOT_META.sumber_dokumen.anchorId}
-              className="space-y-5"
-            >
-              <SourceDocumentSnapshotSection desa={desaView} />
-            </section>
-          )),
-        }
-      : {}),
-    ...(showTransparansiSection || showPerangkatSection
-      ? {
-          transparansi: renderSlotSections("transparansi", (
-            <section id={SLOT_META.transparansi.anchorId}>
-              <TransparansiCard
-                desa={desaView}
-                showDokumen={showSourceSection}
-                showTransparansi={showTransparansiSection}
-                showPerangkat={showPerangkatSection}
-              />
-            </section>
-          )),
-        }
-      : {}),
-    ...(showBudgetSummary
-      ? {
-          ringkasan_anggaran: renderSlotSections("ringkasan_anggaran", (
-            <section id={SLOT_META.ringkasan_anggaran.anchorId} className="space-y-5">
-              <div className="space-y-3">
-                {desa.dataStatus === "demo" ? (
-                  <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
-                    Angka ini masih bersifat demo. Tetap cek sumber dan dokumen sebelum
-                    menjadikannya rujukan akhir.
-                  </p>
-                ) : null}
+  const enabledChapterCount = renderPlan.reduce((n, item) => {
+    if (item.kind === "legacy_slot") return n + (slotEnabled[item.slot] ? 1 : 0);
+    return n + (registryNodesByKey.has(item.componentKey) ? 1 : 0);
+  }, 0);
 
-                {showBudgetMetrics ? (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {budgetItems.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div
-                          key={item.label}
-                          className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
-                        >
-                          <div
-                            className={`mb-2 inline-flex rounded-xl p-2 ${item.bg}`}
-                          >
-                            <Icon size={15} className={item.color} aria-hidden />
-                          </div>
-                          <p className="mb-0.5 text-[10px] leading-tight text-slate-600">
-                            {item.label}
-                          </p>
-                          <p className={`text-sm font-black leading-tight ${item.color}`}>
-                            {item.value}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-
-                {showPendapatanBreakdown && desaView.pendapatan ? (
-                  <div className="rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-bold text-slate-600">
-                        Dari mana uang desa ini berasal?
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {(
-                        [
-                          {
-                            key: "danaDesa",
-                            amount: desaView.pendapatan.danaDesa,
-                            bar: "bg-indigo-500",
-                            dot: "bg-indigo-400",
-                          },
-                          {
-                            key: "add",
-                            amount: desaView.pendapatan.add,
-                            bar: "bg-sky-500",
-                            dot: "bg-sky-400",
-                          },
-                          {
-                            key: "pades",
-                            amount: desaView.pendapatan.pades,
-                            bar: "bg-emerald-500",
-                            dot: "bg-emerald-400",
-                          },
-                          {
-                            key: "bantuanKeuangan",
-                            amount: desaView.pendapatan.bantuanKeuangan,
-                            bar: "bg-violet-500",
-                            dot: "bg-violet-400",
-                          },
-                        ] as const
-                      ).map((source) => {
-                        const info = PENDAPATAN[source.key];
-                        const pct =
-                          desaView.totalAnggaran > 0
-                            ? Math.round((source.amount / desaView.totalAnggaran) * 100)
-                            : 0;
-                        return (
-                          <div key={source.key} className="space-y-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <div
-                                className={`h-2 w-2 flex-shrink-0 rounded-full ${source.dot}`}
-                                aria-hidden
-                              />
-                              <p className="truncate text-[10px] leading-tight text-slate-600">
-                                {info.label}
-                              </p>
-                            </div>
-                            <p className="text-sm font-black text-slate-800">
-                              {formatRupiah(source.amount)}
-                            </p>
-                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                              <div
-                                className={`h-full rounded-full ${source.bar}`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-slate-500">{pct}% dari total</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-          )),
-        }
-      : {}),
-    ...(showKinerjaSection
-      ? {
-          kinerja_anggaran: renderSlotSections("kinerja_anggaran", (
-            <section id={SLOT_META.kinerja_anggaran.anchorId}>
-              <KinerjaAnggaranCard desa={desaView} />
-            </section>
-          )),
-        }
-      : {}),
-    ...(showProfilSection
-      ? {
-          kelengkapan_desa: renderSlotSections("kelengkapan_desa", (
-            <section id={SLOT_META.kelengkapan_desa.anchorId}>
-              {profil ? (
-                <KelengkapanDesa profil={profil} />
-              ) : (
-                <div className="rounded-2xl border border-slate-100 bg-white px-5 py-6 shadow-sm">
-                  <p className="text-sm font-bold text-slate-800">
-                    Kelengkapan desa belum diterbitkan.
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                    Komponen ini tetap mengikuti template aktif, tetapi field profil dan
-                    kelengkapan desa belum memiliki data publik yang siap ditayangkan.
-                  </p>
-                </div>
-              )}
-            </section>
-          )),
-        }
-      : {}),
-    ...(showPanduanSection
-      ? {
-          panduan_warga: renderSlotSections("panduan_warga", (
-            <section
-              id={SLOT_META.panduan_warga.anchorId}
-              className="space-y-4 border-y border-amber-100 bg-amber-50/45 py-5 sm:rounded-3xl sm:border sm:p-5"
-            >
-              <div className="space-y-4">
-                <div className="max-w-2xl">
-                  <p className="text-xs font-black uppercase tracking-widest text-amber-700">
-                    Panduan Warga
-                  </p>
-                  <h2 className="mt-1 text-xl font-black leading-tight text-slate-900">
-                    Baca hak warga, tanya pihak yang tepat, lalu cek langkah sebelum
-                    melapor.
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    Alur ini membantu warga bergerak dari memahami konteks, menanyakan
-                    hal yang tepat, sampai menyampaikan kondisi desa tanpa membuat data
-                    publik terlihat seperti kesimpulan final.
-                  </p>
-                </div>
-
-                <ol
-                  className="grid gap-2 sm:grid-cols-4"
-                  aria-label="Alur panduan warga"
-                >
-                  {panduanFlowSteps.map((item) => (
-                    <li
-                      key={item.step}
-                      className="rounded-2xl border border-amber-100 bg-white/85 p-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800">
-                          {item.step}
-                        </span>
-                        <p className="text-xs font-black text-slate-800">
-                          {item.title}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-                        {item.body}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <SeharusnyaAdaSection desa={desaView} />
-              <ResponsibilityGuideCard />
-              <div id="pre-report-checklist">
-                <PreReportChecklistCard kabupaten={desaView.kabupaten} />
-              </div>
-            </section>
-          )),
-        }
-      : {}),
-    ...(showSuaraSection
-      ? {
-          suara_warga: renderSlotSections("suara_warga", (
-            <section id={SLOT_META.suara_warga.anchorId} className="space-y-3">
-              <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-widest text-indigo-600">
-                  Suara Warga
-                </p>
-                <h2 className="mt-1 text-lg font-black text-slate-900">
-                  Cerita warga tentang kondisi desa ini
-                </h2>
-              </div>
-
-              <Link
-                href={`/desa/${desaView.id}/suara`}
-                prefetch={false}
-                className="group block overflow-hidden rounded-2xl border border-indigo-100 shadow-sm transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                aria-label={`Suara warga untuk ${desaView.nama}`}
-              >
-                <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white/15">
-                      <Megaphone size={15} className="text-white" aria-hidden />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Suara Warga</p>
-                      <p className="text-[10px] text-indigo-200">
-                        {voiceSummary.total > 0
-                          ? `${voiceSummary.total} cerita dari warga`
-                          : "Jadilah yang pertama bercerita"}
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight
-                    size={16}
-                    className="flex-shrink-0 text-indigo-200 transition-all group-hover:translate-x-1 group-hover:text-white"
-                    aria-hidden
-                  />
-                </div>
-                {voicePreview.length > 0 ? (
-                  <div className="divide-y divide-slate-50 bg-white">
-                    {voicePreview.map((voice) => (
-                      <div
-                        key={voice.id}
-                        className="flex items-start gap-2.5 px-4 py-2.5"
-                      >
-                        <span
-                          className="mt-0.5 inline-flex min-w-12 flex-shrink-0 justify-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
-                          aria-hidden
-                        >
-                          {voice.category}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-xs leading-relaxed text-slate-700">
-                            {voice.text}
-                          </p>
-                          <p className="mt-0.5 text-[10px] text-slate-500">
-                            {voice.author}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between bg-indigo-50 px-4 py-2">
-                  <span className="text-[11px] font-semibold text-indigo-600">
-                    Ceritakan Kondisi Desaku
-                  </span>
-                  <ArrowRight
-                    size={12}
-                    className="text-indigo-400 transition-transform group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
-                </div>
-              </Link>
-            </section>
-          )),
-        }
-      : {}),
+  const renderSlotChapter = (slot: PublicDetailSlotKey, no: string): ReactNode => {
+    switch (slot) {
+      case "first_view":
+        return <ChIdentity desa={desaView} chapterNo={no} totalChapters={enabledChapterCount} />;
+      case "sumber_dokumen":
+        return <ChSumber desa={desaView} chapterNo={no} />;
+      case "transparansi":
+        return <ChTransparansi desa={desaView} chapterNo={no} />;
+      case "ringkasan_anggaran":
+        return <ChAnggaran desa={desaView} chapterNo={no} />;
+      case "kinerja_anggaran":
+        return <ChKinerja desa={desaView} chapterNo={no} />;
+      case "kelengkapan_desa":
+        return <ChIsiDesa desa={desaView} chapterNo={no} />;
+      case "panduan_warga":
+        return <ChPanduan desa={desaView} chapterNo={no} />;
+      case "suara_warga":
+        return <ChSuara desa={desaView} chapterNo={no} voice={voiceSummary} />;
+      default:
+        return null;
+    }
   };
+
+  // Build ordered chapters from the render plan, numbering sequentially.
+  const chapters: ChapterRailItem[] = [];
+  const chapterNodes: ReactNode[] = [];
+  let chapterIndex = 0;
+
+  for (const item of renderPlan) {
+    if (item.kind === "legacy_slot") {
+      if (!slotEnabled[item.slot]) continue;
+      const no = String(chapterIndex).padStart(2, "0");
+      const node = renderSlotChapter(item.slot, no);
+      if (!node) continue;
+      chapters.push({ id: `ch-${no}`, label: `${no} · ${SLOT_RAIL_LABEL[item.slot]}` });
+      chapterNodes.push(<div key={`ch-${item.slot}`}>{node}</div>);
+      chapterIndex += 1;
+    } else {
+      const section = registryNodesByKey.get(item.componentKey);
+      if (!section) continue;
+      const no = String(chapterIndex).padStart(2, "0");
+      chapters.push({ id: `ch-${no}`, label: `${no} · ${item.componentKey}` });
+      chapterNodes.push(
+        <section key={`reg-${item.componentKey}`} id={`ch-${no}`} className="chapter">
+          <div className="mx-auto max-w-[1080px] px-4 sm:px-6">{section}</div>
+        </section>,
+      );
+      chapterIndex += 1;
+    }
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
-      <div className="flex items-center justify-between">
-        <Link
-          href="/desa"
-          prefetch={false}
-          className="inline-flex items-center gap-2 rounded-lg text-sm text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-        >
-          <ArrowLeft size={15} aria-hidden /> Kembali ke Daftar Desa
-        </Link>
-        <DownloadButton desa={desaView} />
-      </div>
-
-      <DetailSectionNav sections={navItems} />
-      {renderPlan.map((item, index) => {
-        if (item.kind === "legacy_slot") {
-          const section = slotSections[item.slot];
-          return section ? <div key={`slot-${item.slot}`}>{section}</div> : null;
-        }
-
-        const section = registryOnlySectionsByComponentKey.get(item.componentKey);
-        return section ? (
-          <div key={`component-${item.componentKey}-${index}`}>{section}</div>
-        ) : null;
-      })}
-    </div>
+    <DetailV2Shell chapters={chapters}>
+      {chapterNodes}
+    </DetailV2Shell>
   );
 }

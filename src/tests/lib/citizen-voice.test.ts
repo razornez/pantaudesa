@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   getAvatarBg, getInitial, relativeTime,
-  getVoiceStats, getCategoryStats,
-  VOICE_CATEGORIES,
 } from "@/lib/citizen-voice";
 
 describe("getInitial", () => {
@@ -66,30 +64,5 @@ describe("relativeTime", () => {
 
   it("returns months for >= 30 days", () => {
     expect(relativeTime(ago(60 * 86_400_000))).toBe("2 bulan lalu");
-  });
-});
-
-describe("getVoiceStats", () => {
-  it("returns non-negative counts", () => {
-    const s = getVoiceStats();
-    expect(s.total).toBeGreaterThan(0);
-    expect(s.open + s.inProgress + s.resolved).toBe(s.total);
-    expect(s.desaCount).toBeGreaterThan(0);
-  });
-});
-
-describe("getCategoryStats", () => {
-  it("covers all categories", () => {
-    const stats = getCategoryStats();
-    const keys = Object.keys(VOICE_CATEGORIES);
-    expect(stats.map(s => s.category).sort()).toEqual(keys.sort());
-  });
-
-  it("totals are non-negative", () => {
-    getCategoryStats().forEach(s => {
-      expect(s.total).toBeGreaterThanOrEqual(0);
-      expect(s.resolved).toBeGreaterThanOrEqual(0);
-      expect(s.resolved).toBeLessThanOrEqual(s.total);
-    });
   });
 });

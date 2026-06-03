@@ -77,12 +77,13 @@ function validateStaticRegistryCoverage() {
 
   for (const component of COMPONENT_CATALOG) {
     assert(
-      publicRegistry.includes(`componentKey: "${component.componentKey}"`),
-      `Public registry missing componentKey ${component.componentKey}.`,
+      publicRegistry.includes(`${component.rendererType}:`) ||
+        publicRegistry.includes(`rendererType: "${component.rendererType}"`),
+      `Public renderer registry missing rendererType ${component.rendererType}.`,
     );
     assert(
-      previewRegistry.includes(`${component.componentKey}: (`),
-      `Preview registry missing componentKey ${component.componentKey}.`,
+      previewRegistry.includes(`${component.previewVariant}: (`),
+      `Preview registry missing previewVariant ${component.previewVariant}.`,
     );
   }
 }
@@ -147,10 +148,85 @@ function validateNoKnownHardcodedTemplateCounts() {
   }
 }
 
+function validateNoComponentSpecificMappingOutsideContractLayer() {
+  const allowedFiles = new Set([
+    "src/lib/village-data/component-catalog-manifest.ts",
+    "src/lib/village-data/public-detail-composition.ts",
+    "src/lib/village-data/runtime-template-manifest.ts",
+    "src/lib/village-data/template-resolver.ts",
+    "src/components/desa/public-template-registry.tsx",
+    "src/components/desa/public-template-preview-registry.tsx",
+    "prisma/template-catalog.manifest.mjs",
+    "prisma/seed-templates.mjs",
+    "scripts/template-validate.mjs",
+  ]);
+  const scanFiles = [
+    "src/app/desa/[id]/page.tsx",
+    "src/app/api/internal-admin/village-data/desa-data/route.ts",
+    "src/app/api/internal-admin/village-data/field-standards/route.ts",
+    "src/lib/intake/detail-field-coverage.ts",
+    "src/components/internal-admin/village-data-center/api.ts",
+  ];
+  const componentKeys = COMPONENT_CATALOG.map((component) => component.componentKey);
+  const componentAlternation = componentKeys.join("|");
+  const mappingPatterns = [
+    new RegExp(`componentKey\\s*(?:===|!==|:)\\s*["'](?:${componentAlternation})["']`),
+    new RegExp(`(?:includes|has)\\(\\s*["'](?:${componentAlternation})["']\\s*\\)`),
+    new RegExp(`Record<\\s*["']?(?:${componentAlternation})`),
+  ];
+  const files = scanFiles.map((file) => path.join(root, file)).filter(fs.existsSync);
+
+  for (const file of files) {
+    const relative = path.relative(root, file).replaceAll("\\", "/");
+    if (allowedFiles.has(relative)) continue;
+    if (relative.includes("/tests/") || relative.startsWith("src/tests/")) continue;
+
+    const content = fs.readFileSync(file, "utf8");
+    const mentionsComponentKey = componentKeys.some((key) =>
+      content.includes(`"${key}"`) || content.includes(`'${key}'`),
+    );
+    if (!mentionsComponentKey) continue;
+    if (!mappingPatterns.some((pattern) => pattern.test(content))) continue;
+
+    errors.push(
+      `Component-specific template mapping detected outside contract layer: ${relative}.`,
+    );
+  }
+}
+
+function validateTemplateDrivenAdminDesaDocumentCategories() {
+  const categoryHelper = read("src/lib/admin-desa/document-categories.ts");
+  const adminDesaPage = read("src/app/profil/admin-desa/dokumen/page.tsx");
+  const uploadRoute = read("src/app/api/admin-claim/documents/upload/route.ts");
+  const structuredSubmitRoute = read("src/app/api/admin-claim/documents/structured-submit/route.ts");
+
+  assert(
+    categoryHelper.includes("buildTemplateDocumentCategories") &&
+      categoryHelper.includes("isValidTemplateDocumentCategory"),
+    "Admin Desa document category helper must derive categories from the active template.",
+  );
+  assert(
+    adminDesaPage.includes("buildTemplateDocumentCategories(structuredTemplate)") &&
+      !adminDesaPage.includes("DOCUMENT_CATEGORIES"),
+    "Admin Desa documents page must pass template-driven categories, not static DOCUMENT_CATEGORIES.",
+  );
+  assert(
+    uploadRoute.includes("isValidTemplateDocumentCategory") &&
+      !uploadRoute.includes("isValidCategory"),
+    "Admin Desa upload API must validate category against the active template.",
+  );
+  assert(
+    structuredSubmitRoute.includes("isValidTemplateDocumentCategory"),
+    "Admin Desa structured submission API must validate category against the active template.",
+  );
+}
+
 validateCatalogManifest();
 validateDefaultTemplateManifest();
 validateStaticRegistryCoverage();
 validateNoKnownHardcodedTemplateCounts();
+validateNoComponentSpecificMappingOutsideContractLayer();
+validateTemplateDrivenAdminDesaDocumentCategories();
 
 if (errors.length > 0) {
   console.error("Template validation failed:");

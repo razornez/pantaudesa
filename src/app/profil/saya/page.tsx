@@ -3,6 +3,8 @@ import SayaProfileClient from "@/app/profil/saya/SayaProfileClient";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getAdminClaimProfileSummaryData } from "@/lib/data/admin-claim-read";
+import { getVoicesByAuthorIdFromDb } from "@/lib/data/voice-read";
+import { computeTrustStatsFromVoices, deriveNotifications } from "@/lib/user-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export default async function SayaProfilePage() {
     redirect("/login");
   }
 
-  const [profile, initialAdminClaimProfile] = await Promise.all([
+  const [profile, initialAdminClaimProfile, voices] = await Promise.all([
     db
       ? db.user.findUnique({
           where: { id: session.user.id },
@@ -25,16 +27,24 @@ export default async function SayaProfilePage() {
         })
       : Promise.resolve(null),
     getAdminClaimProfileSummaryData(session.user.id),
+    getVoicesByAuthorIdFromDb(session.user.id),
   ]);
+
+  const selfName = profile?.nama ?? session.user.name ?? "";
+  const trustStats = computeTrustStatsFromVoices(voices);
+  const notifications = deriveNotifications(voices, selfName);
 
   return (
     <SayaProfileClient
       initialAdminClaimProfile={initialAdminClaimProfile}
       initialProfile={{
-        nama: profile?.nama ?? session.user.name ?? "",
+        nama: selfName,
         bio: profile?.bio ?? "",
         avatarUrl: profile?.avatarUrl ?? undefined,
       }}
+      voices={voices}
+      trustStats={trustStats}
+      notifications={notifications}
     />
   );
 }

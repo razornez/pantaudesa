@@ -150,6 +150,38 @@ export async function getVoicesForDesaFromDb(desaId: string) {
   }
 }
 
+export async function getVoicesByAuthorIdFromDb(userId: string): Promise<CitizenVoice[]> {
+  if (!prisma) return [];
+  try {
+    const records = await prisma.voice.findMany({
+      where: { authorId: userId, isAnon: false },
+      orderBy: { createdAt: "desc" },
+      include: {
+        author: { select: { nama: true, name: true, username: true } },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: { author: { select: { nama: true, name: true, username: true } } },
+        },
+        votes: { select: { type: true } },
+        helpfuls: { select: { id: true } },
+      },
+    });
+    const desaRows = await prisma.desa.findMany({
+      where: { id: { in: [...new Set(records.map((r) => r.desaId))] } },
+      select: { id: true, nama: true, kabupaten: true, slug: true },
+    });
+    const desaMap = new Map(desaRows.map((d) => [d.id, d]));
+    return records.map((record) => mapVoice(record, desaMap.get(record.desaId)));
+  } catch (error) {
+    if (isDatabaseConnectivityError(error)) {
+      console.warn("[voice-read] author voice read degraded due to database connectivity.");
+      return [];
+    }
+    console.error("[voice-read] author voice read failed:", error);
+    return [];
+  }
+}
+
 export type DesaVoicePreview = {
   total: number;
   preview: Array<Pick<CitizenVoice, "id" | "category" | "text" | "author">>;

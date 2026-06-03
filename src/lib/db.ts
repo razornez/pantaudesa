@@ -1,4 +1,5 @@
 import { PrismaClient } from "@/generated/prisma";
+import { normalizeLocalRuntimeDatabaseUrl } from "@/lib/db-url";
 import { attachPrismaPerfLogging } from "@/lib/perf";
 
 const globalForPrisma = globalThis as unknown as {
@@ -12,7 +13,7 @@ function localDirectUrlOptInEnabled(): boolean {
 }
 
 function getPrismaDatasourceUrl(): string {
-  const databaseUrl = process.env.DATABASE_URL ?? "";
+  const databaseUrl = normalizeLocalRuntimeDatabaseUrl(process.env.DATABASE_URL ?? "");
   const directUrl = process.env.DIRECT_URL ?? "";
   const isVercelPreview = process.env.VERCEL_ENV === "preview";
   const isThisAuditBranch =

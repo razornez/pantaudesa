@@ -96,6 +96,9 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
       { fieldKey: "kecamatan", label: "Kecamatan", valueType: "string", isPublishableNow: true, displayOrder: 4 },
       { fieldKey: "kabupaten", label: "Kabupaten/Kota", valueType: "string", isPublishableNow: true, displayOrder: 5 },
       { fieldKey: "provinsi", label: "Provinsi", valueType: "string", isPublishableNow: true, displayOrder: 6 },
+      { fieldKey: "geoLat", label: "Koordinat lintang", valueType: "number", isPublishableNow: true, displayOrder: 7 },
+      { fieldKey: "geoLng", label: "Koordinat bujur", valueType: "number", isPublishableNow: true, displayOrder: 8 },
+      { fieldKey: "topografi", label: "Topografi", valueType: "string", isPublishableNow: true, displayOrder: 9 },
     ],
   },
   {
@@ -286,7 +289,12 @@ export const DEFAULT_COMPONENT_CATALOG_MANIFEST: ComponentCatalogManifestEntry[]
     anchorId: "agenda-desa",
     publicGroupKey: "panduan_warga",
     publicTabKey: "agenda_desa",
-    fields: [],
+    highlightFieldKeys: ["agendaDesa", "agendaRingkasan", "agendaKontak"],
+    fields: [
+      { fieldKey: "agendaDesa", label: "Daftar agenda desa", valueType: "json", isPublishableNow: true, displayOrder: 1 },
+      { fieldKey: "agendaRingkasan", label: "Ringkasan agenda", valueType: "text", isPublishableNow: true, displayOrder: 2 },
+      { fieldKey: "agendaKontak", label: "Kontak agenda", valueType: "string", isPublishableNow: true, displayOrder: 3 },
+    ],
   },
 ];
 

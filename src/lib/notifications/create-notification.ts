@@ -17,6 +17,8 @@ export const NOTIF_TYPE = {
   VOICE_REPLY_CREATED:        "VOICE_REPLY_CREATED",          // to active desa admins / voice author
   VOICE_VOTED:                "VOICE_VOTED",                  // to active desa admins
   VOICE_HELPFUL:              "VOICE_HELPFUL",                // to active desa admins / voice author
+  TEMPLATE_COMPONENTS_CHANGED: "TEMPLATE_COMPONENTS_CHANGED",  // to affected active desa admins
+  TEMPLATE_ASSIGNMENT_CHANGED: "TEMPLATE_ASSIGNMENT_CHANGED",  // to affected active desa admins
 } as const;
 
 export type NotifType = typeof NOTIF_TYPE[keyof typeof NOTIF_TYPE];

@@ -10,6 +10,11 @@ import {
   normalizeTemplateNameToKey,
 } from "@/lib/internal-admin/template-management-helpers";
 import {
+  filterActiveAdminDesaNotificationRecipients,
+  notifyTemplateAssignmentChanged,
+  notifyTemplateComponentsChanged,
+} from "@/lib/admin-desa/template-change-notifications";
+import {
   invalidateAllTemplateCaches,
   invalidateTemplateCache,
 } from "@/lib/village-data/template-resolver";
@@ -255,6 +260,40 @@ function buildReadOnlyManifestWorkspace(
     readOnly: true,
     readOnlyReason: reason,
   };
+}
+
+async function loadActiveTemplateAssignmentRecipients(templateId: string) {
+  if (!db) return [];
+  const assignments = await db.desaDetailTemplateAssignment.findMany({
+    where: { templateId, isActive: true },
+    select: {
+      desaId: true,
+      desa: {
+        select: {
+          desaAdminMembers: {
+            select: { userId: true, status: true },
+          },
+        },
+      },
+    },
+  });
+
+  return assignments.map((assignment) => ({
+    desaId: assignment.desaId,
+    recipientUserIds: filterActiveAdminDesaNotificationRecipients(
+      assignment.desa.desaAdminMembers,
+    ),
+  }));
+}
+
+async function loadActiveDesaTemplateRecipients(desaId: string) {
+  if (!db) return [];
+  const members = await db.desaAdminMember.findMany({
+    where: { desaId, status: { in: ["LIMITED", "VERIFIED"] } },
+    select: { userId: true, status: true },
+  });
+
+  return filterActiveAdminDesaNotificationRecipients(members);
 }
 
 async function supportsComponentCatalogTables(): Promise<boolean> {
@@ -886,6 +925,25 @@ export async function replaceTemplateComponents(
     }
     return component;
   });
+  const previousComponentsForNotification = await db.villageDetailComponent.findMany({
+    where: { templateId: input.templateId },
+    select: { componentKey: true, label: true },
+  });
+  const previousComponentKeys = new Set(previousComponentsForNotification.map((component) => component.componentKey));
+  const desiredComponentKeys = new Set<string>(
+    desiredComponents.map((component) => component.componentKey),
+  );
+  const addedComponentLabels = desiredComponents
+    .filter((component) => !previousComponentKeys.has(component.componentKey))
+    .map((component) => component.label);
+  const removedComponentLabels = previousComponentsForNotification
+    .filter((component) => !desiredComponentKeys.has(component.componentKey))
+    .map((component) => component.label);
+  const shouldNotifyComponentChange =
+    addedComponentLabels.length > 0 || removedComponentLabels.length > 0;
+  const assignmentRecipients = shouldNotifyComponentChange
+    ? await loadActiveTemplateAssignmentRecipients(input.templateId)
+    : [];
 
   const withCatalogIds = await buildCatalogIdMaps();
 
@@ -1046,6 +1104,20 @@ export async function replaceTemplateComponents(
   }
 
   invalidateAllTemplateCaches();
+  if (shouldNotifyComponentChange) {
+    await Promise.all(
+      assignmentRecipients.map((assignment) =>
+        notifyTemplateComponentsChanged({
+          desaId: assignment.desaId,
+          templateId: template.id,
+          templateName: template.name,
+          recipientUserIds: assignment.recipientUserIds,
+          addedComponentLabels,
+          removedComponentLabels,
+        }),
+      ),
+    );
+  }
 
   return {
     templateId: template.id,
@@ -1156,6 +1228,7 @@ export async function switchTemplateForDesa(input: {
   if (!desa) {
     throw new TemplateManagementError("Desa tidak ditemukan.", 404, "desa_not_found");
   }
+  const recipientUserIds = await loadActiveDesaTemplateRecipients(input.desaId);
 
   await db.$transaction(async (tx) => {
     await tx.desaDetailTemplateAssignment.upsert({
@@ -1179,6 +1252,12 @@ export async function switchTemplateForDesa(input: {
   }, TEMPLATE_MUTATION_TRANSACTION_OPTIONS);
 
   invalidateTemplateCache(input.desaId);
+  await notifyTemplateAssignmentChanged({
+    desaId: input.desaId,
+    templateId: input.templateId,
+    templateName: template.name,
+    recipientUserIds,
+  });
 
   return {
     templateId: input.templateId,

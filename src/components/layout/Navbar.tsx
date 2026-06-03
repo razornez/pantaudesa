@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, LogOut, Bell, ShieldCheck } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 import { useAuth, type UserRole } from "@/lib/auth-context";
-import { getUnreadCount } from "@/lib/user-profile";
 import { getAvatarBg, getInitial } from "@/lib/citizen-voice";
 import { NAVBAR_COPY } from "@/lib/copy";
 
@@ -64,7 +63,9 @@ export default function Navbar() {
 
   const handleLogout = () => { logout(); router.push("/"); };
 
-  const unread = user?.role === "WARGA" ? getUnreadCount(user.nama) : 0;
+  // No persistent notification table yet — the bell links to the activity feed
+  // on /profil/saya (derived from the user's real voices); no unread badge.
+  const unread = 0;
   const displayName = user?.nama?.split(" ")[0] ?? user?.username ?? "Akun";
 
   // Right-side content per role

@@ -7,13 +7,11 @@ import { ArrowLeft } from "lucide-react";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth-context";
 import {
-  computeTrustStats,
-  getNotifications,
-  getVoicesByAuthor,
   type BadgeTier,
+  type TrustStats,
   type UserNotification,
 } from "@/lib/user-profile";
-import { mockDesa } from "@/lib/mock-data";
+import type { CitizenVoice } from "@/lib/citizen-voice";
 import { SayaProfileHeaderCard } from "@/components/profil/saya/SayaProfileHeaderCard";
 import { SayaProfileNotificationsTab } from "@/components/profil/saya/SayaProfileNotificationsTab";
 import { SayaProfileProfileTab } from "@/components/profil/saya/SayaProfileProfileTab";
@@ -21,13 +19,14 @@ import { SayaProfileVoicesTab } from "@/components/profil/saya/SayaProfileVoices
 import { updateUserProfile } from "@/components/profil/saya/api";
 import type { AdminClaimProfileSummaryData } from "@/lib/data/admin-claim-read";
 
-const desaMap = Object.fromEntries(mockDesa.map((desa) => [desa.id, desa.nama]));
-
 type Tab = "profil" | "suara" | "notifikasi";
 
 export default function SayaProfilePage({
   initialProfile,
   initialAdminClaimProfile,
+  voices,
+  trustStats,
+  notifications: initialNotifications,
 }: {
   initialProfile: {
     nama: string;
@@ -35,7 +34,11 @@ export default function SayaProfilePage({
     avatarUrl?: string;
   };
   initialAdminClaimProfile: AdminClaimProfileSummaryData;
+  voices: CitizenVoice[];
+  trustStats: TrustStats;
+  notifications: UserNotification[];
 }) {
+  const desaMap = Object.fromEntries(voices.map((voice) => [voice.desaId, voice.desaNama ?? "Desa"]));
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toasts, toast, removeToast } = useToast();
@@ -45,14 +48,13 @@ export default function SayaProfilePage({
   const [bio, setBio] = useState(initialProfile.bio);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(initialProfile.avatarUrl);
   const [saving, setSaving] = useState(false);
-  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [notifications, setNotifications] = useState<UserNotification[]>(initialNotifications);
   const dataFetched = useRef(false);
 
   useEffect(() => {
     if (!user || dataFetched.current) return;
 
     dataFetched.current = true;
-    setNotifications(getNotifications(user.nama));
     setNama(initialProfile.nama || user.nama);
     setBio(initialProfile.bio);
     setAvatarUrl(initialProfile.avatarUrl ?? user.avatarUrl);
@@ -80,8 +82,6 @@ export default function SayaProfilePage({
 
   if (!user) return null;
 
-  const voices = getVoicesByAuthor(user.nama);
-  const trustStats = computeTrustStats(user.nama);
   const unreadCount = notifications.filter((item) => !item.isRead).length;
   const tabs: Array<{ id: Tab; label: string; badge?: number }> = [
     { id: "profil", label: "Profil" },

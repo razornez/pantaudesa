@@ -13,10 +13,16 @@ export default defineConfig({
     ["list"],
     ["html", { outputFolder: "playwright-report", open: "never" }],
   ],
+  webServer: {
+    command: "npm run dev",
+    url: "http://127.0.0.1:3000",
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
-    screenshot: "on",
+    screenshot: "only-on-failure",
     video: "off",
     locale: "id-ID",
   },

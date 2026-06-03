@@ -220,6 +220,7 @@ State internal:
   - loading: boolean
   - templateInfo: TemplateRibbonInfo | null
   - markFailedOpen: boolean
+  - inspectorOpen: boolean
 
 Derived:
   - pipelineResult = hasPipelineResult(rawAiMappingResult) ? rawAiMappingResult : null
@@ -263,8 +264,12 @@ Derived:
 
    2d. IntakeDetectedGallery { result: pipelineResult }
 
+   2e. IntakeInfoStrip
+       - result: pipelineResult
+       - onToggleInspector: () => setInspectorOpen(prev => !prev)
+
    [Selalu tampil]
-   2e. Publish Decision Section (lux-card)
+   2f. Publish Decision Section (lux-card)
        - eyebrow: "Review data dokumen · sumber dari dokumen resmi"
        - h2: doc.title
        - Desa info: nama, kecamatan, kabupaten
@@ -283,7 +288,13 @@ Derived:
 3. MarkFailedModal (jika markFailedOpen)
    - doc: { id, title, desa: { nama, kecamatan, kabupaten } }
    - onClose: () => setMarkFailedOpen(false)
-   - onDone: () => router.refresh() atau router.push('/internal-admin/documents')
+   - onDone: handleMarkFailedDone
+
+4. IntakeInspectorDrawer (floating, fixed bottom)
+   - result: pipelineResult
+   - open: inspectorOpen
+   - onClose: () => setInspectorOpen(false)
+   (hanya render jika pipelineResult !== null)
 ```
 
 **Publish action handler:**
@@ -497,7 +508,7 @@ File-file ini dibuat secara eksperimental di sesi sebelumnya dan harus dihapus k
 |---|---|
 | `src/app/internal-admin/documents/[documentId]/review/page.tsx` | Digantikan oleh `/internal-admin/intake/[documentId]/page.tsx` |
 | `src/components/internal-admin/DocumentPipelineView.tsx` | Digantikan oleh `IntakeReviewPage.tsx` |
-| `src/components/internal-admin/intake/IntakeResultStep.tsx` | Menjadi orphan — tidak ada yang meng-render komponen ini setelah Step 2 dipindahkan ke URL baru. Per BMAD Component Cleanup Rule, hapus segera. |
+| ~~`src/components/internal-admin/intake/IntakeResultStep.tsx`~~ | Tetap dipakai oleh `IntakeReviewPage.tsx` — JANGAN dihapus. |
 
 **Sebelum hapus**, jalankan grep untuk konfirmasi zero remaining imports:
 
@@ -518,6 +529,8 @@ Harus kosong sebelum commit.
 - `IntakeCoverageLens` — dipakai ulang as-is
 - `IntakeValidationPanel` — dipakai ulang as-is
 - `IntakeDetectedGallery` — dipakai ulang as-is
+- `IntakeInfoStrip` — dipakai ulang as-is (props: result, onToggleInspector)
+- `IntakeInspectorDrawer` — dipakai ulang as-is (props: result, open, onClose)
 - `PublishCoverageNotices` — dipakai ulang as-is
 - `MarkFailedModal` — dipakai ulang as-is
 - Pipeline API (`/api/internal-admin/intake`) — tidak berubah
