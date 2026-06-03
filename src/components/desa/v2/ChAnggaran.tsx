@@ -5,7 +5,7 @@ import ChapterPanel from "./ChapterPanel";
 
 export default function ChAnggaran({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
   const selisih = Math.max(0, desa.totalAnggaran - desa.terealisasi);
-  const isDemo = desa.dataStatus === "demo";
+  const noData = !desa.totalAnggaran || desa.totalAnggaran === 0;
 
   const stats = [
     { chip: "ichip-brand", icon: Wallet, label: "Total anggaran", target: desa.totalAnggaran, valueClass: "text-ink-1" },
@@ -61,7 +61,7 @@ export default function ChAnggaran({ desa, chapterNo }: { desa: Desa; chapterNo:
                 Rp 0
               </p>
               <p className="mt-1.5 text-[11.5px] text-ink-3">{s.label}</p>
-              {isDemo ? <p className="mono mt-0.5 text-[10px] text-ink-4">(mock)</p> : null}
+              {noData ? <p className="mt-0.5 text-[10px] text-ink-4">belum tersedia</p> : null}
             </div>
           );
         })}
@@ -88,7 +88,7 @@ export default function ChAnggaran({ desa, chapterNo }: { desa: Desa; chapterNo:
               <p className="text-[12.5px] font-medium text-ink-1">Dari mana uang desa ini berasal?</p>
               <p className="mt-0.5 text-[11px] text-ink-3">4 sumber pendapatan utama</p>
             </div>
-            {isDemo ? <span className="mono text-[10px] text-ink-4">(mock)</span> : null}
+            {noData ? <span className="text-[10px] text-ink-4">belum tersedia</span> : null}
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {sources.map((src) => {

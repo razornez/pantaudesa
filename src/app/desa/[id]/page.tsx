@@ -260,6 +260,22 @@ export default async function DesaDetailPage({ params }: Props) {
   }
 
   const visibleComponents = runtimeManifest.visibleComponents;
+
+  // Real coordinates from DataDesa (for map chapter + source attribution)
+  const realLat = readPublishedNumber(publishedValues, "geoLat");
+  const realLng = readPublishedNumber(publishedValues, "geoLng");
+  const geoIsReal = realLat !== null && realLng !== null;
+
+  // Source note derived from what real fields were ingested for this desa
+  const derivedSourceNote = (() => {
+    const hasDemografi = publishedPenduduk !== null || readPublishedString(publishedValues, "kepalaDesa") !== null;
+    const parts: string[] = [];
+    if (hasDemografi) parts.push("Website Resmi Desa (OpenSID)");
+    if (geoIsReal) parts.push("OpenStreetMap");
+    parts.push("DJPK Kemenkeu (Dana Desa)");
+    return { label: parts.join(" · "), mock: false };
+  })();
+
   const visibleSlots = getOrderedVisibleSlots(visibleComponents);
   const renderPlan = buildPublicDetailRenderPlan(visibleComponents);
   const hasRenderer = (rendererType: string) =>
@@ -315,14 +331,21 @@ export default async function DesaDetailPage({ params }: Props) {
   const enabledChapterCount = renderPlan.reduce((n, item) => {
     if (item.kind === "legacy_slot") return n + (slotEnabled[item.slot] ? 1 : 0);
     return n + (registryNodesByKey.has(item.componentKey) ? 1 : 0);
-  }, 0);
+  }, 0) + (geoIsReal ? 1 : 0);
 
   const renderSlotChapter = (slot: PublicDetailSlotKey, no: string): ReactNode => {
     switch (slot) {
       case "first_view":
-        return <ChIdentity desa={desaView} chapterNo={no} totalChapters={enabledChapterCount} />;
+        return (
+          <ChIdentity
+            desa={desaView}
+            chapterNo={no}
+            totalChapters={enabledChapterCount}
+            sourceNote={derivedSourceNote}
+          />
+        );
       case "sumber_dokumen":
-        return <ChSumber desa={desaView} chapterNo={no} />;
+        return <ChSumber desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "transparansi":
         return <ChTransparansi desa={desaView} chapterNo={no} />;
       case "ringkasan_anggaran":
@@ -366,6 +389,27 @@ export default async function DesaDetailPage({ params }: Props) {
       );
       chapterIndex += 1;
     }
+  }
+
+  // Append real-coordinates map chapter for any desa with OSM coords in DataDesa.
+  if (geoIsReal) {
+    const petaNo = String(chapterIndex).padStart(2, "0");
+    chapters.push({ id: `ch-${petaNo}`, label: `${petaNo} · Peta` });
+    chapterNodes.push(
+      <div key="ch-peta">
+        <ChPeta
+          chapterNo={petaNo}
+          geo={{
+            lat: realLat!,
+            lng: realLng!,
+            topografi: `${desaView.kecamatan}, Kab. Bandung`,
+            poi: [{ label: `${desaView.nama} (pusat desa)`, jenis: "kantor" as const, lat: realLat!, lng: realLng! }],
+          }}
+          namaDesa={desaView.nama}
+          coordSourceLabel="OpenStreetMap"
+        />
+      </div>,
+    );
   }
 
   return (

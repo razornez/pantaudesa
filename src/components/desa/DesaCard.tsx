@@ -31,9 +31,15 @@ export default function DesaCard({ desa }: Props) {
               {desa.nama}
             </h3>
           </div>
-          <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(desa.status)}`}>
-            {getStatusLabel(desa.status)}
-          </span>
+          {desa.totalAnggaran > 0 ? (
+            <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(desa.status)}`}>
+              {getStatusLabel(desa.status)}
+            </span>
+          ) : (
+            <span className="flex-shrink-0 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-400">
+              Belum ada data
+            </span>
+          )}
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -66,7 +72,7 @@ export default function DesaCard({ desa }: Props) {
           <div className="mb-2 flex items-center justify-between gap-2 text-sm sm:text-xs">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-slate-600">
               <span>{CARD.penyerapan}</span>
-              <span className="text-[10px] font-bold text-amber-700">(mock)</span>
+              {!desa.totalAnggaran && <span className="text-[10px] text-slate-400">belum tersedia</span>}
             </div>
             <span className="font-bold text-slate-700">{desa.persentaseSerapan}%</span>
           </div>

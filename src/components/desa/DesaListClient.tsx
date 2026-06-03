@@ -168,7 +168,7 @@ export default function DesaListClient({
             </p>
             <p className="mt-1 leading-relaxed">
               {isDataReady
-                ? `${desa.length} desa, ${totalSumber} sumber, dan ${totalDokumen} dokumen pendukung tercatat. ${freshnessLabel ?? "Tanggal pembaruan belum tercatat."} Angka yang bertanda (mock) masih contoh baca.`
+                ? `${desa.length} desa, ${totalSumber} sumber, dan ${totalDokumen} dokumen pendukung tercatat. ${freshnessLabel ?? "Tanggal pembaruan belum tercatat."}`
                 : "Kami belum bisa menampilkan daftar desa saat ini. Coba muat ulang beberapa saat lagi."}
             </p>
           </div>
