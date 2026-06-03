@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Megaphone, ArrowRight, Quote } from "lucide-react";
 import type { Desa } from "@/lib/types";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
 export interface VoicePreviewItem {
   id: string;
@@ -14,10 +14,12 @@ export default function ChSuara({
   desa,
   chapterNo,
   voice,
+  sourceNote,
 }: {
   desa: Desa;
   chapterNo: string;
   voice: { total: number; preview: VoicePreviewItem[] };
+  sourceNote?: SourceNote;
 }) {
   const tileTones = ["tile-warn", "tile-good", "tile-sky"];
 
@@ -31,6 +33,7 @@ export default function ChSuara({
       blobStyle={{ width: 300, height: 300, top: -110, right: -70, background: "var(--color-sky-500)" }}
       tagText="CERITA WARGA"
       tagClass="ch-tag-sky"
+      sourceNote={sourceNote}
       headline={
         voice.total > 0 ? (
           <>

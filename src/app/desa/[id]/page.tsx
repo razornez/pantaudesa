@@ -347,17 +347,17 @@ export default async function DesaDetailPage({ params }: Props) {
       case "sumber_dokumen":
         return <ChSumber desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "transparansi":
-        return <ChTransparansi desa={desaView} chapterNo={no} />;
+        return <ChTransparansi desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "ringkasan_anggaran":
-        return <ChAnggaran desa={desaView} chapterNo={no} />;
+        return <ChAnggaran desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "kinerja_anggaran":
-        return <ChKinerja desa={desaView} chapterNo={no} />;
+        return <ChKinerja desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "kelengkapan_desa":
-        return <ChIsiDesa desa={desaView} chapterNo={no} />;
+        return <ChIsiDesa desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "panduan_warga":
-        return <ChPanduan desa={desaView} chapterNo={no} />;
+        return <ChPanduan desa={desaView} chapterNo={no} sourceNote={derivedSourceNote} />;
       case "suara_warga":
-        return <ChSuara desa={desaView} chapterNo={no} voice={voiceSummary} />;
+        return <ChSuara desa={desaView} chapterNo={no} voice={voiceSummary} sourceNote={derivedSourceNote} />;
       default:
         return null;
     }

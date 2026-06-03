@@ -1,7 +1,7 @@
 import { Boxes, Building2, Users, Store } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
 const KONDISI_DOT: Record<string, string> = {
   baik: "var(--color-good-500)",
@@ -9,7 +9,7 @@ const KONDISI_DOT: Record<string, string> = {
   rusak: "var(--color-watch-500)",
 };
 
-export default function ChIsiDesa({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
+export default function ChIsiDesa({ desa, chapterNo, sourceNote }: { desa: Desa; chapterNo: string; sourceNote?: SourceNote }) {
   const profil = desa.profil;
   const aset = profil?.aset ?? [];
   const fasilitas = profil?.fasilitas ?? [];
@@ -36,6 +36,7 @@ export default function ChIsiDesa({ desa, chapterNo }: { desa: Desa; chapterNo: 
       blobStyle={{ width: 320, height: 320, top: -120, left: -80, background: "var(--color-teal-500)" }}
       tagText="ASET · FASILITAS · LEMBAGA"
       tagClass="ch-tag-teal"
+      sourceNote={sourceNote}
       headline={
         aset.length > 0 ? (
           <>

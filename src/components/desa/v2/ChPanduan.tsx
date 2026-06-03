@@ -1,7 +1,7 @@
 import { BookOpen, MessageSquareWarning, ClipboardCheck, Megaphone, CheckCircle2, ClipboardList, HelpCircle } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import { getExpectations, type ExpectedStatus } from "@/lib/expectations";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
 const STEPS = [
   { tile: "tile-brand", chip: "ichip-brand", icon: BookOpen, title: "Pahami hak warga", body: "Mulai dari hal yang bisa ditanyakan, bukan langsung menyimpulkan." },
@@ -16,7 +16,7 @@ const GROUP: { status: ExpectedStatus; label: string; icon: typeof CheckCircle2;
   { status: "tanyakan", label: "Bisa ditanyakan ke desa", icon: HelpCircle, pill: "cpill-warn" },
 ];
 
-export default function ChPanduan({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
+export default function ChPanduan({ desa, chapterNo, sourceNote }: { desa: Desa; chapterNo: string; sourceNote?: SourceNote }) {
   const { items } = getExpectations(desa);
 
   return (
@@ -29,6 +29,7 @@ export default function ChPanduan({ desa, chapterNo }: { desa: Desa; chapterNo: 
       blobStyle={{ width: 320, height: 320, bottom: -120, left: -70, background: "var(--color-amber-400)" }}
       tagText="HAK WARGA"
       tagClass="ch-tag-amber"
+      sourceNote={sourceNote}
       headline={
         <>
           Sebelum melapor, ada <span className="underline-sweep">empat langkah</span> yang bisa kamu

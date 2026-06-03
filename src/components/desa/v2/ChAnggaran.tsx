@@ -1,9 +1,9 @@
 import { Wallet, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import { PENDAPATAN } from "@/lib/copy";
-import ChapterPanel from "./ChapterPanel";
+import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
-export default function ChAnggaran({ desa, chapterNo }: { desa: Desa; chapterNo: string }) {
+export default function ChAnggaran({ desa, chapterNo, sourceNote }: { desa: Desa; chapterNo: string; sourceNote?: SourceNote }) {
   const selisih = Math.max(0, desa.totalAnggaran - desa.terealisasi);
   const noData = !desa.totalAnggaran || desa.totalAnggaran === 0;
 
@@ -32,6 +32,7 @@ export default function ChAnggaran({ desa, chapterNo }: { desa: Desa; chapterNo:
       blobStyle={{ width: 340, height: 340, top: -130, right: -90, background: "var(--color-brand-500)" }}
       tagText="UANG DESA"
       tagClass="ch-tag-blue"
+      sourceNote={sourceNote}
       headline={
         <>
           Tahun ini {desa.nama} menerima{" "}
