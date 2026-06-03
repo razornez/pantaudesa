@@ -187,41 +187,6 @@ export function getAllVoices(): CitizenVoice[] {
   return [...ALL_VOICES].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
-export function getVoiceStats() {
-  const total       = ALL_VOICES.length;
-  const resolved    = ALL_VOICES.filter(v => v.status === "resolved").length;
-  const inProgress  = ALL_VOICES.filter(v => v.status === "in_progress").length;
-  const open        = ALL_VOICES.filter(v => v.status === "open").length;
-  const desaCount   = new Set(ALL_VOICES.map(v => v.desaId)).size;
-
-  const resolvedWithDate = ALL_VOICES.filter(v => v.status === "resolved" && v.resolvedAt);
-  const avgResolutionDays = resolvedWithDate.length
-    ? Math.round(resolvedWithDate.reduce((acc, v) => acc + (v.resolvedAt!.getTime() - v.createdAt.getTime()) / 86_400_000, 0) / resolvedWithDate.length)
-    : null;
-
-  return { total, resolved, inProgress, open, desaCount, avgResolutionDays };
-}
-
-export function getDesaRanking(): Array<{ desaId: string; total: number; open: number; resolved: number }> {
-  const map: Record<string, { total: number; open: number; resolved: number }> = {};
-  for (const v of ALL_VOICES) {
-    if (!map[v.desaId]) map[v.desaId] = { total: 0, open: 0, resolved: 0 };
-    map[v.desaId].total++;
-    if (v.status === "open" || v.status === "in_progress") map[v.desaId].open++;
-    if (v.status === "resolved") map[v.desaId].resolved++;
-  }
-  return Object.entries(map).map(([desaId, s]) => ({ desaId, ...s })).sort((a, b) => b.total - a.total);
-}
-
-export function getCategoryStats(): Array<{ category: VoiceCategory; total: number; resolved: number }> {
-  const map: Record<string, { total: number; resolved: number }> = {};
-  for (const v of ALL_VOICES) {
-    if (!map[v.category]) map[v.category] = { total: 0, resolved: 0 };
-    map[v.category].total++;
-    if (v.status === "resolved") map[v.category].resolved++;
-  }
-  return (Object.keys(VOICE_CATEGORIES) as VoiceCategory[]).map(cat => ({
-    category: cat,
-    ...(map[cat] ?? { total: 0, resolved: 0 }),
-  }));
-}
+// NOTE: getVoiceStats / getDesaRanking / getCategoryStats were removed together
+// with the dead VoiceStats component. Public voice stats are computed from real
+// DB voices via getVoiceStatsFromVoices() in src/lib/data/voice-read.ts.
