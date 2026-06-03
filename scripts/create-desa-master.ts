@@ -59,6 +59,7 @@ async function main() {
 
   let created = 0;
   let updated = 0;
+  let reconciled = 0;
   for (const kec of selected) {
     await sleep(250);
     const rows = await idm<DesaRow[]>(`/users/list_desa/${kec.id_kecamatan}`);
@@ -69,41 +70,63 @@ async function main() {
       if (!prev || Number(r.tahun_data) > Number(prev.tahun_data)) byKode.set(r.id_desa, r);
     }
 
+    const kecName = titleCase(kec.nama_kecamatan);
     for (const r of byKode.values()) {
-      const kodeDesa = r.id_desa;
-      const nama = titleCase(r.nama_desa);
-      const base = kebab(r.nama_desa);
-      // Ensure slug uniqueness across the whole table.
-      const clash = await db.desa.findUnique({ where: { slug: base }, select: { kodeDesa: true } });
-      const slug = clash && clash.kodeDesa !== kodeDesa ? `${base}-${kodeDesa.slice(-4)}` : base;
+      try {
+        const kodeDesa = r.id_desa;
+        const nama = titleCase(r.nama_desa);
 
-      const existing = await db.desa.findUnique({ where: { kodeDesa }, select: { id: true } });
-      await db.desa.upsert({
-        where: { kodeDesa },
-        create: {
-          kodeDesa,
-          nama,
-          slug,
-          kecamatan: titleCase(kec.nama_kecamatan),
-          kabupaten: "Bandung",
-          provinsi: "Jawa Barat",
-          dataStatus: "demo",
-        },
-        update: {
-          nama,
-          kecamatan: titleCase(kec.nama_kecamatan),
-          kabupaten: "Bandung",
-          provinsi: "Jawa Barat",
-        },
-      });
-      if (existing) updated += 1;
-      else created += 1;
+        // Reconcile legacy seeded records (demo-desa-* without kodeDesa): match by
+        // nama+kecamatan and backfill kodeDesa so the upsert updates in place
+        // instead of creating a duplicate.
+        const legacy = await db.desa.findFirst({
+          where: {
+            kodeDesa: null,
+            kabupaten: { equals: "Bandung", mode: "insensitive" },
+            kecamatan: { equals: kecName, mode: "insensitive" },
+            nama: { equals: nama, mode: "insensitive" },
+          },
+          select: { id: true },
+        });
+        if (legacy) {
+          await db.desa.update({ where: { id: legacy.id }, data: { kodeDesa } });
+          reconciled += 1;
+        }
+
+        const base = kebab(r.nama_desa);
+        const clash = await db.desa.findUnique({ where: { slug: base }, select: { kodeDesa: true } });
+        const slug = clash && clash.kodeDesa !== kodeDesa ? `${base}-${kodeDesa.slice(-4)}` : base;
+
+        const existing = await db.desa.findUnique({ where: { kodeDesa }, select: { id: true } });
+        await db.desa.upsert({
+          where: { kodeDesa },
+          create: {
+            kodeDesa,
+            nama,
+            slug,
+            kecamatan: kecName,
+            kabupaten: "Bandung",
+            provinsi: "Jawa Barat",
+            dataStatus: "demo",
+          },
+          update: {
+            nama,
+            kecamatan: kecName,
+            kabupaten: "Bandung",
+            provinsi: "Jawa Barat",
+          },
+        });
+        if (existing || legacy) updated += 1;
+        else created += 1;
+      } catch (e) {
+        console.log(`  ! ${r.nama_desa}: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
     console.log(`  ${titleCase(kec.nama_kecamatan).padEnd(16)} ${byKode.size} desa`);
   }
 
   const total = await db.desa.count();
-  console.log(`\nDone. created=${created} updated=${updated} | total desa in DB: ${total}`);
+  console.log(`\nDone. created=${created} updated=${updated} reconciled=${reconciled} | total desa in DB: ${total}`);
   await db.$disconnect();
 }
 
