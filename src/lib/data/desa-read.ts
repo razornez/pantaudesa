@@ -944,11 +944,27 @@ async function fetchDesaDetailItem(idOrSlug: string) {
   return item;
 }
 
-const getCachedDesaItems = unstable_cache(
-  fetchDesaItems,
-  ["pantau-desa-public-list-v5"],
-  { revalidate: 300, tags: ["desa-public"] }
-);
+// Module-level cache replaces unstable_cache for the full desa list.
+// Next.js unstable_cache has a hard 2MB serialization limit which the
+// ~3,500-desa Jawa Barat payload exceeds. Module-level cache has no size
+// limit and provides the same 5-minute TTL within a process lifetime.
+// (The "desa-public" tag was declared but never revalidated anywhere.)
+let _desaListCache: { items: Awaited<ReturnType<typeof fetchDesaItems>>; expiresAt: number } | null = null;
+const DESA_LIST_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedDesaItems(): Promise<Awaited<ReturnType<typeof fetchDesaItems>>> {
+  if (_desaListCache && Date.now() < _desaListCache.expiresAt) {
+    return _desaListCache.items;
+  }
+  const items = await fetchDesaItems();
+  _desaListCache = { items, expiresAt: Date.now() + DESA_LIST_TTL_MS };
+  return items;
+}
+
+/** Call after publishing new desa data to invalidate the in-process list cache. */
+export function invalidateDesaListCache() {
+  _desaListCache = null;
+}
 
 const getCachedDesaDetailItem = unstable_cache(
   fetchDesaDetailItem,
