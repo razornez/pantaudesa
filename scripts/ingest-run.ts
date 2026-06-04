@@ -28,14 +28,20 @@ async function main() {
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
-  // Resolve target desa: --all, --kecamatan <name>, explicit slugs, or default batukarut.
-  const kecIdx = argv.indexOf("--kecamatan");
+  // Resolve target desa: --all, --provinsi, --kabupaten, --kecamatan, explicit slugs.
+  const kecIdx  = argv.indexOf("--kecamatan");
+  const kabIdx  = argv.indexOf("--kabupaten");
+  const provIdx = argv.indexOf("--provinsi");
   const slugArgs = argv.filter((a) => !a.startsWith("--"));
   const where = argv.includes("--all")
     ? {}
-    : kecIdx >= 0 && argv[kecIdx + 1]
-      ? { kecamatan: { equals: argv[kecIdx + 1], mode: "insensitive" as const } }
-      : { slug: { in: slugArgs.length ? slugArgs : ["batukarut"] } };
+    : provIdx >= 0 && argv[provIdx + 1]
+      ? { provinsi: { equals: argv[provIdx + 1], mode: "insensitive" as const } }
+      : kabIdx >= 0 && argv[kabIdx + 1]
+        ? { kabupaten: { equals: argv[kabIdx + 1], mode: "insensitive" as const } }
+        : kecIdx >= 0 && argv[kecIdx + 1]
+          ? { kecamatan: { equals: argv[kecIdx + 1], mode: "insensitive" as const } }
+          : { slug: { in: slugArgs.length ? slugArgs : ["batukarut"] } };
 
   const desas = await db.desa.findMany({
     where,
@@ -88,9 +94,14 @@ async function main() {
   const only = onlyIdx >= 0 ? argv[onlyIdx + 1] : null;
   const kecAdapter = new KecamatanBandungAdapter();
   kecAdapter.setDb(db);
-  const adapters = [new OSMOverpassAdapter(), new KemendesaDanaDesaAdapter(), kecAdapter, new OpenSIDAdapter()].filter(
-    (a) => !only || a.id.includes(only),
-  );
+  // KecamatanBandungAdapter only works for Kab Bandung sites — skip for other kabupaten.
+  const hasBandung = workDesas.some((d) => /^bandung$/i.test(d.kabupaten));
+  const adapters = [
+    new OSMOverpassAdapter(),
+    new KemendesaDanaDesaAdapter(),
+    ...(hasBandung ? [kecAdapter] : []),
+    new OpenSIDAdapter(),
+  ].filter((a) => !only || a.id.includes(only));
 
   for (const adapter of adapters) {
     const s = await runIngestion(adapter, ctx);

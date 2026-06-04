@@ -56,14 +56,17 @@ export class OpenSIDAdapter implements DataAdapter {
     // Label/non-name words trimmed from both ends of a candidate (e.g. the
     // "Pemerintah Desa" prefix or a "Sambutan"/"Selamat Datang" heading).
     const STOP =
-      /^(pemerintah|desa|kecamatan|kabupaten|provinsi|kantor|jabatan|nama|nip|status|hadir|belum|rekam|kehadiran|login|beranda|profil|profile|publikasi|galeri|berita|sambutan|selamat|datang|website|sekretaris|kasi|kasie|kaur|kadus|dusun|kepala|bapak|ibu|bpk)$/i;
+      /^(pemerintah|desa|kecamatan|kabupaten|provinsi|kantor|jabatan|nama|nip|status|hadir|belum|rekam|kehadiran|login|beranda|profil|profile|publikasi|galeri|berita|sambutan|selamat|datang|website|sekretaris|kasi|kasie|kaur|kadus|dusun|kepala|bapak|ibu|bpk|administrator|aparatur|panitia|pemilih|camat|terpilih|pendamping|calon|data|tetap|pilkades|sebagai|pemilihan)$/i;
+    // Reject if the candidate string contains obviously non-name tokens
+    const JUNK = /\bdata\b|\bpemilih\b|\bpanitia\b|\baparatur\b|\bcamat\b|\bterpilih\b|\bsekretaris jenderal\b|\bkecamatan\b|\bkabupaten\b|\badministrator\b/i;
     const finalize = (raw: string): string | null => {
+      if (JUNK.test(raw)) return null;
       const ws = raw.trim().split(/\s+/).filter(Boolean);
       while (ws.length && STOP.test(ws[0].replace(/[.,]/g, ""))) ws.shift();
       while (ws.length && STOP.test(ws[ws.length - 1].replace(/[.,]/g, ""))) ws.pop();
-      if (ws.length < 2 || ws.length > 5) return null;
-      if (!ws.every((w) => /^[A-Z][A-Za-z.'’]*,?$/.test(w))) return null;
-      const name = ws.join(" ").replace(/,\s*[A-Z][A-Za-z.]{0,4}\.?$/, "").replace(/,$/, "").trim(); // drop trailing gelar
+      if (ws.length < 2 || ws.length > 4) return null; // max 4 words for a person’s name
+      if (!ws.every((w) => /^[A-Z][A-Za-z.’’]*,?$/.test(w))) return null;
+      const name = ws.join(" ").replace(/,\s*[A-Z][A-Za-z.]{0,4}\.?$/, "").replace(/,$/, "").trim();
       return name.split(/\s+/).length >= 2 ? this.titleCase(name) : null;
     };
     // Pattern B (staff/attendance widget): capitalized words immediately before "Kepala Desa".
@@ -133,42 +136,28 @@ export class OpenSIDAdapter implements DataAdapter {
     return dusun + rw + rt > 0 ? { dusun, rw, rt, kk } : null;
   }
 
-  /** Parse /data-statistik/pendidikan → persentase lulusan SMA/SMK+ (proxy pendidikan). */
-  private parsePendidikanSMA(html: string): number | null {
-    const text = stripTags(html);
-    const rows = [...text.matchAll(/([A-Z][A-Za-z /]{4,40})\s*\|[^\d]{0,4}(\d[\d.,]*)\s*\|[^\d]{0,4}([\d.,]+)%/g)];
-    let totalPop = 0;
-    let smaPop = 0;
-    for (const r of rows) {
-      const label = r[1].trim();
-      const count = toInt(r[2]);
-      if (!Number.isFinite(count) || count <= 0) continue;
-      totalPop += count;
-      if (/SMA|SMK|MA\b|Aliyah|D[1-4]\b|Sarjana|S1|S2|S3|Diploma|Strata/i.test(label)) smaPop += count;
-    }
-    if (totalPop === 0) return null;
-    return Math.round((smaPop / totalPop) * 100);
-  }
-
   /** Scrape all data for one desa — called concurrently per batch. */
   private async scrapeOne(d: AdapterContext["desas"][number]): Promise<AdapterDesaResult> {
     const base = d.website?.replace(/\/+$/, "") ?? `https://${slugDesaId(d.nama)}.desa.id`;
     const fields: AdapterFieldOutput[] = [];
 
     // All sources are INDEPENDENT — failure on one never short-circuits the rest.
-    const [html, wilHtml, home, pek, pendHtml] = await Promise.all([
+    // NOTE: /data-statistik/pendidikan was removed — OpenSID loads education data
+    // via AJAX (JavaScript-rendered), so static HTML scraping yields no content.
+    const [html, wilHtml, home, pek] = await Promise.all([
       this.fetchText(`${base}/data-statistik/jenis-kelamin`),
       this.fetchText(`${base}/data-wilayah`),
       this.fetchText(`${base}/`),
       this.fetchText(`${base}/data-statistik/pekerjaan`),
-      this.fetchText(`${base}/data-statistik/pendidikan`),
     ]);
 
     let total = NaN;
     if (html) {
       const m = stripTags(html).match(/\b(?:JUMLAH|TOTAL)\b[^\d]{0,6}(\d[\d.,]{2,})/i);
       total = m ? toInt(m[1]) : NaN;
-      if (Number.isFinite(total) && total > 0) fields.push({ fieldKey: "jumlahPenduduk", value: total });
+      // Reject unrealistic values — Indonesian desa rarely exceed 30,000 jiwa.
+      // Values >50,000 indicate the parser captured a kecamatan/kabupaten total.
+      if (Number.isFinite(total) && total > 0 && total <= 50000) fields.push({ fieldKey: "jumlahPenduduk", value: total });
     }
 
     const wil = wilHtml ? this.parseWilayah(wilHtml) : null;
@@ -186,9 +175,6 @@ export class OpenSIDAdapter implements DataAdapter {
 
     const job = pek ? this.parseDominantJob(pek) : null;
     if (job) fields.push({ fieldKey: "mataPencaharian", value: job });
-
-    const smaPct = pendHtml ? this.parsePendidikanSMA(pendHtml) : null;
-    if (smaPct !== null) fields.push({ fieldKey: "persentaseLulusSMA", value: smaPct });
 
     return fields.length > 0
       ? { desaId: d.desaId, fields, rawMeta: { base, total, wilayah: wil } }

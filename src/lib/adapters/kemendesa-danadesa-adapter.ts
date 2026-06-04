@@ -84,12 +84,17 @@ export class KemendesaDanaDesaAdapter implements DataAdapter {
       const cached = tree.desaByKec.get(kecId);
       if (cached) return cached;
       const desas = (await getJson(`/users/list_desa/${kecId}`)) as Array<Record<string, string>>;
-      // Dedup by desa name, keeping the latest tahun_data row.
+      // Dedup by desa name, preferring the row with the largest pagu value
+      // (regardless of year). IDM 2024 data is stored in thousands rather than
+      // full Rupiah — e.g. 1333688 instead of 1333688000 — so "latest year"
+      // often gives the wrong scale. Highest pagu across years is most reliable.
       const map = new Map<string, Record<string, string>>();
       for (const x of desas) {
         const k = up(String(x.nama_desa ?? ""));
         const prev = map.get(k);
-        if (!prev || Number(x.tahun_data) > Number(prev.tahun_data)) map.set(k, x);
+        const xPagu = parseFloat(String(x.pagu ?? 0));
+        const prevPagu = prev ? parseFloat(String(prev.pagu ?? 0)) : 0;
+        if (!prev || xPagu > prevPagu) map.set(k, x);
       }
       tree.desaByKec.set(kecId, map);
       await sleep(300);
