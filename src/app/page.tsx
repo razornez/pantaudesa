@@ -27,21 +27,24 @@ export default async function HomePage() {
   const summaryStats = buildSummaryStats(desaItems);
   const trendData = buildTrendData(desaItems);
 
+  // Sort by data completeness (real fields count), not budget absorption.
+  const score = (d: Desa) => d.completenessScore ?? 0;
+
   const topBaik = [...desaItems]
-    .sort((a, b) => b.persentaseSerapan - a.persentaseSerapan)
+    .sort((a, b) => score(b) - score(a))
     .slice(0, 5);
 
   const topRendah = [...desaItems]
-    .filter((d) => d.status === "rendah")
-    .sort((a, b) => a.persentaseSerapan - b.persentaseSerapan)
+    .filter((d) => score(d) < 20) // desa with very few real fields
+    .sort((a, b) => score(a) - score(b))
     .slice(0, 3);
 
-  // Provinsi ranking — includes best desa name per province
+  // Provinsi ranking — by average data completeness
   const byProvinsi = desaItems.reduce<Record<string, { total: number; count: number; best: Desa }>>((acc, d) => {
     if (!acc[d.provinsi]) acc[d.provinsi] = { total: 0, count: 0, best: d };
-    acc[d.provinsi].total += d.persentaseSerapan;
+    acc[d.provinsi].total += score(d);
     acc[d.provinsi].count += 1;
-    if (d.persentaseSerapan > acc[d.provinsi].best.persentaseSerapan) acc[d.provinsi].best = d;
+    if (score(d) > score(acc[d.provinsi].best)) acc[d.provinsi].best = d;
     return acc;
   }, {});
 

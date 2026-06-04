@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowRight, TrendingDown, MapPin, Trophy, Map, Search, type LucideIcon } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { BADGE_STYLES } from "@/lib/badge";
-import { getSerapanColor } from "@/lib/utils";
+// getSerapanColor removed — progress now shows data completeness, not budget absorption
 import { ASSETS } from "@/lib/assets";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
@@ -40,7 +40,7 @@ function PodiumBlock({ desa, rank }: { desa: Desa; rank: 1 | 2 | 3 }) {
           {desa.nama.replace(/^Desa\s+/, "")}
         </p>
         <p className={`${config.pctSize} font-black ${config.textAccent} mt-0.5`}>
-          {desa.persentaseSerapan}%
+          {desa.completenessScore ?? 0}%
         </p>
         {desa.profil?.badge && (
           <span className={`inline-flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded-full mt-1 ${
@@ -92,10 +92,16 @@ function RankRow({ desa, rank, warning = false }: { desa: Desa; rank: number; wa
       <div className="flex items-center gap-2 flex-shrink-0">
         {warning && <TrendingDown size={12} className="text-amber-500" />}
         <div className="hidden sm:block w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${getSerapanColor(desa.persentaseSerapan)}`} style={{ width: `${desa.persentaseSerapan}%` }} />
+          <div
+            className={`h-full rounded-full ${
+              (desa.completenessScore ?? 0) >= 75 ? "bg-emerald-500" :
+              (desa.completenessScore ?? 0) >= 40 ? "bg-sky-500" : "bg-amber-400"
+            }`}
+            style={{ width: `${desa.completenessScore ?? 0}%` }}
+          />
         </div>
-        <span className={`text-sm font-black ${warning ? "text-amber-700" : desa.persentaseSerapan >= 85 ? "text-emerald-600" : "text-amber-600"}`}>
-          {desa.persentaseSerapan}%
+        <span className={`text-sm font-black ${warning ? "text-amber-700" : (desa.completenessScore ?? 0) >= 75 ? "text-emerald-600" : "text-sky-600"}`}>
+          {desa.completenessScore ?? 0}%
         </span>
       </div>
       <ArrowRight size={13} className="text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" />
@@ -145,9 +151,9 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, t
   const [view, setView] = useState<View>("terbaik");
 
   const views: { id: View; label: string; shortLabel: string; icon: LucideIcon }[] = [
-    { id: "terbaik",  label: "Capaian Tinggi", shortLabel: "Tinggi", icon: Trophy },
+    { id: "terbaik",  label: "Data Terlengkap", shortLabel: "Terlengkap", icon: Trophy },
     { id: "provinsi", label: "Per Provinsi",   shortLabel: "Provinsi", icon: Map },
-    { id: "ditinjau", label: "Perlu Ditinjau", shortLabel: "Ditinjau", icon: Search },
+    { id: "ditinjau", label: "Data Terendah", shortLabel: "Terendah", icon: Search },
   ];
 
   return (

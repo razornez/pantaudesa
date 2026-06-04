@@ -181,6 +181,10 @@ export interface Desa {
   ringkasanSumber?: string;
   dataSourceLabel?: string | null;
   dataPublishedAt?: string | null;   // ISO string; null until internal admin publishes
+  /** 0–100: % of known real data fields present (danaDesa, coords, demografi, etc.) */
+  completenessScore?: number;
+  /** raw count of published real DataDesa fields */
+  jumlahDataReal?: number;
 }
 
 export interface TrendData {
