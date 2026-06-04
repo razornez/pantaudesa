@@ -111,9 +111,11 @@ type DesaListRecord = {
   dataSourceLabel: string | null;
   dataPublishedAt: Date | null;
   updatedAt: Date;
-  dataSources: SourceRecord[];
   anggaranSummaries: SummaryRecord[];
-  dokumenPublik: Array<Pick<DocumentRecord, "lastCheckedAt" | "updatedAt">>;
+  // dataSources and dokumenPublik are omitted from the list query to keep the
+  // serialized payload under Next.js's 2MB unstable_cache limit at scale.
+  dataSources?: SourceRecord[];
+  dokumenPublik?: Array<Pick<DocumentRecord, "lastCheckedAt" | "updatedAt">>;
   _count: {
     dataSources: number;
     dokumenPublik: number;
@@ -600,9 +602,11 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
   const percent = Math.round(toNumber(latestSummary?.persentaseRealisasi));
   const status = normalizeStatus(latestSummary?.statusSerapan, percent);
-  const latestSource = record.dataSources[0];
+  const sources = record.dataSources ?? [];
+  const docs = record.dokumenPublik ?? [];
+  const latestSource = sources[0];
   const sourceNames = latestSource?.sourceName ? [latestSource.sourceName] : [];
-  const hasNeedsReviewSource = record.dataSources.some(
+  const hasNeedsReviewSource = sources.some(
     (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
   );
   const hasSource = record._count.dataSources > 0 || Boolean(record.websiteUrl);
@@ -610,8 +614,8 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   const freshnessDate = latestDate([
     record.updatedAt,
     latestSummary?.updatedAt,
-    ...record.dataSources.map((source) => source.lastCheckedAt ?? source.updatedAt),
-    ...record.dokumenPublik.map((doc) => doc.lastCheckedAt ?? doc.updatedAt),
+    ...sources.map((source) => source.lastCheckedAt ?? source.updatedAt),
+    ...docs.map((doc) => doc.lastCheckedAt ?? doc.updatedAt),
   ]);
   const freshnessLabel = formatFreshness(freshnessDate);
   const documentCount = record._count.dokumenPublik;
@@ -635,7 +639,7 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     kategori: record.kategori ?? "Demo",
     skorTransparansi: makeSkorTransparansi(percent, documentCount, record._count.dataSources),
     pendapatan: makePendapatan(totalAnggaran),
-    sumber: record.dataSources.map((source) => ({
+    sumber: sources.map((source) => ({
       nama: source.sourceName,
       status: source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
       perluReview: source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
@@ -778,18 +782,6 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
       dataSourceLabel: true,
       dataPublishedAt: true,
       updatedAt: true,
-      dataSources: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        select: {
-          sourceName: true,
-          sourceUrl: true,
-          accessStatus: true,
-          dataStatus: true,
-          lastCheckedAt: true,
-          updatedAt: true,
-        },
-      },
       anggaranSummaries: {
         orderBy: { tahun: "desc" },
         take: 1,
@@ -803,14 +795,9 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
           updatedAt: true,
         },
       },
-      dokumenPublik: {
-        orderBy: [{ updatedAt: "desc" }],
-        take: 1,
-        select: {
-          lastCheckedAt: true,
-          updatedAt: true,
-        },
-      },
+      // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
+      // serialized payload exceeds Next.js 2MB unstable_cache limit. Only _count
+      // is needed for list cards; detail pages fetch full data separately.
       _count: {
         select: {
           dataSources: true,
@@ -959,7 +946,7 @@ async function fetchDesaDetailItem(idOrSlug: string) {
 
 const getCachedDesaItems = unstable_cache(
   fetchDesaItems,
-  ["pantau-desa-public-list-v4"],
+  ["pantau-desa-public-list-v5"],
   { revalidate: 300, tags: ["desa-public"] }
 );
 
