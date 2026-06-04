@@ -96,7 +96,11 @@ export default function DesaListClient({
     }
 
     if (status !== "semua") {
-      result = result.filter((d) => d.status === status);
+      // Filter by data completeness score, not budget absorption status.
+      const sc = (d: DesaListItem) => d.completenessScore ?? 0;
+      if (status === "baik")   result = result.filter((d) => sc(d) >= 84);
+      if (status === "sedang") result = result.filter((d) => sc(d) >= 34 && sc(d) < 84);
+      if (status === "rendah") result = result.filter((d) => sc(d) < 34);
     }
 
     result.sort((a, b) => {
@@ -251,38 +255,60 @@ export default function DesaListClient({
       )}
 
       {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Sebelumnya
+            ← Sebelumnya
           </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPage(p)}
-              aria-label={`Buka halaman ${p}`}
-              className={`min-h-[44px] min-w-[44px] rounded-lg text-sm transition-colors ${
-                p === page
-                  ? "bg-indigo-600 font-semibold text-white"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+
+          {/* Compact page window: first, ...window..., last */}
+          {(() => {
+            const btn = (p: number) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPage(p)}
+                aria-label={`Halaman ${p}`}
+                className={`min-h-[40px] min-w-[40px] rounded-lg text-sm font-medium transition-colors ${
+                  p === page
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {p}
+              </button>
+            );
+            const ellipsis = (k: string) => (
+              <span key={k} className="px-1 text-slate-400 text-sm select-none">…</span>
+            );
+            const WINDOW = 2; // pages each side of current
+            const pages: React.ReactNode[] = [];
+            const lo = Math.max(2, page - WINDOW);
+            const hi = Math.min(totalPages - 1, page + WINDOW);
+            pages.push(btn(1));
+            if (lo > 2) pages.push(ellipsis("el"));
+            for (let p = lo; p <= hi; p++) pages.push(btn(p));
+            if (hi < totalPages - 1) pages.push(ellipsis("er"));
+            if (totalPages > 1) pages.push(btn(totalPages));
+            return pages;
+          })()}
+
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Berikutnya
+            Berikutnya →
           </button>
+
+          <span className="text-[12px] text-slate-400 ml-1">
+            Hal {page} dari {totalPages}
+          </span>
         </div>
       )}
     </div>
