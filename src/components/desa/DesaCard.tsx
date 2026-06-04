@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, FileText, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
-import { formatRupiahMock, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { formatRupiah, getStatusColor, getStatusLabel } from "@/lib/utils";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
@@ -89,7 +89,7 @@ export default function DesaCard({ desa }: Props) {
           <div className="mt-3 rounded-xl bg-indigo-50 px-3 py-2">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Dana Desa (DJPK)</span>
-              <span className="text-[11px] font-bold text-indigo-700">{formatRupiahMock(desa.paguDanaDesa ?? 0)}</span>
+              <span className="text-[11px] font-bold text-indigo-700">{formatRupiah(desa.paguDanaDesa ?? 0)}</span>
             </div>
           </div>
         )}
