@@ -1,0 +1,52 @@
+name: Nominatim Geocode Sweep
+
+on:
+  # Run automatically every day at 03:00 WIB (20:00 UTC)
+  schedule:
+    - cron: "0 20 * * *"
+  # Also allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  geocode:
+    name: Geocode missing desa coordinates
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Nominatim geocode sweep
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          echo "Starting Nominatim geocode sweep..."
+          npx tsx scripts/ingest-run.ts --all --only nominatim --skip-have geoLat
+          echo "Done."
+
+      - name: Coverage report
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          npx tsx -e "
+          import { config } from 'dotenv';
+          const { PrismaClient } = await import('./src/generated/prisma/index.js');
+          const db = new PrismaClient();
+          const geo = (await db.dataDesa.findMany({where:{fieldKey:'geoLat',isActive:true,status:'PUBLISHED',sourceId:{not:null}},select:{desaId:true},distinct:['desaId']})).length;
+          const total = await db.desa.count();
+          console.log('geoLat coverage:', geo + '/' + total + ' (' + Math.round(geo/total*100) + '%)');
+          await db.\$disconnect();
+          "
