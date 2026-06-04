@@ -56,14 +56,17 @@ export class OpenSIDAdapter implements DataAdapter {
     // Label/non-name words trimmed from both ends of a candidate (e.g. the
     // "Pemerintah Desa" prefix or a "Sambutan"/"Selamat Datang" heading).
     const STOP =
-      /^(pemerintah|desa|kecamatan|kabupaten|provinsi|kantor|jabatan|nama|nip|status|hadir|belum|rekam|kehadiran|login|beranda|profil|profile|publikasi|galeri|berita|sambutan|selamat|datang|website|sekretaris|kasi|kasie|kaur|kadus|dusun|kepala|bapak|ibu|bpk)$/i;
+      /^(pemerintah|desa|kecamatan|kabupaten|provinsi|kantor|jabatan|nama|nip|status|hadir|belum|rekam|kehadiran|login|beranda|profil|profile|publikasi|galeri|berita|sambutan|selamat|datang|website|sekretaris|kasi|kasie|kaur|kadus|dusun|kepala|bapak|ibu|bpk|administrator|aparatur|panitia|pemilih|camat|terpilih|pendamping|calon|data|tetap|pilkades|sebagai|pemilihan)$/i;
+    // Reject if the candidate string contains obviously non-name tokens
+    const JUNK = /\bdata\b|\bpemilih\b|\bpanitia\b|\baparatur\b|\bcamat\b|\bterpilih\b|\bsekretaris jenderal\b|\bkecamatan\b|\bkabupaten\b|\badministrator\b/i;
     const finalize = (raw: string): string | null => {
+      if (JUNK.test(raw)) return null;
       const ws = raw.trim().split(/\s+/).filter(Boolean);
       while (ws.length && STOP.test(ws[0].replace(/[.,]/g, ""))) ws.shift();
       while (ws.length && STOP.test(ws[ws.length - 1].replace(/[.,]/g, ""))) ws.pop();
-      if (ws.length < 2 || ws.length > 5) return null;
-      if (!ws.every((w) => /^[A-Z][A-Za-z.'’]*,?$/.test(w))) return null;
-      const name = ws.join(" ").replace(/,\s*[A-Z][A-Za-z.]{0,4}\.?$/, "").replace(/,$/, "").trim(); // drop trailing gelar
+      if (ws.length < 2 || ws.length > 4) return null; // max 4 words for a person’s name
+      if (!ws.every((w) => /^[A-Z][A-Za-z.’’]*,?$/.test(w))) return null;
+      const name = ws.join(" ").replace(/,\s*[A-Z][A-Za-z.]{0,4}\.?$/, "").replace(/,$/, "").trim();
       return name.split(/\s+/).length >= 2 ? this.titleCase(name) : null;
     };
     // Pattern B (staff/attendance widget): capitalized words immediately before "Kepala Desa".
@@ -152,7 +155,9 @@ export class OpenSIDAdapter implements DataAdapter {
     if (html) {
       const m = stripTags(html).match(/\b(?:JUMLAH|TOTAL)\b[^\d]{0,6}(\d[\d.,]{2,})/i);
       total = m ? toInt(m[1]) : NaN;
-      if (Number.isFinite(total) && total > 0) fields.push({ fieldKey: "jumlahPenduduk", value: total });
+      // Reject unrealistic values — Indonesian desa rarely exceed 30,000 jiwa.
+      // Values >50,000 indicate the parser captured a kecamatan/kabupaten total.
+      if (Number.isFinite(total) && total > 0 && total <= 50000) fields.push({ fieldKey: "jumlahPenduduk", value: total });
     }
 
     const wil = wilHtml ? this.parseWilayah(wilHtml) : null;
