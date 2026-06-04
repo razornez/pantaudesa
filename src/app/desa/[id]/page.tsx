@@ -97,6 +97,9 @@ export default async function DesaDetailPage({ params }: Props) {
   const publishedTotalAnggaran = readPublishedNumber(publishedValues, "totalAnggaran");
   const publishedTerealisasi = readPublishedNumber(publishedValues, "terealisasi");
   const publishedPersentaseSerapan = readPublishedNumber(publishedValues, "persentaseSerapan");
+  // Dana Desa pagu from DJPK (always present after ingestion; not the same as
+  // APBDes totalAnggaran but the closest real budget figure we have).
+  const publishedDanaDesa = readPublishedNumber(publishedValues, "danaDesa");
 
   const desaView = {
     ...desa,
@@ -114,8 +117,16 @@ export default async function DesaDetailPage({ params }: Props) {
     riwayat: toPublishedRiwayatArray(publishedValues.riwayatAPBDes),
     penduduk: publishedPenduduk ?? desa.penduduk,
     tahun: publishedTahun ?? desa.tahun,
-    totalAnggaran: publishedTotalAnggaran ?? desa.totalAnggaran,
+    // Use APBDes totalAnggaran if published; fall back to danaDesa pagu from
+    // DJPK when APBDes data isn't available. The pagu is real but only the
+    // central-government share — ADD/PADes/bantuan will show as 0 (unknown).
+    totalAnggaran: publishedTotalAnggaran ?? (desa.totalAnggaran > 0 ? desa.totalAnggaran : (publishedDanaDesa ?? 0)),
     terealisasi: publishedTerealisasi ?? desa.terealisasi,
+    pendapatan: publishedTotalAnggaran ?? desa.totalAnggaran
+      ? undefined  // keep existing pendapatan from APBDes if available
+      : publishedDanaDesa
+        ? { danaDesa: publishedDanaDesa, add: 0, pades: 0, bantuanKeuangan: 0 }
+        : undefined,
   };
 
   desaView.persentaseSerapan =
@@ -372,9 +383,15 @@ export default async function DesaDetailPage({ params }: Props) {
     if (item.kind === "legacy_slot") {
       if (!slotEnabled[item.slot]) continue;
 
-      // Insert map chapter just before Suara Warga so it appears in a
-      // logical position (after content, before community voice), not last.
-      if (item.slot === "suara_warga" && geoIsReal) {
+      const no = String(chapterIndex).padStart(2, "0");
+      const node = renderSlotChapter(item.slot, no);
+      if (!node) continue;
+      chapters.push({ id: `ch-${no}`, label: `${no} · ${SLOT_RAIL_LABEL[item.slot]}` });
+      chapterNodes.push(<div key={`ch-${item.slot}`}>{node}</div>);
+      chapterIndex += 1;
+
+      // Insert map chapter right AFTER first_view (Kenalan) → chapter 01.
+      if (item.slot === "first_view" && geoIsReal) {
         const petaNo = String(chapterIndex).padStart(2, "0");
         chapters.push({ id: `ch-${petaNo}`, label: `${petaNo} · Peta` });
         chapterNodes.push(
@@ -394,13 +411,6 @@ export default async function DesaDetailPage({ params }: Props) {
         );
         chapterIndex += 1;
       }
-
-      const no = String(chapterIndex).padStart(2, "0");
-      const node = renderSlotChapter(item.slot, no);
-      if (!node) continue;
-      chapters.push({ id: `ch-${no}`, label: `${no} · ${SLOT_RAIL_LABEL[item.slot]}` });
-      chapterNodes.push(<div key={`ch-${item.slot}`}>{node}</div>);
-      chapterIndex += 1;
     } else {
       const section = registryNodesByKey.get(item.componentKey);
       if (!section) continue;
@@ -413,27 +423,6 @@ export default async function DesaDetailPage({ params }: Props) {
       );
       chapterIndex += 1;
     }
-  }
-
-  // If suara_warga slot was not rendered (not in template), append peta at end.
-  if (geoIsReal && !slotEnabled["suara_warga"]) {
-    const petaNo = String(chapterIndex).padStart(2, "0");
-    chapters.push({ id: `ch-${petaNo}`, label: `${petaNo} · Peta` });
-    chapterNodes.push(
-      <div key="ch-peta">
-        <ChPeta
-          chapterNo={petaNo}
-          geo={{
-            lat: realLat!,
-            lng: realLng!,
-            topografi: `${desaView.kecamatan}, Kab. Bandung`,
-            poi: [{ label: `${desaView.nama} (pusat desa)`, jenis: "kantor" as const, lat: realLat!, lng: realLng! }],
-          }}
-          namaDesa={desaView.nama}
-          coordSourceLabel="OpenStreetMap"
-        />
-      </div>,
-    );
   }
 
   return (

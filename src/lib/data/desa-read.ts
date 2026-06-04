@@ -613,7 +613,9 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   const hasNeedsReviewSource = sources.some(
     (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
   );
-  const hasSource = record._count.dataSources > 0 || Boolean(record.websiteUrl);
+  // Also treat desa with real published DataDesa fields as "source-found"
+  // (even if they have no DataSource records seeded — most Jawa Barat desa).
+  const hasSource = record._count.dataSources > 0 || Boolean(record.websiteUrl) || record._count.dataDesa > 0;
   const identityStatus = hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo";
   const freshnessDate = latestDate([
     record.updatedAt,
