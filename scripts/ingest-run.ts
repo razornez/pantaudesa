@@ -25,6 +25,7 @@ async function main() {
   const { KemendesaDanaDesaAdapter } = await import("@/lib/adapters/kemendesa-danadesa-adapter");
   const { OpenSIDAdapter } = await import("@/lib/adapters/opensid-adapter");
   const { KecamatanBandungAdapter } = await import("@/lib/adapters/kecamatan-bandung-adapter");
+  const { NominatimGeocodeAdapter } = await import("@/lib/adapters/nominatim-geocode-adapter");
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
@@ -94,10 +95,10 @@ async function main() {
   const only = onlyIdx >= 0 ? argv[onlyIdx + 1] : null;
   const kecAdapter = new KecamatanBandungAdapter();
   kecAdapter.setDb(db);
-  // KecamatanBandungAdapter only works for Kab Bandung sites — skip for other kabupaten.
   const hasBandung = workDesas.some((d) => /^bandung$/i.test(d.kabupaten));
   const adapters = [
     new OSMOverpassAdapter(),
+    new NominatimGeocodeAdapter(), // fallback geocoder for desa Overpass misses
     new KemendesaDanaDesaAdapter(),
     ...(hasBandung ? [kecAdapter] : []),
     new OpenSIDAdapter(),
