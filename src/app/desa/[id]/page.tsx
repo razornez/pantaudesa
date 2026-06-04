@@ -371,6 +371,30 @@ export default async function DesaDetailPage({ params }: Props) {
   for (const item of renderPlan) {
     if (item.kind === "legacy_slot") {
       if (!slotEnabled[item.slot]) continue;
+
+      // Insert map chapter just before Suara Warga so it appears in a
+      // logical position (after content, before community voice), not last.
+      if (item.slot === "suara_warga" && geoIsReal) {
+        const petaNo = String(chapterIndex).padStart(2, "0");
+        chapters.push({ id: `ch-${petaNo}`, label: `${petaNo} · Peta` });
+        chapterNodes.push(
+          <div key="ch-peta">
+            <ChPeta
+              chapterNo={petaNo}
+              geo={{
+                lat: realLat!,
+                lng: realLng!,
+                topografi: `${desaView.kecamatan}, Kab. Bandung`,
+                poi: [{ label: `${desaView.nama} (pusat desa)`, jenis: "kantor" as const, lat: realLat!, lng: realLng! }],
+              }}
+              namaDesa={desaView.nama}
+              coordSourceLabel="OpenStreetMap"
+            />
+          </div>,
+        );
+        chapterIndex += 1;
+      }
+
       const no = String(chapterIndex).padStart(2, "0");
       const node = renderSlotChapter(item.slot, no);
       if (!node) continue;
@@ -391,8 +415,8 @@ export default async function DesaDetailPage({ params }: Props) {
     }
   }
 
-  // Append real-coordinates map chapter for any desa with OSM coords in DataDesa.
-  if (geoIsReal) {
+  // If suara_warga slot was not rendered (not in template), append peta at end.
+  if (geoIsReal && !slotEnabled["suara_warga"]) {
     const petaNo = String(chapterIndex).padStart(2, "0");
     chapters.push({ id: `ch-${petaNo}`, label: `${petaNo} · Peta` });
     chapterNodes.push(
