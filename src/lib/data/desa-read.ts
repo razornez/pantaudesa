@@ -112,13 +112,13 @@ type DesaListRecord = {
   dataPublishedAt: Date | null;
   updatedAt: Date;
   anggaranSummaries: SummaryRecord[];
-  // dataSources and dokumenPublik are omitted from the list query to keep the
-  // serialized payload under Next.js's 2MB unstable_cache limit at scale.
+  // dataSources and dokumenPublik full objects omitted to keep payload small.
   dataSources?: SourceRecord[];
   dokumenPublik?: Array<Pick<DocumentRecord, "lastCheckedAt" | "updatedAt">>;
   _count: {
     dataSources: number;
     dokumenPublik: number;
+    dataDesa: number; // published real fields — drives completenessScore
   };
 };
 
@@ -450,6 +450,7 @@ function mapSupabaseListRecord(
     _count: {
       dataSources: sourceRows.length,
       dokumenPublik: documentCount,
+      dataDesa: 0, // not available in Supabase fallback path
     },
   };
 }
@@ -654,6 +655,10 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     sourceSummary,
     dataSourceLabel: record.dataSourceLabel ?? null,
     dataPublishedAt: record.dataPublishedAt?.toISOString() ?? null,
+    jumlahDataReal: record._count.dataDesa,
+    // 12 = full real-data set: danaDesa+tahunData, geoLat+geoLng,
+    // penduduk+KK+dusun+RW+RT, kepalaDesa+mataPencaharian, luasWilayah
+    completenessScore: Math.min(100, Math.round((record._count.dataDesa / 12) * 100)),
   };
 }
 
@@ -796,12 +801,14 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
         },
       },
       // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
-      // serialized payload exceeds Next.js 2MB unstable_cache limit. Only _count
-      // is needed for list cards; detail pages fetch full data separately.
+      // serialized payload exceeds the module-level cache. Only _count is needed
+      // for list cards; detail pages fetch full data separately.
       _count: {
         select: {
           dataSources: true,
           dokumenPublik: true,
+          // Filtered count of real published DataDesa fields (for completeness score).
+          dataDesa: { where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } } },
         },
       },
     },

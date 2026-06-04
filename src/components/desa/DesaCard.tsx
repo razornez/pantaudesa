@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, FileText, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
-import { formatRupiahMock, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
-import { CARD } from "@/lib/copy";
+import { formatRupiahMock, getStatusColor, getStatusLabel } from "@/lib/utils";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
@@ -70,16 +69,17 @@ export default function DesaCard({ desa }: Props) {
 
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between gap-2 text-sm sm:text-xs">
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-slate-600">
-              <span>{CARD.penyerapan}</span>
-              {!desa.totalAnggaran && <span className="text-[10px] text-slate-400">belum tersedia</span>}
-            </div>
-            <span className="font-bold text-slate-700">{desa.persentaseSerapan}%</span>
+            <span className="text-slate-500">Kelengkapan data</span>
+            <span className="font-bold text-slate-700">{desa.completenessScore ?? 0}%</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 sm:h-2">
             <div
-              className={`h-full rounded-full transition-all ${getSerapanColor(desa.persentaseSerapan)}`}
-              style={{ width: `${desa.persentaseSerapan}%` }}
+              className={`h-full rounded-full transition-all ${
+                (desa.completenessScore ?? 0) >= 75 ? "bg-emerald-500" :
+                (desa.completenessScore ?? 0) >= 40 ? "bg-sky-500" :
+                (desa.completenessScore ?? 0) >= 15 ? "bg-amber-400" : "bg-slate-300"
+              }`}
+              style={{ width: `${desa.completenessScore ?? 0}%` }}
             />
           </div>
         </div>
