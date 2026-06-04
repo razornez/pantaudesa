@@ -115,6 +115,8 @@ type DesaListRecord = {
   // dataSources and dokumenPublik full objects omitted to keep payload small.
   dataSources?: SourceRecord[];
   dokumenPublik?: Array<Pick<DocumentRecord, "lastCheckedAt" | "updatedAt">>;
+  // danaDesa pagu from DJPK (one row per desa, value only)
+  dataDesa?: Array<{ valueText: string | null }>;
   _count: {
     dataSources: number;
     dokumenPublik: number;
@@ -447,10 +449,11 @@ function mapSupabaseListRecord(
           },
         ]
       : [],
+    dataDesa: [], // danaDesa not available in Supabase fallback path
     _count: {
       dataSources: sourceRows.length,
       dokumenPublik: documentCount,
-      dataDesa: 0, // not available in Supabase fallback path
+      dataDesa: 0,
     },
   };
 }
@@ -656,9 +659,8 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     dataSourceLabel: record.dataSourceLabel ?? null,
     dataPublishedAt: record.dataPublishedAt?.toISOString() ?? null,
     jumlahDataReal: record._count.dataDesa,
-    // 12 = full real-data set: danaDesa+tahunData, geoLat+geoLng,
-    // penduduk+KK+dusun+RW+RT, kepalaDesa+mataPencaharian, luasWilayah
     completenessScore: Math.min(100, Math.round((record._count.dataDesa / 12) * 100)),
+    paguDanaDesa: record.dataDesa?.[0]?.valueText ? parseInt(record.dataDesa[0].valueText, 10) || 0 : 0,
   };
 }
 
@@ -799,6 +801,12 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
           dataStatus: true,
           updatedAt: true,
         },
+      },
+      // Fetch danaDesa pagu from DataDesa — one row per desa, just the value.
+      dataDesa: {
+        where: { fieldKey: "danaDesa", isActive: true, status: "PUBLISHED", sourceId: { not: null } },
+        select: { valueText: true },
+        take: 1,
       },
       // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
       // serialized payload exceeds the module-level cache. Only _count is needed

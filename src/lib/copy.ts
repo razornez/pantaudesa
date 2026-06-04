@@ -14,10 +14,11 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_FILTER_LABELS: Record<string, string> = {
-  semua:  "Semua Desa",
-  baik:   "Data Lengkap (≥84%)",
-  sedang: "Data Sedang (34–83%)",
-  rendah: "Data Minim (<34%)",
+  semua:        "Semua Desa",
+  ada_anggaran: "Ada Data Anggaran",
+  baik:         "Data Lengkap (≥84%)",
+  sedang:       "Data Sedang (34–83%)",
+  rendah:       "Data Minim (<34%)",
 };
 
 // ─── Bidang APBDes → label ramah warga ───────────────────────────────────────
