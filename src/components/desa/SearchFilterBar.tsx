@@ -24,10 +24,11 @@ interface Props {
 type StatusOption = { value: StatusSerapan; color: string };
 
 const STATUS_OPTIONS: StatusOption[] = [
-  { value: "semua",  color: "bg-slate-100 text-slate-700 border-slate-200" },
-  { value: "baik",   color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "sedang", color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "rendah", color: "bg-rose-100 text-rose-700 border-rose-200" },
+  { value: "semua",        color: "bg-slate-100 text-slate-700 border-slate-200" },
+  { value: "ada_anggaran", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  { value: "baik",         color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "sedang",       color: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "rendah",       color: "bg-rose-100 text-rose-700 border-rose-200" },
 ];
 
 export default function SearchFilterBar({

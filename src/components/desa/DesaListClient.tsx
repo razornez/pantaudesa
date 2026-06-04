@@ -96,11 +96,11 @@ export default function DesaListClient({
     }
 
     if (status !== "semua") {
-      // Filter by data completeness score, not budget absorption status.
       const sc = (d: DesaListItem) => d.completenessScore ?? 0;
-      if (status === "baik")   result = result.filter((d) => sc(d) >= 84);
-      if (status === "sedang") result = result.filter((d) => sc(d) >= 34 && sc(d) < 84);
-      if (status === "rendah") result = result.filter((d) => sc(d) < 34);
+      if (status === "ada_anggaran") result = result.filter((d) => (d.paguDanaDesa ?? 0) > 0);
+      if (status === "baik")         result = result.filter((d) => sc(d) >= 84);
+      if (status === "sedang")       result = result.filter((d) => sc(d) >= 34 && sc(d) < 84);
+      if (status === "rendah")       result = result.filter((d) => sc(d) < 34);
     }
 
     result.sort((a, b) => {

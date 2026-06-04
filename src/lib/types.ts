@@ -185,6 +185,8 @@ export interface Desa {
   completenessScore?: number;
   /** raw count of published real DataDesa fields */
   jumlahDataReal?: number;
+  /** Dana Desa pagu from DJPK (Rp, 0 if not yet ingested) */
+  paguDanaDesa?: number;
 }
 
 export interface TrendData {
@@ -204,6 +206,6 @@ export interface SummaryStats {
   rataRataSkorTransparansi: number;
 }
 
-export type StatusSerapan = "semua" | "baik" | "sedang" | "rendah";
+export type StatusSerapan = "semua" | "baik" | "sedang" | "rendah" | "ada_anggaran";
 export type SortField = "nama" | "totalAnggaran" | "persentaseSerapan" | "terealisasi";
 export type SortOrder = "asc" | "desc";

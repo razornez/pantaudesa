@@ -84,16 +84,15 @@ export default function DesaCard({ desa }: Props) {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <div className="rounded-xl bg-slate-50 p-3 sm:p-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-[10px]">Diterima</p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiahMock(desa.totalAnggaran)}</p>
+        {/* Dana Desa pagu from DJPK */}
+        {(desa.paguDanaDesa ?? 0) > 0 && (
+          <div className="mt-3 rounded-xl bg-indigo-50 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Dana Desa (DJPK)</span>
+              <span className="text-[11px] font-bold text-indigo-700">{formatRupiahMock(desa.paguDanaDesa ?? 0)}</span>
+            </div>
           </div>
-          <div className="rounded-xl bg-slate-50 p-3 sm:p-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-[10px]">Dipakai</p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800 sm:text-xs">{formatRupiahMock(desa.terealisasi)}</p>
-          </div>
-        </div>
+        )}
       </div>
     </Link>
   );
