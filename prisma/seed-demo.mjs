@@ -542,10 +542,14 @@ function demoSummaryForArjasari(desa, index) {
 }
 
 async function seedDemoSourcesAndBudgets() {
-  const arjasariSummaries = desaRecords.map(demoSummaryForArjasari);
+  // arjasariSummaries removed: Arjasari desa now use REAL data from the
+  // ingestion pipeline (DJPK danaDesa). Fake APBDes summaries were
+  // misleading — Lebakwangi/Rancakole showed "kinerjanya baik" from
+  // fabricated 86% serapan. Without a summary, desa correctly shows
+  // "Belum ada data" for budget status.
   const summaryRecords = [
     ...demoVillageRecords,
-    ...arjasariSummaries,
+    // arjasariSummaries removed — no fake APBDes for real Arjasari desa
   ];
 
   for (const desa of demoVillageRecords) {
