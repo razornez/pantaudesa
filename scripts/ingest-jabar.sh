@@ -41,6 +41,12 @@ if [[ "$PASS" == "osm" || "$PASS" == "all" ]]; then
   run_adapter "osm" "geoLat"
 fi
 
+# Nominatim: fallback geocoder for desa Overpass missed. Run AFTER osm pass.
+# Nominatim rate-limits to 1 req/s — allow a few hours after OSM pass before running.
+if [[ "$PASS" == "nominatim" || "$PASS" == "all" ]]; then
+  run_adapter "nominatim" "geoLat"
+fi
+
 if [[ "$PASS" == "opensid" || "$PASS" == "all" ]]; then
   run_adapter "opensid" "jumlahPenduduk"
 fi
