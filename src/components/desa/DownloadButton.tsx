@@ -17,22 +17,10 @@ function toCSV(desa: Desa): string {
     ["Tahun Anggaran", desa.tahun.toString()],
     ["Jumlah Penduduk", desa.penduduk.toString()],
     ["Kategori Fokus", desa.kategori],
-    ["Total Anggaran (Rp)", desa.totalAnggaran.toString()],
-    ["Terealisasi (Rp)", desa.terealisasi.toString()],
-    ["Belum Terserap (Rp)", (desa.totalAnggaran - desa.terealisasi).toString()],
-    ["Persentase Serapan (%)", desa.persentaseSerapan.toString()],
-    ["Status Serapan", desa.status],
+    ["Dana Desa (Rp)", (desa.paguDanaDesa ?? 0) > 0 ? (desa.paguDanaDesa ?? 0).toString() : "-"],
+    ["Kelengkapan Data (%)", (desa.completenessScore ?? 0).toString()],
     [],
   ];
-
-  if (desa.skorTransparansi) {
-    rows.push(["=== SKOR TRANSPARANSI ===", ""]);
-    rows.push(["Skor Total", desa.skorTransparansi.total.toString()]);
-    rows.push(["Ketepatan Pelaporan", desa.skorTransparansi.ketepatan.toString()]);
-    rows.push(["Kelengkapan Dokumen", desa.skorTransparansi.kelengkapan.toString()]);
-    rows.push(["Responsivitas", desa.skorTransparansi.responsif.toString()]);
-    rows.push([]);
-  }
 
   if (desa.apbdes?.length) {
     rows.push(["=== RINCIAN APBDes ===", ""]);
@@ -51,7 +39,7 @@ function toCSV(desa: Desa): string {
   if (desa.riwayat?.length) {
     rows.push(["=== RIWAYAT 5 TAHUN ===", ""]);
     rows.push(["Tahun", "Anggaran (Rp)", "Realisasi (Rp)", "Persentase (%)"]);
-    desa.riwayat.forEach((r) => rows.push([r.tahun.toString(), r.totalAnggaran.toString(), r.terealisasi.toString(), r.persentaseSerapan.toString()]));
+    desa.riwayat.forEach((r) => rows.push([r.tahun.toString(), r.totalAnggaran.toString(), r.terealisasi.toString(), `${r.persentaseSerapan}`]));
   }
 
   return rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
