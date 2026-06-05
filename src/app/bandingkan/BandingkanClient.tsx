@@ -7,7 +7,7 @@ import {
   Minus, MapPin, ChevronRight, BarChart3,
 } from "lucide-react";
 import { Desa } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { formatRupiah } from "@/lib/utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,17 @@ function delta(a: number, b: number): "up" | "down" | "same" {
   if (a > b) return "up";
   if (a < b) return "down";
   return "same";
+}
+
+// Completeness-based badge + bar (no serapan/APBDes — that data does not exist yet).
+function completenessBadge(score: number): { label: string; cls: string } {
+  if (score >= 75) return { label: "Data Lengkap", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+  if (score >= 34) return { label: "Data Sedang",  cls: "border-sky-200 bg-sky-50 text-sky-700" };
+  return { label: "Data Minim", cls: "border-amber-200 bg-amber-50 text-amber-700" };
+}
+
+function completenessBar(score: number): string {
+  return score >= 75 ? "bg-emerald-500" : score >= 34 ? "bg-sky-500" : "bg-amber-400";
 }
 
 function DeltaIcon({ dir, size = 13 }: { dir: "up" | "down" | "same"; size?: number }) {
@@ -114,8 +125,8 @@ function DesaPicker({
                 <p className="text-sm font-semibold text-slate-800 truncate">{d.nama}</p>
                 <p className="text-xs text-slate-400">{d.kabupaten} · {d.provinsi}</p>
               </div>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${getStatusColor(d.status)}`}>
-                {d.persentaseSerapan}%
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${completenessBadge(d.completenessScore ?? 0).cls}`}>
+                {d.completenessScore ?? 0}%
               </span>
             </button>
           ))}
@@ -184,8 +195,8 @@ function DesaHeader({ desa, align }: { desa: Desa; align: "left" | "right" }) {
   return (
     <Link href={`/desa/${desa.id}`} className="group block">
       <div className={`flex flex-col gap-1 ${isLeft ? "items-start" : "items-start sm:items-end"}`}>
-        <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getStatusColor(desa.status)}`}>
-          {getStatusLabel(desa.status)}
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${completenessBadge(desa.completenessScore ?? 0).cls}`}>
+          {completenessBadge(desa.completenessScore ?? 0).label}
         </span>
         <p className="text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
           {desa.nama}
@@ -206,14 +217,15 @@ function DesaHeader({ desa, align }: { desa: Desa; align: "left" | "right" }) {
 
 function buildPresets(desaList: Desa[]): { label: string; hint: string; left: Desa; right: Desa }[] {
   if (desaList.length < 2) return [];
-  const bySerapan = [...desaList].sort((a, b) => b.persentaseSerapan - a.persentaseSerapan);
-  const top = bySerapan[0];
-  const bottom = bySerapan[bySerapan.length - 1];
+  const score = (d: Desa) => d.completenessScore ?? 0;
+  const byKelengkapan = [...desaList].sort((a, b) => score(b) - score(a));
+  const top = byKelengkapan[0];
+  const bottom = byKelengkapan[byKelengkapan.length - 1];
   const nama = (d: Desa) => d.nama.replace(/^Desa\s+/, "");
 
   const presets: { label: string; hint: string; left: Desa; right: Desa }[] = [];
   if (top && bottom && top.id !== bottom.id) {
-    presets.push({ label: "Serapan tertinggi vs terendah", hint: `${nama(top)} vs ${nama(bottom)}`, left: top, right: bottom });
+    presets.push({ label: "Data terlengkap vs terminim", hint: `${nama(top)} vs ${nama(bottom)}`, left: top, right: bottom });
   }
   // Two desa in the same kabupaten
   for (let i = 0; i < desaList.length; i++) {
@@ -228,10 +240,14 @@ function buildPresets(desaList: Desa[]): { label: string; hint: string; left: De
       }
     }
   }
-  // A desa needing review (status rendah) vs a strong one
-  const rendah = desaList.find((d) => d.status === "rendah");
-  if (rendah && top && rendah.id !== top.id) {
-    presets.push({ label: "Status Perlu Ditinjau", hint: `${nama(rendah)} vs ${nama(top)}`, left: rendah, right: top });
+  // Highest Dana Desa vs lowest among those that have it
+  const withDana = desaList.filter((d) => (d.paguDanaDesa ?? 0) > 0).sort((a, b) => (b.paguDanaDesa ?? 0) - (a.paguDanaDesa ?? 0));
+  if (withDana.length >= 2 && withDana[0].id !== withDana[withDana.length - 1].id) {
+    presets.push({
+      label: "Dana Desa tertinggi vs terendah",
+      hint: `${nama(withDana[0])} vs ${nama(withDana[withDana.length - 1])}`,
+      left: withDana[0], right: withDana[withDana.length - 1],
+    });
   }
   return presets.slice(0, 3);
 }
@@ -245,10 +261,6 @@ export default function BandingkanClient({ desaList }: { desaList: Desa[] }) {
   const canCompare = desaA && desaB;
   const presets = useMemo(() => buildPresets(desaList), [desaList]);
 
-  // Riwayat serapan terakhir 3 tahun
-  const riwayatA = desaA?.riwayat?.slice(-3) ?? [];
-  const riwayatB = desaB?.riwayat?.slice(-3) ?? [];
-
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
 
@@ -259,7 +271,7 @@ export default function BandingkanClient({ desaList }: { desaList: Desa[] }) {
         </div>
         <h1 className="text-3xl font-black text-slate-900">Bandingkan Desa</h1>
         <p className="text-slate-500 text-sm max-w-md mx-auto">
-          Pilih dua desa dan lihat perbedaan anggaran, serapan, transparansi, dan kondisi aktual secara berdampingan.
+          Pilih dua desa dan lihat perbedaan kelengkapan data, Dana Desa, dan jumlah penduduk secara berdampingan.
         </p>
       </div>
 
@@ -322,7 +334,7 @@ export default function BandingkanClient({ desaList }: { desaList: Desa[] }) {
              : "Pilih desa kedua untuk memulai perbandingan."}
           </p>
           <p className="text-xs text-slate-400">
-            Kamu bisa membandingkan serapan anggaran, transparansi, jumlah penduduk, dan banyak lagi.
+            Kamu bisa membandingkan kelengkapan data, Dana Desa, jumlah penduduk, dan lokasi.
           </p>
         </div>
       )}
@@ -338,87 +350,56 @@ export default function BandingkanClient({ desaList }: { desaList: Desa[] }) {
             <DesaHeader desa={desaB} align="right" />
           </div>
 
-          {/* Progress bars */}
+          {/* Progress bars — data completeness */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Serapan Anggaran</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kelengkapan Data</p>
             <div className="space-y-2">
-              {[
-                { desa: desaA },
-                { desa: desaB },
-              ].map(({ desa }) => (
-                <div key={desa.id}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-500 truncate max-w-[160px]">{desa.nama}</span>
-                    <span className="font-black text-slate-800">{desa.persentaseSerapan}%</span>
+              {[desaA, desaB].map((desa) => {
+                const sc = desa.completenessScore ?? 0;
+                return (
+                  <div key={desa.id}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-500 truncate max-w-[160px]">{desa.nama}</span>
+                      <span className="font-black text-slate-800">{sc}%</span>
+                    </div>
+                    <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${completenessBar(sc)}`}
+                        style={{ width: `${sc}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${getSerapanColor(desa.persentaseSerapan)}`}
-                      style={{ width: `${desa.persentaseSerapan}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* Tabel perbandingan */}
+          {/* Tabel perbandingan — real fields only */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Detail Perbandingan</p>
             </div>
             <div className="px-5">
-              <CompRow label="Total Anggaran"  valA={formatRupiah(desaA.totalAnggaran)}        valB={formatRupiah(desaB.totalAnggaran)} />
-              <CompRow label="Terealisasi"     valA={formatRupiah(desaA.terealisasi)}           valB={formatRupiah(desaB.terealisasi)} />
-              <CompRow label="% Serapan"       valA={`${desaA.persentaseSerapan}%`}             valB={`${desaB.persentaseSerapan}%`} />
-              <CompRow label="Penduduk"        valA={desaA.penduduk.toLocaleString("id-ID")}    valB={desaB.penduduk.toLocaleString("id-ID")} />
-              <CompRow label="Anggaran/Jiwa"   valA={formatRupiah(desaA.penduduk ? Math.round(desaA.totalAnggaran / desaA.penduduk) : 0)} valB={formatRupiah(desaB.penduduk ? Math.round(desaB.totalAnggaran / desaB.penduduk) : 0)} />
-              <CompRow label="Fokus Program"   valA={desaA.kategori}  valB={desaB.kategori} />
-              <CompRow label="Provinsi"        valA={desaA.provinsi}  valB={desaB.provinsi} />
-              {desaA.skorTransparansi && desaB.skorTransparansi && (
-                <CompRow label="Skor Transparansi" valA={`${desaA.skorTransparansi.total}/100`} valB={`${desaB.skorTransparansi.total}/100`} />
-              )}
+              <CompRow label="Kelengkapan Data" valA={`${desaA.completenessScore ?? 0}%`} valB={`${desaB.completenessScore ?? 0}%`} />
+              <CompRow
+                label="Dana Desa (DJPK)"
+                valA={(desaA.paguDanaDesa ?? 0) > 0 ? formatRupiah(desaA.paguDanaDesa ?? 0) : "—"}
+                valB={(desaB.paguDanaDesa ?? 0) > 0 ? formatRupiah(desaB.paguDanaDesa ?? 0) : "—"}
+              />
+              <CompRow
+                label="Penduduk"
+                valA={desaA.penduduk > 0 ? desaA.penduduk.toLocaleString("id-ID") : "—"}
+                valB={desaB.penduduk > 0 ? desaB.penduduk.toLocaleString("id-ID") : "—"}
+              />
+              <CompRow
+                label="Dana Desa/Jiwa"
+                valA={desaA.penduduk > 0 && (desaA.paguDanaDesa ?? 0) > 0 ? formatRupiah(Math.round((desaA.paguDanaDesa ?? 0) / desaA.penduduk)) : "—"}
+                valB={desaB.penduduk > 0 && (desaB.paguDanaDesa ?? 0) > 0 ? formatRupiah(Math.round((desaB.paguDanaDesa ?? 0) / desaB.penduduk)) : "—"}
+              />
+              <CompRow label="Kabupaten" valA={desaA.kabupaten} valB={desaB.kabupaten} />
+              <CompRow label="Provinsi"  valA={desaA.provinsi}  valB={desaB.provinsi} />
             </div>
           </div>
-
-          {/* Riwayat serapan */}
-          {riwayatA.length > 0 && riwayatB.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tren Serapan 3 Tahun Terakhir</p>
-              </div>
-              <div className="px-5">
-                {riwayatA.map((rA, i) => {
-                  const rB = riwayatB[i];
-                  if (!rB) return null;
-                  return (
-                    <CompRow
-                      key={rA.tahun}
-                      label={String(rA.tahun)}
-                      valA={`${rA.persentaseSerapan}%`}
-                      valB={`${rB.persentaseSerapan}%`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Dokumen publik */}
-          {desaA.dokumen && desaB.dokumen && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ketersediaan Dokumen Publik</p>
-              </div>
-              <div className="px-5">
-                <CompRow
-                  label="Tersedia"
-                  valA={`${desaA.dokumen.filter(d => d.tersedia).length}/${desaA.dokumen.length}`}
-                  valB={`${desaB.dokumen.filter(d => d.tersedia).length}/${desaB.dokumen.length}`}
-                />
-              </div>
-            </div>
-          )}
 
           {/* CTA ke profil masing-masing */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

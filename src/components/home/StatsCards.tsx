@@ -1,36 +1,31 @@
-import { TrendingUp, MapPin, Wallet, CheckCircle2, AlertCircle, Search, Shield } from "lucide-react";
+import { Gauge, MapPin, Wallet, CheckCircle2, AlertCircle, Search, Database } from "lucide-react";
 import { SummaryStats } from "@/lib/types";
-import { formatRupiah } from "@/lib/utils";
-import { STATS, SKOR } from "@/lib/copy";
+import { STATS } from "@/lib/copy";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 
 interface Props {
   stats: SummaryStats;
 }
 
-function skorLabel(skor: number): string {
-  if (skor >= 80) return "Cukup Terbuka";
-  if (skor >= 60) return "Perlu Ditingkatkan";
-  return "Kurang Terbuka";
-}
-
-function skorColors(skor: number): { text: string; bg: string; ring: string } {
-  if (skor >= 80) return { text: "text-emerald-600", bg: "bg-emerald-50", ring: "border-emerald-200" };
-  if (skor >= 60) return { text: "text-amber-600",   bg: "bg-amber-50",   ring: "border-amber-200" };
-  return           { text: "text-rose-600",    bg: "bg-rose-50",    ring: "border-rose-200" };
+function coverageColors(pct: number): { text: string; bg: string; ring: string } {
+  if (pct >= 75) return { text: "text-emerald-600", bg: "bg-emerald-50", ring: "border-emerald-200" };
+  if (pct >= 34) return { text: "text-sky-600",     bg: "bg-sky-50",     ring: "border-sky-200" };
+  return           { text: "text-amber-600",  bg: "bg-amber-50",   ring: "border-amber-200" };
 }
 
 export default function StatsCards({ stats }: Props) {
-  const pctBaik   = Math.round((stats.desaSerapanBaik   / stats.totalDesa) * 100);
-  const pctSedang = Math.round((stats.desaSerapanSedang / stats.totalDesa) * 100);
-  const pctRendah = Math.round((stats.desaSerapanRendah / stats.totalDesa) * 100);
+  const total = stats.totalDesa || 1;
+  const pctLengkap = Math.round((stats.desaLengkap / total) * 100);
+  const pctSedang  = Math.round((stats.desaSedang  / total) * 100);
+  const pctMinim   = Math.round((stats.desaMinim   / total) * 100);
+  const pctDana    = Math.round((stats.desaAdaDanaDesa / total) * 100);
 
   const cards = [
     {
-      label: STATS.totalAnggaran.label,
-      value: stats.totalAnggaranNasional,
+      label: STATS.totalDanaDesa.label,
+      value: stats.totalDanaDesaNasional,
       format: "rupiah" as const,
-      sub:   STATS.totalAnggaran.sub(formatRupiah(stats.totalTerealisasi)),
+      sub:   STATS.totalDanaDesa.sub(stats.totalDesa.toLocaleString("id-ID")),
       icon:  Wallet,
       color: "text-indigo-600",
       bg:    "bg-indigo-50",
@@ -45,44 +40,44 @@ export default function StatsCards({ stats }: Props) {
       bg:    "bg-sky-50",
     },
     {
-      label: STATS.rataRataSerapan.label,
-      value: stats.rataRataSerapan,
+      label: STATS.rataRataKelengkapan.label,
+      value: stats.rataRataKelengkapan,
       format: "percent" as const,
-      sub:   STATS.rataRataSerapan.sub,
-      icon:  TrendingUp,
+      sub:   STATS.rataRataKelengkapan.sub,
+      icon:  Gauge,
       color: "text-emerald-600",
       bg:    "bg-emerald-50",
     },
     {
-      label: STATS.desaBaik.label,
-      value: stats.desaSerapanBaik,
+      label: STATS.desaLengkap.label,
+      value: stats.desaLengkap,
       format: "number" as const,
-      sub:   STATS.desaBaik.sub(pctBaik),
+      sub:   STATS.desaLengkap.sub(pctLengkap),
       icon:  CheckCircle2,
       color: "text-emerald-600",
       bg:    "bg-emerald-50",
     },
     {
       label: STATS.desaSedang.label,
-      value: stats.desaSerapanSedang,
+      value: stats.desaSedang,
       format: "number" as const,
       sub:   STATS.desaSedang.sub(pctSedang),
       icon:  AlertCircle,
-      color: "text-amber-600",
-      bg:    "bg-amber-50",
+      color: "text-sky-600",
+      bg:    "bg-sky-50",
     },
     {
-      label: STATS.desaRendah.label,
-      value: stats.desaSerapanRendah,
+      label: STATS.desaMinim.label,
+      value: stats.desaMinim,
       format: "number" as const,
-      sub:   STATS.desaRendah.sub(pctRendah),
+      sub:   STATS.desaMinim.sub(pctMinim),
       icon:  Search,
       color: "text-amber-700",
       bg:    "bg-amber-50",
     },
   ];
 
-  const { text: skorText, bg: skorBg, ring: skorRing } = skorColors(stats.rataRataSkorTransparansi);
+  const { text: covText, bg: covBg, ring: covRing } = coverageColors(pctDana);
 
   return (
     <div className="space-y-3">
@@ -107,23 +102,25 @@ export default function StatsCards({ stats }: Props) {
         })}
       </div>
 
-      {/* Skor Transparansi Nasional */}
-      <div className={`rounded-2xl border p-4 flex items-center justify-between gap-4 ${skorBg} ${skorRing}`}>
+      {/* Cakupan Dana Desa — real DJPK coverage */}
+      <div className={`rounded-2xl border p-4 flex items-center justify-between gap-4 ${covBg} ${covRing}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm flex-shrink-0">
-            <Shield size={20} className={skorText} />
+            <Database size={20} className={covText} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-800">{SKOR.nationalLabel}</p>
-            <p className="text-xs text-slate-500">{SKOR.nationalSub}</p>
+            <p className="text-sm font-semibold text-slate-800">Cakupan Data Dana Desa</p>
+            <p className="text-xs text-slate-500">Desa yang sudah punya nilai pagu Dana Desa resmi (DJPK)</p>
           </div>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className={`text-3xl font-black ${skorText}`}>
-            <AnimatedCounter value={stats.rataRataSkorTransparansi} />
-            <span className="text-sm font-normal text-slate-400">/100</span>
+          <p className={`text-3xl font-black ${covText}`}>
+            <AnimatedCounter value={pctDana} />
+            <span className="text-sm font-normal text-slate-400">%</span>
           </p>
-          <p className={`text-xs font-semibold ${skorText}`}>{skorLabel(stats.rataRataSkorTransparansi)}</p>
+          <p className={`text-xs font-semibold ${covText}`}>
+            {stats.desaAdaDanaDesa.toLocaleString("id-ID")} desa
+          </p>
         </div>
       </div>
     </div>

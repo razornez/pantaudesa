@@ -3,13 +3,12 @@ import Image from "next/image";
 import { ArrowRight, CheckCircle2, FolderOpen, Search } from "lucide-react";
 import HeroSection from "@/components/home/HeroSection";
 import StatsCards from "@/components/home/StatsCards";
-import TrendChart from "@/components/home/TrendChart";
 import SerapanDonut from "@/components/home/SerapanDonut";
 import DesaLeaderboard from "@/components/home/DesaLeaderboard";
 import AlertDiniSection from "@/components/home/AlertDiniSection";
 import CitizenJourneySection from "@/components/home/CitizenJourneySection";
 import DocumentDeskSection from "@/components/home/DocumentDeskSection";
-import { buildSummaryStats, buildTrendData, getDesaListResult } from "@/lib/data/desa-read";
+import { buildSummaryStats, getDesaListResult } from "@/lib/data/desa-read";
 import { perfStart, publicPerfLog, publicPerfLogWithRows } from "@/lib/perf";
 import type { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
@@ -25,7 +24,6 @@ export default async function HomePage() {
   const compositionTimer = perfStart();
   const desaItems = desaResult.items;
   const summaryStats = buildSummaryStats(desaItems);
-  const trendData = buildTrendData(desaItems);
 
   // Sort by data completeness (real fields count), not budget absorption.
   const score = (d: Desa) => d.completenessScore ?? 0;
@@ -77,15 +75,10 @@ export default async function HomePage() {
 
       <section>
         <div className="mb-4 max-w-2xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-              angka bertanda mock
-            </span>
-          </div>
-          <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang perlu dilihat lebih dulu</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prioritas warga</p>
+          <h2 className="text-lg font-semibold text-slate-800 mt-1">Mulai dari desa yang datanya paling lengkap</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Urutan ini memakai data contoh untuk membantu warga membaca indikator awal; angka persentase belum menjadi fakta final atau terverifikasi.
+            Urutan ini berdasarkan seberapa lengkap data resmi tiap desa berhasil dikumpulkan — semakin lengkap, semakin mudah dipantau warga.
           </p>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-4 items-start">
@@ -112,13 +105,12 @@ export default async function HomePage() {
       {/* ── Charts + Leaderboard ─────────────────────────────────────────── */}
       <section>
         <div className="mb-4 max-w-2xl">
-          <h2 className="text-base font-semibold text-slate-800">Gambaran angka pendukung</h2>
+          <h2 className="text-base font-semibold text-slate-800">Sebaran kelengkapan data</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Grafik tetap tersedia sebagai konteks tambahan, sementara prioritas cek transparansi tampil lebih dulu.
+            Berapa banyak desa yang datanya sudah lengkap, sedang, atau masih minim.
           </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <TrendChart data={trendData} />
           <SerapanDonut stats={summaryStats} />
         </div>
       </section>

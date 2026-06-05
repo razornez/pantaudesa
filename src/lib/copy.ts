@@ -51,14 +51,12 @@ export const BIDANG_CITIZEN_LABELS: Record<string, { label: string; hint: string
 export const SECTION = {
   // Home page
   ringkasanNasional:    "Apa yang Sedang Dipetakan?",
-  ringkasanNasionalSub: "Gambaran besar penggunaan uang negara untuk desa-desa di seluruh Indonesia",
-  alertDini:            "Prioritas Cek Transparansi",
+  ringkasanNasionalSub: "Gambaran besar kelengkapan data dan Dana Desa untuk desa-desa di seluruh Indonesia",
+  alertDini:            "Desa yang Datanya Masih Minim",
   alertDiniSub: (n: number) =>
-    `${n} desa dalam data demo perlu ditinjau lebih dulu karena indikator serapannya masih rendah.`,
-  tren:          "Bagaimana Tren Penggunaan Anggaran Tahun Ini?",
-  trenSub:       "Bandingkan uang desa yang tersedia dengan yang sudah digunakan tiap bulan",
-  distribusi:    "Berapa Desa yang Sudah Baik, dan Berapa yang Perlu Dicek?",
-  distribusiSub: "Gambaran desa berdasarkan seberapa banyak anggaran yang sudah digunakan",
+    `${n} desa datanya masih minim — bantu lengkapi dengan menelusuri sumber resminya.`,
+  distribusi:    "Berapa Desa yang Datanya Sudah Lengkap?",
+  distribusiSub: "Sebaran desa berdasarkan seberapa lengkap data yang berhasil dikumpulkan",
   topBaik:       "Desa dengan Capaian Tinggi",
   topBaikSub:    "5 desa yang paling aktif dan bertanggung jawab menggunakan anggarannya",
   topRendah:     "Desa yang Perlu Ditinjau",
@@ -86,28 +84,28 @@ export const SECTION = {
 // ─── Stats cards (home) ───────────────────────────────────────────────────────
 
 export const STATS = {
-  totalAnggaran: {
-    label: "Total Uang Negara untuk Desa",
-    sub:   (terealisasi: string) => `Sudah dipakai ${terealisasi}`,
+  totalDanaDesa: {
+    label: "Total Dana Desa (DJPK)",
+    sub:   (desaCount: string) => `Tersebar di ${desaCount} desa`,
   },
   totalDesa: {
     label: "Desa yang Sedang Dipantau",
     sub:   "Desa aktif dalam pengawasan publik",
   },
-  rataRataSerapan: {
-    label: "Rata-rata Penggunaan Anggaran",
-    sub:   "Dari seluruh desa yang dipantau",
+  rataRataKelengkapan: {
+    label: "Rata-rata Kelengkapan Data",
+    sub:   "Seberapa lengkap data tiap desa terkumpul",
   },
-  desaBaik: {
-    label: "Desa dengan Kinerja Baik",
+  desaLengkap: {
+    label: "Desa dengan Data Lengkap",
     sub:   (pct: number) => `${pct}% dari total desa terpantau`,
   },
   desaSedang: {
-    label: "Desa yang Perlu Ditingkatkan",
+    label: "Desa dengan Data Sedang",
     sub:   (pct: number) => `${pct}% dari total desa terpantau`,
   },
-  desaRendah: {
-    label: "Desa yang Perlu Ditinjau",
+  desaMinim: {
+    label: "Desa dengan Data Minim",
     sub:   (pct: number) => `${pct}% dari total desa terpantau`,
   },
 } as const;
@@ -213,9 +211,9 @@ export const TABLE_HEADERS = {
 // ─── Donut chart ──────────────────────────────────────────────────────────────
 
 export const DONUT_LABELS = {
-  baik:   "Kinerja Baik (≥85%)",
-  sedang: "Perlu Ditingkatkan (60–84%)",
-  rendah: "Perlu Ditinjau (<60%)",
+  baik:   "Data Lengkap (≥75%)",
+  sedang: "Data Sedang (34–74%)",
+  rendah: "Data Minim (<34%)",
 } as const;
 
 // ─── Hero homepage ────────────────────────────────────────────────────────────

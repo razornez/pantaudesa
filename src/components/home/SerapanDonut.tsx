@@ -10,9 +10,9 @@ interface Props {
 
 export default function SerapanDonut({ stats }: Props) {
   const data = [
-    { name: DONUT_LABELS.baik,   value: stats.desaSerapanBaik,   fill: "#34D399" },
-    { name: DONUT_LABELS.sedang, value: stats.desaSerapanSedang, fill: "#FBBF24" },
-    { name: DONUT_LABELS.rendah, value: stats.desaSerapanRendah, fill: "#FB7185" },
+    { name: DONUT_LABELS.baik,   value: stats.desaLengkap, fill: "#34D399" },
+    { name: DONUT_LABELS.sedang, value: stats.desaSedang,  fill: "#38BDF8" },
+    { name: DONUT_LABELS.rendah, value: stats.desaMinim,   fill: "#FBBF24" },
   ];
 
   return (

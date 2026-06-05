@@ -1,10 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Radar, Search, TrendingDown, ArrowRight } from "lucide-react";
+import { Radar, Search, ArrowRight } from "lucide-react";
 import { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
-import { isDowntrending } from "@/lib/verdicts";
 import { DataStatusBadge } from "@/components/ui/DataStatusBadge";
 
 interface Props {
@@ -12,9 +11,11 @@ interface Props {
 }
 
 export default function AlertDiniSection({ desa }: Props) {
+  // Surface real desa (have Dana Desa) whose data is still the most incomplete,
+  // so warga can help complete them — based on real completeness, not serapan.
   const perluDitinjau = desa
-    .filter((d) => d.persentaseSerapan < 50)
-    .sort((a, b) => a.persentaseSerapan - b.persentaseSerapan)
+    .filter((d) => (d.paguDanaDesa ?? 0) > 0 && (d.completenessScore ?? 0) < 34)
+    .sort((a, b) => (a.completenessScore ?? 0) - (b.completenessScore ?? 0))
     .slice(0, 3);
 
   if (perluDitinjau.length === 0) return null;
@@ -64,7 +65,7 @@ export default function AlertDiniSection({ desa }: Props) {
               key={d.id}
               href={`/desa/${d.id}`}
               className="group relative min-h-[44px] overflow-hidden rounded-2xl border border-amber-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-              aria-label={`Cek ${d.nama}, serapan ${d.persentaseSerapan}%`}
+              aria-label={`Lengkapi data ${d.nama}, kelengkapan ${d.completenessScore ?? 0}%`}
             >
               <div className="risk-radar-grid absolute inset-0 opacity-60" aria-hidden />
               <div className="relative">
@@ -82,20 +83,17 @@ export default function AlertDiniSection({ desa }: Props) {
                       <p className="mt-1 text-xs text-slate-500">{d.kabupaten}, {d.provinsi}</p>
                     </div>
                   </div>
-                  {isDowntrending(d.riwayat) && (
-                    <TrendingDown size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                  )}
                 </div>
 
                 <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/80 p-2.5">
                   <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold tracking-wide text-amber-700">Perlu dicek</span>
-                    <span className="text-sm font-black text-amber-800">{d.persentaseSerapan}%</span>
+                    <span className="text-[10px] font-bold tracking-wide text-amber-700">Kelengkapan data</span>
+                    <span className="text-sm font-black text-amber-800">{d.completenessScore ?? 0}%</span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-700 group-hover:brightness-110"
-                      style={{ width: `${d.persentaseSerapan}%` }}
+                      style={{ width: `${d.completenessScore ?? 0}%` }}
                     />
                   </div>
                 </div>
