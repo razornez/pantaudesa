@@ -38,11 +38,11 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
               </th>
               <th className="hidden px-4 py-3 text-left md:table-cell">{TABLE_HEADERS.wilayah}</th>
               <th className="hidden px-4 py-3 text-right lg:table-cell">
-                <SortHeader label={TABLE_HEADERS.anggaran} field="totalAnggaran" active={sortField === "totalAnggaran"} order={sortOrder} onSort={onSort} />
+                <SortHeader label="Dana Desa" field="paguDanaDesa" active={sortField === "paguDanaDesa"} order={sortOrder} onSort={onSort} />
               </th>
-              <th className="hidden px-4 py-3 text-right lg:table-cell">{TABLE_HEADERS.realisasi}</th>
+              <th className="hidden px-4 py-3 text-right lg:table-cell" />
               <th className="px-4 py-3 text-right">
-                <SortHeader label="Kelengkapan" field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
+                <SortHeader label="Kelengkapan" field="completenessScore" active={sortField === "completenessScore"} order={sortOrder} onSort={onSort} />
               </th>
               <th className="px-4 py-3" />
             </tr>

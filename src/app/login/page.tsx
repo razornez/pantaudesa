@@ -28,7 +28,9 @@ function ModeSelector({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => v
         return (
           <button key={m.id} type="button" onClick={() => onChange(m.id)}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              mode === m.id ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              mode === m.id
+                ? "bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-200"
+                : "text-slate-500 hover:text-slate-700"
             }`}>
             <Icon size={13} /> {m.label}
           </button>

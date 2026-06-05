@@ -207,5 +207,5 @@ export interface SummaryStats {
 }
 
 export type StatusSerapan = "semua" | "baik" | "sedang" | "rendah" | "ada_anggaran";
-export type SortField = "nama" | "totalAnggaran" | "persentaseSerapan" | "terealisasi";
+export type SortField = "nama" | "completenessScore" | "paguDanaDesa";
 export type SortOrder = "asc" | "desc";
