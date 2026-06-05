@@ -26,6 +26,7 @@ export interface DocRow {
   rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult?: unknown;
+  sourceTypeCode?: string | null;
   createdAt: string;
   updatedAt: string;
   desa: { id: string; nama: string; kecamatan: string; kabupaten: string };

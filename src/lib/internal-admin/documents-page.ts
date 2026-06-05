@@ -23,6 +23,8 @@ export interface InternalDocumentQueueItem {
   rejectedReason: string | null;
   aiMappingStatus: string | null;
   aiMappingResult?: unknown;
+  /** "PUBLIC_CONTRIBUTION" marks an upload from a public visitor (not an Admin Desa). */
+  sourceTypeCode?: string | null;
   createdAt: string;
   updatedAt: string;
   desa: { id: string; nama: string; kecamatan: string; kabupaten: string };
@@ -65,6 +67,7 @@ export async function loadInternalDocumentQueue(
         rejectedReason: true,
         aiMappingStatus: true,
         aiMappingResult: true,
+        sourceTypeCode: true,
         createdAt: true,
         updatedAt: true,
         desa: { select: { id: true, nama: true, kecamatan: true, kabupaten: true } },
