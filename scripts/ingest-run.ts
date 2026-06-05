@@ -26,6 +26,7 @@ async function main() {
   const { OpenSIDAdapter } = await import("@/lib/adapters/opensid-adapter");
   const { KecamatanBandungAdapter } = await import("@/lib/adapters/kecamatan-bandung-adapter");
   const { NominatimGeocodeAdapter } = await import("@/lib/adapters/nominatim-geocode-adapter");
+  const { LocationIQGeocodeAdapter } = await import("@/lib/adapters/locationiq-geocode-adapter");
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
@@ -98,7 +99,8 @@ async function main() {
   const hasBandung = workDesas.some((d) => /^bandung$/i.test(d.kabupaten));
   const adapters = [
     new OSMOverpassAdapter(),
-    new NominatimGeocodeAdapter(), // fallback geocoder for desa Overpass misses
+    new NominatimGeocodeAdapter(), // free OSM geocoder (local IP only — blocked on cloud)
+    new LocationIQGeocodeAdapter(), // keyed OSM geocoder (works from cloud; needs LOCATIONIQ_KEY)
     new KemendesaDanaDesaAdapter(),
     ...(hasBandung ? [kecAdapter] : []),
     new OpenSIDAdapter(),
