@@ -1,10 +1,20 @@
-name: Nominatim Geocode Sweep
+name: Nominatim Geocode Sweep (DISABLED on cloud — run locally)
+
+# ⚠️ The nightly schedule is intentionally DISABLED.
+#
+# Nominatim's public API blocks bulk/systematic geocoding from datacenter/cloud
+# IPs (GitHub Actions runners). A scheduled run here geocodes ZERO desa and then
+# gets killed at the 90-minute job timeout — pure waste. Verified 2026-06-05:
+# run 26990527638 ran 89 min, 0 coordinates written.
+#
+# Geocoding MUST run from a residential IP (local machine). Use:
+#   npx tsx scripts/ingest-run.ts --all --only nominatim --skip-have geoLat
+#   (or scripts/nominatim-sweep.bat). It is resumable via --skip-have geoLat.
+#
+# workflow_dispatch is kept only so the job can be triggered manually for
+# debugging; it will still be rate-limited/blocked on cloud runners.
 
 on:
-  # Run automatically every day at 03:00 WIB (20:00 UTC)
-  schedule:
-    - cron: "0 20 * * *"
-  # Also allow manual trigger from GitHub Actions UI
   workflow_dispatch:
 
 jobs:
