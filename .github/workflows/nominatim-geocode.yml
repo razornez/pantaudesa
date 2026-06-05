@@ -26,6 +26,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Verify DIRECT_URL secret is set
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::error::Repository secret DIRECT_URL is not set."
+            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Name: DIRECT_URL  |  Value: the Supabase session-mode (port 5432) connection string"
+            exit 1
+          fi
+          echo "DIRECT_URL secret is present."
+
       - name: Run Nominatim geocode sweep
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
