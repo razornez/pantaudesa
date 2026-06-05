@@ -1,27 +1,27 @@
-name: Nominatim Geocode Sweep (DISABLED on cloud — run locally)
+name: LocationIQ Geocode Sweep
 
-# ⚠️ The nightly schedule is intentionally DISABLED.
+# Geocodes desa missing coordinates using LocationIQ (same OpenStreetMap data as
+# Nominatim, but with an API key so it works from cloud/datacenter IPs — unlike
+# Nominatim, which blocks GitHub Actions runners).
 #
-# Nominatim's public API blocks bulk/systematic geocoding from datacenter/cloud
-# IPs (GitHub Actions runners). A scheduled run here geocodes ZERO desa and then
-# gets killed at the 90-minute job timeout — pure waste. Verified 2026-06-05:
-# run 26990527638 ran 89 min, 0 coordinates written.
+# Required repository secrets:
+#   DIRECT_URL     — Supabase session-mode (port 5432) connection string
+#   LOCATIONIQ_KEY — free API key from https://locationiq.com/
 #
-# Geocoding MUST run from a residential IP (local machine). Use:
-#   npx tsx scripts/ingest-run.ts --all --only nominatim --skip-have geoLat
-#   (or scripts/nominatim-sweep.bat). It is resumable via --skip-have geoLat.
-#
-# workflow_dispatch is kept only so the job can be triggered manually for
-# debugging; it will still be rate-limited/blocked on cloud runners.
+# Resumable: --skip-have geoLat only processes desa still missing coordinates,
+# so nightly runs chip away at the backlog within the free daily quota (~5,000).
 
 on:
+  # 03:00 WIB (20:00 UTC) nightly
+  schedule:
+    - cron: "0 20 * * *"
   workflow_dispatch:
 
 jobs:
   geocode:
     name: Geocode missing desa coordinates
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repo
@@ -39,25 +39,31 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
-      - name: Verify DIRECT_URL secret is set
+      - name: Verify required secrets are set
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          LOCATIONIQ_KEY: ${{ secrets.LOCATIONIQ_KEY }}
         run: |
+          missing=0
           if [ -z "$DIRECT_URL" ]; then
             echo "::error::Repository secret DIRECT_URL is not set."
-            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
-            echo "Name: DIRECT_URL  |  Value: the Supabase session-mode (port 5432) connection string"
-            exit 1
+            missing=1
           fi
-          echo "DIRECT_URL secret is present."
+          if [ -z "$LOCATIONIQ_KEY" ]; then
+            echo "::error::Repository secret LOCATIONIQ_KEY is not set. Register free at https://locationiq.com/ and add it under Settings → Secrets and variables → Actions."
+            missing=1
+          fi
+          if [ "$missing" = "1" ]; then exit 1; fi
+          echo "Required secrets present."
 
-      - name: Run Nominatim geocode sweep
+      - name: Run LocationIQ geocode sweep
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          LOCATIONIQ_KEY: ${{ secrets.LOCATIONIQ_KEY }}
         run: |
-          echo "Starting Nominatim geocode sweep..."
-          npx tsx scripts/ingest-run.ts --all --only nominatim --skip-have geoLat
+          echo "Starting LocationIQ geocode sweep..."
+          npx tsx scripts/ingest-run.ts --all --only locationiq --skip-have geoLat
           echo "Done."
 
       - name: Coverage report
@@ -67,7 +73,6 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
           npx tsx -e "
-          import { config } from 'dotenv';
           const { PrismaClient } = await import('./src/generated/prisma/index.js');
           const db = new PrismaClient();
           const geo = (await db.dataDesa.findMany({where:{fieldKey:'geoLat',isActive:true,status:'PUBLISHED',sourceId:{not:null}},select:{desaId:true},distinct:['desaId']})).length;
