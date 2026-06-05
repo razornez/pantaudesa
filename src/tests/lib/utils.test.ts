@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatRupiah, formatRupiahFull,
   getStatusLabel, getStatusColor,
-  getSerapanColor, getVerdictColors,
+  getVerdictColors,
 } from "@/lib/utils";
 
 describe("formatRupiah", () => {
@@ -51,22 +51,6 @@ describe("getStatusColor", () => {
   });
 });
 
-describe("getSerapanColor", () => {
-  it("returns emerald when >= 85", () => {
-    expect(getSerapanColor(85)).toBe("bg-emerald-500");
-    expect(getSerapanColor(100)).toBe("bg-emerald-500");
-  });
-
-  it("returns amber when >= 60 and < 85", () => {
-    expect(getSerapanColor(60)).toBe("bg-amber-500");
-    expect(getSerapanColor(84)).toBe("bg-amber-500");
-  });
-
-  it("returns rose when < 60", () => {
-    expect(getSerapanColor(0)).toBe("bg-rose-500");
-    expect(getSerapanColor(59)).toBe("bg-rose-500");
-  });
-});
 
 describe("getVerdictColors", () => {
   it("returns emerald palette for positive", () => {

@@ -46,6 +46,8 @@ function LoginInner() {
   const router     = useRouter();
   const params     = useSearchParams();
 
+  const nextUrl = params.get("next") ?? "/";
+
   const [mode,    setMode]    = useState<Mode>("warga");
   const [step,    setStep]    = useState<Step>("email");
   const [email,   setEmail]   = useState(params.get("email") ?? "");
@@ -143,7 +145,7 @@ function LoginInner() {
         return;
       }
 
-      router.push("/");
+      router.push(nextUrl);
       router.refresh();
     } catch (ex) {
       Sentry.captureException(ex);
