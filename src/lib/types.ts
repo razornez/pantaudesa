@@ -189,21 +189,21 @@ export interface Desa {
   paguDanaDesa?: number;
 }
 
-export interface TrendData {
-  bulan: string;
-  anggaran: number;
-  realisasi: number;
-}
 
 export interface SummaryStats {
-  totalAnggaranNasional: number;
+  /** Sum of Dana Desa pagu (DJPK) across all desa — the one universal real metric. */
+  totalDanaDesaNasional: number;
   totalDesa: number;
-  rataRataSerapan: number;
-  desaSerapanBaik: number;
-  desaSerapanSedang: number;
-  desaSerapanRendah: number;
-  totalTerealisasi: number;
-  rataRataSkorTransparansi: number;
+  /** Average data-completeness score (0–100) across all desa. */
+  rataRataKelengkapan: number;
+  /** completenessScore ≥ 75 */
+  desaLengkap: number;
+  /** completenessScore 34–74 */
+  desaSedang: number;
+  /** completenessScore < 34 */
+  desaMinim: number;
+  /** paguDanaDesa > 0 */
+  desaAdaDanaDesa: number;
 }
 
 export type StatusSerapan = "semua" | "baik" | "sedang" | "rendah" | "ada_anggaran";

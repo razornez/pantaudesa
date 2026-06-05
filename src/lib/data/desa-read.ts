@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConnectivityError } from "@/lib/db-connectivity";
 import { perfStart, publicPerfLogWithRows } from "@/lib/perf";
-import type { Desa, SummaryStats, TrendData } from "@/lib/types";
+import type { Desa, SummaryStats } from "@/lib/types";
 
 export type DesaDataOrigin = "database";
 export type DesaReadState = "ready" | "empty" | "unavailable";
@@ -1052,37 +1052,20 @@ export async function getDesaStaticParamsFromDb(): Promise<Array<{ id: string }>
 
 export function buildSummaryStats(desa: Desa[]): SummaryStats {
   const totalDesa = desa.length;
-  const totalAnggaranNasional = desa.reduce((acc, item) => acc + item.totalAnggaran, 0);
-  const totalTerealisasi = desa.reduce((acc, item) => acc + item.terealisasi, 0);
-  const rataRataSerapan = totalDesa
-    ? Math.round(desa.reduce((acc, item) => acc + item.persentaseSerapan, 0) / totalDesa)
-    : 0;
-  const rataRataSkorTransparansi = totalDesa
-    ? Math.round(desa.reduce((acc, item) => acc + (item.skorTransparansi?.total ?? 0), 0) / totalDesa)
+  // Dana Desa pagu (DJPK) is the only metric with real, 100%-coverage data.
+  const totalDanaDesaNasional = desa.reduce((acc, item) => acc + (item.paguDanaDesa ?? 0), 0);
+  const score = (item: Desa) => item.completenessScore ?? 0;
+  const rataRataKelengkapan = totalDesa
+    ? Math.round(desa.reduce((acc, item) => acc + score(item), 0) / totalDesa)
     : 0;
 
   return {
-    totalAnggaranNasional,
+    totalDanaDesaNasional,
     totalDesa,
-    rataRataSerapan,
-    desaSerapanBaik: desa.filter((item) => item.status === "baik").length,
-    desaSerapanSedang: desa.filter((item) => item.status === "sedang").length,
-    desaSerapanRendah: desa.filter((item) => item.status === "rendah").length,
-    totalTerealisasi,
-    rataRataSkorTransparansi,
+    rataRataKelengkapan,
+    desaLengkap: desa.filter((item) => score(item) >= 75).length,
+    desaSedang: desa.filter((item) => score(item) >= 34 && score(item) < 75).length,
+    desaMinim: desa.filter((item) => score(item) < 34).length,
+    desaAdaDanaDesa: desa.filter((item) => (item.paguDanaDesa ?? 0) > 0).length,
   };
-}
-
-export function buildTrendData(desa: Desa[]): TrendData[] {
-  const stats = buildSummaryStats(desa);
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-
-  return months.map((bulan, index) => {
-    const ratio = (index + 1) / months.length;
-    return {
-      bulan,
-      anggaran: stats.totalAnggaranNasional,
-      realisasi: Math.round(stats.totalTerealisasi * ratio),
-    };
-  });
 }

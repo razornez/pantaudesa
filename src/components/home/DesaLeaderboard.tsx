@@ -171,13 +171,8 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, t
           />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-900/20 to-slate-950/65" />
           <div className="absolute bottom-2 left-4 right-4">
-            <div className="mb-1">
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 shadow-sm">
-                angka mock
-              </span>
-            </div>
             <h2 className="text-base font-black text-white drop-shadow">Mulai Baca dari Desa Ini</h2>
-            <p className="text-[11px] font-semibold text-white/90 drop-shadow">Panduan awal, bukan penilaian akhir.</p>
+            <p className="text-[11px] font-semibold text-white/90 drop-shadow">Diurutkan dari data paling lengkap.</p>
           </div>
         </div>
         <div className="px-5 pb-0 pt-1">
@@ -239,7 +234,7 @@ export default function DesaLeaderboard({ topBaik, topRendah, provinsiRanking, t
           <div className="px-4 py-3 bg-amber-50/60 border-b border-amber-100 flex items-center gap-2">
             <Search size={14} className="text-amber-600 flex-shrink-0" />
             <DataStatusBadge status="needs-review" />
-            <p className="text-xs text-amber-800 font-semibold">Indikator serapan rendah, perlu dicek bersama sumbernya.</p>
+            <p className="text-xs text-amber-800 font-semibold">Datanya masih minim — bantu lengkapi dari sumber resminya.</p>
           </div>
           {topRendah.map((d, i) => <RankRow key={d.id} desa={d} rank={i + 1} warning />)}
         </div>
