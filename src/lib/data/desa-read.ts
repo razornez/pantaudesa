@@ -115,12 +115,14 @@ type DesaListRecord = {
   // dataSources and dokumenPublik full objects omitted to keep payload small.
   dataSources?: SourceRecord[];
   dokumenPublik?: Array<Pick<DocumentRecord, "lastCheckedAt" | "updatedAt">>;
-  // danaDesa pagu from DJPK (one row per desa, value only)
-  dataDesa?: Array<{ valueText: string | null }>;
+  // All attributed published DataDesa rows (fieldKey + value) — used to compute an
+  // honest, dimension-based completeness score and to extract the danaDesa pagu.
+  dataDesa?: Array<{ fieldKey: string | null; valueText: string | null }>;
   _count: {
     dataSources: number;
     dokumenPublik: number;
-    dataDesa: number; // published real fields — drives completenessScore
+    dataDesa: number; // raw attributed row count (kept for identityStatus check)
+    apbdesItems: number; // rincian kinerja anggaran — completeness dimension
   };
 };
 
@@ -449,11 +451,12 @@ function mapSupabaseListRecord(
           },
         ]
       : [],
-    dataDesa: [], // danaDesa not available in Supabase fallback path
+    dataDesa: [], // DataDesa fields not available in Supabase fallback path
     _count: {
       dataSources: sourceRows.length,
       dokumenPublik: documentCount,
       dataDesa: 0,
+      apbdesItems: 0,
     },
   };
 }
@@ -599,9 +602,55 @@ async function fetchDesaListRecordsViaSupabase(): Promise<DesaListRecord[]> {
   });
 }
 
+// Honest completeness: share of the detail page's data dimensions that are
+// actually filled — NOT a raw row count. Uses DISTINCT field keys so duplicate
+// rows (e.g. jumlahPenduduk ingested twice) cannot inflate the score, and folds
+// in the relational dimensions a desa profile is judged on (sources, documents,
+// APBDes detail, category). A desa with only demographic fields can no longer
+// reach 100% while showing "0 sumber / 0 dokumen / belum ada rincian APBDes".
+function computeCompletenessScore(input: {
+  fieldKeys: Set<string>;
+  hasPenduduk: boolean;
+  sourceCount: number;
+  documentCount: number;
+  hasApbdesDetail: boolean;
+  kategori: string | null;
+}): number {
+  const f = input.fieldKeys;
+  const dimensions: boolean[] = [
+    f.has("danaDesa"),                                            // Dana Desa (DJPK)
+    f.has("geoLat"),                                              // Koordinat / peta
+    input.hasPenduduk,                                            // Jumlah penduduk
+    f.has("luasWilayah"),                                         // Luas wilayah
+    f.has("kepalaDesa"),                                          // Kepala desa
+    ["jumlahKK", "jumlahDusun", "jumlahRt", "jumlahRw", "mataPencaharian"].some((k) => f.has(k)), // Demografi rinci
+    input.sourceCount > 0,                                        // Sumber data tercatat
+    input.documentCount > 0,                                      // Dokumen publik
+    input.hasApbdesDetail,                                        // Rincian kinerja anggaran (APBDes)
+    Boolean(input.kategori && input.kategori.trim() && input.kategori.trim().toLowerCase() !== "demo"), // Kategori terisi (bukan demo)
+  ];
+  const filled = dimensions.filter(Boolean).length;
+  return Math.round((filled / dimensions.length) * 100);
+}
+
 function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   const latestSummary = [...record.anggaranSummaries].sort((a, b) => b.tahun - a.tahun)[0];
   const tahun = latestSummary?.tahun ?? record.tahunData ?? 2024;
+  // Distinct real DataDesa field keys + danaDesa pagu, from one attributed-rows fetch.
+  const dataDesaRows = record.dataDesa ?? [];
+  const fieldKeys = new Set(
+    dataDesaRows.map((r) => r.fieldKey).filter((k): k is string => Boolean(k)),
+  );
+  const paguRow = dataDesaRows.find((r) => r.fieldKey === "danaDesa");
+  const paguDanaDesa = paguRow?.valueText ? parseInt(paguRow.valueText, 10) || 0 : 0;
+  const completenessScore = computeCompletenessScore({
+    fieldKeys,
+    hasPenduduk: fieldKeys.has("jumlahPenduduk") || (record.jumlahPenduduk ?? 0) > 0,
+    sourceCount: record._count.dataSources,
+    documentCount: record._count.dokumenPublik,
+    hasApbdesDetail: (record._count.apbdesItems ?? 0) > 0 || (record.anggaranSummaries?.length ?? 0) > 0,
+    kategori: record.kategori,
+  });
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
   const percent = Math.round(toNumber(latestSummary?.persentaseRealisasi));
@@ -660,9 +709,9 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     sourceSummary,
     dataSourceLabel: record.dataSourceLabel ?? null,
     dataPublishedAt: record.dataPublishedAt?.toISOString() ?? null,
-    jumlahDataReal: record._count.dataDesa,
-    completenessScore: Math.min(100, Math.round((record._count.dataDesa / 12) * 100)),
-    paguDanaDesa: record.dataDesa?.[0]?.valueText ? parseInt(record.dataDesa[0].valueText, 10) || 0 : 0,
+    jumlahDataReal: fieldKeys.size,
+    completenessScore,
+    paguDanaDesa,
   };
 }
 
@@ -804,11 +853,12 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
           updatedAt: true,
         },
       },
-      // Fetch danaDesa pagu from DataDesa — one row per desa, just the value.
+      // All attributed published DataDesa rows (fieldKey + value). Used to compute
+      // an honest, dimension-based completeness score and to read the danaDesa pagu.
+      // Payload is small (short field keys); fits the module-level cache.
       dataDesa: {
-        where: { fieldKey: "danaDesa", isActive: true, status: "PUBLISHED", sourceId: { not: null } },
-        select: { valueText: true },
-        take: 1,
+        where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } },
+        select: { fieldKey: true, valueText: true },
       },
       // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
       // serialized payload exceeds the module-level cache. Only _count is needed
@@ -817,7 +867,8 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
         select: {
           dataSources: true,
           dokumenPublik: true,
-          // Filtered count of real published DataDesa fields (for completeness score).
+          apbdesItems: true,
+          // Raw attributed row count (kept for identityStatus check).
           dataDesa: { where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } } },
         },
       },
