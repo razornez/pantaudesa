@@ -19,7 +19,7 @@ export default function NotFound() {
       <div className="max-w-sm space-y-2 mb-8">
         <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">404 — Tidak Ditemukan</p>
         <h1 className="text-3xl font-black text-slate-900 leading-tight">
-          Desa ini tidak ada di peta.
+          Halaman tidak ditemukan.
         </h1>
         <p className="text-slate-500 text-sm leading-relaxed">
           Mungkin alamatnya salah atau halaman sudah dipindahkan. Tapi masih banyak desa lain yang bisa kamu pantau.
