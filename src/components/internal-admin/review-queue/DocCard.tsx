@@ -104,6 +104,11 @@ export function DocCard({
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
           {formatCategory(doc.category)}
         </span>
+        {doc.sourceTypeCode === "PUBLIC_CONTRIBUTION" ? (
+          <span className="pill-warn rounded-full px-2 py-0.5 text-[10px] font-semibold" title="Diunggah oleh pengunjung publik — periksa keaslian dengan cermat sebelum publikasi">
+            Kontribusi publik
+          </span>
+        ) : null}
         {formatReviewStatusLabel(doc.aiMappingStatus) ? (
           <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
             {formatReviewStatusLabel(doc.aiMappingStatus)}

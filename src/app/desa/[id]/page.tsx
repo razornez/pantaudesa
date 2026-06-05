@@ -11,6 +11,12 @@ import {
   toPublishedRiwayatArray,
 } from "@/lib/data/desa-template-public-view";
 import { getPublishedTemplateData } from "@/lib/data/village-template-read";
+import PublicContributeForm from "@/components/desa/PublicContributeForm";
+import {
+  getAcceptedFileInputValue,
+  getAllowedFormatLabels,
+  getMaxFileSizeBytes,
+} from "@/lib/storage/upload-validation";
 import { getVoicePreviewForDesaFromDb } from "@/lib/data/voice-read";
 import { perfStart, publicPerfLog } from "@/lib/perf";
 import {
@@ -442,6 +448,32 @@ export default async function DesaDetailPage({ params }: Props) {
       chapterIndex += 1;
     }
   }
+
+  // Public "help complete the data" contribution form — appended as the final
+  // chapter. Lists which dimensions are still missing so visitors know what helps.
+  const missingDimensions: string[] = [];
+  if (!geoIsReal) missingDimensions.push("Koordinat/peta");
+  if (publishedPenduduk === null && !(desaView.penduduk > 0)) missingDimensions.push("Jumlah penduduk");
+  if (readPublishedNumber(publishedValues, "luasWilayah") === null) missingDimensions.push("Luas wilayah");
+  if (readPublishedString(publishedValues, "kepalaDesa") === null) missingDimensions.push("Kepala desa");
+  if ((desaView.dokumen?.length ?? 0) === 0) missingDimensions.push("Dokumen publik");
+  if ((desaView.apbdes?.length ?? 0) === 0) missingDimensions.push("Rincian APBDes");
+
+  chapters.push({ id: "ch-contribute", label: "★ Bantu Lengkapi" });
+  chapterNodes.push(
+    <section key="ch-contribute" id="ch-contribute" className="chapter">
+      <div className="mx-auto max-w-[1080px] px-4 sm:px-6">
+        <PublicContributeForm
+          desaId={desaView.prismaId ?? desaView.id}
+          desaNama={desaView.nama}
+          missing={missingDimensions}
+          accept={getAcceptedFileInputValue()}
+          formatLabels={getAllowedFormatLabels()}
+          maxFileMb={Math.round(getMaxFileSizeBytes() / (1024 * 1024))}
+        />
+      </div>
+    </section>,
+  );
 
   return (
     <DetailV2Shell chapters={chapters}>
