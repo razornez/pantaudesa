@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, FileText, MapPin } from "lucide-react";
 import { Desa } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { formatRupiah } from "@/lib/utils";
 import { DataStatusBadge, type DataStatusKind } from "@/components/ui/DataStatusBadge";
 
 interface Props {
@@ -30,9 +30,18 @@ export default function DesaCard({ desa }: Props) {
               {desa.nama}
             </h3>
           </div>
-          {desa.totalAnggaran > 0 ? (
-            <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(desa.status)}`}>
-              {getStatusLabel(desa.status)}
+          {/* Completeness-based badge */}
+          {(desa.completenessScore ?? 0) >= 75 ? (
+            <span className="flex-shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              Data Lengkap
+            </span>
+          ) : (desa.completenessScore ?? 0) >= 34 ? (
+            <span className="flex-shrink-0 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+              Data Sedang
+            </span>
+          ) : (desa.paguDanaDesa ?? 0) > 0 ? (
+            <span className="flex-shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+              Data Minim
             </span>
           ) : (
             <span className="flex-shrink-0 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-400">
