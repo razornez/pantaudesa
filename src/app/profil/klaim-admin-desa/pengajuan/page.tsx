@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PengajuanAdminDesaPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/masuk?next=/profil/klaim-admin-desa/pengajuan");
+    redirect("/login?next=/profil/klaim-admin-desa/pengajuan");
   }
 
   let activeClaim = null;

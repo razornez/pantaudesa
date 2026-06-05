@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { House, ShieldCheck } from "lucide-react";
 import InternalAdminLogoutButton from "@/components/internal-admin/InternalAdminLogoutButton";
+import { auth } from "@/lib/auth";
 import { getInternalAdminSession } from "@/lib/auth/internal-admin";
 import {
   INTERNAL_ADMIN_AREAS_SUMMARY,
@@ -18,7 +19,16 @@ export default async function InternalAdminLayout({
   const session = await getInternalAdminSession();
   perfLog("internal-admin.layout", "getInternalAdminSession()", t);
   if (!session) {
-    redirect("/masuk?error=unauthorized");
+    // Distinguish "not logged in" from "logged in but not internal admin".
+    // A logged-in non-admin keeps their session and is sent somewhere usable —
+    // never to a non-existent /masuk route (which rendered the 404 page) and
+    // never logged out. Only truly unauthenticated users go to /login.
+    const rawSession = await auth();
+    redirect(
+      rawSession?.user?.id
+        ? "/?error=akses-ditolak"
+        : "/login?next=/internal-admin",
+    );
   }
 
   return (
