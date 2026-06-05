@@ -658,8 +658,9 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   });
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
-  const percent = Math.round(toNumber(latestSummary?.persentaseRealisasi));
-  const status = normalizeStatus(latestSummary?.statusSerapan, percent);
+  // APBDes data does not exist yet (anggaranSummaries always empty). Rather than
+  // computing percent/status from stale 0-values, derive status from completeness.
+  const status = completenessScore >= 75 ? "baik" : completenessScore >= 34 ? "sedang" : "rendah";
   const sources = record.dataSources ?? [];
   const docs = record.dokumenPublik ?? [];
   const latestSource = sources[0];
@@ -692,12 +693,11 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     provinsi: record.provinsi,
     totalAnggaran,
     terealisasi,
-    persentaseSerapan: percent,
+    persentaseSerapan: 0, // APBDes data not yet ingested — always 0
     status,
     tahun,
     penduduk: record.jumlahPenduduk ?? 0,
-    kategori: record.kategori ?? "Demo",
-    skorTransparansi: makeSkorTransparansi(percent, documentCount, record._count.dataSources),
+    kategori: record.kategori ?? "",
     pendapatan: makePendapatan(totalAnggaran),
     sumber: sources.map((source) => ({
       nama: source.sourceName,
