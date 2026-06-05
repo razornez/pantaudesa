@@ -488,8 +488,8 @@ export default async function DesaDetailPage({ params }: Props) {
           <li>
             <Link href="/desa" className="hover:text-indigo-600 transition-colors">Desa</Link>
           </li>
-          <li aria-hidden className="select-none">›</li>
-          <li>
+          <li aria-hidden className="hidden sm:list-item select-none">›</li>
+          <li className="hidden sm:list-item">
             <Link href={`/desa?kabupaten=${encodeURIComponent(desaView.kabupaten)}`} className="hover:text-indigo-600 transition-colors">
               {desaView.kabupaten}
             </Link>

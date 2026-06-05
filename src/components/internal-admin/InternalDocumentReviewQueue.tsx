@@ -24,6 +24,12 @@ export default function InternalDocumentReviewQueue({
   const router = useRouter();
   const { toasts, toast, removeToast } = useToast();
   const [failTarget, setFailTarget] = useState<DocRow | null>(null);
+  const [showPublicOnly, setShowPublicOnly] = useState(false);
+
+  const publicCount = useMemo(
+    () => documents.filter((doc) => doc.sourceTypeCode === "PUBLIC_CONTRIBUTION").length,
+    [documents],
+  );
 
   const summary = useMemo(
     () =>
@@ -178,7 +184,7 @@ export default function InternalDocumentReviewQueue({
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {STATUS_TABS.map((tab) => (
           <Link
             key={tab.value}
@@ -191,26 +197,48 @@ export default function InternalDocumentReviewQueue({
             {tab.label}
           </Link>
         ))}
+        {publicCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowPublicOnly((v) => !v)}
+            className={`btn-lux !min-h-[36px] text-[11px] sm:!min-h-[40px] sm:text-xs ${
+              showPublicOnly ? "btn-lux-primary" : "btn-lux-ghost"
+            }`}
+          >
+            Kontribusi publik
+            <span className="ml-1.5 rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+              {publicCount}
+            </span>
+          </button>
+        )}
       </div>
 
-      {documents.length === 0 ? (
-        <div className="lux-card space-y-2 p-8 text-center">
-          <FileText size={24} className="mx-auto text-slate-300" aria-hidden />
-          <p className="text-sm text-slate-500">Tidak ada dokumen pada filter ini.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {documents.map((doc) => (
-            <DocCard
-              key={doc.id}
-              doc={doc}
-              onMarkFailed={setFailTarget}
-              onNotify={toast}
-              isHighlighted={focusDocumentId === doc.id}
-            />
-          ))}
-        </div>
-      )}
+      {(() => {
+        const visible = showPublicOnly
+          ? documents.filter((doc) => doc.sourceTypeCode === "PUBLIC_CONTRIBUTION")
+          : documents;
+        if (visible.length === 0) {
+          return (
+            <div className="lux-card space-y-2 p-8 text-center">
+              <FileText size={24} className="mx-auto text-slate-300" aria-hidden />
+              <p className="text-sm text-slate-500">Tidak ada dokumen pada filter ini.</p>
+            </div>
+          );
+        }
+        return (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((doc) => (
+              <DocCard
+                key={doc.id}
+                doc={doc}
+                onMarkFailed={setFailTarget}
+                onNotify={toast}
+                isHighlighted={focusDocumentId === doc.id}
+              />
+            ))}
+          </div>
+        );
+      })()}
 
       {failTarget ? (
         <MarkFailedModal

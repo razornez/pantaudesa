@@ -22,7 +22,7 @@ export default function NotFound() {
           Halaman tidak ditemukan.
         </h1>
         <p className="text-slate-500 text-sm leading-relaxed">
-          Mungkin alamatnya salah atau halaman sudah dipindahkan. Tapi masih banyak desa lain yang bisa kamu pantau.
+          Mungkin alamatnya salah atau halaman sudah dipindahkan. Kamu masih bisa menelusuri desa dari halaman utama.
         </p>
       </div>
 

@@ -192,20 +192,13 @@ export const BUDGET_ITEMS = {
 
 // ─── Card desa (list) ─────────────────────────────────────────────────────────
 
-export const CARD = {
-  anggaran:    "Uang yang Diterima",
-  realisasi:   "Sudah Dipakai",
-  penyerapan:  "Anggaran terpakai",
-} as const;
-
 // ─── Tabel desa ───────────────────────────────────────────────────────────────
 
 export const TABLE_HEADERS = {
-  nama:      "Nama Desa",
-  wilayah:   "Wilayah",
-  anggaran:  "Uang Diterima",
-  realisasi: "Sudah Dipakai",
-  serapan:   "% Terpakai",
+  nama:        "Nama Desa",
+  wilayah:     "Wilayah",
+  anggaran:    "Dana Desa",
+  kelengkapan: "Kelengkapan",
 } as const;
 
 // ─── Donut chart ──────────────────────────────────────────────────────────────
