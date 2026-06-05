@@ -307,8 +307,10 @@ function LoginInner() {
                 {visibleErr && (
                   <div className="text-center">
                     <p className="text-sm text-rose-600">⚠ {err}</p>
-                    {attemptsLeft !== null && attemptsLeft <= 2 && (
-                      <p className="text-xs text-rose-400 mt-1">Sisa {attemptsLeft} percobaan sebelum akun dibekukan.</p>
+                    {attemptsLeft !== null && (
+                      <p className={`text-xs mt-1 ${attemptsLeft <= 2 ? "text-rose-500 font-semibold" : "text-rose-400"}`}>
+                        Sisa {attemptsLeft} percobaan sebelum akun dibekukan.
+                      </p>
                     )}
                   </div>
                 )}
