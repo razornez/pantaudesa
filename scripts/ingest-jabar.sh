@@ -33,7 +33,7 @@ run_adapter() {
     printf "  %-30s " "$kab"
     $TSX scripts/ingest-run.ts --kabupaten "$kab" --only "$adapter" \
       ${skip_field:+--skip-have "$skip_field"} 2>&1 \
-      | grep -E "\[$adapter\]" | head -1 || echo "(no output)"
+      | grep -E "\[$adapter" | head -1 || echo "(no output)"
   done
 }
 
@@ -45,6 +45,12 @@ fi
 # Nominatim rate-limits to 1 req/s — allow a few hours after OSM pass before running.
 if [[ "$PASS" == "nominatim" || "$PASS" == "all" ]]; then
   run_adapter "nominatim" "geoLat"
+fi
+
+# LocationIQ: keyed OSM geocoder that works from cloud and isn't blocked like
+# Nominatim. Needs LOCATIONIQ_KEY in env. Run as: bash scripts/ingest-jabar.sh locationiq
+if [[ "$PASS" == "locationiq" ]]; then
+  run_adapter "locationiq" "geoLat"
 fi
 
 if [[ "$PASS" == "opensid" || "$PASS" == "all" ]]; then
