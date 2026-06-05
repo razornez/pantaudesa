@@ -611,7 +611,7 @@ async function fetchDesaListRecordsViaSupabase(): Promise<DesaListRecord[]> {
 function computeCompletenessScore(input: {
   fieldKeys: Set<string>;
   hasPenduduk: boolean;
-  sourceCount: number;
+  hasSource: boolean;
   documentCount: number;
   hasApbdesDetail: boolean;
   kategori: string | null;
@@ -624,7 +624,7 @@ function computeCompletenessScore(input: {
     f.has("luasWilayah"),                                         // Luas wilayah
     f.has("kepalaDesa"),                                          // Kepala desa
     ["jumlahKK", "jumlahDusun", "jumlahRt", "jumlahRw", "mataPencaharian"].some((k) => f.has(k)), // Demografi rinci
-    input.sourceCount > 0,                                        // Sumber data tercatat
+    input.hasSource,                                              // Sumber data tercatat (provenance)
     input.documentCount > 0,                                      // Dokumen publik
     input.hasApbdesDetail,                                        // Rincian kinerja anggaran (APBDes)
     Boolean(input.kategori && input.kategori.trim() && input.kategori.trim().toLowerCase() !== "demo"), // Kategori terisi (bukan demo)
@@ -643,10 +643,15 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
   );
   const paguRow = dataDesaRows.find((r) => r.fieldKey === "danaDesa");
   const paguDanaDesa = paguRow?.valueText ? parseInt(paguRow.valueText, 10) || 0 : 0;
+  // Every attributed DataDesa row already carries provenance (sourceId not null —
+  // it is our query filter), so a desa with real fields IS sourced even when the
+  // legacy DataSource table is empty. The detail page surfaces the same provenance.
+  const hasProvenance =
+    record._count.dataSources > 0 || fieldKeys.size > 0 || Boolean(record.websiteUrl);
   const completenessScore = computeCompletenessScore({
     fieldKeys,
     hasPenduduk: fieldKeys.has("jumlahPenduduk") || (record.jumlahPenduduk ?? 0) > 0,
-    sourceCount: record._count.dataSources,
+    hasSource: hasProvenance,
     documentCount: record._count.dokumenPublik,
     hasApbdesDetail: (record._count.apbdesItems ?? 0) > 0 || (record.anggaranSummaries?.length ?? 0) > 0,
     kategori: record.kategori,
