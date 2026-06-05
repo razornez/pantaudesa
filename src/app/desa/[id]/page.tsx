@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import {
@@ -476,8 +477,32 @@ export default async function DesaDetailPage({ params }: Props) {
   );
 
   return (
-    <DetailV2Shell chapters={chapters}>
-      {chapterNodes}
-    </DetailV2Shell>
+    <>
+      {/* Breadcrumb — positioned above the chapter rail so users always know their context */}
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-[1080px] px-4 sm:px-6 pt-4 pb-1">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
+          <li>
+            <Link href="/" className="hover:text-indigo-600 transition-colors">Beranda</Link>
+          </li>
+          <li aria-hidden className="select-none">›</li>
+          <li>
+            <Link href="/desa" className="hover:text-indigo-600 transition-colors">Desa</Link>
+          </li>
+          <li aria-hidden className="select-none">›</li>
+          <li>
+            <Link href={`/desa?kabupaten=${encodeURIComponent(desaView.kabupaten)}`} className="hover:text-indigo-600 transition-colors">
+              {desaView.kabupaten}
+            </Link>
+          </li>
+          <li aria-hidden className="select-none">›</li>
+          <li className="font-medium text-slate-700 truncate max-w-[180px]" aria-current="page">
+            {desaView.nama}
+          </li>
+        </ol>
+      </nav>
+      <DetailV2Shell chapters={chapters}>
+        {chapterNodes}
+      </DetailV2Shell>
+    </>
   );
 }

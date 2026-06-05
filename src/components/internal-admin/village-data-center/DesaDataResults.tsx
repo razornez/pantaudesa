@@ -339,6 +339,15 @@ export function DesaDataResults({
                           >
                             <ExternalLink size={11} aria-hidden /> Buka di Intake
                           </a>
+                          <a
+                            href={`/desa/${item.slug || item.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-medium bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                            style={{ boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.1)" }}
+                          >
+                            <ExternalLink size={11} aria-hidden /> Lihat profil publik
+                          </a>
                           <TemplateSwitchPopover
                             key={`${item.id}:${item.detailTemplateAssignment?.template.id ?? "default"}`}
                             desaId={item.id}

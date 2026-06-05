@@ -106,7 +106,9 @@ export default function DesaListClient({
     result.sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortField === "nama") return multiplier * a.nama.localeCompare(b.nama);
-      return multiplier * (a[sortField] - b[sortField]);
+      if (sortField === "completenessScore") return multiplier * ((a.completenessScore ?? 0) - (b.completenessScore ?? 0));
+      if (sortField === "paguDanaDesa") return multiplier * ((a.paguDanaDesa ?? 0) - (b.paguDanaDesa ?? 0));
+      return 0;
     });
 
     return result;
