@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpDown } from "lucide-react";
 import { Desa, SortField, SortOrder } from "@/lib/types";
-import { formatRupiahMock, getStatusColor, getStatusLabel, getSerapanColor } from "@/lib/utils";
+import { formatRupiah, getStatusColor, getStatusLabel } from "@/lib/utils";
 import { TABLE_HEADERS } from "@/lib/copy";
 
 interface Props {
@@ -42,7 +42,7 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
               </th>
               <th className="hidden px-4 py-3 text-right lg:table-cell">{TABLE_HEADERS.realisasi}</th>
               <th className="px-4 py-3 text-right">
-                <SortHeader label={TABLE_HEADERS.serapan} field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
+                <SortHeader label="Kelengkapan" field="persentaseSerapan" active={sortField === "persentaseSerapan"} order={sortOrder} onSort={onSort} />
               </th>
               <th className="px-4 py-3" />
             </tr>
@@ -63,18 +63,25 @@ export default function DesaTable({ desa, sortField, sortOrder, onSort }: Props)
                   <p className="text-xs">{d.kecamatan}</p>
                   <p className="text-xs text-slate-400">{d.kabupaten}, {d.provinsi}</p>
                 </td>
-                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiahMock(d.totalAnggaran)}</td>
-                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">{formatRupiahMock(d.terealisasi)}</td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">
+                  {(d.paguDanaDesa ?? 0) > 0 ? formatRupiah(d.paguDanaDesa ?? 0) : "—"}
+                </td>
+                <td className="hidden px-4 py-3 text-right text-slate-700 lg:table-cell">—</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-end gap-1.5">
-                    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(d.status)}`}>
-                      {getStatusLabel(d.status)}
+                    <span className="text-xs font-semibold text-slate-700">
+                      {d.completenessScore ?? 0}%
                     </span>
                     <div className="flex items-center gap-1.5">
                       <div className="h-2 w-16 overflow-hidden rounded-full bg-slate-100">
-                        <div className={`h-full rounded-full ${getSerapanColor(d.persentaseSerapan)}`} style={{ width: `${d.persentaseSerapan}%` }} />
+                        <div
+                          className={`h-full rounded-full ${
+                            (d.completenessScore ?? 0) >= 75 ? "bg-emerald-500" :
+                            (d.completenessScore ?? 0) >= 40 ? "bg-sky-500" : "bg-amber-400"
+                          }`}
+                          style={{ width: `${d.completenessScore ?? 0}%` }}
+                        />
                       </div>
-                      <span className="text-xs font-medium text-slate-600">{d.persentaseSerapan}%</span>
                     </div>
                   </div>
                 </td>
