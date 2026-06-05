@@ -101,8 +101,26 @@ export default async function DesaDetailPage({ params }: Props) {
   // APBDes totalAnggaran but the closest real budget figure we have).
   const publishedDanaDesa = readPublishedNumber(publishedValues, "danaDesa");
 
+  // Real sources from DataDesa provenance (every published field carries a cited
+  // source: DJPK, OSM, OpenSID, etc.). The legacy DataSource table is empty, which
+  // made the detail page show "0 sumber" while displaying sourced data. Surface the
+  // real provenance so the Sumber section reflects what's actually cited.
+  const realSumber = (() => {
+    const seen = new Set<string>();
+    const out: { nama: string; status: "imported"; perluReview: boolean }[] = [];
+    for (const s of templateData.sourceSummaries) {
+      const label = s.sourceLabel?.trim();
+      if (!label || seen.has(label)) continue;
+      seen.add(label);
+      out.push({ nama: label, status: "imported", perluReview: false });
+    }
+    return out;
+  })();
+
   const desaView = {
     ...desa,
+    sumber: realSumber.length > 0 ? realSumber : desa.sumber,
+    jumlahSumber: realSumber.length > 0 ? realSumber.length : desa.jumlahSumber,
     kecamatan: readPublishedString(publishedValues, "kecamatan") ?? desa.kecamatan,
     kabupaten: readPublishedString(publishedValues, "kabupaten") ?? desa.kabupaten,
     provinsi: readPublishedString(publishedValues, "provinsi") ?? desa.provinsi,
