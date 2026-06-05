@@ -30,11 +30,6 @@ export function getStatusColor(status: string): string {
   }
 }
 
-export function getSerapanColor(persen: number): string {
-  if (persen >= 85) return "bg-emerald-500";
-  if (persen >= 60) return "bg-amber-500";
-  return "bg-rose-500";
-}
 
 // ─── Verdict tone → Tailwind classes ─────────────────────────────────────────
 

@@ -8,9 +8,9 @@
 // ─── Status desa ─────────────────────────────────────────────────────────────
 
 export const STATUS_LABELS: Record<string, string> = {
-  baik:   "Kinerjanya Baik",
-  sedang: "Perlu Ditingkatkan",
-  rendah: "Perlu Ditinjau",
+  baik:   "Data Lengkap",
+  sedang: "Data Sedang",
+  rendah: "Data Minim",
 };
 
 export const STATUS_FILTER_LABELS: Record<string, string> = {

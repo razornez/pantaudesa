@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpDown } from "lucide-react";
 import { Desa, SortField, SortOrder } from "@/lib/types";
-import { formatRupiah, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { formatRupiah } from "@/lib/utils";
 import { TABLE_HEADERS } from "@/lib/copy";
 
 interface Props {
