@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import SuaraWargaSection from "@/components/desa/SuaraWargaSection";
