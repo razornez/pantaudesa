@@ -869,8 +869,11 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
       // for list cards; detail pages fetch full data separately.
       _count: {
         select: {
-          dataSources: true,
-          dokumenPublik: true,
+          // Exclude demo-seeded sources/documents from completeness — they are
+          // placeholder fixtures (e.g. Batukarut showcase), not real published
+          // data, and must not inflate the "data lengkap" score.
+          dataSources: { where: { dataStatus: { not: "demo" } } },
+          dokumenPublik: { where: { dataStatus: { not: "demo" } } },
           apbdesItems: true,
           // Raw attributed row count (kept for identityStatus check).
           dataDesa: { where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } } },
