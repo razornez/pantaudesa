@@ -1,115 +1,119 @@
 # PantauDesa
 
-PantauDesa adalah platform transparansi anggaran desa yang membantu warga mencari, memahami, dan mengawasi penggunaan uang desa
+**Platform transparansi anggaran desa** — bantu warga mencari, memahami, dan mengawasi penggunaan dana desa di seluruh Indonesia.
 
-> Cari desamu. Lihat anggarannya. Awasi penggunaannya.
+> Cari desamu. Lihat Dana Desa-nya. Awasi penggunaannya.
 
-## Product vision
+PantauDesa menerjemahkan data resmi desa (Dana Desa, lokasi, demografi, dokumen publik) menjadi informasi yang mudah dibaca warga — bukan bahasa birokrasi.
 
-Setiap tahun desa menerima anggaran publik. Namun banyak warga tidak tahu berapa uang yang diterima, untuk apa digunakan, dokumen apa yang bisa diminta, dan siapa yang harus ditanya.
+---
 
-PantauDesa dibuat untuk menerjemahkan data APBDes, realisasi anggaran, dokumen publik, dan sinyal risiko menjadi informasi yang mudah dipahami warga.
+## ✨ Fitur
 
-## Current scope
+- **Beranda** — ringkasan nasional: total Dana Desa, sebaran kelengkapan data, desa terlengkap.
+- **Daftar & pencarian desa** — 3.500+ desa, filter per provinsi/kabupaten/kecamatan + tingkat kelengkapan data.
+- **Detail desa** — profil cinematic: Dana Desa, peta lokasi, demografi, sumber data, dokumen.
+- **Bandingkan desa** — sandingkan dua desa (kelengkapan data, Dana Desa, penduduk).
+- **Suara Warga** — warga berbagi kondisi desanya; admin desa bisa merespons.
+- **Kontribusi publik** — pengunjung bisa kirim dokumen resmi untuk melengkapi data (masuk antrian review).
+- **Portal Admin Desa** — perangkat desa klaim & kelola data desanya (alur verifikasi berjenjang).
+- **Back-office internal** — antrian review klaim, dokumen, dan data desa.
 
-Fitur yang sedang/akan dikembangkan:
+Skor **kelengkapan data** dihitung jujur dari dimensi nyata yang benar-benar terisi (bukan angka serapan fiktif). Setiap nilai yang tampil punya **sumber** (provenance) yang tercatat.
 
-- Homepage ringkasan nasional.
-- Search dan daftar desa.
-- Detail desa.
-- Status serapan anggaran: baik, sedang, rendah.
-- Alert dini desa yang perlu diawasi.
-- Chart tren realisasi.
-- Distribusi status desa.
-- Leaderboard desa/provinsi.
-- Rincian APBDes per bidang.
-- Checklist dokumen publik.
-- Informasi perangkat desa yang bisa ditanya.
-- CTA pengaduan dan edukasi hak warga.
+---
 
-## Tech stack
+## 🧱 Tech stack
 
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Prisma
-- NextAuth
-- Recharts
-- Sentry
-- Resend
-- Vitest
+- **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript**
+- **Tailwind CSS v4**
+- **Prisma** + **PostgreSQL** (Supabase)
+- **NextAuth (Auth.js v5)** — login PIN/OTP berbasis email
+- **Recharts** · **Sentry** · **Resend** (email) · **Vitest** (test)
+- Geocoding via **LocationIQ** (OpenStreetMap)
 
-## Getting started
+---
 
-Install dependencies:
+## 🚀 Menjalankan secara lokal
+
+### Prasyarat
+- Node.js 20+
+- PostgreSQL (atau project Supabase gratis)
+
+### Langkah
 
 ```bash
+# 1. Clone & install
+git clone https://github.com/<org>/pantaudesa.git
+cd pantaudesa
 npm install
+
+# 2. Siapkan environment
+cp .env.example .env.local
+# isi minimal: DATABASE_URL, DIRECT_URL, AUTH_SECRET
+#   (generate AUTH_SECRET: `npx auth secret` atau `openssl rand -base64 32`)
+
+# 3. Siapkan database
+npm run db:push          # buat skema
+npm run db:seed          # (opsional) data contoh
+
+# 4. Jalankan
+npm run dev              # http://localhost:3000
 ```
 
-Run development server:
+### Variabel environment
+
+Lihat [`.env.example`](.env.example) untuk daftar lengkap + keterangan. Yang **wajib** agar app jalan:
+
+| Variabel | Fungsi |
+|---|---|
+| `DATABASE_URL` | Koneksi PostgreSQL (runtime) |
+| `DIRECT_URL` | Koneksi langsung (migrasi/admin) |
+| `AUTH_SECRET` | Secret NextAuth |
+
+Yang **opsional** (mengaktifkan fitur tertentu): `RESEND_API_KEY` (email OTP), `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (upload dokumen), `LOCATIONIQ_KEY` (geocoding), `SENTRY_DSN` (error tracking).
+
+---
+
+## 🛠️ Skrip
 
 ```bash
-npm run dev
+npm run dev          # dev server (port 3000)
+npm run build        # production build
+npm run start        # jalankan hasil build
+npm run lint         # eslint
+npm run test         # vitest
+npm run db:push      # sync skema Prisma ke DB
+npm run db:studio    # Prisma Studio
+npm run db:seed      # seed data contoh
 ```
 
-Build production:
+---
 
-```bash
-npm run build
-```
+## 🤝 Kontribusi
 
-Run lint:
+Kontribusi sangat diterima! Baca **[CONTRIBUTING.md](CONTRIBUTING.md)** untuk panduan setup, alur PR, dan standar kode. Lihat juga standar desain/engineering di [`docs/bmad/standards/`](docs/bmad/standards/).
 
-```bash
-npm run lint
-```
+Menemukan celah keamanan? Jangan buka issue publik — baca **[SECURITY.md](SECURITY.md)**.
 
-Run tests:
+---
 
-```bash
-npm run test
-```
+## 📐 Prinsip produk
 
-## Documentation
+1. **Bahasa warga** — data dijelaskan dengan bahasa sehari-hari, bukan jargon.
+2. **Jujur sebelum viral** — tegas, tetapi tidak menuduh tanpa dasar/sumber.
+3. **Transparansi yang bisa ditindaklanjuti** — setiap data bantu warga tahu langkah berikutnya.
+4. **Mobile-first** — mayoritas warga membuka dari HP/WhatsApp.
+5. **Jelaskan angkanya** — jangan cuma tampilkan angka; jelaskan artinya + sumbernya.
 
-Business and product documentation:
+---
 
-- [`docs/business/01-product-strategy.md`](docs/business/01-product-strategy.md)
-- [`docs/business/02-business-model.md`](docs/business/02-business-model.md)
-- [`docs/product/03-design-brief.md`](docs/product/03-design-brief.md)
-- [`docs/product/04-roadmap-and-backlog.md`](docs/product/04-roadmap-and-backlog.md)
+## 📊 Catatan data
 
-## Product principles
+Data berasal dari sumber publik resmi (DJPK Kemenkeu untuk Dana Desa, OpenStreetMap untuk koordinat, situs resmi desa berbasis OpenSID untuk demografi). Setiap nilai menampilkan sumbernya. Cakupan data masih terus dilengkapi — sebagian field belum tersedia untuk semua desa.
 
-1. Citizen-first language  
-   Data harus dijelaskan dengan bahasa warga, bukan bahasa birokrasi.
+---
 
-2. Trust before virality  
-   Produk harus tegas, tetapi tidak menuduh tanpa dasar.
+## 📄 Lisensi
 
-3. Actionable transparency  
-   Setiap data harus membantu warga tahu langkah berikutnya.
-
-4. Mobile-first  
-   Pengguna kemungkinan besar membuka dari HP, WhatsApp, dan media sosial.
-
-5. Explain the number  
-   Jangan hanya menampilkan angka; jelaskan arti angka itu bagi warga.
-
-## Data note
-
-Saat ini sebagian data dapat bersifat ilustrasi/demo. Sebelum publikasi resmi, data source, tanggal pembaruan, dan metodologi perlu ditampilkan dengan jelas di UI.
-
-## Business direction
-
-PantauDesa juga dapat menjadi portfolio produk untuk layanan:
-
-- Custom transparency dashboard.
-- Civic-tech dashboard.
-- Data monitoring platform.
-- Public-sector website.
-- AI/data automation untuk organisasi dan pemerintah daerah.
-
-Lihat detailnya di [`docs/business/02-business-model.md`](docs/business/02-business-model.md).
+[MIT](LICENSE) © 2026 PantauDesa
