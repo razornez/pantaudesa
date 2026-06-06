@@ -734,7 +734,11 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
   const percent = Math.round(toNumber(latestSummary?.persentaseRealisasi));
-  const status = normalizeStatus(latestSummary?.statusSerapan, percent);
+  // APBDes not yet ingested → percent always 0 → normalizeStatus would always return
+  // "rendah" which is misleading. Fall back to neutral "sedang" when no APBDes summary.
+  const status: Desa["status"] = latestSummary
+    ? normalizeStatus(latestSummary.statusSerapan, percent)
+    : "sedang";
   const apbdes = record.apbdesItems
     .filter((item) => item.tahun === tahun)
     .sort((a, b) => (a.kodeBidang ?? "").localeCompare(b.kodeBidang ?? ""))
@@ -797,7 +801,7 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     status,
     tahun,
     penduduk: record.jumlahPenduduk ?? 0,
-    kategori: record.kategori ?? "Demo",
+    kategori: record.kategori ?? "",
     apbdes,
     dokumen,
     perangkat,

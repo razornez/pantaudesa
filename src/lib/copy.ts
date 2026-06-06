@@ -5,13 +5,6 @@
  * Setiap perubahan bahasa cukup dilakukan di sini.
  */
 
-// ─── Status desa ─────────────────────────────────────────────────────────────
-
-export const STATUS_LABELS: Record<string, string> = {
-  baik:   "Data Lengkap",
-  sedang: "Data Sedang",
-  rendah: "Data Minim",
-};
 
 export const STATUS_FILTER_LABELS: Record<string, string> = {
   semua:        "Semua Desa",
@@ -110,30 +103,6 @@ export const STATS = {
   },
 } as const;
 
-// ─── Skor transparansi ────────────────────────────────────────────────────────
-
-export const DATA_DISCLAIMER = {
-  short: "Data yang ditampilkan bersifat ilustrasi. Integrasi data resmi sedang disiapkan.",
-  detailTitle: "Catatan tentang data desa ini",
-  detailBody:
-    "Sebagian data di halaman ini masih bersifat demo/ilustrasi untuk menguji pengalaman pengguna. Jangan gunakan data ini sebagai dasar tuduhan atau kesimpulan resmi sebelum ada sumber dan verifikasi yang jelas.",
-  statusLabel: "Data demo",
-} as const;
-
-export const DATA_STATUS_COPY = {
-  demo: {
-    label: "Data demo",
-    description: "Data ilustrasi untuk menguji pengalaman pengguna.",
-  },
-  imported: {
-    label: "Data impor",
-    description: "Data diambil dari sumber tertentu dan masih perlu dicek.",
-  },
-  verified: {
-    label: "Data terverifikasi",
-    description: "Data sudah dicek sebelum ditampilkan ke publik.",
-  },
-} as const;
 
 export const SKOR = {
   labels: {
@@ -181,16 +150,6 @@ export const PENDAPATAN = {
   bantuanKeuangan:  { label: "Bantuan Keuangan Lain",         hint: "Dari provinsi, kabupaten, atau pihak lain" },
 } as const;
 
-// ─── Item anggaran di detail desa ────────────────────────────────────────────
-
-export const BUDGET_ITEMS = {
-  totalAnggaran: { label: "Uang yang Diterima Desa" },
-  terealisasi:   { label: "Sudah Digunakan" },
-  belumTerserap: { label: "Belum Terpakai / Perlu Dicek" },
-  persentase:    { label: "Sudah Terpakai" },
-} as const;
-
-// ─── Card desa (list) ─────────────────────────────────────────────────────────
 
 // ─── Tabel desa ───────────────────────────────────────────────────────────────
 
@@ -268,9 +227,6 @@ export const RESPONSIBILITY_CARD = {
   disclaimer: "Panduan kewenangan bersifat umum. Detail perlu diverifikasi dengan sumber resmi.",
 } as const;
 
-export const KINERJA_CARD = {
-  subtitle: "Riwayat dan rincian penggunaan uang desa: grafik, daftar kegiatan, hasil pembangunan, dan perubahan 5 tahun",
-} as const;
 
 export const PHILOSOPHY = {
   homeTitle: "Kenapa desa harus dipantau?",
@@ -391,12 +347,6 @@ export const PRE_REPORT = {
 
 // ─── Pengaduan (Pak Waspada CTA — kept for homepage bottom CTA) ──────────────
 
-export const PENGADUAN = {
-  title:       "Ada yang Ingin Ditanyakan?",
-  subtitle:    "Sebelum melapor, ada baiknya bertanya dulu ke pihak desa. Jika sudah ada bukti dan masalahnya memang kewenangan desa, baru eskalasi ke jalur resmi.",
-  lapor:       "Cek Langkah Sebelum Melapor",
-  inspektorat: (kab: string) => `Panduan Inspektorat ${kab}`,
-} as const;
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────
 
