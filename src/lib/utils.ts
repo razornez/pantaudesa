@@ -1,5 +1,4 @@
 import { VerdictTone } from "./verdicts";
-import { STATUS_LABELS } from "./copy";
 
 // ─── Format angka ─────────────────────────────────────────────────────────────
 
@@ -15,11 +14,6 @@ export function formatRupiahFull(value: number): string {
 
 
 // ─── Status desa ──────────────────────────────────────────────────────────────
-
-/** Label ramah warga berdasarkan status kinerja. Sumber kebenaran ada di copy.ts. */
-export function getStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
-}
 
 export function getStatusColor(status: string): string {
   switch (status) {

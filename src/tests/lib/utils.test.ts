@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatRupiah, formatRupiahFull,
-  getStatusLabel, getStatusColor,
+  getStatusColor,
   getVerdictColors,
 } from "@/lib/utils";
 
@@ -76,13 +76,3 @@ describe("getVerdictColors", () => {
   });
 });
 
-describe("getStatusLabel", () => {
-  it("returns label for known statuses", () => {
-    expect(getStatusLabel("baik")).toBeTruthy();
-    expect(getStatusLabel("rendah")).toBeTruthy();
-  });
-
-  it("returns the raw value for unknown status", () => {
-    expect(getStatusLabel("xyz")).toBe("xyz");
-  });
-});

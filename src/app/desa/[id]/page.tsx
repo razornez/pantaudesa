@@ -48,7 +48,10 @@ import ChKomparasi from "@/components/desa/v2/showcase/ChKomparasi";
 
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+// "force-dynamic" would bypass unstable_cache in App Router — then every
+// request hits the DB cold. Use revalidate instead so Next.js ISR cache
+// works and detail pages are served from cache for up to 5 minutes.
+export const revalidate = 300;
 
 interface Props {
   params: Promise<{ id: string }>;
