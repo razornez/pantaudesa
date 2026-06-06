@@ -59,7 +59,8 @@ type KecRow = { id_kecamatan: string; nama_kecamatan: string };
 type DesaRow = { id_desa: string; nama_desa: string; tahun_data: string; pagu: string; kab_nama?: string; prov_nama?: string };
 
 async function processKabupaten(
-  db: Awaited<ReturnType<typeof import("@/lib/db")["db"]>>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
   kabId: string,
   kabNama: string,
   provNama: string,
