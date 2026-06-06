@@ -260,15 +260,6 @@ function latestDate(dates: Array<Date | null | undefined>) {
   return new Date(Math.max(...valid.map((date) => date.getTime())));
 }
 
-function makeSkorTransparansi(percent: number, documentCount: number, sourceCount: number) {
-  const kelengkapan = Math.min(100, 40 + documentCount * 10);
-  const ketepatan = Math.min(100, 50 + sourceCount * 12);
-  const responsif = Math.min(100, 45 + sourceCount * 8);
-  const konsistensi = Math.min(100, Math.max(35, percent));
-  const total = Math.round((percent * 0.35) + (ketepatan * 0.25) + (kelengkapan * 0.25) + (responsif * 0.15));
-
-  return { total, ketepatan, kelengkapan, responsif, konsistensi };
-}
 
 function makePendapatan(total: number) {
   const danaDesa = Math.round(total * 0.65);
@@ -805,7 +796,11 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     apbdes,
     dokumen,
     perangkat,
-    skorTransparansi: makeSkorTransparansi(percent, dokumen.length, record.dataSources.length),
+    // skorTransparansi intentionally omitted: makeSkorTransparansi produced
+    // fabricated sub-scores from a percent that is always 0 (no APBDes data).
+    // ChTransparansi already handles skor===undefined gracefully with a
+    // "belum diterbitkan" fallback. When real APBDes data lands, this can be
+    // derived from actual realisasi fields.
     pendapatan: makePendapatan(totalAnggaran),
     sumber: record.dataSources.map((source) => ({
       nama: source.sourceName,

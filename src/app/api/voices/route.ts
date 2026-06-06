@@ -241,11 +241,40 @@ export async function GET(req: Request) {
 
 // ─── POST /api/voices ─────────────────────────────────────────────────────────
 
+// Lightweight per-IP rate limit for unauthenticated voice submissions.
+// Prevents spam / desaId enumeration via rapid posting.
+const VOICE_RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const VOICE_RATE_MAX_UNAUTH = 3;               // unauthenticated: 3 per 10 min
+const VOICE_RATE_MAX_AUTH = 10;                // authenticated: 10 per 10 min
+const voiceRateBuckets = new Map<string, number[]>();
+
+function voiceRateLimited(key: string, max: number): boolean {
+  const now = Date.now();
+  const hits = (voiceRateBuckets.get(key) ?? []).filter((t) => now - t < VOICE_RATE_WINDOW_MS);
+  if (hits.length >= max) { voiceRateBuckets.set(key, hits); return true; }
+  hits.push(now);
+  voiceRateBuckets.set(key, hits);
+  return false;
+}
+
 export async function POST(req: Request) {
   try {
     if (!db) return NextResponse.json({ error: "Layanan penyimpanan belum siap" }, { status: 503 });
 
     const session = await auth();
+
+    // Rate-limit: stricter for unauthenticated posters to prevent spam/enumeration.
+    const clientIp = (req as import("next/server").NextRequest).headers?.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? (req as import("next/server").NextRequest).headers?.get("x-real-ip")
+      ?? "unknown";
+    const rateLimitKey = session?.user?.id ?? `ip:${clientIp}`;
+    const maxPerWindow = session?.user?.id ? VOICE_RATE_MAX_AUTH : VOICE_RATE_MAX_UNAUTH;
+    if (voiceRateLimited(rateLimitKey, maxPerWindow)) {
+      return NextResponse.json(
+        { error: "Terlalu banyak kiriman. Coba lagi beberapa menit lagi." },
+        { status: 429 },
+      );
+    }
     const body = await req.json();
     const { desaId, category, text, photos } = body;
 
