@@ -14,7 +14,9 @@ import type { Desa } from "@/lib/types";
 import { SECTION } from "@/lib/copy";
 import { ASSETS } from "@/lib/assets";
 
-export const dynamic = "force-dynamic";
+// Revalidate every 5 minutes — same TTL as the module-level desa list cache.
+// Avoids re-fetching 3,581 desa rows on every single page visit.
+export const revalidate = 300;
 
 export default async function HomePage() {
   const routeTimer = perfStart();
