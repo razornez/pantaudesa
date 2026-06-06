@@ -1,6 +1,6 @@
 import ChapterPanel from "../ChapterPanel";
 import PetaMap from "./PetaMap";
-import type { GeoDemo } from "@/lib/desa-detail/showcase-demo";
+import type { GeoPoint } from "./geo-types";
 
 const LEGEND = [
   { label: "Kantor desa", color: "#1E1B4B" },
@@ -16,7 +16,7 @@ export default function ChPeta({
   coordSourceLabel,
 }: {
   chapterNo: string;
-  geo: GeoDemo;
+  geo: GeoPoint;
   namaDesa: string;
   /** When set, the center coordinates are REAL (from this source). POI stay demo. */
   coordSourceLabel?: string | null;

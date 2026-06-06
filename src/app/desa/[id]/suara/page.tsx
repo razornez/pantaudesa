@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getDesaByIdOrSlugWithFallback, getDesaStaticParamsFromDb } from "@/lib/data/desa-read";
+import { getDesaByIdOrSlugWithFallback } from "@/lib/data/desa-read";
 import SuaraWargaSection from "@/components/desa/SuaraWargaSection";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-export async function generateStaticParams() {
-  return getDesaStaticParamsFromDb();
-}
+// Generate on-demand (ISR) instead of prerendering all 3,581 desa at build —
+// matches the /desa/[id] detail page strategy, keeps builds fast, and avoids
+// hammering the DB with thousands of queries during the build.
+export const revalidate = 300;
 
 export default async function SuaraWargaDesaPage({ params }: Props) {
   const { id } = await params;

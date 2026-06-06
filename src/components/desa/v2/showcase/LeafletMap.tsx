@@ -3,9 +3,9 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { GeoDemo } from "@/lib/desa-detail/showcase-demo";
+import type { GeoPoint } from "./geo-types";
 
-const POI_COLOR: Record<GeoDemo["poi"][number]["jenis"], string> = {
+const POI_COLOR: Record<GeoPoint["poi"][number]["jenis"], string> = {
   kantor: "#1E1B4B",
   pendidikan: "#0EA5E9",
   kesehatan: "#F43F5E",
@@ -21,7 +21,7 @@ function dotIcon(color: string) {
   });
 }
 
-export default function LeafletMap({ geo }: { geo: GeoDemo }) {
+export default function LeafletMap({ geo }: { geo: GeoPoint }) {
   return (
     <MapContainer
       center={[geo.lat, geo.lng]}
