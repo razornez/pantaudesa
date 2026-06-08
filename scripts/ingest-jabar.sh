@@ -57,6 +57,10 @@ if [[ "$PASS" == "opensid" || "$PASS" == "all" ]]; then
   run_adapter "opensid" "jumlahPenduduk"
 fi
 
+if [[ "$PASS" == "idm" || "$PASS" == "all" ]]; then
+  run_adapter "kemendesa-idm" "kategori"
+fi
+
 if [[ "$PASS" == "kecamatan" || "$PASS" == "all" ]]; then
   echo "=== Adapter: kecamatan-bandung (Kab Bandung only) ==="
   $TSX scripts/ingest-run.ts --kabupaten Bandung --only kecamatan --skip-have luasWilayah 2>&1 \
