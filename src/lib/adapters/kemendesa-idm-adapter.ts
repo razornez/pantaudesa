@@ -34,21 +34,37 @@ export class KemendesaIdmAdapter implements DataAdapter {
     }
   }
 
-  private parse(html: string): { kategori: string | null; idmScore: number | null } {
+  private parse(html: string): {
+    kategori: string | null;
+    idmScore: number | null;
+    idmIks: number | null;
+    idmIke: number | null;
+    idmIkl: number | null;
+  } {
     // HTML fragment has table rows like:
     //   <td>STATUS IDM</td><td>: MANDIRI</td>
     //   <td>NILAI IDM</td><td>: 0.8822</td>
+    // Sub-indices are in JS pie chart data:
+    //   {"series": "IKS", "point": 0.880}, {"series": "IKE", ...}, {"series": "IKL", ...}
     const statusM = html.match(/STATUS IDM<\/td>\s*<td>\s*:\s*([A-Z_]+)/i);
     const nilaiM = html.match(/NILAI IDM<\/td>\s*<td>\s*:\s*([\d.]+)/i);
+    const iksM = html.match(/"series"\s*:\s*"IKS"\s*,\s*"point"\s*:\s*([\d.]+)/i);
+    const ikeM = html.match(/"series"\s*:\s*"IKE"\s*,\s*"point"\s*:\s*([\d.]+)/i);
+    const iklM = html.match(/"series"\s*:\s*"IKL"\s*,\s*"point"\s*:\s*([\d.]+)/i);
 
     const raw = statusM?.[1]?.trim() ?? null;
-    // API uses SANGAT_TERTINGGAL (underscore) — normalise to space
     const kategori = raw ? raw.replace(/_/g, " ") : null;
-    const idmScore = nilaiM ? parseFloat(nilaiM[1]) : null;
+    const parseNum = (m: RegExpMatchArray | null) => {
+      const v = m ? parseFloat(m[1]) : null;
+      return v !== null && Number.isFinite(v) ? v : null;
+    };
 
     return {
       kategori: kategori && kategori.length > 2 ? kategori : null,
-      idmScore: idmScore && Number.isFinite(idmScore) ? idmScore : null,
+      idmScore: parseNum(nilaiM),
+      idmIks: parseNum(iksM),
+      idmIke: parseNum(ikeM),
+      idmIkl: parseNum(iklM),
     };
   }
 
@@ -62,10 +78,13 @@ export class KemendesaIdmAdapter implements DataAdapter {
       return { desaId: d.desaId, fields: [], rawMeta: { note: "fetch failed", kodeDesa: d.kodeDesa } };
     }
 
-    const { kategori, idmScore } = this.parse(html);
+    const { kategori, idmScore, idmIks, idmIke, idmIkl } = this.parse(html);
     const fields = [];
     if (kategori) fields.push({ fieldKey: "kategori", value: kategori });
     if (idmScore !== null) fields.push({ fieldKey: "idmScore", value: idmScore });
+    if (idmIks !== null) fields.push({ fieldKey: "idmIks", value: idmIks });
+    if (idmIke !== null) fields.push({ fieldKey: "idmIke", value: idmIke });
+    if (idmIkl !== null) fields.push({ fieldKey: "idmIkl", value: idmIkl });
 
     return fields.length > 0
       ? { desaId: d.desaId, fields, rawMeta: { kodeDesa: d.kodeDesa, tahun: IDM_YEAR } }
