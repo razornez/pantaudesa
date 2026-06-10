@@ -29,6 +29,7 @@ async function main() {
   const { LocationIQGeocodeAdapter } = await import("@/lib/adapters/locationiq-geocode-adapter");
   const { KemendesaIdmAdapter } = await import("@/lib/adapters/kemendesa-idm-adapter");
   const { OpenMeteoElevationAdapter } = await import("@/lib/adapters/openmeteo-elevation-adapter");
+  const { DukcapilGisAdapter } = await import("@/lib/adapters/dukcapil-gis-adapter");
   const { runIngestion } = await import("@/lib/adapters/ingestion-runner");
   if (!db) throw new Error("Database tidak tersedia.");
 
@@ -106,6 +107,7 @@ async function main() {
     new KemendesaDanaDesaAdapter(),
     new KemendesaIdmAdapter(),
     new OpenMeteoElevationAdapter(),
+    new DukcapilGisAdapter(),
     ...(hasBandung ? [kecAdapter] : []),
     new OpenSIDAdapter(),
   ].filter((a) => !only || a.id.includes(only));
