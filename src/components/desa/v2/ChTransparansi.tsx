@@ -1,4 +1,4 @@
-import { UserRound, Info } from "lucide-react";
+import { UserRound, Info, FileText, CheckCircle2, Clock } from "lucide-react";
 import type { Desa } from "@/lib/types";
 import ChapterPanel, { type SourceNote } from "./ChapterPanel";
 
@@ -123,25 +123,71 @@ export default function ChTransparansi({ desa, chapterNo, sourceNote }: { desa: 
         </div>
       ) : null}
 
-      {perangkat.length > 0 ? (
-        <div className="mt-6 reveal reveal-5">
-          <p className="eyebrow mb-3 text-white/45">Perangkat desa</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {perangkat.slice(0, 6).map((p, i) => (
-              <div
-                key={`${p.jabatan}-${i}`}
-                className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10"
-              >
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/80">
-                  <UserRound size={15} aria-hidden />
+      {/* Dokumen & Perangkat — 2-column grid */}
+      {(desa.dokumen && desa.dokumen.length > 0) || perangkat.length > 0 ? (
+        <div className="mt-6 grid grid-cols-1 gap-4 reveal reveal-5 md:grid-cols-2">
+          {/* Dokumen tersedia */}
+          {desa.dokumen && desa.dokumen.length > 0 ? (
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: "rgba(99,102,241,.10)", boxShadow: "inset 0 0 0 1px rgba(99,102,241,.20)" }}
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "linear-gradient(140deg,#6366F1,#4F46E5)" }}>
+                  <FileText size={14} className="text-white" aria-hidden />
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-white">{p.nama}</p>
-                  <p className="truncate text-[11px] text-white/55">{p.jabatan}</p>
-                </div>
+                <p className="eyebrow text-white/70">Dokumen terbuka</p>
               </div>
-            ))}
-          </div>
+              <p className="num mb-2 text-[36px] font-semibold leading-none text-white">
+                <span data-counter data-target={desa.dokumen.filter((d) => d.tersedia).length}>0</span>
+                <span className="text-[18px] text-white/40"> / {desa.dokumen.length}</span>
+              </p>
+              <div className="mt-4 space-y-2">
+                {desa.dokumen.slice(0, 4).map((dok) => (
+                  <div key={`${dok.nama}-${dok.tahun}`} className="flex items-center justify-between text-[12.5px]">
+                    <span className="text-white/75 truncate mr-3">{dok.nama} {dok.tahun}</span>
+                    {dok.tersedia ? (
+                      <span className="cpill cpill-good flex-shrink-0">
+                        <CheckCircle2 size={10} aria-hidden /> tersedia
+                      </span>
+                    ) : (
+                      <span className="cpill cpill-ink flex-shrink-0 text-white/40">
+                        <Clock size={10} aria-hidden /> belum
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Perangkat desa */}
+          {perangkat.length > 0 ? (
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: "rgba(20,184,166,.10)", boxShadow: "inset 0 0 0 1px rgba(20,184,166,.20)" }}
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "linear-gradient(140deg,#14B8A6,#0F766E)" }}>
+                  <UserRound size={14} className="text-white" aria-hidden />
+                </div>
+                <p className="eyebrow text-white/70">Yang bisa kamu tanya</p>
+              </div>
+              <p className="mb-4 text-[13.5px] font-medium text-white">Perangkat desa {desa.nama}</p>
+              <div className="space-y-2">
+                {perangkat.slice(0, 4).map((p, i) => (
+                  <div
+                    key={`${p.jabatan}-${i}`}
+                    className="rounded-xl p-3"
+                    style={{ background: "rgba(255,255,255,.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,.08)" }}
+                  >
+                    <p className="text-[13px] text-white">{p.nama}</p>
+                    <p className="mt-0.5 text-[11px] text-white/50">{p.jabatan}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </ChapterPanel>
