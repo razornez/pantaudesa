@@ -6,12 +6,11 @@
 # create-desa-master untuk SETIAP nama provinsi:
 #
 # LANGKAH 1 — buat desa master (jalankan SEMUA ini dulu):
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua"
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Barat"
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Selatan"
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Tengah"
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Pegunungan"
-#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Barat Daya"
+#   npx tsx scripts/create-desa-master.ts --provinsi "Papua"          ← IDM 94 = Papua Tengah
+#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Barat"    ← IDM 91 = Papua induk
+#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Selatan"  ← IDM 93
+#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Pegunungan" ← IDM 95
+#   npx tsx scripts/create-desa-master.ts --provinsi "Papua Barat Daya" ← IDM 92
 #
 # LANGKAH 2 — jalankan adapter:
 #   bash scripts/ingest-papua.sh idm
@@ -45,25 +44,22 @@ for i in "$@"; do
 done
 
 PAPUA_KABS=(
-  # Papua (induk) — 9 kabupaten + 1 kota
+  # Papua Barat (IDM code 91) — 9 entries (termasuk Kota Jayapura)
   Jayapura Sarmi Keerom Waropen "Kepulauan Yapen" "Biak Numfor" Supiori "Mamberamo Raya"
   "Kota Jayapura"
 
-  # Papua Selatan — 4 kabupaten
+  # Papua Selatan (IDM code 93) — 4 kabupaten
   Merauke "Boven Digoel" Mappi Asmat
 
-  # Papua Tengah — 8 kabupaten
+  # Papua (IDM code 94, = Papua Tengah) — 8 kabupaten
   Nabire Paniai "Puncak Jaya" Mimika Dogiyai "Intan Jaya" Deiyai Puncak
 
-  # Papua Pegunungan — 8 kabupaten
+  # Papua Pegunungan (IDM code 95) — 8 kabupaten
   Jayawijaya "Pegunungan Bintang" Tolikara Yahukimo "Mamberamo Tengah" Yalimo "Lanny Jaya" Nduga
 
-  # Papua Barat — 8 kabupaten + 1 kota
-  Fakfak Kaimana "Teluk Wondama" "Teluk Bintuni" Manokwari "Sorong Selatan" Tambrauw Maybrat
-  "Manokwari Selatan" "Pegunungan Arfak" "Kota Sorong"
-
-  # Papua Barat Daya — 5 kabupaten
-  "Raja Ampat" Sorong Maybrat Tambrauw "Sorong Selatan"
+  # Papua Barat Daya (IDM code 92) — 12 kabupaten
+  "Fak Fak" Kaimana "Teluk Wondama" "Teluk Bintuni" Manokwari "Sorong Selatan" Tambrauw Maybrat
+  "Manokwari Selatan" "Pegunungan Arfak" "Raja Ampat" Sorong
 )
 
 run_adapter() {
