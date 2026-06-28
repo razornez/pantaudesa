@@ -86,6 +86,27 @@ const FACTS: Fact[] = [
     provinsi: "Bali",
     warna: "sky",
   },
+  {
+    angka: "7.725",
+    judul: "Jawa Timur punya lebih banyak desa dari seluruh pulau Sumatera",
+    body: "7.725 desa tersebar di 29 kabupaten dan 9 kota di Jawa Timur. Ini menjadikannya provinsi dengan desa terbanyak di seluruh Jawa. Dana desanya sudah hampir 100% tercatat, tapi 42% desa masih belum punya koordinat GPS yang akurat.",
+    provinsi: "Jawa Timur",
+    warna: "indigo",
+  },
+  {
+    angka: "462",
+    judul: "Lamongan punya lebih banyak desa dari seluruh Provinsi DI Yogyakarta",
+    body: "Kabupaten Lamongan di Jawa Timur punya 462 desa. Seluruh Provinsi DI Yogyakarta dengan 5 kabupaten/kota hanya punya 392 desa. Satu kabupaten menandingi satu provinsi penuh.",
+    provinsi: "Jawa Timur",
+    warna: "amber",
+  },
+  {
+    angka: "67 pulau",
+    judul: "Sumenep punya desa di 67 pulau berbeda, sebagian hanya bisa dicapai perahu",
+    body: "Kabupaten Sumenep mencakup daratan Madura dan 67 pulau yang tersebar di Laut Jawa dan Flores. Ada desa yang kepala desanya harus naik perahu berhari-hari untuk melapor ke kabupaten. Data mereka hampir tidak pernah muncul di sistem nasional.",
+    provinsi: "Jawa Timur",
+    warna: "sky",
+  },
 ];
 
 const colorMap = {
@@ -130,7 +151,7 @@ export default function SurprisingFactsSection() {
           Fakta mengejutkan dari data
         </p>
         <h2 className="mt-1 text-lg font-semibold text-slate-800">
-          Yang kami temukan saat mengumpulkan data 18.000+ desa
+          Yang kami temukan saat mengumpulkan data 27.000+ desa
         </h2>
         <p className="mt-1 text-sm text-slate-500">
           Dari Jawa Barat sampai Papua, data pemerintah selalu menyimpan sesuatu yang tidak terduga.
