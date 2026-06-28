@@ -62,24 +62,50 @@ const SLOT_RAIL_LABEL: Record<PublicDetailSlotKey, string> = {
   suara_warga: "Suara Warga",
 };
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pantaudesa.id";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const desa = await getDesaByIdOrSlugWithFallback(id);
   if (!desa) return { title: "Desa Tidak Ditemukan" };
 
-  const title = `${desa.nama} - Halaman Detail Desa`;
-  const description = `${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}. Halaman detail desa berbasis template aktif dan data publik yang sudah diterbitkan.`;
+  const title = `${desa.nama}, ${desa.kabupaten} - Data Desa Transparan | PantauDesa`;
+  const description = `Data resmi ${desa.nama}, ${desa.kecamatan}, ${desa.kabupaten}, ${desa.provinsi}. Lihat dana desa, anggaran APBDes, jumlah penduduk, dan skor transparansi dari sumber pemerintah.`;
+  const pageUrl = `${BASE_URL}/desa/${desa.id}`;
+  const ogImage = `${BASE_URL}/desa/${desa.id}/opengraph-image`;
+  const keywords = [
+    desa.nama,
+    `desa ${desa.nama}`,
+    desa.kecamatan,
+    desa.kabupaten,
+    desa.provinsi,
+    "dana desa",
+    "APBDes",
+    "transparansi desa",
+    "anggaran desa",
+    `dana desa ${desa.kabupaten}`,
+  ].filter(Boolean);
 
   return {
     title,
     description,
+    keywords,
+    alternates: { canonical: pageUrl },
     openGraph: {
       title,
       description,
-      url: `https://pantaudesa.id/desa/${desa.id}`,
+      url: pageUrl,
       type: "article",
+      siteName: "PantauDesa",
+      locale: "id_ID",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${desa.nama} - PantauDesa` }],
     },
-    twitter: { title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 
@@ -377,11 +403,32 @@ export default async function DesaDetailPage({ params }: Props) {
     </section>,
   );
 
+  const pageUrl = `${BASE_URL}/desa/${desaView.id}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "GovernmentOrganization",
+    name: desaView.nama,
+    description: `Data transparansi desa ${desaView.nama}, ${desaView.kecamatan}, ${desaView.kabupaten}, ${desaView.provinsi}.`,
+    url: pageUrl,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: desaView.kecamatan,
+      addressRegion: desaView.provinsi,
+      addressCountry: "ID",
+    },
+    ...(desaView.penduduk > 0 ? { numberOfEmployees: { "@type": "QuantitativeValue", value: desaView.penduduk } } : {}),
+    ...(realLat !== null && realLng !== null ? { geo: { "@type": "GeoCoordinates", latitude: realLat, longitude: realLng } } : {}),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb — positioned above the chapter rail so users always know their context */}
-      <nav aria-label="Breadcrumb" className="mx-auto max-w-[1080px] px-4 sm:px-6 pt-4 pb-1 flex items-center justify-between gap-2">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400 min-w-0">
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-[1080px] px-4 sm:px-6 pt-4 pb-1">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
           <li>
             <Link href="/" className="hover:text-indigo-600 transition-colors">Beranda</Link>
           </li>
@@ -400,12 +447,12 @@ export default async function DesaDetailPage({ params }: Props) {
             {desaView.nama}
           </li>
         </ol>
-        <ShareBar
-          desaNama={desaView.nama}
-          kabupaten={desaView.kabupaten}
-          provinsi={desaView.provinsi}
-        />
       </nav>
+      <ShareBar
+        desaNama={desaView.nama}
+        kabupaten={desaView.kabupaten}
+        provinsi={desaView.provinsi}
+      />
       <DetailV2Shell chapters={chapters}>
         {chapterNodes}
       </DetailV2Shell>

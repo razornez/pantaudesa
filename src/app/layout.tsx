@@ -5,7 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/lib/auth-context";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pantaudesa.vercel.app";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pantaudesa.id";
 
 export const metadata: Metadata = {
   title: {
