@@ -29,6 +29,7 @@ import { buildRuntimeTemplateManifest } from "@/lib/village-data/runtime-templat
 import type { ComponentRendererType } from "@/lib/village-data/component-catalog-manifest";
 import { PUBLIC_TEMPLATE_RENDERER_REGISTRY } from "@/components/desa/public-template-registry";
 import DetailV2Shell, { type ChapterRailItem } from "@/components/desa/v2/DetailV2Shell";
+import ShareBar from "@/components/desa/ShareBar";
 import ChIdentity from "@/components/desa/v2/ChIdentity";
 import ChSumber from "@/components/desa/v2/ChSumber";
 import ChAnggaran from "@/components/desa/v2/ChAnggaran";
@@ -379,8 +380,8 @@ export default async function DesaDetailPage({ params }: Props) {
   return (
     <>
       {/* Breadcrumb — positioned above the chapter rail so users always know their context */}
-      <nav aria-label="Breadcrumb" className="mx-auto max-w-[1080px] px-4 sm:px-6 pt-4 pb-1">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-[1080px] px-4 sm:px-6 pt-4 pb-1 flex items-center justify-between gap-2">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400 min-w-0">
           <li>
             <Link href="/" className="hover:text-indigo-600 transition-colors">Beranda</Link>
           </li>
@@ -399,6 +400,11 @@ export default async function DesaDetailPage({ params }: Props) {
             {desaView.nama}
           </li>
         </ol>
+        <ShareBar
+          desaNama={desaView.nama}
+          kabupaten={desaView.kabupaten}
+          provinsi={desaView.provinsi}
+        />
       </nav>
       <DetailV2Shell chapters={chapters}>
         {chapterNodes}
