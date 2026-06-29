@@ -107,6 +107,20 @@ const FACTS: Fact[] = [
     provinsi: "Jawa Timur",
     warna: "sky",
   },
+  {
+    angka: "223",
+    judul: "Dua kabupaten Toraja punya 223 desa yang hidup di luar logika birokrasi biasa",
+    body: "Tana Toraja dan Toraja Utara punya 223 desa dengan sistem adat yang kuat. Dana desanya 100% tercatat di sistem nasional. Tapi ritual pemakaman Rambu Solo mereka bisa menghabiskan ratusan juta rupiah, jauh melampaui anggaran resmi desa. Uang itu mengalir di luar sistem mana pun.",
+    provinsi: "Sulawesi Selatan",
+    warna: "amber",
+  },
+  {
+    angka: "207",
+    judul: "Luwu punya 207 desa, dari pesisir teluk sampai kaki Gunung Latimojong",
+    body: "Kabupaten Luwu adalah salah satu kabupaten terluas di Sulawesi Selatan, membentang dari pantai Teluk Bone sampai lereng pegunungan Latimojong. Dengan 207 desa, variasi geografisnya ekstrem. Desa di pesisir dan desa di pegunungan berada dalam satu kabupaten tapi dengan akses dan kondisi yang sama sekali berbeda.",
+    provinsi: "Sulawesi Selatan",
+    warna: "emerald",
+  },
 ];
 
 const colorMap = {
