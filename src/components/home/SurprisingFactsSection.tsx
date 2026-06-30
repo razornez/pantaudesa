@@ -121,6 +121,20 @@ const FACTS: Fact[] = [
     provinsi: "Sulawesi Selatan",
     warna: "emerald",
   },
+  {
+    angka: "69%",
+    judul: "Hampir 70% desa NTT tidak terdeteksi di sistem dana desa nasional",
+    body: "Dari 3.185 desa di Nusa Tenggara Timur, hanya 31% yang masuk catatan DJPK Kemenkeu. Sisanya tidak terlacak — bukan karena tidak ada, tapi karena sistem pencatatan pusat belum menjangkau pulau-pulau kecil yang tersebar dari Timor sampai Sumba dan Flores.",
+    provinsi: "Nusa Tenggara Timur",
+    warna: "rose",
+  },
+  {
+    angka: "112",
+    judul: "Rote Ndao, pulau paling selatan Indonesia, punya 112 desa yang nyaris tak terlihat di data nasional",
+    body: "Rote Ndao adalah pulau berpenghuni paling selatan di Indonesia. Dari 112 desanya, hampir tidak ada yang muncul di OpenStreetMap — OSM coverage NTT hanya 20%, terendah dari semua provinsi yang sudah kami data. Desa-desa ini ada, hidup, dan punya warga — tapi secara digital hampir tidak eksis.",
+    provinsi: "Nusa Tenggara Timur",
+    warna: "amber",
+  },
 ];
 
 const colorMap = {
