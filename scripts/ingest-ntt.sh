@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nusa Tenggara Timur — adapter sweep
-# 8 kabupaten + kota (pulau-pulau kecil, akses sulit)
+# 21 kabupaten (Timor, Flores, Sumba, Sabu Raijua, Rote Ndao)
 set -euo pipefail
 
 ADAPTER="${1:-all}"
@@ -8,8 +8,11 @@ RESUME_FROM="${3:-}"
 if [[ "${2:-}" == "--resume-from" ]]; then RESUME_FROM="$3"; fi
 
 NTT_KABS=(
-  Kupang Timor "Timor Tengah Selatan" "Timor Tengah Utara" Belu Alor Lembata
-  "Kota Kupang"
+  Kupang "Timor Tengah Selatan" "Timor Tengah Utara" Belu Alor
+  "Flores Timur" Sikka Ende Ngada Manggarai
+  "Sumba Timur" "Sumba Barat" Lembata "Rote Ndao" "Manggarai Barat"
+  Nagekeo "Sumba Tengah" "Sumba Barat Daya" "Manggarai Timur"
+  "Sabu Raijua" Malaka
 )
 
 run_adapter() {
