@@ -49,6 +49,20 @@ next-env.d.ts
 # local dev logs and tooling caches
 .next-dev*.log
 .next-start*.log
+# ingestion run logs
+*-idm.log
+*-djpk.log
+*-osm.log
+*-dukcapil.log
+*-elevation.log
+*-opensid.log
+*-master.log
+*-sikka.log
+*-malaka.log
+ntt*.log
+sulsel*.log
+jatim*.log
+jabar*.log
 .claude/
 .tmp-manual-backoffice-qa/
 .mcp.json
