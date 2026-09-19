@@ -25,7 +25,8 @@ type SourceRecord = {
   sourceName: string;
   sourceUrl: string | null;
   accessStatus: string;
-  dataStatus: "demo" | "imported" | "needs_review" | "outdated" | "rejected" | "verified";
+  dataStatus:
+    "demo" | "imported" | "needs_review" | "outdated" | "rejected" | "verified";
   lastCheckedAt: Date | null;
   updatedAt: Date;
 };
@@ -226,7 +227,11 @@ function toNumber(value: unknown): number {
   if (value == null) return 0;
   if (typeof value === "number") return value;
   if (typeof value === "bigint") return Number(value);
-  if (typeof value === "object" && "toNumber" in value && typeof value.toNumber === "function") {
+  if (
+    typeof value === "object" &&
+    "toNumber" in value &&
+    typeof value.toNumber === "function"
+  ) {
     return value.toNumber();
   }
   return Number(value);
@@ -238,8 +243,12 @@ function toNumericStorageValue(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normalizeStatus(value: string | null | undefined, percent: number): Desa["status"] {
-  if (value === "baik" || value === "sedang" || value === "rendah") return value;
+function normalizeStatus(
+  value: string | null | undefined,
+  percent: number,
+): Desa["status"] {
+  if (value === "baik" || value === "sedang" || value === "rendah")
+    return value;
   if (percent >= 85) return "baik";
   if (percent >= 60) return "sedang";
   return "rendah";
@@ -260,7 +269,6 @@ function latestDate(dates: Array<Date | null | undefined>) {
   return new Date(Math.max(...valid.map((date) => date.getTime())));
 }
 
-
 function makePendapatan(total: number) {
   const danaDesa = Math.round(total * 0.65);
   const add = Math.round(total * 0.25);
@@ -280,7 +288,7 @@ function toDate(value: string | Date | null | undefined): Date | null {
 function normalizeEnvValue(value: string | undefined): string {
   const trimmed = value?.trim() ?? "";
   if (
-    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
     return trimmed.slice(1, -1).trim();
@@ -290,7 +298,9 @@ function normalizeEnvValue(value: string | undefined): string {
 
 async function requireSupabaseClient() {
   const url = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceRoleKey = normalizeEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const serviceRoleKey = normalizeEnvValue(
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
   const validUrl = /^https:\/\/[^/]+\.supabase\.co\/?$/i.test(url);
   const validKey =
     /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(serviceRoleKey) ||
@@ -382,12 +392,13 @@ function mapSupabaseDetailRecord(
       lastCheckedAt: toDate(row.lastCheckedAt),
       dataStatus: row.dataStatus,
       updatedAt: toDate(row.updatedAt) ?? new Date(0),
-      source: row.sourceId && sourceMap.has(row.sourceId)
-        ? {
-            sourceName: sourceMap.get(row.sourceId)!.sourceName,
-            sourceUrl: sourceMap.get(row.sourceId)!.sourceUrl,
-          }
-        : null,
+      source:
+        row.sourceId && sourceMap.has(row.sourceId)
+          ? {
+              sourceName: sourceMap.get(row.sourceId)!.sourceName,
+              sourceUrl: sourceMap.get(row.sourceId)!.sourceUrl,
+            }
+          : null,
     })),
     perangkat: perangkatRows.map((row) => ({
       nama: row.nama,
@@ -397,12 +408,13 @@ function mapSupabaseDetailRecord(
       kontakLabel: row.kontakLabel,
       dataStatus: row.dataStatus,
       updatedAt: toDate(row.updatedAt) ?? new Date(0),
-      source: row.sourceId && sourceMap.has(row.sourceId)
-        ? {
-            sourceName: sourceMap.get(row.sourceId)!.sourceName,
-            sourceUrl: sourceMap.get(row.sourceId)!.sourceUrl,
-          }
-        : null,
+      source:
+        row.sourceId && sourceMap.has(row.sourceId)
+          ? {
+              sourceName: sourceMap.get(row.sourceId)!.sourceName,
+              sourceUrl: sourceMap.get(row.sourceId)!.sourceUrl,
+            }
+          : null,
     })),
   };
 }
@@ -430,10 +442,16 @@ function mapSupabaseListRecord(
     dataPublishedAt: toDate(desa.dataPublishedAt),
     updatedAt: toDate(desa.updatedAt) ?? new Date(0),
     dataSources: sourceRows
-      .sort((a, b) => (toDate(b.updatedAt)?.getTime() ?? 0) - (toDate(a.updatedAt)?.getTime() ?? 0))
+      .sort(
+        (a, b) =>
+          (toDate(b.updatedAt)?.getTime() ?? 0) -
+          (toDate(a.updatedAt)?.getTime() ?? 0),
+      )
       .slice(0, 1)
       .map(mapSupabaseSourceRow),
-    anggaranSummaries: latestSummary ? [mapSupabaseSummaryRow(latestSummary)] : [],
+    anggaranSummaries: latestSummary
+      ? [mapSupabaseSummaryRow(latestSummary)]
+      : [],
     dokumenPublik: latestDocument
       ? [
           {
@@ -452,11 +470,15 @@ function mapSupabaseListRecord(
   };
 }
 
-async function fetchDesaDetailRecordViaSupabase(idOrSlug: string): Promise<DesaRecord | null> {
+async function fetchDesaDetailRecordViaSupabase(
+  idOrSlug: string,
+): Promise<DesaRecord | null> {
   const client = await requireSupabaseClient();
   const { data: desaRow, error: desaError } = await client
     .from("desa")
-    .select("id,slug,nama,kecamatan,kabupaten,provinsi,tahunData,jumlahPenduduk,kategori,websiteUrl,dataStatus,dataSourceLabel,dataPublishedAt,updatedAt")
+    .select(
+      "id,slug,nama,kecamatan,kabupaten,provinsi,tahunData,jumlahPenduduk,kategori,websiteUrl,dataStatus,dataSourceLabel,dataPublishedAt,updatedAt",
+    )
     .or(`id.eq.${idOrSlug},slug.eq.${idOrSlug}`)
     .limit(1)
     .maybeSingle<SupabaseDesaRow>();
@@ -474,34 +496,44 @@ async function fetchDesaDetailRecordViaSupabase(idOrSlug: string): Promise<DesaR
   ] = await Promise.all([
     client
       .from("data_sources")
-      .select("id,desaId,sourceName,sourceUrl,accessStatus,dataStatus,lastCheckedAt,updatedAt")
+      .select(
+        "id,desaId,sourceName,sourceUrl,accessStatus,dataStatus,lastCheckedAt,updatedAt",
+      )
       .eq("desaId", desaId)
       .order("updatedAt", { ascending: false })
       .returns<SupabaseSourceRow[]>(),
     client
       .from("anggaran_desa_summaries")
-      .select("desaId,tahun,totalAnggaran,totalRealisasi,persentaseRealisasi,statusSerapan,dataStatus,updatedAt")
+      .select(
+        "desaId,tahun,totalAnggaran,totalRealisasi,persentaseRealisasi,statusSerapan,dataStatus,updatedAt",
+      )
       .eq("desaId", desaId)
       .order("tahun", { ascending: false })
       .limit(1)
       .returns<SupabaseSummaryRow[]>(),
     client
       .from("apbdes_items")
-      .select("desaId,tahun,kodeBidang,namaBidang,anggaran,realisasi,persentase,dataStatus,updatedAt")
+      .select(
+        "desaId,tahun,kodeBidang,namaBidang,anggaran,realisasi,persentase,dataStatus,updatedAt",
+      )
       .eq("desaId", desaId)
       .order("tahun", { ascending: false })
       .order("kodeBidang", { ascending: true })
       .returns<SupabaseApbdesRow[]>(),
     client
       .from("dokumen_publik")
-      .select("desaId,tahun,namaDokumen,jenisDokumen,status,url,lastCheckedAt,dataStatus,updatedAt,sourceId")
+      .select(
+        "desaId,tahun,namaDokumen,jenisDokumen,status,url,lastCheckedAt,dataStatus,updatedAt,sourceId",
+      )
       .eq("desaId", desaId)
       .order("tahun", { ascending: false })
       .order("namaDokumen", { ascending: true })
       .returns<SupabaseDocumentRow[]>(),
     client
       .from("perangkat_desa")
-      .select("desaId,nama,jabatan,periode,fotoUrl,kontakLabel,dataStatus,updatedAt,sourceId")
+      .select(
+        "desaId,nama,jabatan,periode,fotoUrl,kontakLabel,dataStatus,updatedAt,sourceId",
+      )
       .eq("desaId", desaId)
       .order("jabatan", { ascending: true })
       .order("nama", { ascending: true })
@@ -528,7 +560,9 @@ async function fetchDesaListRecordsViaSupabase(): Promise<DesaListRecord[]> {
   const client = await requireSupabaseClient();
   const { data: desaRows, error: desaError } = await client
     .from("desa")
-    .select("id,slug,nama,kecamatan,kabupaten,provinsi,tahunData,jumlahPenduduk,kategori,websiteUrl,dataStatus,dataSourceLabel,dataPublishedAt,updatedAt")
+    .select(
+      "id,slug,nama,kecamatan,kabupaten,provinsi,tahunData,jumlahPenduduk,kategori,websiteUrl,dataStatus,dataSourceLabel,dataPublishedAt,updatedAt",
+    )
     .order("provinsi", { ascending: true })
     .order("kabupaten", { ascending: true })
     .order("nama", { ascending: true })
@@ -542,19 +576,25 @@ async function fetchDesaListRecordsViaSupabase(): Promise<DesaListRecord[]> {
   const [sourceResult, summaryResult, documentResult] = await Promise.all([
     client
       .from("data_sources")
-      .select("id,desaId,sourceName,sourceUrl,accessStatus,dataStatus,lastCheckedAt,updatedAt")
+      .select(
+        "id,desaId,sourceName,sourceUrl,accessStatus,dataStatus,lastCheckedAt,updatedAt",
+      )
       .in("desaId", ids)
       .order("updatedAt", { ascending: false })
       .returns<SupabaseSourceRow[]>(),
     client
       .from("anggaran_desa_summaries")
-      .select("desaId,tahun,totalAnggaran,totalRealisasi,persentaseRealisasi,statusSerapan,dataStatus,updatedAt")
+      .select(
+        "desaId,tahun,totalAnggaran,totalRealisasi,persentaseRealisasi,statusSerapan,dataStatus,updatedAt",
+      )
       .in("desaId", ids)
       .order("tahun", { ascending: false })
       .returns<SupabaseSummaryRow[]>(),
     client
       .from("dokumen_publik")
-      .select("desaId,tahun,namaDokumen,jenisDokumen,status,url,lastCheckedAt,dataStatus,updatedAt,sourceId")
+      .select(
+        "desaId,tahun,namaDokumen,jenisDokumen,status,url,lastCheckedAt,dataStatus,updatedAt,sourceId",
+      )
       .in("desaId", ids)
       .order("updatedAt", { ascending: false })
       .returns<SupabaseDocumentRow[]>(),
@@ -609,23 +649,31 @@ function computeCompletenessScore(input: {
 }): number {
   const f = input.fieldKeys;
   const dimensions: boolean[] = [
-    f.has("danaDesa"),                                            // Dana Desa (DJPK)
-    f.has("geoLat"),                                              // Koordinat / peta
-    input.hasPenduduk,                                            // Jumlah penduduk
-    f.has("luasWilayah"),                                         // Luas wilayah
-    f.has("kepalaDesa"),                                          // Kepala desa
-    ["jumlahKK", "jumlahDusun", "jumlahRt", "jumlahRw", "mataPencaharian"].some((k) => f.has(k)), // Demografi rinci
-    input.hasSource,                                              // Sumber data tercatat (provenance)
-    input.documentCount > 0,                                      // Dokumen publik
-    input.hasApbdesDetail,                                        // Rincian kinerja anggaran (APBDes)
-    Boolean(input.kategori && input.kategori.trim() && input.kategori.trim().toLowerCase() !== "demo"), // Kategori terisi (bukan demo)
+    f.has("danaDesa"), // Dana Desa (DJPK)
+    f.has("geoLat"), // Koordinat / peta
+    input.hasPenduduk, // Jumlah penduduk
+    f.has("luasWilayah"), // Luas wilayah
+    f.has("kepalaDesa"), // Kepala desa
+    ["jumlahKK", "jumlahDusun", "jumlahRt", "jumlahRw", "mataPencaharian"].some(
+      (k) => f.has(k),
+    ), // Demografi rinci
+    input.hasSource, // Sumber data tercatat (provenance)
+    input.documentCount > 0, // Dokumen publik
+    input.hasApbdesDetail, // Rincian kinerja anggaran (APBDes)
+    Boolean(
+      input.kategori &&
+      input.kategori.trim() &&
+      input.kategori.trim().toLowerCase() !== "demo",
+    ), // Kategori terisi (bukan demo)
   ];
   const filled = dimensions.filter(Boolean).length;
   return Math.round((filled / dimensions.length) * 100);
 }
 
 function mapDesaListRecord(record: DesaListRecord): DesaListItem {
-  const latestSummary = [...record.anggaranSummaries].sort((a, b) => b.tahun - a.tahun)[0];
+  const latestSummary = [...record.anggaranSummaries].sort(
+    (a, b) => b.tahun - a.tahun,
+  )[0];
   const tahun = latestSummary?.tahun ?? record.tahunData ?? 2024;
   // Distinct real DataDesa field keys + danaDesa pagu, from one attributed-rows fetch.
   const dataDesaRows = record.dataDesa ?? [];
@@ -633,36 +681,57 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     dataDesaRows.map((r) => r.fieldKey).filter((k): k is string => Boolean(k)),
   );
   const paguRow = dataDesaRows.find((r) => r.fieldKey === "danaDesa");
-  const paguDanaDesa = paguRow?.valueText ? parseInt(paguRow.valueText, 10) || 0 : 0;
+  const paguDanaDesa = paguRow?.valueText
+    ? parseInt(paguRow.valueText, 10) || 0
+    : 0;
   // Every attributed DataDesa row already carries provenance (sourceId not null —
   // it is our query filter), so a desa with real fields IS sourced even when the
   // legacy DataSource table is empty. The detail page surfaces the same provenance.
   const hasProvenance =
-    record._count.dataSources > 0 || fieldKeys.size > 0 || Boolean(record.websiteUrl);
+    record._count.dataSources > 0 ||
+    fieldKeys.size > 0 ||
+    Boolean(record.websiteUrl);
   const completenessScore = computeCompletenessScore({
     fieldKeys,
-    hasPenduduk: fieldKeys.has("jumlahPenduduk") || (record.jumlahPenduduk ?? 0) > 0,
+    hasPenduduk:
+      fieldKeys.has("jumlahPenduduk") || (record.jumlahPenduduk ?? 0) > 0,
     hasSource: hasProvenance,
     documentCount: record._count.dokumenPublik,
-    hasApbdesDetail: (record._count.apbdesItems ?? 0) > 0 || (record.anggaranSummaries?.length ?? 0) > 0,
+    hasApbdesDetail:
+      (record._count.apbdesItems ?? 0) > 0 ||
+      (record.anggaranSummaries?.length ?? 0) > 0,
     kategori: record.kategori,
   });
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
   // APBDes data does not exist yet (anggaranSummaries always empty). Rather than
   // computing percent/status from stale 0-values, derive status from completeness.
-  const status = completenessScore >= 75 ? "baik" : completenessScore >= 34 ? "sedang" : "rendah";
+  const status =
+    completenessScore >= 75
+      ? "baik"
+      : completenessScore >= 34
+        ? "sedang"
+        : "rendah";
   const sources = record.dataSources ?? [];
   const docs = record.dokumenPublik ?? [];
   const latestSource = sources[0];
   const sourceNames = latestSource?.sourceName ? [latestSource.sourceName] : [];
   const hasNeedsReviewSource = sources.some(
-    (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
+    (source) =>
+      source.dataStatus === "needs_review" ||
+      source.accessStatus === "requires_review",
   );
   // Also treat desa with real published DataDesa fields as "source-found"
   // (even if they have no DataSource records seeded — most Jawa Barat desa).
-  const hasSource = record._count.dataSources > 0 || Boolean(record.websiteUrl) || record._count.dataDesa > 0;
-  const identityStatus = hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo";
+  const hasSource =
+    record._count.dataSources > 0 ||
+    Boolean(record.websiteUrl) ||
+    record._count.dataDesa > 0;
+  const identityStatus = hasNeedsReviewSource
+    ? "needs-review"
+    : hasSource
+      ? "source-found"
+      : "demo";
   const freshnessDate = latestDate([
     record.updatedAt,
     latestSummary?.updatedAt,
@@ -692,8 +761,11 @@ function mapDesaListRecord(record: DesaListRecord): DesaListItem {
     pendapatan: makePendapatan(totalAnggaran),
     sumber: sources.map((source) => ({
       nama: source.sourceName,
-      status: source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
-      perluReview: source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
+      status:
+        source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
+      perluReview:
+        source.dataStatus === "needs_review" ||
+        source.accessStatus === "requires_review",
     })),
     jumlahSumber: record._count.dataSources,
     jumlahDokumenPendukung: documentCount,
@@ -720,7 +792,9 @@ function logPublicDesaReadError(scope: string, error: unknown) {
 }
 
 function mapDesaRecord(record: DesaRecord): DesaListItem {
-  const latestSummary = [...record.anggaranSummaries].sort((a, b) => b.tahun - a.tahun)[0];
+  const latestSummary = [...record.anggaranSummaries].sort(
+    (a, b) => b.tahun - a.tahun,
+  )[0];
   const tahun = latestSummary?.tahun ?? record.tahunData ?? 2024;
   const totalAnggaran = toNumber(latestSummary?.totalAnggaran);
   const terealisasi = toNumber(latestSummary?.totalRealisasi);
@@ -744,7 +818,11 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     .map((source) => source.sourceName)
     .filter(Boolean);
   const dokumen = record.dokumenPublik
-    .sort((a, b) => (b.tahun ?? 0) - (a.tahun ?? 0) || a.namaDokumen.localeCompare(b.namaDokumen))
+    .sort(
+      (a, b) =>
+        (b.tahun ?? 0) - (a.tahun ?? 0) ||
+        a.namaDokumen.localeCompare(b.namaDokumen),
+    )
     .map((doc) => ({
       nama: doc.namaDokumen,
       jenis: DOCUMENT_KIND[doc.jenisDokumen] ?? "Dokumen",
@@ -755,7 +833,10 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
       terakhirDicekLabel: formatFreshness(doc.lastCheckedAt ?? doc.updatedAt),
     }));
   const perangkat = (record.perangkat ?? [])
-    .sort((a, b) => a.jabatan.localeCompare(b.jabatan) || a.nama.localeCompare(b.nama))
+    .sort(
+      (a, b) =>
+        a.jabatan.localeCompare(b.jabatan) || a.nama.localeCompare(b.nama),
+    )
     .map((item) => ({
       jabatan: item.jabatan,
       nama: item.nama,
@@ -763,14 +844,22 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
       kontak: item.kontakLabel ?? undefined,
     }));
   const hasNeedsReviewSource = record.dataSources.some(
-    (source) => source.dataStatus === "needs_review" || source.accessStatus === "requires_review"
+    (source) =>
+      source.dataStatus === "needs_review" ||
+      source.accessStatus === "requires_review",
   );
   const hasSource = record.dataSources.length > 0 || Boolean(record.websiteUrl);
-  const identityStatus = hasNeedsReviewSource ? "needs-review" : hasSource ? "source-found" : "demo";
+  const identityStatus = hasNeedsReviewSource
+    ? "needs-review"
+    : hasSource
+      ? "source-found"
+      : "demo";
   const freshnessDate = latestDate([
     record.updatedAt,
     latestSummary?.updatedAt,
-    ...record.dataSources.map((source) => source.lastCheckedAt ?? source.updatedAt),
+    ...record.dataSources.map(
+      (source) => source.lastCheckedAt ?? source.updatedAt,
+    ),
     ...record.dokumenPublik.map((doc) => doc.updatedAt),
   ]);
   const freshnessLabel = formatFreshness(freshnessDate);
@@ -804,8 +893,11 @@ function mapDesaRecord(record: DesaRecord): DesaListItem {
     pendapatan: makePendapatan(totalAnggaran),
     sumber: record.dataSources.map((source) => ({
       nama: source.sourceName,
-      status: source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
-      perluReview: source.dataStatus === "needs_review" || source.accessStatus === "requires_review",
+      status:
+        source.dataStatus === "verified" ? "needs_review" : source.dataStatus,
+      perluReview:
+        source.dataStatus === "needs_review" ||
+        source.accessStatus === "requires_review",
     })),
     jumlahSumber: record.dataSources.length,
     jumlahDokumenPendukung: documentCount,
@@ -824,63 +916,80 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
   if (!prisma) return fetchDesaListRecordsViaSupabase();
 
   const timer = perfStart();
-  const records = await prisma.desa.findMany({
-    // Exclude QA test fixtures (seed-qa creates "qa-desa-*" for E2E only) from all
-    // public reads, so they never surface as real desa even when seed:qa has run.
-    where: { NOT: { id: { startsWith: "qa-desa" } } },
-    orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
-    select: {
-      id: true,
-      slug: true,
-      nama: true,
-      kecamatan: true,
-      kabupaten: true,
-      provinsi: true,
-      tahunData: true,
-      jumlahPenduduk: true,
-      kategori: true,
-      websiteUrl: true,
-      dataStatus: true,
-      dataSourceLabel: true,
-      dataPublishedAt: true,
-      updatedAt: true,
-      anggaranSummaries: {
-        orderBy: { tahun: "desc" },
-        take: 1,
+  const records = await (async () => {
+    // PostgreSQL accepts at most 32,767 bind variables per prepared statement.
+    // Paginate relation reads so the 32k-row public directory stays below that
+    // limit even when Prisma expands each relation into an ID list.
+    const batchSize = 5_000;
+    const allRecords = [];
+
+    for (let skip = 0; ; skip += batchSize) {
+      const batch = await prisma.desa.findMany({
+        // Keep this query free of top-level negation filters. With tens of thousands of
+        // desa and relation selects, Prisma must split the query to stay below Postgres'
+        // parameter limit; it cannot do so when the parent query contains NOT filters.
+        orderBy: [{ provinsi: "asc" }, { kabupaten: "asc" }, { nama: "asc" }],
         select: {
-          tahun: true,
-          totalAnggaran: true,
-          totalRealisasi: true,
-          persentaseRealisasi: true,
-          statusSerapan: true,
+          id: true,
+          slug: true,
+          nama: true,
+          kecamatan: true,
+          kabupaten: true,
+          provinsi: true,
+          tahunData: true,
+          jumlahPenduduk: true,
+          kategori: true,
+          websiteUrl: true,
           dataStatus: true,
+          dataSourceLabel: true,
+          dataPublishedAt: true,
           updatedAt: true,
+          anggaranSummaries: {
+            orderBy: { tahun: "desc" },
+            take: 1,
+            select: {
+              tahun: true,
+              totalAnggaran: true,
+              totalRealisasi: true,
+              persentaseRealisasi: true,
+              statusSerapan: true,
+              dataStatus: true,
+              updatedAt: true,
+            },
+          },
+          // All attributed published DataDesa rows (fieldKey + value). Used to compute
+          // an honest, dimension-based completeness score and to read the danaDesa pagu.
+          // Payload is small (short field keys); fits the module-level cache.
+          dataDesa: {
+            // Keep this relation filter free of negations so Prisma can split the
+            // full-directory query into batches. Attribution is filtered below.
+            where: { isActive: true, status: "PUBLISHED" },
+            select: { fieldKey: true, valueText: true, sourceId: true },
+          },
+          // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
+          // serialized payload exceeds the module-level cache. Only _count is needed
+          // for list cards; detail pages fetch full data separately.
+          _count: {
+            select: {
+              // Exclude demo-seeded sources/documents from completeness — they are
+              // placeholder fixtures (e.g. Batukarut showcase), not real published
+              // data, and must not inflate the "data lengkap" score.
+              dataSources: true,
+              dokumenPublik: true,
+              apbdesItems: true,
+              // Raw attributed row count (kept for identityStatus check).
+              dataDesa: { where: { isActive: true, status: "PUBLISHED" } },
+            },
+          },
         },
-      },
-      // All attributed published DataDesa rows (fieldKey + value). Used to compute
-      // an honest, dimension-based completeness score and to read the danaDesa pagu.
-      // Payload is small (short field keys); fits the module-level cache.
-      dataDesa: {
-        where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } },
-        select: { fieldKey: true, valueText: true },
-      },
-      // dataSources and dokumenPublik full objects removed — at 3,000+ desa the
-      // serialized payload exceeds the module-level cache. Only _count is needed
-      // for list cards; detail pages fetch full data separately.
-      _count: {
-        select: {
-          // Exclude demo-seeded sources/documents from completeness — they are
-          // placeholder fixtures (e.g. Batukarut showcase), not real published
-          // data, and must not inflate the "data lengkap" score.
-          dataSources: { where: { dataStatus: { not: "demo" } } },
-          dokumenPublik: { where: { dataStatus: { not: "demo" } } },
-          apbdesItems: true,
-          // Raw attributed row count (kept for identityStatus check).
-          dataDesa: { where: { isActive: true, status: "PUBLISHED", sourceId: { not: null } } },
-        },
-      },
-    },
-  }).catch(async (error) => {
+        skip,
+        take: batchSize,
+      });
+
+      allRecords.push(...batch);
+      if (batch.length < batchSize) return allRecords;
+    }
+  })().catch(async (error) => {
     if (!isDatabaseConnectivityError(error)) throw error;
     const fallbackTimer = perfStart();
     const fallbackRecords = await fetchDesaListRecordsViaSupabase();
@@ -892,114 +1001,148 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
     );
     return fallbackRecords;
   });
-  publicPerfLogWithRows("public.desa-read", "desa.findMany(list-lite)", records.length, timer);
-  return records;
+  // Apply public-only filters after Prisma has completed its batched database reads.
+  // seed-qa creates ids beginning with "qa-desa" solely for E2E coverage.
+  const publicRecords: DesaListRecord[] = records
+    .filter((record) => !record.id.startsWith("qa-desa"))
+    .map(({ dataDesa, _count, ...record }) => {
+      const dataDesaRows = (dataDesa ?? []) as Array<{
+        fieldKey: string | null;
+        valueText: string | null;
+        sourceId: string | null;
+      }>;
+      const attributedDataDesa = dataDesaRows
+        .filter((row) => row.sourceId !== null)
+        .map(({ fieldKey, valueText }) => ({ fieldKey, valueText }));
+
+      return {
+        ...record,
+        dataDesa: attributedDataDesa,
+        _count: {
+          ..._count,
+          dataDesa: attributedDataDesa.length,
+        },
+      };
+    });
+  publicPerfLogWithRows(
+    "public.desa-read",
+    "desa.findMany(list-lite)",
+    publicRecords.length,
+    timer,
+  );
+  return publicRecords;
 }
 
-async function fetchDesaDetailRecord(idOrSlug: string): Promise<DesaRecord | null> {
+async function fetchDesaDetailRecord(
+  idOrSlug: string,
+): Promise<DesaRecord | null> {
   if (!prisma) return fetchDesaDetailRecordViaSupabase(idOrSlug);
 
   const timer = perfStart();
-  const record = await prisma.desa.findFirst({
-    where: {
-      OR: [
-        { id: idOrSlug },
-        { slug: idOrSlug },
-      ],
-    },
-    select: {
-      id: true,
-      slug: true,
-      nama: true,
-      kecamatan: true,
-      kabupaten: true,
-      provinsi: true,
-      tahunData: true,
-      jumlahPenduduk: true,
-      kategori: true,
-      websiteUrl: true,
-      dataStatus: true,
-      dataSourceLabel: true,
-      dataPublishedAt: true,
-      updatedAt: true,
-      dataSources: {
-        orderBy: { updatedAt: "desc" },
-        select: {
-          sourceName: true,
-          sourceUrl: true,
-          accessStatus: true,
-          dataStatus: true,
-          lastCheckedAt: true,
-          updatedAt: true,
+  const record = await prisma.desa
+    .findFirst({
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
+      select: {
+        id: true,
+        slug: true,
+        nama: true,
+        kecamatan: true,
+        kabupaten: true,
+        provinsi: true,
+        tahunData: true,
+        jumlahPenduduk: true,
+        kategori: true,
+        websiteUrl: true,
+        dataStatus: true,
+        dataSourceLabel: true,
+        dataPublishedAt: true,
+        updatedAt: true,
+        dataSources: {
+          orderBy: { updatedAt: "desc" },
+          select: {
+            sourceName: true,
+            sourceUrl: true,
+            accessStatus: true,
+            dataStatus: true,
+            lastCheckedAt: true,
+            updatedAt: true,
+          },
+        },
+        anggaranSummaries: {
+          orderBy: { tahun: "desc" },
+          take: 1,
+          select: {
+            tahun: true,
+            totalAnggaran: true,
+            totalRealisasi: true,
+            persentaseRealisasi: true,
+            statusSerapan: true,
+            dataStatus: true,
+            updatedAt: true,
+          },
+        },
+        apbdesItems: {
+          orderBy: [{ tahun: "desc" }, { kodeBidang: "asc" }],
+          select: {
+            tahun: true,
+            kodeBidang: true,
+            namaBidang: true,
+            anggaran: true,
+            realisasi: true,
+            persentase: true,
+            dataStatus: true,
+            updatedAt: true,
+          },
+        },
+        dokumenPublik: {
+          orderBy: [{ tahun: "desc" }, { namaDokumen: "asc" }],
+          select: {
+            tahun: true,
+            namaDokumen: true,
+            jenisDokumen: true,
+            status: true,
+            url: true,
+            lastCheckedAt: true,
+            dataStatus: true,
+            updatedAt: true,
+            source: { select: { sourceName: true, sourceUrl: true } },
+          },
+        },
+        perangkat: {
+          orderBy: [{ jabatan: "asc" }, { nama: "asc" }],
+          select: {
+            nama: true,
+            jabatan: true,
+            periode: true,
+            fotoUrl: true,
+            kontakLabel: true,
+            dataStatus: true,
+            updatedAt: true,
+            source: { select: { sourceName: true, sourceUrl: true } },
+          },
         },
       },
-      anggaranSummaries: {
-        orderBy: { tahun: "desc" },
-        take: 1,
-        select: {
-          tahun: true,
-          totalAnggaran: true,
-          totalRealisasi: true,
-          persentaseRealisasi: true,
-          statusSerapan: true,
-          dataStatus: true,
-          updatedAt: true,
-        },
-      },
-      apbdesItems: {
-        orderBy: [{ tahun: "desc" }, { kodeBidang: "asc" }],
-        select: {
-          tahun: true,
-          kodeBidang: true,
-          namaBidang: true,
-          anggaran: true,
-          realisasi: true,
-          persentase: true,
-          dataStatus: true,
-          updatedAt: true,
-        },
-      },
-      dokumenPublik: {
-        orderBy: [{ tahun: "desc" }, { namaDokumen: "asc" }],
-        select: {
-          tahun: true,
-          namaDokumen: true,
-          jenisDokumen: true,
-          status: true,
-          url: true,
-          lastCheckedAt: true,
-          dataStatus: true,
-          updatedAt: true,
-          source: { select: { sourceName: true, sourceUrl: true } },
-        },
-      },
-      perangkat: {
-        orderBy: [{ jabatan: "asc" }, { nama: "asc" }],
-        select: {
-          nama: true,
-          jabatan: true,
-          periode: true,
-          fotoUrl: true,
-          kontakLabel: true,
-          dataStatus: true,
-          updatedAt: true,
-          source: { select: { sourceName: true, sourceUrl: true } },
-        },
-      },
-    },
-  }).catch(async (error) => {
-    if (!isDatabaseConnectivityError(error)) throw error;
-    const fallbackTimer = perfStart();
-    const fallbackRecord = await fetchDesaDetailRecordViaSupabase(idOrSlug);
-    publicPerfLogWithRows(
-      "public.desa-read",
-      "desa.detail via supabase fallback",
-      fallbackRecord ? 1 : 0,
-      fallbackTimer,
-    );
-    return fallbackRecord;
-  });
-  publicPerfLogWithRows("public.desa-read", "desa.findFirst(detail)", record ? 1 : 0, timer);
+    })
+    .catch(async (error) => {
+      if (!isDatabaseConnectivityError(error)) throw error;
+      const fallbackTimer = perfStart();
+      const fallbackRecord = await fetchDesaDetailRecordViaSupabase(idOrSlug);
+      publicPerfLogWithRows(
+        "public.desa-read",
+        "desa.detail via supabase fallback",
+        fallbackRecord ? 1 : 0,
+        fallbackTimer,
+      );
+      return fallbackRecord;
+    });
+  publicPerfLogWithRows(
+    "public.desa-read",
+    "desa.findFirst(detail)",
+    record ? 1 : 0,
+    timer,
+  );
   return record;
 }
 
@@ -1007,7 +1150,12 @@ async function fetchDesaItems() {
   const records = await fetchDesaListRecords();
   const mapTimer = perfStart();
   const items = records.map(mapDesaListRecord);
-  publicPerfLogWithRows("public.desa-read", "mapDesaRecords(list)", items.length, mapTimer);
+  publicPerfLogWithRows(
+    "public.desa-read",
+    "mapDesaRecords(list)",
+    items.length,
+    mapTimer,
+  );
   return items;
 }
 
@@ -1015,7 +1163,12 @@ async function fetchDesaDetailItem(idOrSlug: string) {
   const record = await fetchDesaDetailRecord(idOrSlug);
   const mapTimer = perfStart();
   const item = record ? mapDesaRecord(record) : null;
-  publicPerfLogWithRows("public.desa-read", "mapDesaRecord(detail)", item ? 1 : 0, mapTimer);
+  publicPerfLogWithRows(
+    "public.desa-read",
+    "mapDesaRecord(detail)",
+    item ? 1 : 0,
+    mapTimer,
+  );
   return item;
 }
 
@@ -1025,10 +1178,15 @@ async function fetchDesaDetailItem(idOrSlug: string) {
 // limit and provides the same 5-minute TTL within a process lifetime.
 // (The "desa-public" tag was declared but never revalidated anywhere.)
 // Cache is busted on new deployment — module-level variables reset in new serverless instances.
-let _desaListCache: { items: Awaited<ReturnType<typeof fetchDesaItems>>; expiresAt: number } | null = null;
+let _desaListCache: {
+  items: Awaited<ReturnType<typeof fetchDesaItems>>;
+  expiresAt: number;
+} | null = null;
 const DESA_LIST_TTL_MS = 5 * 60 * 1000;
 
-async function getCachedDesaItems(): Promise<Awaited<ReturnType<typeof fetchDesaItems>>> {
+async function getCachedDesaItems(): Promise<
+  Awaited<ReturnType<typeof fetchDesaItems>>
+> {
   if (_desaListCache && Date.now() < _desaListCache.expiresAt) {
     return _desaListCache.items;
   }
@@ -1045,7 +1203,7 @@ export function invalidateDesaListCache() {
 const getCachedDesaDetailItem = unstable_cache(
   fetchDesaDetailItem,
   ["pantau-desa-public-detail-v4"],
-  { revalidate: 300, tags: ["desa-public"] }
+  { revalidate: 300, tags: ["desa-public"] },
 );
 
 export async function getDesaListResult(): Promise<DesaListReadResult> {
@@ -1056,14 +1214,20 @@ export async function getDesaListResult(): Promise<DesaListReadResult> {
     return {
       items: [],
       state: "unavailable",
-      message: "Data desa belum siap ditampilkan. Coba muat ulang beberapa saat lagi.",
+      message:
+        "Data desa belum siap ditampilkan. Coba muat ulang beberapa saat lagi.",
       dbHostAlias,
     };
   }
 
   try {
     const items = await getCachedDesaItems();
-    publicPerfLogWithRows("public.desa-read", "getCachedDesaItems()", items.length, timer);
+    publicPerfLogWithRows(
+      "public.desa-read",
+      "getCachedDesaItems()",
+      items.length,
+      timer,
+    );
     if (items.length === 0) {
       return {
         items: [],
@@ -1084,7 +1248,8 @@ export async function getDesaListResult(): Promise<DesaListReadResult> {
     return {
       items: [],
       state: "unavailable",
-      message: "Data desa belum bisa dimuat. Coba muat ulang beberapa saat lagi.",
+      message:
+        "Data desa belum bisa dimuat. Coba muat ulang beberapa saat lagi.",
       dbHostAlias,
     };
   }
@@ -1095,7 +1260,9 @@ export async function getDesaListWithFallback(): Promise<DesaListItem[]> {
   return result.items;
 }
 
-export async function getDesaByIdOrSlugWithFallback(idOrSlug: string): Promise<DesaListItem | null> {
+export async function getDesaByIdOrSlugWithFallback(
+  idOrSlug: string,
+): Promise<DesaListItem | null> {
   try {
     return await getCachedDesaDetailItem(idOrSlug);
   } catch (error) {
@@ -1104,7 +1271,9 @@ export async function getDesaByIdOrSlugWithFallback(idOrSlug: string): Promise<D
   }
 }
 
-export async function getDesaStaticParamsFromDb(): Promise<Array<{ id: string }>> {
+export async function getDesaStaticParamsFromDb(): Promise<
+  Array<{ id: string }>
+> {
   const result = await getDesaListResult();
   return result.items.map((desa) => ({ id: desa.id }));
 }
@@ -1112,7 +1281,10 @@ export async function getDesaStaticParamsFromDb(): Promise<Array<{ id: string }>
 export function buildSummaryStats(desa: Desa[]): SummaryStats {
   const totalDesa = desa.length;
   // Dana Desa pagu (DJPK) is the only metric with real, 100%-coverage data.
-  const totalDanaDesaNasional = desa.reduce((acc, item) => acc + (item.paguDanaDesa ?? 0), 0);
+  const totalDanaDesaNasional = desa.reduce(
+    (acc, item) => acc + (item.paguDanaDesa ?? 0),
+    0,
+  );
   const score = (item: Desa) => item.completenessScore ?? 0;
   const rataRataKelengkapan = totalDesa
     ? Math.round(desa.reduce((acc, item) => acc + score(item), 0) / totalDesa)
@@ -1123,7 +1295,8 @@ export function buildSummaryStats(desa: Desa[]): SummaryStats {
     totalDesa,
     rataRataKelengkapan,
     desaLengkap: desa.filter((item) => score(item) >= 75).length,
-    desaSedang: desa.filter((item) => score(item) >= 34 && score(item) < 75).length,
+    desaSedang: desa.filter((item) => score(item) >= 34 && score(item) < 75)
+      .length,
     desaMinim: desa.filter((item) => score(item) < 34).length,
     desaAdaDanaDesa: desa.filter((item) => (item.paguDanaDesa ?? 0) > 0).length,
   };
