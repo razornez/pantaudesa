@@ -916,6 +916,49 @@ async function fetchDesaListRecords(): Promise<DesaListRecord[]> {
   if (!prisma) return fetchDesaListRecordsViaSupabase();
 
   const timer = perfStart();
+  if (process.env.DESA_LIST_FAST_PATH !== "0") {
+  // The directory must be fast enough to render on a cold serverless instance.
+  // Load only the fields rendered by the list itself; relation-heavy data belongs
+  // on the individual desa detail page and previously made the initial render take
+  // tens of seconds for 32k rows.
+  const directoryRows = await prisma.desa.findMany({
+    // DesaListClient already applies the selected client-side ordering. Avoid a
+    // full database sort before sending the initial directory payload.
+    take: 120,
+    select: {
+      id: true,
+      slug: true,
+      nama: true,
+      kecamatan: true,
+      kabupaten: true,
+      provinsi: true,
+      tahunData: true,
+      jumlahPenduduk: true,
+      kategori: true,
+      websiteUrl: true,
+      dataStatus: true,
+      dataSourceLabel: true,
+      dataPublishedAt: true,
+      updatedAt: true,
+    },
+  });
+  const directoryRecords: DesaListRecord[] = directoryRows
+    .filter((record) => !record.id.startsWith("qa-desa"))
+    .map((record) => ({
+      ...record,
+      anggaranSummaries: [],
+      dataDesa: [],
+      _count: { dataSources: 0, dokumenPublik: 0, dataDesa: 0, apbdesItems: 0 },
+    }));
+  publicPerfLogWithRows(
+    "public.desa-read",
+    "desa.findMany(directory)",
+    directoryRecords.length,
+    timer,
+  );
+  return directoryRecords;
+  }
+
   const records = await (async () => {
     // PostgreSQL accepts at most 32,767 bind variables per prepared statement.
     // Paginate relation reads so the 32k-row public directory stays below that

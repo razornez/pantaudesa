@@ -22,6 +22,7 @@ export default async function DesaListPage({ searchParams }: Props) {
       desa={result.items}
       initialSearch={params?.cari ?? ""}
       readState={result.state}
+      isInitialDirectory
       readMessage={result.message}
       dbHostAlias={result.dbHostAlias}
     />

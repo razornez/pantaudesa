@@ -16,6 +16,7 @@ interface Props {
   desa: DesaListItem[];
   initialSearch?: string;
   readState?: DesaReadState;
+  isInitialDirectory?: boolean;
   readMessage?: string;
   dbHostAlias?: string;
 }
@@ -24,6 +25,7 @@ export default function DesaListClient({
   desa,
   initialSearch = "",
   readState = "ready",
+  isInitialDirectory = false,
 }: Props) {
   const provinsiList = useMemo(
     () => [...new Set(desa.map((d) => d.provinsi))].sort(),
@@ -174,7 +176,9 @@ export default function DesaListClient({
             </p>
             <p className="mt-1 leading-relaxed">
               {isDataReady
-                ? `${desa.length} desa, ${totalSumber} sumber, dan ${totalDokumen} dokumen pendukung tercatat. ${freshnessLabel ?? "Tanggal pembaruan belum tercatat."}`
+                ? isInitialDirectory
+                  ? `Menampilkan ${desa.length} desa untuk tampilan awal yang cepat. Gunakan filter atau pencarian untuk mempersempit daftar.`
+                  : `${desa.length} desa, ${totalSumber} sumber, dan ${totalDokumen} dokumen pendukung tercatat. ${freshnessLabel ?? "Tanggal pembaruan belum tercatat."}`
                 : "Kami belum bisa menampilkan daftar desa saat ini. Coba muat ulang beberapa saat lagi."}
             </p>
           </div>
